@@ -1,0 +1,73 @@
+<div class="table-wrap">
+  <div class="table-loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Loading...</span>
+  </div>
+
+  <!-- Scrollable container: header sticky, body scrolls vertically -->
+  <div class="table-scroll">
+    <table class="erp-table" [style.fontSize]="fontSize">
+      <colgroup>
+        <col *ngIf="selectable" style="width:32px" />
+        <!-- Equal width for every column — 100% / N, no fixed px so it auto-fills viewport -->
+        <col *ngFor="let col of columns" />
+      </colgroup>
+
+      <thead>
+        <tr>
+          <th *ngIf="selectable" class="th-check" [style.padding]="cellPad">
+            <input type="checkbox"
+                   [checked]="allSelected"
+                   [indeterminate]="someSelected"
+                   (change)="toggleSelectAll($any($event.target).checked)" />
+          </th>
+          <th *ngFor="let col of columns"
+              [class.sortable]="col.sortable"
+              [class.sort-active]="sort.key === col.key"
+              [style.textAlign]="col.align || 'left'"
+              [style.padding]="cellPad"
+              [style.fontSize]="headerFontSize"
+              (click)="onSort(col)">
+            {{ col.header }}<span class="sort-icon" *ngIf="col.sortable">{{ sortIcon(col) }}</span>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let row of data"
+            [class.selected]="isSelected(row)"
+            (click)="onRowClick(row)">
+          <td *ngIf="selectable" class="td-check" [style.padding]="cellPad"
+              (click)="$event.stopPropagation(); toggleRow(row)">
+            <input type="checkbox" [checked]="isSelected(row)" (change)="toggleRow(row)" />
+          </td>
+          <td *ngFor="let col of columns"
+              [style.textAlign]="col.align || 'left'"
+              [style.padding]="cellPad">
+
+            <!-- Badge -->
+            <span *ngIf="col.type === 'badge'"
+                  class="badge badge-{{ getBadgeClass(col, getCellValue(row, col)) }}">
+              {{ getCellValue(row, col) }}
+            </span>
+
+            <!-- Boolean -->
+            <ng-container *ngIf="col.type === 'boolean'">
+              <span class="bool-dot" [class.on]="getCellValue(row, col)"></span>
+              {{ getCellValue(row, col) ? 'Yes' : 'No' }}
+            </ng-container>
+
+            <!-- Default: text / number / date — NO ellipsis, full value always shown -->
+            <ng-container *ngIf="!col.type || col.type === 'text' || col.type === 'number' || col.type === 'date'">
+              {{ getCellValue(row, col) }}
+            </ng-container>
+          </td>
+        </tr>
+
+        <tr *ngIf="!loading && data.length === 0">
+          <td [colSpan]="columns.length + (selectable ? 1 : 0)" class="empty-row">No records found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

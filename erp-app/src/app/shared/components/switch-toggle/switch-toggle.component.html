@@ -1,0 +1,7 @@
+<div class="switch-wrap" [class.disabled]="disabled" (click)="toggle()">
+  <span class="switch-label-text" *ngIf="label">{{ label }}</span>
+  <div class="switch-track" [class.on]="checked">
+    <div class="switch-thumb"></div>
+  </div>
+  <span class="switch-state-label">{{ checked ? onLabel : offLabel }}</span>
+</div>

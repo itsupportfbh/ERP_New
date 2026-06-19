@@ -1,0 +1,22 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>Dashboard</h2>
+    <span class="text-muted">Welcome back, Admin</span>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card" *ngFor="let s of stats">
+      <div class="stat-icon" [style.background]="s.color + '18'">
+        <span [style.fontSize]="'20px'">{{ s.icon }}</span>
+      </div>
+      <div>
+        <div class="stat-value">{{ s.value }}</div>
+        <div class="stat-label">{{ s.label }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card dashboard-note">
+    <p>Navigate the sidebar to explore <strong>Sales Order</strong>, <strong>Inventory</strong>, and the <strong>Components</strong> showcase.</p>
+  </div>
+</div>

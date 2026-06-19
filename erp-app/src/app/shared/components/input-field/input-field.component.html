@@ -1,0 +1,16 @@
+<div class="field-wrap">
+  <label class="field-label" *ngIf="label">
+    {{ label }}<span class="req" *ngIf="required">*</span>
+  </label>
+  <input
+    class="field-input"
+    [class.has-error]="errorMsg && touched"
+    [type]="type"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    [value]="value"
+    (input)="onInput($any($event.target).value)"
+    (blur)="onBlur()"
+  />
+  <span class="field-error" *ngIf="errorMsg && touched">{{ errorMsg }}</span>
+</div>

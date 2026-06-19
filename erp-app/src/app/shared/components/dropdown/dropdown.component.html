@@ -1,0 +1,29 @@
+<div class="field-wrap">
+  <label class="field-label" *ngIf="label">
+    {{ label }}<span class="req" *ngIf="required">*</span>
+  </label>
+  <div class="dd-trigger"
+       [class.open]="open"
+       [class.disabled]="disabled"
+       [class.has-error]="errorMsg && touched"
+       (click)="toggle()">
+    <span class="dd-value" [class.placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
+    <span class="dd-actions">
+      <span class="dd-clear" *ngIf="value !== null && value !== undefined" (click)="clear($event)">&#x2715;</span>
+      <span class="dd-arrow" [class.rotated]="open">&#x25BE;</span>
+    </span>
+  </div>
+
+  <!-- Menu rendered at fixed position — escapes overflow:hidden parents -->
+  <div class="dd-menu" *ngIf="open" [ngStyle]="menuStyle">
+    <div class="dd-item"
+         *ngFor="let opt of options"
+         [class.selected]="opt.value === value"
+         (click)="select(opt)">
+      {{ opt.label }}
+    </div>
+    <div class="dd-empty" *ngIf="options.length === 0">No options</div>
+  </div>
+
+  <span class="field-error" *ngIf="errorMsg && touched">{{ errorMsg }}</span>
+</div>

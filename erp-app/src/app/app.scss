@@ -1,0 +1,7 @@
+/* app-root must fill the viewport so the flex chain propagates height to all pages */
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}

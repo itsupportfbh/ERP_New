@@ -1,0 +1,40 @@
+<div class="field-wrap">
+  <label class="field-label" *ngIf="label">
+    {{ label }}<span class="req" *ngIf="required">*</span>
+  </label>
+  <div class="dd-trigger"
+       [class.open]="open"
+       [class.disabled]="disabled"
+       [class.has-error]="errorMsg && touched"
+       (click)="toggle()">
+    <span class="dd-value" [class.placeholder]="!displayText">{{ displayText || placeholder }}</span>
+    <span class="dd-actions">
+      <span class="dd-count" *ngIf="selected.length">{{ selected.length }}</span>
+      <span class="dd-clear" *ngIf="selected.length" (click)="clearAll($event)">&#x2715;</span>
+      <span class="dd-arrow" [class.rotated]="open">&#x25BE;</span>
+    </span>
+  </div>
+
+  <!-- Fixed-position menu — escapes overflow:hidden parents -->
+  <div class="dd-menu" *ngIf="open" [ngStyle]="menuStyle">
+    <div class="dd-search">
+      <input placeholder="Search..."
+             [(ngModel)]="search"
+             (click)="$event.stopPropagation()"
+             autocomplete="off" />
+    </div>
+    <div class="dd-list">
+      <div class="dd-item"
+           *ngFor="let opt of filteredOptions"
+           (click)="toggleOption(opt)">
+        <span class="dd-checkbox" [class.checked]="isSelected(opt.value)">
+          <span *ngIf="isSelected(opt.value)">&#x2714;</span>
+        </span>
+        {{ opt.label }}
+      </div>
+      <div class="dd-empty" *ngIf="filteredOptions.length === 0">No results</div>
+    </div>
+  </div>
+
+  <span class="field-error" *ngIf="errorMsg && touched">{{ errorMsg }}</span>
+</div>

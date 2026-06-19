@@ -1,0 +1,113 @@
+<div class="page-container">
+
+  <!-- Header bar -->
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn-outline btn-sm" (click)="onCancel()">&#8592; Back</button>
+      <h2>New Sales Order</h2>
+    </div>
+    <div class="btn-group">
+      <erp-switch label="Urgent" [(ngModel)]="header.urgent"></erp-switch>
+      <erp-switch label="Tax Incl." [(ngModel)]="header.taxInclusive"></erp-switch>
+      <button class="btn btn-outline btn-sm" (click)="onCancel()">Cancel</button>
+      <button class="btn btn-primary btn-sm" (click)="onSave()">&#10003; Save Order</button>
+    </div>
+  </div>
+
+  <!-- Master fields -->
+  <div class="card section-card">
+    <div class="section-label">Order Details</div>
+    <div class="form-row cols-4">
+      <erp-input label="Order No"   [disabled]="true" [(ngModel)]="header.orderNo"></erp-input>
+      <erp-input label="Date"       type="date"  [(ngModel)]="header.date"    [required]="true"></erp-input>
+      <erp-input label="Due Date"   type="date"  [(ngModel)]="header.dueDate"></erp-input>
+      <erp-dropdown label="Customer" [options]="customers" placeholder="Select customer"
+                    [(ngModel)]="header.customer" [required]="true"></erp-dropdown>
+    </div>
+    <div class="form-row cols-4" style="margin-top:10px">
+      <erp-dropdown label="Branch"    [options]="branches"  placeholder="Select branch"   [(ngModel)]="header.branch"></erp-dropdown>
+      <erp-dropdown label="Salesman"  [options]="salesmen"  placeholder="Select salesman" [(ngModel)]="header.salesman"></erp-dropdown>
+      <erp-dropdown label="Pay Mode"  [options]="payModes"  placeholder="Select mode"     [(ngModel)]="header.payMode"></erp-dropdown>
+      <erp-dropdown label="Warehouse" [options]="warehouses" placeholder="Select WH"      [(ngModel)]="header.warehouse"></erp-dropdown>
+    </div>
+    <div class="form-row" style="margin-top:10px; grid-template-columns:1fr auto auto">
+      <erp-input label="Remarks" placeholder="Enter remarks..." [(ngModel)]="header.remarks"></erp-input>
+    </div>
+  </div>
+
+  <!-- Line items -->
+  <div class="card section-card lines-section">
+    <div class="lines-header">
+      <span class="section-label">Order Lines</span>
+      <button class="btn btn-outline btn-sm" (click)="addLine()">+ Add Line</button>
+    </div>
+
+    <div class="lines-table-wrap">
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th class="col-sno">#</th>
+            <th class="col-product">Product</th>
+            <th class="col-unit">Unit</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-rate">Rate</th>
+            <th class="col-disc">Disc%</th>
+            <th class="col-tax">Tax%</th>
+            <th class="col-amount">Amount</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let line of lines; let i = index">
+            <td class="col-sno td-sno">{{ i + 1 }}</td>
+            <td class="col-product">
+              <erp-dropdown [options]="products" placeholder="Select product"
+                            [(ngModel)]="line.product"></erp-dropdown>
+            </td>
+            <td class="col-unit">
+              <erp-dropdown [options]="units" placeholder="Unit" [(ngModel)]="line.unit"></erp-dropdown>
+            </td>
+            <td class="col-qty">
+              <erp-input type="number" placeholder="0" [(ngModel)]="line.qty"
+                         (ngModelChange)="calcLine(line)"></erp-input>
+            </td>
+            <td class="col-rate">
+              <erp-input type="number" placeholder="0.00" [(ngModel)]="line.rate"
+                         (ngModelChange)="calcLine(line)"></erp-input>
+            </td>
+            <td class="col-disc">
+              <erp-input type="number" placeholder="0" [(ngModel)]="line.disc"
+                         (ngModelChange)="calcLine(line)"></erp-input>
+            </td>
+            <td class="col-tax">
+              <erp-dropdown [options]="taxOptions" placeholder="0%" [(ngModel)]="line.tax"
+                            (ngModelChange)="calcLine(line)"></erp-dropdown>
+            </td>
+            <td class="col-amount td-amount">{{ line.amount | number:'1.2-2' }}</td>
+            <td class="col-del">
+              <button class="del-btn" (click)="removeLine(i)" [disabled]="lines.length === 1"
+                      title="Remove line">&#x2715;</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals -->
+    <div class="totals-bar">
+      <div class="total-row">
+        <span>Sub Total</span>
+        <span>{{ subtotal - totalTax | number:'1.2-2' }}</span>
+      </div>
+      <div class="total-row">
+        <span>Tax</span>
+        <span>{{ totalTax | number:'1.2-2' }}</span>
+      </div>
+      <div class="total-row grand">
+        <span>Grand Total</span>
+        <span>&#8377; {{ grandTotal | number:'1.2-2' }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>

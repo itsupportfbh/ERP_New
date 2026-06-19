@@ -1,0 +1,35 @@
+<div class="shell" [class.sidebar-closed]="!sidebarOpen">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text" *ngIf="sidebarOpen">Unity ERP</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" *ngFor="let m of menus" [routerLink]="m.route" routerLinkActive="active">
+        <span class="nav-icon">{{ m.icon }}</span>
+        <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main area -->
+  <div class="main-area">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="toggle-btn" (click)="sidebarOpen = !sidebarOpen" title="Toggle sidebar">
+        <span>&#9776;</span>
+      </button>
+      <span class="topbar-title">Unity ERP</span>
+      <div class="topbar-right">
+        <div class="avatar">A</div>
+        <button class="btn btn-outline btn-sm" (click)="logout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

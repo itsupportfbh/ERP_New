@@ -1,0 +1,52 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>Components Showcase</h2>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" (click)="onReload()">&#x21BB; Reload Data</button>
+    </div>
+  </div>
+
+  <!-- Form fields section -->
+  <div class="card form-section">
+    <div class="section-title">Form Fields</div>
+    <div class="form-row cols-4">
+      <erp-input label="Customer Name" placeholder="Enter name" [(ngModel)]="form.name" [required]="true" errorMsg="Required"></erp-input>
+      <erp-input label="Email" type="email" placeholder="Enter email" [(ngModel)]="form.email"></erp-input>
+      <erp-input label="Mobile" placeholder="Enter mobile" [(ngModel)]="form.mobile"></erp-input>
+      <erp-input label="Amount" type="number" placeholder="0.00" [(ngModel)]="form.amount"></erp-input>
+    </div>
+    <div class="form-row cols-4" style="margin-top: 10px">
+      <erp-input label="Date" type="date" [(ngModel)]="form.date"></erp-input>
+      <erp-dropdown label="Status" [options]="statusOptions" placeholder="Select status" [(ngModel)]="form.status" [required]="true"></erp-dropdown>
+      <erp-dropdown label="Category" [options]="categoryOptions" placeholder="Select category" [(ngModel)]="form.category"></erp-dropdown>
+      <erp-multiselect label="Departments" [options]="deptOptions" placeholder="Select departments" [(ngModel)]="form.departments"></erp-multiselect>
+    </div>
+    <div class="switch-row" style="margin-top: 12px">
+      <erp-switch label="Active" [(ngModel)]="form.isActive"></erp-switch>
+      <erp-switch label="Send Email" onLabel="On" offLabel="Off" [(ngModel)]="form.sendEmail"></erp-switch>
+    </div>
+  </div>
+
+  <!-- Table section — 15 columns, no horizontal scroll -->
+  <div class="card table-section">
+    <div class="section-title">
+      Data Table — 20 Columns, Fits in Viewport (No Horizontal Scroll, No Truncation)
+      <span class="section-sub">{{ allData.length }} records</span>
+    </div>
+    <erp-table
+      [columns]="columns"
+      [data]="tableData"
+      [loading]="loading"
+      [selectable]="true"
+      rowKey="id"
+      (sortChange)="onSort($event)">
+    </erp-table>
+    <erp-pager
+      [totalItems]="allData.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="onPage($event)"
+      (pageSizeChange)="onPageSize($event)">
+    </erp-pager>
+  </div>
+</div>

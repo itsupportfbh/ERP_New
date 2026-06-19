@@ -1,0 +1,22 @@
+<div class="pager-wrap">
+  <div class="pager-info">
+    Showing {{ startItem }}–{{ endItem }} of {{ totalItems }}
+  </div>
+  <div class="pager-controls">
+    <button class="pager-btn" [disabled]="currentPage === 1" (click)="goTo(1)" title="First">&#x00AB;</button>
+    <button class="pager-btn" [disabled]="currentPage === 1" (click)="goTo(currentPage - 1)" title="Prev">&#x2039;</button>
+    <button class="pager-btn" *ngIf="pages[0] > 1" (click)="goTo(1)">1</button>
+    <span class="pager-ellipsis" *ngIf="pages[0] > 2">…</span>
+    <button class="pager-btn" *ngFor="let p of pages" [class.active]="p === currentPage" (click)="goTo(p)">{{ p }}</button>
+    <span class="pager-ellipsis" *ngIf="pages[pages.length-1] < totalPages - 1">…</span>
+    <button class="pager-btn" *ngIf="pages[pages.length-1] < totalPages" (click)="goTo(totalPages)">{{ totalPages }}</button>
+    <button class="pager-btn" [disabled]="currentPage === totalPages" (click)="goTo(currentPage + 1)" title="Next">&#x203A;</button>
+    <button class="pager-btn" [disabled]="currentPage === totalPages" (click)="goTo(totalPages)" title="Last">&#x00BB;</button>
+  </div>
+  <div class="pager-size">
+    <span>Rows:</span>
+    <select [value]="pageSize" (change)="changePageSize($any($event.target).value)">
+      <option *ngFor="let s of pageSizes" [value]="s">{{ s }}</option>
+    </select>
+  </div>
+</div>
