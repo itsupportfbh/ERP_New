@@ -1,26 +1,122 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+  selectedCompanyId?: number;
+  selectedOrgGuid?: string;
+}
+
+export interface UserData {
+  userId: number;
+  email: string;
+  username: string;
+  token: string;
+  approvalLevelNames: string[];
+  approvalLevelIds: number[];
+  teams: string[];
+  allowedMenuIds: number[];
+  companyId: number;
+  companyName: string;
+  locationId: number;
+  departmentId: number;
+  orgGuid: string;
+  databaseName: string;
+  isMasterOwner: boolean;
+  isTenantUser: boolean;
+  organizations: any[];
+  organizationId: string;
+  companies: any[];
+  requiresCompanySelection: boolean;
+  companyCurrencyId: number;
+  companyCurrencyName: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  data: UserData;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly TOKEN_KEY = 'erp_token';
+  private readonly TOKEN_KEY = 'token';
+  private readonly REMEMBER_KEY = 'erp_remember_user';
 
-  constructor(private router: Router) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
-  login(username: string, password: string): boolean {
-    if (username === 'admin' && password === 'admin123') {
-      localStorage.setItem(this.TOKEN_KEY, btoa(`${username}:${Date.now()}`));
-      return true;
-    }
-    return false;
+  login(payload: LoginPayload): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/user/login`, payload).pipe(
+      tap(res => {
+        if (res.success && res.data) {
+          this.storeUserData(res.data);
+        }
+      }),
+      catchError(err => {
+        const message = err.error?.message || err.message || 'Login failed. Please try again.';
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  private storeUserData(data: UserData): void {
+    localStorage.setItem(this.TOKEN_KEY, data.token);
+    localStorage.setItem('username', data.username);
+    localStorage.setItem('email', data.email);
+    localStorage.setItem('id', String(data.userId));
+    localStorage.setItem('approvalRoles', JSON.stringify(data.approvalLevelNames));
+    localStorage.setItem('approvalLevelIds', JSON.stringify(data.approvalLevelIds));
+    localStorage.setItem('teams', JSON.stringify(data.teams));
+    localStorage.setItem('allowedMenuIds', JSON.stringify(data.allowedMenuIds));
+    localStorage.setItem('companyId', String(data.companyId));
+    localStorage.setItem('companyName', data.companyName);
+    localStorage.setItem('locationId', String(data.locationId));
+    localStorage.setItem('departmentId', String(data.departmentId));
+    localStorage.setItem('orgGuid', data.orgGuid);
+    localStorage.setItem('databaseName', data.databaseName);
+    localStorage.setItem('isMasterOwner', String(data.isMasterOwner));
+    localStorage.setItem('isTenantUser', String(data.isTenantUser));
+    localStorage.setItem('organizations', JSON.stringify(data.organizations));
+    localStorage.setItem('companies', JSON.stringify(data.companies));
+    localStorage.setItem('organizationId', data.organizationId ?? '');
+    localStorage.setItem('companyCurrencyId', String(data.companyCurrencyId));
+    localStorage.setItem('companyCurrencyName', data.companyCurrencyName ?? '');
   }
 
   logout(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
+    const keys = [
+      'token', 'username', 'email', 'id',
+      'approvalRoles', 'approvalLevelIds', 'teams', 'allowedMenuIds',
+      'companyId', 'companyName', 'locationId', 'departmentId',
+      'orgGuid', 'databaseName', 'isMasterOwner', 'isTenantUser',
+      'organizations', 'companies', 'organizationId',
+      'companyCurrencyId', 'companyCurrencyName'
+    ];
+    keys.forEach(k => localStorage.removeItem(k));
     this.router.navigate(['/login']);
   }
 
   isLoggedIn(): boolean {
     return !!localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  getRememberedUser(): string | null {
+    return localStorage.getItem(this.REMEMBER_KEY);
+  }
+
+  setRememberedUser(email: string): void {
+    localStorage.setItem(this.REMEMBER_KEY, email);
+  }
+
+  clearRememberedUser(): void {
+    localStorage.removeItem(this.REMEMBER_KEY);
   }
 }
