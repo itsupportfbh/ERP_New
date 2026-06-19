@@ -1,0 +1,246 @@
+<div class="wizard-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <span class="status-badge status-{{ approvalStatus === 2 ? 'approved' : approvalStatus === 3 ? 'rejected' : 'pending' }}">
+      {{ approvalStatusLabel }}
+    </span>
+    <div class="header-actions" *ngIf="isEdit && approvalStatus === 1">
+      <button class="btn btn-success btn-sm" (click)="approve(2)" [disabled]="saving">&#10003; Approve</button>
+      <button class="btn btn-danger btn-sm" (click)="approve(3)" [disabled]="saving">&#10007; Reject</button>
+    </div>
+  </div>
+
+  <!-- Step bar -->
+  <div class="step-bar">
+    <div class="step-item" [class.active]="step >= 1" [class.done]="step > 1">
+      <div class="step-circle">
+        <svg *ngIf="step > 1" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+        <span *ngIf="step <= 1">1</span>
+      </div>
+      <span class="step-label">Header</span>
+    </div>
+    <div class="step-line" [class.done]="step > 1"></div>
+    <div class="step-item" [class.active]="step >= 2" [class.done]="step > 2">
+      <div class="step-circle">
+        <svg *ngIf="step > 2" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+        <span *ngIf="step <= 2">2</span>
+      </div>
+      <span class="step-label">Line Items</span>
+    </div>
+    <div class="step-line" [class.done]="step > 2"></div>
+    <div class="step-item" [class.active]="step >= 3">
+      <div class="step-circle"><span>3</span></div>
+      <span class="step-label">Review &amp; Submit</span>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+  <div class="alert-success" *ngIf="success">&#10003; {{ success }}</div>
+
+  <!-- STEP 1: Header -->
+  <ng-container *ngIf="step === 1 && !loading">
+    <div class="card section-card">
+      <div class="section-label">Supplier &amp; Terms</div>
+      <div class="form-row cols-3">
+        <erp-dropdown label="Supplier" [required]="true" [options]="supplierOptions"
+          [(ngModel)]="supplierId" (ngModelChange)="onSupplierChange()" placeholder="Select supplier"></erp-dropdown>
+        <erp-dropdown label="Payment Terms" [options]="paymentTermOptions"
+          [(ngModel)]="paymentTermId" placeholder="Select payment terms"></erp-dropdown>
+        <erp-dropdown label="Currency" [options]="currencyOptions"
+          [(ngModel)]="currencyId" placeholder="Select currency"></erp-dropdown>
+      </div>
+      <div class="form-row cols-3 block-gap">
+        <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate"></erp-input>
+        <erp-dropdown label="Incoterms" [options]="incotermOptions"
+          [(ngModel)]="incotermsId" placeholder="Select incoterms"></erp-dropdown>
+        <div class="toggle-field">
+          <label class="field-label">Overseas Order</label>
+          <label class="toggle-chk">
+            <span class="toggle-box" [class.on]="isOverseas" (click)="isOverseas = !isOverseas">
+              <svg *ngIf="isOverseas" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+            </span>
+            <span>{{ isOverseas ? 'Yes' : 'No' }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-card block-gap">
+      <div class="section-label">Delivery Details</div>
+      <div class="form-row cols-3">
+        <erp-input label="PO Date" type="date" [(ngModel)]="poDate"></erp-input>
+        <erp-input label="Delivery Date" type="date" [required]="true" [(ngModel)]="deliveryDate"></erp-input>
+        <erp-dropdown label="Delivery Location" [options]="locationOptions"
+          [(ngModel)]="locationId" placeholder="Select location"></erp-dropdown>
+      </div>
+      <div class="form-row cols-2 block-gap">
+        <erp-input label="Contact Number" [(ngModel)]="contactNumber" placeholder="Supplier contact"></erp-input>
+        <erp-input label="Remarks" [(ngModel)]="remarks" placeholder="Additional remarks"></erp-input>
+      </div>
+    </div>
+
+    <div class="card section-card block-gap" *ngIf="isOverseas">
+      <div class="section-label">Charges</div>
+      <div class="form-row cols-3">
+        <erp-input label="Tax Amount" type="number" [(ngModel)]="tax" placeholder="0.00"></erp-input>
+        <erp-input label="Shipping" type="number" [(ngModel)]="shipping" placeholder="0.00"></erp-input>
+        <erp-input label="Discount" type="number" [(ngModel)]="discount" placeholder="0.00"></erp-input>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+    </div>
+  </ng-container>
+
+  <!-- STEP 2: Line Items -->
+  <ng-container *ngIf="step === 2 && !loading">
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Line Items</div>
+        <button class="btn btn-outline btn-xs" (click)="addLine()">+ Add Line</button>
+      </div>
+
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>PR No</th>
+              <th>Item *</th>
+              <th>Qty *</th>
+              <th>UOM</th>
+              <th>Unit Price</th>
+              <th>Disc %</th>
+              <th>Tax Code</th>
+              <th>Location</th>
+              <th>Budget Line</th>
+              <th>Remarks</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of lines; let i = index">
+              <td class="row-num">{{ i + 1 }}</td>
+              <td class="pr-col">
+                <erp-dropdown [options]="availablePROptions" [(ngModel)]="line.prId"
+                  placeholder="PR" (ngModelChange)="onPrSelect(line)"></erp-dropdown>
+              </td>
+              <td class="item-col">
+                <erp-dropdown [options]="itemOptions" [(ngModel)]="line.itemId"
+                  placeholder="Select item" (ngModelChange)="onItemSelect(line)"></erp-dropdown>
+              </td>
+              <td class="qty-col">
+                <erp-input type="number" [(ngModel)]="line.quantity" placeholder="0"></erp-input>
+              </td>
+              <td class="uom-col">
+                <erp-dropdown [options]="uomOptions" [(ngModel)]="line.uomId" placeholder="UOM"></erp-dropdown>
+              </td>
+              <td class="price-col">
+                <erp-input type="number" [(ngModel)]="line.unitPrice" placeholder="0.00"></erp-input>
+              </td>
+              <td class="disc-col">
+                <erp-input type="number" [(ngModel)]="line.discountPct" placeholder="0"></erp-input>
+              </td>
+              <td class="tax-col">
+                <erp-dropdown [options]="taxCodeOptions" [(ngModel)]="line.taxCodeId" placeholder="Tax"></erp-dropdown>
+              </td>
+              <td class="loc-col">
+                <erp-dropdown [options]="locationOptions" [(ngModel)]="line.locationId" placeholder="Loc"></erp-dropdown>
+              </td>
+              <td class="ledger-col">
+                <erp-dropdown [options]="ledgerOptions" [(ngModel)]="line.budgetLineId" placeholder="Budget"></erp-dropdown>
+              </td>
+              <td class="remarks-col">
+                <erp-input [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
+              </td>
+              <td class="del-col">
+                <button class="btn-icon danger" (click)="removeLine(i)" title="Remove">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!lines.length">
+              <td colspan="12" class="empty-lines">Click "+ Add Line" to add items</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals-row">
+        <div class="total-item"><span>Sub Total</span><strong>{{ subTotal | number:'1.2-2' }}</strong></div>
+        <div class="total-item" *ngIf="isOverseas && (tax ?? 0) > 0">
+          <span>Tax</span><strong>{{ tax | number:'1.2-2' }}</strong>
+        </div>
+        <div class="total-item" *ngIf="isOverseas && (shipping ?? 0) > 0">
+          <span>Shipping</span><strong>{{ shipping | number:'1.2-2' }}</strong>
+        </div>
+        <div class="total-item" *ngIf="isOverseas && (discount ?? 0) > 0">
+          <span>Discount</span><strong>-{{ discount | number:'1.2-2' }}</strong>
+        </div>
+        <div class="total-sep"></div>
+        <div class="total-item grand"><span>Net Total</span><strong>{{ netTotal | number:'1.2-2' }}</strong></div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
+      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+    </div>
+  </ng-container>
+
+  <!-- STEP 3: Review -->
+  <ng-container *ngIf="step === 3 && !loading">
+    <div class="card section-card">
+      <div class="section-label">Purchase Order Summary</div>
+      <div class="review-grid">
+        <div class="review-row"><span class="review-key">Supplier</span><span class="review-val">{{ getLabel(supplierOptions, supplierId) }}</span></div>
+        <div class="review-row"><span class="review-key">Payment Terms</span><span class="review-val">{{ getLabel(paymentTermOptions, paymentTermId) }}</span></div>
+        <div class="review-row"><span class="review-key">Currency</span><span class="review-val">{{ getLabel(currencyOptions, currencyId) }}</span></div>
+        <div class="review-row"><span class="review-key">FX Rate</span><span class="review-val">{{ fxRate }}</span></div>
+        <div class="review-row"><span class="review-key">PO Date</span><span class="review-val">{{ poDate }}</span></div>
+        <div class="review-row"><span class="review-key">Delivery Date</span><span class="review-val">{{ deliveryDate }}</span></div>
+        <div class="review-row"><span class="review-key">Location</span><span class="review-val">{{ getLabel(locationOptions, locationId) }}</span></div>
+        <div class="review-row"><span class="review-key">Overseas</span><span class="review-val">{{ isOverseas ? 'Yes' : 'No' }}</span></div>
+        <div class="review-row"><span class="review-key">Net Total</span><span class="review-val">{{ netTotal | number:'1.2-2' }}</span></div>
+        <div class="review-row"><span class="review-key">Status</span><span class="review-val">{{ approvalStatusLabel }}</span></div>
+      </div>
+    </div>
+
+    <div class="card section-card">
+      <div class="section-label">Line Items ({{ lines.length }})</div>
+      <table class="review-lines">
+        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Line Total</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let l of lines; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ getLabel(itemOptions, l.itemId) }}</td>
+            <td>{{ l.quantity }}</td>
+            <td>{{ l.unitPrice | number:'1.2-2' }}</td>
+            <td>{{ l.discountPct ?? 0 }}%</td>
+            <td>{{ ((l.quantity ?? 0) * (l.unitPrice ?? 0) * (1 - (l.discountPct ?? 0) / 100)) | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
+      <div class="footer-approve-group" *ngIf="isEdit && approvalStatus === 1">
+        <button class="btn btn-success btn-sm" (click)="approve(2)" [disabled]="saving">&#10003; Approve</button>
+        <button class="btn btn-danger btn-sm" (click)="approve(3)" [disabled]="saving">&#10007; Reject</button>
+      </div>
+      <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update PO' : '&#10003; Submit PO') }}
+      </button>
+    </div>
+  </ng-container>
+</div>

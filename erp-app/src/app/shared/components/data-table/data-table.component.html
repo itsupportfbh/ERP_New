@@ -11,6 +11,7 @@
         <col *ngIf="selectable" style="width:32px" />
         <!-- Equal width for every column — 100% / N, no fixed px so it auto-fills viewport -->
         <col *ngFor="let col of columns" />
+        <col *ngIf="rowActions.length" style="width:1px" />
       </colgroup>
 
       <thead>
@@ -30,6 +31,7 @@
               (click)="onSort(col)">
             {{ col.header }}<span class="sort-icon" *ngIf="col.sortable">{{ sortIcon(col) }}</span>
           </th>
+          <th *ngIf="rowActions.length" [style.padding]="cellPad"></th>
         </tr>
       </thead>
 
@@ -38,8 +40,9 @@
             [class.selected]="isSelected(row)"
             (click)="onRowClick(row)">
           <td *ngIf="selectable" class="td-check" [style.padding]="cellPad"
-              (click)="$event.stopPropagation(); toggleRow(row)">
-            <input type="checkbox" [checked]="isSelected(row)" (change)="toggleRow(row)" />
+              (click)="$event.stopPropagation()">
+            <input type="checkbox" [checked]="isSelected(row)"
+                   (change)="toggleRow(row)" (click)="$event.stopPropagation()" />
           </td>
           <td *ngFor="let col of columns"
               [style.textAlign]="col.align || 'left'"
@@ -62,10 +65,16 @@
               {{ getCellValue(row, col) }}
             </ng-container>
           </td>
+          <td *ngIf="rowActions.length" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="white-space:nowrap">
+            <button *ngFor="let act of rowActions"
+              class="btn-icon {{ act.btnClass ?? '' }}"
+              [title]="act.label"
+              (click)="onAction(act.key, row, $event)">{{ act.label }}</button>
+          </td>
         </tr>
 
         <tr *ngIf="!loading && data.length === 0">
-          <td [colSpan]="columns.length + (selectable ? 1 : 0)" class="empty-row">No records found</td>
+          <td [colSpan]="totalCols" class="empty-row">No records found</td>
         </tr>
       </tbody>
     </table>

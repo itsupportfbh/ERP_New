@@ -1,0 +1,252 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+
+@Injectable({ providedIn: 'root' })
+export class PurchaseService {
+  private readonly api = environment.apiUrl;
+
+  constructor(private http: HttpClient) {}
+
+  // ── Helpers ──────────────────────────────────────────
+  unwrap(res: any): any[] {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.result)) return res.result;
+    return [];
+  }
+  unwrapOne(res: any): any {
+    if (Array.isArray(res)) return res[0] ?? {};
+    if (Array.isArray(res?.data)) return res.data[0] ?? {};
+    return res?.data ?? res ?? {};
+  }
+
+  // ── Purchase Request ─────────────────────────────────
+  getPurchaseRequests(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseRequest/GetPurchaseRequest`);
+  }
+  getPurchaseRequestById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseRequest/GetPurchaseRequestById/${id}`);
+  }
+  getAvailablePurchaseRequests(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseRequest/GetAvailablePurchaseRequests`);
+  }
+  createPurchaseRequest(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequest/CreatePurchaseRequest`, data);
+  }
+  updatePurchaseRequest(id: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseRequest/UpdatePurchaseRequestById/${id}`, data);
+  }
+  deletePurchaseRequest(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/PurchaseRequest/DeletePurchaseRequestById/${id}`);
+  }
+
+  // ── Purchase Order ───────────────────────────────────
+  getPurchaseOrders(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrder/getAll`);
+  }
+  getPurchaseOrdersWithGRN(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrder/GetAllDetailswithGRN`);
+  }
+  getPurchaseOrderById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrder/get/${id}`);
+  }
+  createPurchaseOrder(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseOrder/insert`, data);
+  }
+  updatePurchaseOrder(data: any): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseOrder/update`, data);
+  }
+  deletePurchaseOrder(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/PurchaseOrder/delete/${id}`);
+  }
+  getPurchaseOrderQr(poNo: string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrder/${poNo}/qr`);
+  }
+  emailSupplierPo(id: number | string): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseOrder/${id}/email-supplier`, {});
+  }
+  getItemSupplierPrices(itemId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/Item/GetItemById/${itemId}`);
+  }
+
+  // ── RFQ / Quotation ──────────────────────────────────
+  getRfqs(): Observable<any> {
+    return this.http.get(`${this.api}/Quotation/GetAll`);
+  }
+  getRfqById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/Quotation/GetById/${id}`);
+  }
+  createRfq(data: any): Observable<any> {
+    return this.http.post(`${this.api}/Quotation/Create`, data);
+  }
+  updateRfq(id: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.api}/Quotation/Update/${id}`, data);
+  }
+  deleteRfq(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/Quotation/Delete/${id}`);
+  }
+  sendRfq(data: any): Observable<any> {
+    return this.http.post(`${this.api}/Quotation/Create`, data);
+  }
+
+  // ── GRN ─────────────────────────────────────────────
+  getGRNs(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRN`);
+  }
+  getGRNsDetails(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRNDetails`);
+  }
+  getGRNById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/getGRNbyId/${id}`);
+  }
+  getGRNsByPoId(poId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRNByPoId?poId=${poId}`);
+  }
+  getAvailableGRNsForPin(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRN`);
+  }
+  getAvailableGRNsForPinEdit(pinId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRN`);
+  }
+  createGRN(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseGoodReceipt/insertGRN`, data);
+  }
+  updateGRNFlagIssues(data: any): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseGoodReceipt/update`, data);
+  }
+  deleteGRN(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/PurchaseGoodReceipt/delete/${id}`);
+  }
+  closeGRN(id: number | string): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseGoodReceipt/apply-grn-update-salesorder`, { id });
+  }
+  reopenGRN(id: number | string): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseGoodReceipt/update`, { id, isClosed: false });
+  }
+  postGRNToInventory(data: any): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseGoodReceipt/update`, data);
+  }
+
+  // ── Supplier Invoice (PIN) ───────────────────────────
+  getSupplierInvoices(): Observable<any> {
+    return this.http.get(`${this.api}/SupplierInvoicePin/GetAll`);
+  }
+  getSupplierInvoiceById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/SupplierInvoicePin/GetById/${id}`);
+  }
+  createSupplierInvoice(data: any): Observable<any> {
+    return this.http.post(`${this.api}/SupplierInvoicePin/Create`, data);
+  }
+  updateSupplierInvoice(id: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.api}/SupplierInvoicePin/Update/${id}`, data);
+  }
+  deleteSupplierInvoice(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/SupplierInvoicePin/Delete/${id}`);
+  }
+  getThreeWayMatch(pinId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/SupplierInvoicePin/GetThreeWayMatch/${pinId}`);
+  }
+  postPinToAP(pinId: number | string): Observable<any> {
+    return this.http.post(`${this.api}/SupplierInvoicePin/PostToAp/${pinId}`, {});
+  }
+  getSupplierAdvanceByGrn(grnNos: string): Observable<any> {
+    return this.http.get(`${this.api}/finance/ap/supplier-advance-by-grn?grnNos=${grnNos}`);
+  }
+
+  // ── Debit Note ───────────────────────────────────────
+  getDebitNotes(): Observable<any> {
+    return this.http.get(`${this.api}/SupplierDebitNote/GetAll`);
+  }
+  getDebitNoteById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/SupplierDebitNote/GetById/${id}`);
+  }
+  getDebitNoteSourceByPin(pinId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/SupplierDebitNote/GetDebitNoteSource/${pinId}`);
+  }
+  createDebitNote(data: any): Observable<any> {
+    return this.http.post(`${this.api}/SupplierDebitNote/Create`, data);
+  }
+  updateDebitNote(id: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.api}/SupplierDebitNote/Update/${id}`, data);
+  }
+  deleteDebitNote(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/SupplierDebitNote/Delete/${id}`);
+  }
+
+  // ── Supplier Scorecard ───────────────────────────────
+  getScorecardReport(fromDate: string, toDate: string, supplierId?: number | string): Observable<any> {
+    let url = `${this.api}/SupplierScorecard/GetReport?fromDate=${fromDate}&toDate=${toDate}`;
+    if (supplierId) url += `&supplierId=${supplierId}`;
+    return this.http.get(url);
+  }
+
+  // ── Current User ─────────────────────────────────────
+  getCurrentUserProfile(userId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/User/view/${userId}`);
+  }
+
+  // ── Purchase Alerts ──────────────────────────────────
+  getPurchaseAlerts(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseAlert/unread`);
+  }
+  markAlertRead(id: number | string): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseAlert/${id}/read`, {});
+  }
+  markAllAlertsRead(): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseAlert/read-all`, {});
+  }
+
+  // ── Shared Lookups ───────────────────────────────────
+  getSuppliers(): Observable<any> {
+    return this.http.get(`${this.api}/Suppliers/getAllSupplier`);
+  }
+  getDepartments(): Observable<any> {
+    return this.http.get(`${this.api}/Department/getAll`);
+  }
+  getItems(): Observable<any> {
+    return this.http.get(`${this.api}/Item/GetItems`);
+  }
+  getUOMs(): Observable<any> {
+    return this.http.get(`${this.api}/Uom/GetUoms`);
+  }
+  getLocations(): Observable<any> {
+    return this.http.get(`${this.api}/Location/getAllLocationDetails`);
+  }
+  getWarehouses(): Observable<any> {
+    return this.http.get(`${this.api}/Warehouse/getAll`);
+  }
+  getWarehouseBins(warehouseId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/StockAdjustment/GetBinDetailsbywarehouseID/${warehouseId}`);
+  }
+  getPaymentTerms(): Observable<any> {
+    return this.http.get(`${this.api}/PaymentTerms/GetPaymentTerms`);
+  }
+  getCurrencies(): Observable<any> {
+    return this.http.get(`${this.api}/Currency/GetCurrencies`);
+  }
+  getIncoterms(): Observable<any> {
+    return this.http.get(`${this.api}/Incoterms/GetAllIncoterms`);
+  }
+  getTaxCodes(): Observable<any> {
+    return this.http.get(`${this.api}/TaxCode/getAll`);
+  }
+  getChartOfAccounts(): Observable<any> {
+    return this.http.get(`${this.api}/ChartOfAccount/GetChartOfAccounts`);
+  }
+  getExchangeRate(fromCurrencyId: number, toCurrencyId: number, rateDate: string): Observable<any> {
+    return this.http.get(`${this.api}/ExchangeRate/GetRate`, {
+      params: { fromCurrencyId: String(fromCurrencyId), toCurrencyId: String(toCurrencyId), rateDate }
+    });
+  }
+  getFlagIssues(): Observable<any> {
+    return this.http.get(`${this.api}/FlagIssues/GetAllFlagissue`);
+  }
+  checkPeriodLock(date: string): Observable<any> {
+    return this.http.get(`${this.api}/PeriodClose/GetStatusForDate?date=${date}`);
+  }
+  checkGstLock(date: string): Observable<any> {
+    return this.http.get(`${this.api}/GstLock/Check/${date}`);
+  }
+}

@@ -1,0 +1,170 @@
+<div class="pin-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <div class="header-actions">
+      <span class="status-badge" [class.posted]="isGlPosted">{{ isGlPosted ? 'GL Posted' : status }}</span>
+      <button class="btn btn-outline btn-sm" *ngIf="isEdit" (click)="loadThreeWayMatch()">&#9651; 3-Way Match</button>
+      <button class="btn btn-outline btn-sm" *ngIf="isEdit && !isGlPosted" [disabled]="posting" (click)="postToAP()">
+        <span class="btn-spinner" *ngIf="posting"></span>
+        {{ posting ? 'Posting…' : '&#128229; Post to A/P' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- GRN Selection -->
+    <div class="card section-card" *ngIf="!isGlPosted">
+      <div class="section-label-row">
+        <div class="section-label">Select GRN(s)</div>
+        <label class="toggle-chk">
+          <span class="toggle-box" [class.on]="combineMode" (click)="combineMode = !combineMode">
+            <svg *ngIf="combineMode" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+          </span>
+          <span>Combine multiple GRNs</span>
+        </label>
+      </div>
+      <erp-multiselect label="GRN(s)" [options]="grnOptions" [(ngModel)]="selectedGrnIds"
+        (ngModelChange)="onGrnSelect()" placeholder="Select GRN(s) to invoice"></erp-multiselect>
+    </div>
+
+    <!-- Header -->
+    <div class="card section-card">
+      <div class="section-label">Invoice Header</div>
+      <div class="form-row cols-3">
+        <erp-input label="Invoice No" [required]="true" [(ngModel)]="invoiceNo" placeholder="Supplier invoice number"></erp-input>
+        <erp-input label="Invoice Date" type="date" [(ngModel)]="invoiceDate" [disabled]="isGlPosted"></erp-input>
+        <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
+      </div>
+      <div class="form-row cols-3 block-gap">
+        <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="currencyId" [disabled]="isGlPosted"></erp-dropdown>
+        <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="isGlPosted"></erp-input>
+        <erp-input label="Tax %" type="number" [(ngModel)]="taxPct" (ngModelChange)="recalcLines()" [disabled]="isGlPosted"></erp-input>
+      </div>
+      <div class="form-row cols-2 block-gap">
+        <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="incotermsId" *ngIf="isOverseas" [disabled]="isGlPosted"></erp-dropdown>
+        <div class="toggle-field">
+          <label class="field-label">Partial Invoice</label>
+          <label class="toggle-chk">
+            <span class="toggle-box" [class.on]="isPartial" (click)="!isGlPosted && (isPartial = !isPartial)">
+              <svg *ngIf="isPartial" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+            </span>
+            <span>{{ isPartial ? 'Yes (partial)' : 'No' }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lines -->
+    <div class="card section-card">
+      <div class="section-label">Invoice Lines</div>
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Item</th>
+              <th>GRN Qty</th>
+              <th>Invoice Qty</th>
+              <th>Unit Price</th>
+              <th>Disc %</th>
+              <th>Tax Mode</th>
+              <th>Line Total</th>
+              <th>Tax Amt</th>
+              <th>Grand Total</th>
+              <th>Budget Line</th>
+              <th>DC Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of lines; let i = index">
+              <td class="row-num">{{ i + 1 }}</td>
+              <td>{{ l.itemName }}</td>
+              <td class="num-cell">{{ l.grnQty }}</td>
+              <td class="num-cell">
+                <erp-input type="number" [(ngModel)]="l.qty" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0"></erp-input>
+              </td>
+              <td class="num-cell">
+                <erp-input type="number" [(ngModel)]="l.unitPrice" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0.00"></erp-input>
+              </td>
+              <td class="num-cell">
+                <erp-input type="number" [(ngModel)]="l.discountPct" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0"></erp-input>
+              </td>
+              <td>
+                <erp-dropdown [options]="taxModeOptions" [(ngModel)]="l.taxMode" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted"></erp-dropdown>
+              </td>
+              <td class="num-cell">{{ l.lineTotal | number:'1.2-2' }}</td>
+              <td class="num-cell">{{ l.taxAmt | number:'1.2-2' }}</td>
+              <td class="num-cell">{{ l.lineGrandTotal | number:'1.2-2' }}</td>
+              <td>
+                <erp-dropdown [options]="ledgerOptions" [(ngModel)]="l.budgetLineId" [disabled]="isGlPosted" placeholder="Budget"></erp-dropdown>
+              </td>
+              <td>
+                <erp-input [(ngModel)]="l.dcNoteNo" placeholder="DC Note" [disabled]="isGlPosted"></erp-input>
+              </td>
+            </tr>
+            <tr *ngIf="!lines.length">
+              <td colspan="12" class="empty-lines">Select GRN(s) above to populate invoice lines</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="lines.length">
+            <tr class="total-foot">
+              <td colspan="7" style="text-align:right; padding: 8px 10px; font-size:11px; font-weight:700; color: var(--text-muted);">TOTALS</td>
+              <td class="num-cell">{{ subTotal | number:'1.2-2' }}</td>
+              <td class="num-cell">{{ totalTax | number:'1.2-2' }}</td>
+              <td class="num-cell" style="font-weight:700; color: var(--primary)">{{ grandTotal | number:'1.2-2' }}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3-Way Match Modal -->
+    <div class="match-overlay" *ngIf="showThreeWay" (click)="showThreeWay = false">
+      <div class="match-modal" (click)="$event.stopPropagation()">
+        <div class="match-header">
+          <span>3-Way Match Report</span>
+          <button class="btn-icon" (click)="showThreeWay = false">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+          </button>
+        </div>
+        <div class="match-body">
+          <table class="review-lines">
+            <thead><tr><th>Item</th><th>PO Qty</th><th>GRN Qty</th><th>Invoice Qty</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let m of threeWayMatch">
+                <td>{{ m.itemName }}</td>
+                <td>{{ m.poQty }}</td>
+                <td>{{ m.grnQty }}</td>
+                <td>{{ m.pinQty }}</td>
+                <td>
+                  <span class="match-badge" [class.ok]="m.matchStatus === 'OK'" [class.mismatch]="m.matchStatus !== 'OK'">
+                    {{ m.matchStatus }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <div class="footer-right" *ngIf="!isGlPosted">
+        <button class="btn btn-outline btn-sm" [disabled]="saving" (click)="submit(true)">Save as Draft</button>
+        <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit(false)">
+          <span class="btn-spinner" *ngIf="saving"></span>
+          {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update' : '&#10003; Post Invoice') }}
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</div>

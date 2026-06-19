@@ -6,10 +6,57 @@
       <span class="logo-text" *ngIf="sidebarOpen">Unity ERP</span>
     </div>
     <nav class="sidebar-nav">
-      <a class="nav-item" *ngFor="let m of menus" [routerLink]="m.route" routerLinkActive="active">
-        <span class="nav-icon">{{ m.icon }}</span>
-        <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
-      </a>
+      <ng-container *ngFor="let m of menus">
+        <button
+          *ngIf="m.children?.length; else singleMenu"
+          type="button"
+          class="nav-item nav-parent"
+          [class.active]="isMenuActive(m)"
+          [class.open]="isOpen(m)"
+          (click)="toggleMenu(m)">
+          <span class="nav-icon" [ngSwitch]="m.icon">
+            <span *ngSwitchCase="'home'">&#8962;</span>
+            <span *ngSwitchCase="'partners'">&#128101;</span>
+            <span *ngSwitchCase="'sales'">&#128722;</span>
+            <span *ngSwitchCase="'inventory'">&#128230;</span>
+            <span *ngSwitchCase="'components'">&#129513;</span>
+            <span *ngSwitchDefault>&#9679;</span>
+          </span>
+          <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
+          <span class="nav-caret" *ngIf="sidebarOpen">&#x25BE;</span>
+        </button>
+
+        <div class="submenu" *ngIf="m.children?.length && isOpen(m) && sidebarOpen">
+          <a
+            class="submenu-item"
+            *ngFor="let child of m.children"
+            [routerLink]="child.route"
+            [queryParams]="child.queryParams"
+            [class.active]="isChildActive(child)">
+            <span class="submenu-dot" [ngSwitch]="child.icon">
+              <span *ngSwitchCase="'customer'">&#128100;</span>
+              <span *ngSwitchCase="'supplier'">&#128666;</span>
+              <span *ngSwitchCase="'users'">&#128101;</span>
+              <span *ngSwitchDefault>&#9679;</span>
+            </span>
+            <span>{{ child.label }}</span>
+          </a>
+        </div>
+
+        <ng-template #singleMenu>
+          <a class="nav-item" [routerLink]="m.route" routerLinkActive="active">
+            <span class="nav-icon" [ngSwitch]="m.icon">
+              <span *ngSwitchCase="'home'">&#8962;</span>
+              <span *ngSwitchCase="'partners'">&#128101;</span>
+              <span *ngSwitchCase="'sales'">&#128722;</span>
+              <span *ngSwitchCase="'inventory'">&#128230;</span>
+              <span *ngSwitchCase="'components'">&#129513;</span>
+              <span *ngSwitchDefault>&#9679;</span>
+            </span>
+            <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
+          </a>
+        </ng-template>
+      </ng-container>
     </nav>
   </aside>
 
