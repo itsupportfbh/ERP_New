@@ -40,7 +40,7 @@ export class MultiselectDropdownComponent implements ControlValueAccessor {
   get displayText(): string {
     if (!this.selected.length) return '';
     if (this.selected.length <= 2)
-      return this.selected.map(v => this.options.find(o => o.value === v)?.label).join(', ');
+      return this.selected.map(v => this.options.find(o => this.sameValue(o.value, v))?.label).join(', ');
     return `${this.selected.length} selected`;
   }
 
@@ -71,10 +71,10 @@ export class MultiselectDropdownComponent implements ControlValueAccessor {
     };
   }
 
-  isSelected(val: any): boolean { return this.selected.includes(val); }
+  isSelected(val: any): boolean { return this.selected.some(v => this.sameValue(v, val)); }
 
   toggleOption(opt: DropdownOption): void {
-    const idx = this.selected.indexOf(opt.value);
+    const idx = this.selected.findIndex(v => this.sameValue(v, opt.value));
     if (idx >= 0) this.selected.splice(idx, 1);
     else this.selected.push(opt.value);
     this.onChange([...this.selected]);
@@ -99,4 +99,8 @@ export class MultiselectDropdownComponent implements ControlValueAccessor {
   registerOnChange(fn: any): void { this.onChange = fn; }
   registerOnTouched(fn: any): void { this.onTouched = fn; }
   setDisabledState(d: boolean): void { this.disabled = d; }
+
+  private sameValue(a: any, b: any): boolean {
+    return String(a ?? '') === String(b ?? '');
+  }
 }

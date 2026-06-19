@@ -1,0 +1,101 @@
+<div class="dn-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <span class="status-badge" [class.posted]="isPosted">{{ status }}</span>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Header -->
+    <div class="card section-card">
+      <div class="section-label">Debit Note Details</div>
+      <div class="form-row cols-3">
+        <erp-dropdown label="Supplier Invoice (PIN)" [required]="true" [options]="pinOptions"
+          [(ngModel)]="pinId" (ngModelChange)="onPinSelect()" placeholder="Select invoice" [disabled]="isPosted"></erp-dropdown>
+        <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
+        <erp-dropdown label="Reason" [required]="true" [options]="reasonOptions"
+          [(ngModel)]="reason" [disabled]="isPosted"></erp-dropdown>
+      </div>
+      <div class="form-row cols-3 block-gap">
+        <erp-input label="Reference No" [(ngModel)]="referenceNo" placeholder="Internal ref no" [disabled]="isPosted"></erp-input>
+        <erp-input label="Note Date" type="date" [(ngModel)]="noteDate" [disabled]="isPosted"></erp-input>
+        <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="true"></erp-input>
+      </div>
+      <div class="form-row cols-2 block-gap" *ngIf="currencyName || isOverseas">
+        <erp-input label="Currency" [(ngModel)]="currencyName" [disabled]="true"></erp-input>
+        <erp-input label="Incoterms" [(ngModel)]="incoterms" [disabled]="true" *ngIf="isOverseas"></erp-input>
+      </div>
+    </div>
+
+    <!-- Lines -->
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Debit Lines</div>
+        <button class="btn btn-outline btn-xs" (click)="addLine()" [disabled]="isPosted">+ Add Line</button>
+      </div>
+
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Item</th>
+              <th>Total Qty (Received)</th>
+              <th>Variance Qty *</th>
+              <th>Unit Price</th>
+              <th>Line Amount</th>
+              <th>Remarks</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of lines; let i = index">
+              <td class="row-num">{{ i + 1 }}</td>
+              <td class="item-name">{{ l.itemName || '—' }}</td>
+              <td class="num-cell">{{ l.totalQty }}</td>
+              <td class="num-cell">
+                <erp-input type="number" [(ngModel)]="l.varianceQty" (ngModelChange)="recalcLine(l)"
+                  placeholder="0" [disabled]="isPosted"></erp-input>
+              </td>
+              <td class="num-cell">
+                <erp-input type="number" [(ngModel)]="l.unitPrice" (ngModelChange)="recalcLine(l)"
+                  placeholder="0.00" [disabled]="isPosted"></erp-input>
+              </td>
+              <td class="num-cell">{{ l.lineAmount | number:'1.2-2' }}</td>
+              <td class="remarks-col">
+                <erp-input [(ngModel)]="l.remarks" placeholder="Remarks" [disabled]="isPosted"></erp-input>
+              </td>
+              <td class="del-col">
+                <button class="btn-icon danger" (click)="removeLine(i)" [disabled]="isPosted">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!lines.length">
+              <td colspan="8" class="empty-lines">Select a Supplier Invoice to populate lines, or add manually</td>
+            </tr>
+            <tr class="total-foot" *ngIf="lines.length">
+              <td colspan="5" style="text-align:right; padding:8px; font-weight:700; color:var(--text-muted);">Total Amount</td>
+              <td class="num-cell" style="font-weight:700; color:var(--primary)">{{ totalAmount | number:'1.2-2' }}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" [disabled]="saving || isPosted" (click)="submit()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update' : '&#10003; Save Debit Note') }}
+      </button>
+    </div>
+  </ng-container>
+</div>

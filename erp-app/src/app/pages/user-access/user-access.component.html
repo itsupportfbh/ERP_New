@@ -1,0 +1,305 @@
+<div class="wizard-page">
+
+  <!-- ── Page header ──────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+      <h2>{{ title }}</h2>
+    </div>
+  </div>
+
+  <!-- ── Step indicator ───────────────────────────── -->
+  <div class="step-bar">
+    <div class="step-item" [class.active]="step >= 1" [class.done]="step > 1" (click)="goStep(1)">
+      <div class="step-circle">
+        <svg *ngIf="step > 1" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1.5,5 3.8,7.5 8.5,2"/>
+        </svg>
+        <span *ngIf="step <= 1">1</span>
+      </div>
+      <span class="step-label">Account Details</span>
+    </div>
+
+    <div class="step-line" [class.done]="step > 1"></div>
+
+    <div class="step-item" [class.active]="step >= 2" [class.done]="step > 2" (click)="goStep(2)">
+      <div class="step-circle">
+        <svg *ngIf="step > 2" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1.5,5 3.8,7.5 8.5,2"/>
+        </svg>
+        <span *ngIf="step <= 2">2</span>
+      </div>
+      <span class="step-label">Permissions</span>
+    </div>
+
+    <div class="step-line" [class.done]="step > 2"></div>
+
+    <div class="step-item" [class.active]="step >= 3" (click)="goStep(3)">
+      <div class="step-circle"><span>3</span></div>
+      <span class="step-label">Review &amp; Submit</span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/>
+    </svg>
+    {{ error }}
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-row" *ngIf="loading">
+    <div class="spinner-sm"></div> Loading user details…
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       STEP 1 — ACCOUNT DETAILS
+  ═══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="step === 1 && !loading">
+
+    <div class="card section-card">
+      <div class="section-label">Account Information</div>
+      <div class="form-row cols-3">
+        <erp-input label="Username" [required]="true"
+                   [(ngModel)]="account.username" placeholder="Enter username">
+        </erp-input>
+        <erp-input label="Email" type="email" [required]="true"
+                   [(ngModel)]="account.email" placeholder="Enter email">
+        </erp-input>
+        <erp-dropdown
+          label="Status"
+          [options]="[{label:'Active',value:true},{label:'Inactive',value:false}]"
+          [(ngModel)]="account.isActive">
+        </erp-dropdown>
+      </div>
+
+      <div class="form-row cols-3 block-gap">
+        <erp-dropdown
+          label="Department"
+          placeholder="Select department"
+          [required]="true"
+          [options]="departmentOptions"
+          [(ngModel)]="account.departmentId">
+        </erp-dropdown>
+        <erp-dropdown
+          label="Location"
+          placeholder="Select location"
+          [required]="true"
+          [options]="locationOptions"
+          [(ngModel)]="account.locationId">
+        </erp-dropdown>
+        <erp-multiselect
+          label="Approval Levels (Roles)"
+          placeholder="Select roles…"
+          [options]="approvalLevelOptions"
+          [(ngModel)]="account.approvalLevelIds">
+        </erp-multiselect>
+      </div>
+    </div>
+
+    <div class="card section-card block-gap">
+      <div class="section-label">
+        {{ isEdit ? 'Change Password' : 'Set Password' }}
+      </div>
+
+      <!-- Edit mode: toggle -->
+      <div class="pwd-toggle" *ngIf="isEdit">
+        <label class="toggle-chk" (click)="editPassword = !editPassword">
+          <span class="toggle-box" [class.on]="editPassword">
+            <svg *ngIf="editPassword" viewBox="0 0 10 10" fill="none" stroke="#fff"
+                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1.5,5 3.8,7.5 8.5,2"/>
+            </svg>
+          </span>
+          Change password for this user
+        </label>
+      </div>
+
+      <div class="form-row cols-2" *ngIf="!isEdit || editPassword">
+        <erp-input
+          label="Password"
+          type="password"
+          [required]="!isEdit"
+          [placeholder]="isEdit ? 'Enter new password' : 'Set password'"
+          [(ngModel)]="account.password">
+        </erp-input>
+        <div class="pwd-hint-box">
+          <p class="pwd-rule">&#10003; Minimum 8 characters</p>
+          <p class="pwd-rule">&#10003; Uppercase &amp; lowercase letters</p>
+          <p class="pwd-rule">&#10003; At least one number</p>
+          <p class="pwd-rule">&#10003; At least one special character</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+    </div>
+  </ng-container>
+
+  <!-- ════════════════════════════════════════════════
+       STEP 2 — PERMISSIONS
+  ═══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="step === 2">
+
+    <div class="card perm-card">
+      <div class="perm-intro">
+        <div class="section-label">Roles &amp; Permissions</div>
+        <p class="perm-hint">
+          Configure which functions the user can access and what actions they can perform in each module.
+        </p>
+        <div class="flag-legend">
+          <span *ngFor="let f of permFlags" class="legend-item">
+            <b>{{ f.key }}</b>&nbsp;{{ f.label }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Module tabs -->
+      <div class="module-tabs">
+        <button *ngFor="let mod of modules"
+                class="module-tab"
+                [class.active]="activeModuleId === mod.id"
+                (click)="setModule(mod.id)">
+          <span class="mod-tab-name">{{ mod.title }}</span>
+          <span class="perm-dot" *ngIf="hasAnyPerm(mod.id)"></span>
+        </button>
+      </div>
+
+      <!-- Permission matrix table -->
+      <div class="perm-table-wrap">
+        <table class="perm-table">
+          <thead>
+            <tr>
+              <th class="fn-col">Function Name</th>
+              <th *ngFor="let f of permFlags" class="flag-col">
+                <div class="flag-head">
+                  <span class="flag-key">{{ f.key }}</span>
+                  <label class="flag-all-wrap" [title]="f.label">
+                    <input type="checkbox"
+                      class="flag-chk"
+                      [checked]="allChecked(f.key)"
+                      [indeterminate]="someChecked(f.key)"
+                      (change)="toggleModuleAll(f.key, $any($event.target).checked)" />
+                    <span class="all-label">All</span>
+                  </label>
+                </div>
+              </th>
+            </tr>
+            <tr class="flag-label-row">
+              <td class="fn-label-cell"></td>
+              <td *ngFor="let f of permFlags" class="flag-label-cell">{{ f.label }}</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of activeModuleRows" class="perm-row">
+              <td class="fn-name">{{ row.functionTitle }}</td>
+              <td *ngFor="let f of permFlags" class="flag-cell">
+                <label class="rpx-check-wrap">
+                  <input type="checkbox"
+                    [checked]="row.flags[f.key]"
+                    (change)="togglePerm(row, f.key)" />
+                  <span class="rpx-check-box"></span>
+                </label>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="perm-card-footer">
+        <button class="btn btn-outline btn-sm" (click)="resetPermissions()">
+          &#8635; Reset All
+        </button>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
+      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+    </div>
+  </ng-container>
+
+  <!-- ════════════════════════════════════════════════
+       STEP 3 — REVIEW & SUBMIT
+  ═══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="step === 3">
+
+    <div class="review-grid">
+
+      <!-- Account summary -->
+      <div class="card section-card">
+        <div class="section-label">Account Details</div>
+
+        <div class="review-row">
+          <span class="review-key">Username</span>
+          <span class="review-val">{{ account.username }}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-key">Email</span>
+          <span class="review-val">{{ account.email }}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-key">Department</span>
+          <span class="review-val">{{ getDepartmentName() }}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-key">Location</span>
+          <span class="review-val">{{ getLocationName() }}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-key">Roles</span>
+          <span class="review-val">{{ getRoleNames() }}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-key">Status</span>
+          <span class="review-val">
+            <span class="badge" [class.badge-success]="account.isActive" [class.badge-danger]="!account.isActive">
+              {{ account.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </span>
+        </div>
+        <div class="review-row" *ngIf="(!isEdit) || (isEdit && editPassword && account.password)">
+          <span class="review-key">Password</span>
+          <span class="review-val">••••••••</span>
+        </div>
+      </div>
+
+      <!-- Module permissions summary -->
+      <div class="card section-card">
+        <div class="section-label">Module Access</div>
+
+        <div class="mod-summary-row" *ngFor="let mod of modules">
+          <div class="mod-icon" [class.mod-enabled]="hasAnyPerm(mod.id)">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <rect x="2" y="2" width="12" height="12" rx="2"/>
+              <path *ngIf="hasAnyPerm(mod.id)" d="M5 8l2 2 4-4" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="mod-info">
+            <span class="mod-name">{{ mod.title }}</span>
+            <span class="mod-count">{{ getModulePermSummary(mod.id) }}</span>
+          </div>
+          <span class="mod-badge badge"
+            [class.badge-success]="hasAnyPerm(mod.id)"
+            [class.badge-default]="!hasAnyPerm(mod.id)">
+            {{ hasAnyPerm(mod.id) ? 'Enabled' : 'No Access' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
+      <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        <span>{{ saving ? 'Saving…' : (isEdit ? '&#10003; Update User' : '&#10003; Create User') }}</span>
+      </button>
+    </div>
+  </ng-container>
+
+</div>

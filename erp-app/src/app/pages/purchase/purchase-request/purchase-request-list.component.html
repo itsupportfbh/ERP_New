@@ -1,0 +1,20 @@
+<div class="list-page">
+  <div class="page-header">
+    <h2>Purchase Requests</h2>
+    <div class="header-actions">
+      <erp-input placeholder="Search PR…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+      <button class="btn btn-primary btn-sm" (click)="create()">+ New PR</button>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <erp-table
+      [columns]="columns"
+      [data]="filtered"
+      [loading]="loading"
+      [rowActions]="rowActions"
+      (rowClick)="onRowClick($event)"
+      (actionClick)="onAction($event)">
+    </erp-table>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<div class="match-page">
+  <div class="page-header">
+    <h2>Three-Way Match</h2>
+  </div>
+
+  <div class="card filter-card">
+    <div class="filter-row">
+      <erp-dropdown label="Supplier Invoice (PIN)" [options]="pinOptions"
+        [(ngModel)]="pinId" placeholder="Select invoice to validate"></erp-dropdown>
+      <erp-input placeholder="Search item…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+      <button class="btn btn-primary btn-sm" (click)="loadMatch()" [disabled]="!pinId || loading">
+        &#9651; Run Match
+      </button>
+    </div>
+  </div>
+
+  <!-- Results summary -->
+  <div class="match-summary" *ngIf="rows.length">
+    <div class="match-stat ok">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="2,8 6,12 14,4"/></svg>
+      <span>{{ okCount }} Matched</span>
+    </div>
+    <div class="match-stat mismatch">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+      <span>{{ mismatchCount }} Mismatch</span>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <erp-table [columns]="columns" [data]="filtered" [loading]="loading"></erp-table>
+  </div>
+</div>

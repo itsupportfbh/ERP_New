@@ -1,0 +1,41 @@
+<div class="scorecard-page">
+  <div class="page-header">
+    <h2>Supplier Scorecard</h2>
+  </div>
+
+  <!-- Filters -->
+  <div class="card filter-card">
+    <div class="filter-row">
+      <erp-input label="From Date" type="date" [(ngModel)]="fromDate"></erp-input>
+      <erp-input label="To Date" type="date" [(ngModel)]="toDate"></erp-input>
+      <erp-dropdown label="Supplier" [options]="supplierOptions" [(ngModel)]="supplierId" placeholder="All Suppliers"></erp-dropdown>
+      <erp-input placeholder="Search supplier…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+      <button class="btn btn-primary btn-sm filter-btn" (click)="load()">&#128269; Load Report</button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-cards" *ngIf="rows.length">
+    <div class="summary-card">
+      <span class="summary-val">{{ rows.length }}</span>
+      <span class="summary-label">Suppliers</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-val">{{ sumField('poCount') }}</span>
+      <span class="summary-label">Total POs</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-val">{{ avgField('fulfillmentPct') | number:'1.0-0' }}%</span>
+      <span class="summary-label">Avg Fulfillment</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-val">{{ avgField('overallScore') | number:'1.0-0' }}</span>
+      <span class="summary-label">Avg Score</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card table-card">
+    <erp-table [columns]="columns" [data]="filtered" [loading]="loading"></erp-table>
+  </div>
+</div>

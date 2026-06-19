@@ -1,0 +1,8 @@
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.match-page { display: flex; flex-direction: column; flex: 1; gap: 14px; padding: 0 0 24px; overflow-y: auto; }
+.page-header { display: flex; align-items: center; gap: 12px; padding: 10px 0 4px; flex-shrink: 0; h2 { margin: 0; } }
+.filter-card { padding: 14px 16px; flex-shrink: 0; }
+.filter-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.match-summary { display: flex; gap: 12px; flex-shrink: 0; }
+.match-stat { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; svg { width: 16px; height: 16px; } &.ok { background: rgba(72,199,142,0.12); color: #1a7a4a; border: 1px solid rgba(72,199,142,0.3); } &.mismatch { background: rgba(239,68,68,0.08); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); } }
+.table-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; }

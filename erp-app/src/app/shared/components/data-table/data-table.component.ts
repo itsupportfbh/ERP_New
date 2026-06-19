@@ -9,6 +9,12 @@ export interface TableColumn {
   badgeMap?: { [val: string]: 'success' | 'danger' | 'warning' | 'default' };
 }
 
+export interface RowAction {
+  key: string;
+  label: string;
+  btnClass?: string;
+}
+
 export interface SortState { key: string; dir: 'asc' | 'desc'; }
 
 @Component({
@@ -24,18 +30,25 @@ export class DataTableComponent implements OnChanges {
   @Input() loading = false;
   @Input() selectable = false;
   @Input() rowKey = 'id';
+  @Input() rowActions: RowAction[] = [];
   @Output() sortChange = new EventEmitter<SortState>();
   @Output() rowClick = new EventEmitter<any>();
   @Output() selectionChange = new EventEmitter<any[]>();
+  @Output() actionClick = new EventEmitter<{ action: string; row: any }>();
 
   sort: SortState = { key: '', dir: 'asc' };
   selectedRows = new Set<any>();
 
   ngOnChanges(): void { this.selectedRows.clear(); }
 
-  /** Total visible columns including optional checkbox column */
+  /** Total visible columns including optional checkbox and action columns */
   get totalCols(): number {
-    return this.columns.length + (this.selectable ? 1 : 0);
+    return this.columns.length + (this.selectable ? 1 : 0) + (this.rowActions.length ? 1 : 0);
+  }
+
+  onAction(key: string, row: any, e: Event): void {
+    e.stopPropagation();
+    this.actionClick.emit({ action: key, row });
   }
 
   /**

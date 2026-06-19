@@ -1,0 +1,12 @@
+<div class="list-page">
+  <div class="page-header">
+    <h2>Supplier Debit Notes</h2>
+    <div class="header-actions">
+      <erp-input placeholder="Search debit note…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+      <button class="btn btn-primary btn-sm" (click)="create()">+ New Debit Note</button>
+    </div>
+  </div>
+  <div class="card table-card">
+    <erp-table [columns]="columns" [data]="filtered" [loading]="loading" (rowClick)="onRowClick($event)"></erp-table>
+  </div>
+</div>

@@ -1,0 +1,54 @@
+<div class="list-page">
+  <div class="page-header">
+    <h2>Purchase Orders</h2>
+    <div class="header-actions">
+      <erp-input placeholder="Search PO…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+
+      <!-- Alert bell -->
+      <button class="btn btn-outline btn-sm alert-btn" (click)="showAlerts = !showAlerts; loadAlerts()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <path d="M10 2a6 6 0 0 0-6 6v3l-1.5 2.5h15L16 11V8a6 6 0 0 0-6-6z"/>
+          <path d="M8.5 17a1.5 1.5 0 0 0 3 0"/>
+        </svg>
+        Alerts
+        <span class="alert-count" *ngIf="alerts.length > 0">{{ alerts.length }}</span>
+      </button>
+
+      <button class="btn btn-primary btn-sm" (click)="create()">+ New PO</button>
+    </div>
+  </div>
+
+  <!-- Alerts panel -->
+  <div class="alerts-panel card" *ngIf="showAlerts">
+    <div class="alerts-header">
+      <strong>Purchase Alerts</strong>
+      <div class="alerts-actions">
+        <button class="btn btn-outline btn-xs" (click)="loadAlerts()" [disabled]="alertsLoading">Refresh</button>
+        <button class="btn btn-outline btn-xs" (click)="markAllAlertsRead()" *ngIf="alerts.length">Mark All Read</button>
+        <button class="btn btn-icon" (click)="showAlerts = false" title="Close">&#10005;</button>
+      </div>
+    </div>
+    <div class="alerts-loading" *ngIf="alertsLoading"><div class="spinner-sm"></div> Loading…</div>
+    <div class="alerts-empty" *ngIf="!alertsLoading && alerts.length === 0">No unread alerts</div>
+    <div class="alert-item" *ngFor="let a of alerts">
+      <div class="alert-msg">
+        <strong>{{ a.itemName }}</strong> — {{ a.message }}
+        <span class="alert-meta" *ngIf="a.supplierName">Supplier: {{ a.supplierName }}</span>
+        <span class="alert-meta" *ngIf="a.warehouseName">Warehouse: {{ a.warehouseName }}</span>
+        <span class="alert-meta">Qty: {{ a.requiredQty }}</span>
+      </div>
+      <button class="btn btn-outline btn-xs" (click)="markAlertRead(a.id, $event)">Mark Read</button>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <erp-table
+      [columns]="columns"
+      [data]="filtered"
+      [loading]="loading"
+      [rowActions]="rowActions"
+      (rowClick)="onRowClick($event)"
+      (actionClick)="onAction($event)">
+    </erp-table>
+  </div>
+</div>

@@ -1,0 +1,103 @@
+<div class="grn-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <div class="header-actions" *ngIf="isEdit">
+      <button class="btn btn-outline btn-sm" *ngIf="!isClosed" (click)="closeGrn()">&#x2713; Close GRN</button>
+      <button class="btn btn-outline btn-sm" *ngIf="isClosed" (click)="reopenGrn()">&#8635; Reopen GRN</button>
+      <span class="status-badge" [class.closed]="isClosed">{{ isClosed ? 'Closed' : 'Open' }}</span>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Header -->
+    <div class="card section-card">
+      <div class="section-label">Receipt Header</div>
+      <div class="form-row cols-3">
+        <erp-dropdown label="Purchase Order" [required]="true" [options]="poOptions"
+          [(ngModel)]="poId" (ngModelChange)="onPoChange()" placeholder="Select PO"></erp-dropdown>
+        <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
+        <erp-input label="Receipt Date" type="date" [(ngModel)]="receiptDate"></erp-input>
+      </div>
+      <div class="form-row cols-2 block-gap">
+        <erp-input label="Invoice Number" [(ngModel)]="invoiceNo" placeholder="Supplier invoice no"></erp-input>
+        <erp-input label="Over-Receipt Tolerance %" type="number" [(ngModel)]="overReceiptTolerance" placeholder="e.g. 5"></erp-input>
+      </div>
+    </div>
+
+    <!-- Lines -->
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Receipt Lines</div>
+        <button class="btn btn-outline btn-xs" (click)="addLine()" [disabled]="isClosed">+ Add Line</button>
+      </div>
+
+      <div class="lines-wrap">
+        <div class="grn-line-card" *ngFor="let line of lines; let i = index" [class.posted]="line.isPosted">
+          <div class="line-header">
+            <span class="line-num">#{{ i + 1 }}</span>
+            <span class="item-title">{{ line.itemName || 'Item ' + (i + 1) }}</span>
+            <span class="posted-badge" *ngIf="line.isPosted">&#10003; Posted</span>
+            <button class="btn btn-outline btn-xs" *ngIf="isEdit && !line.isPosted"
+              (click)="postToInventory(line, i)">&#128229; Post</button>
+            <button class="btn-icon danger" *ngIf="!isClosed && !line.isPosted" (click)="removeLine(i)">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+            </button>
+          </div>
+
+          <div class="line-grid">
+            <div class="form-row cols-3">
+              <erp-dropdown label="Warehouse" [options]="warehouseOptions" [(ngModel)]="line.warehouseId"
+                (ngModelChange)="onWarehouseChange(line)" placeholder="Select warehouse" [disabled]="line.isPosted"></erp-dropdown>
+              <erp-dropdown label="Bin / Location" [options]="getBinOptions(line.warehouseId)"
+                [(ngModel)]="line.binId" placeholder="Select bin" [disabled]="line.isPosted"></erp-dropdown>
+              <erp-dropdown label="Quality Check" [options]="qualityCheckOptions"
+                [(ngModel)]="line.qualityCheck" [disabled]="line.isPosted"></erp-dropdown>
+            </div>
+            <div class="form-row cols-4 block-gap">
+              <erp-input label="Qty Ordered" type="number" [(ngModel)]="line.qtyOrdered" [disabled]="true"></erp-input>
+              <erp-input label="Qty Received *" type="number" [(ngModel)]="line.qtyReceived" placeholder="0" [disabled]="line.isPosted"></erp-input>
+              <erp-input label="Unit Price" type="number" [(ngModel)]="line.unitPrice" placeholder="0.00" [disabled]="line.isPosted"></erp-input>
+              <erp-dropdown label="Flag Issue" [options]="flagIssueOptions" [(ngModel)]="line.flagIssueId" placeholder="None"></erp-dropdown>
+            </div>
+            <div class="form-row cols-3 block-gap">
+              <erp-input label="Batch No" [(ngModel)]="line.batchNo" placeholder="Batch number"></erp-input>
+              <erp-input label="Serial No" [(ngModel)]="line.serialNo" placeholder="Serial number"></erp-input>
+              <erp-input label="Expiry Date" type="date" [(ngModel)]="line.expiryDate"></erp-input>
+            </div>
+            <div class="form-row cols-2 block-gap">
+              <erp-input label="Remarks" [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
+              <div class="toggle-field">
+                <label class="field-label">Partial Receipt</label>
+                <label class="toggle-chk">
+                  <span class="toggle-box" [class.on]="line.isPartial" (click)="!line.isPosted && (line.isPartial = !line.isPartial)">
+                    <svg *ngIf="line.isPartial" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+                  </span>
+                  <span>{{ line.isPartial ? 'Yes (partial)' : 'No' }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-lines" *ngIf="!lines.length">
+          Select a Purchase Order or click "+ Add Line" to start.
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" [disabled]="saving || isClosed" (click)="submit()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update GRN' : '&#10003; Save GRN') }}
+      </button>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,218 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+      <h2>{{ title }}</h2>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" [disabled]="saving || loading" (click)="save()">&#10003; Save</button>
+    </div>
+  </div>
+
+  <div class="error-text" *ngIf="error">{{ error }}</div>
+
+  <div class="customer-steps" *ngIf="type === 'customers'">
+    <button [class.active]="customerStep === 1" (click)="customerStep = 1">1 Account</button>
+    <button [class.active]="customerStep === 2" (click)="nextCustomerStep()">2 Commercial</button>
+    <button [class.active]="customerStep === 3" (click)="customerStep = 3">3 KYC</button>
+  </div>
+
+  <div class="card section-card" *ngIf="type === 'customers' && customerStep === 1">
+    <div class="section-label">Account Details</div>
+    <div class="form-row cols-4">
+      <erp-input label="Customer Name" [required]="true" [(ngModel)]="customer.customerName"></erp-input>
+      <erp-input label="Customer Code" [(ngModel)]="customer.customerCode"></erp-input>
+      <erp-dropdown label="Country" [required]="true" [options]="countryOptions" [(ngModel)]="customer.countryId" (ngModelChange)="onCustomerCountryChange($event)"></erp-dropdown>
+      <erp-dropdown label="Location" [required]="true" [options]="locationOptions" [(ngModel)]="customer.locationId"></erp-dropdown>
+    </div>
+    <div class="form-row cols-4 block-gap">
+      <erp-input label="Contact Person" [required]="true" [(ngModel)]="customer.contactPerson"></erp-input>
+      <erp-input label="Email" type="email" [(ngModel)]="customer.email"></erp-input>
+      <erp-input label="Phone" [(ngModel)]="customer.phone"></erp-input>
+      <erp-input label="Tax Reg No" [(ngModel)]="customer.taxRegNo"></erp-input>
+    </div>
+    <div class="form-row cols-2 block-gap">
+      <label class="textarea-field">
+        <span>Address</span>
+        <textarea [(ngModel)]="customer.address" rows="3"></textarea>
+      </label>
+    </div>
+    <div class="wizard-inline-actions">
+      <button class="btn btn-primary btn-sm" (click)="nextCustomerStep()">Next</button>
+    </div>
+  </div>
+
+  <div class="card section-card" *ngIf="type === 'customers' && customerStep === 2">
+    <div class="section-label">Commercial Details</div>
+    <div class="form-row cols-4">
+      <erp-dropdown label="Customer Group" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"></erp-dropdown>
+      <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="customer.paymentTermId"></erp-dropdown>
+      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
+      <erp-input label="Credit Amount" type="number" [(ngModel)]="customer.creditAmount"></erp-input>
+    </div>
+    <div class="form-row cols-4 block-gap">
+      <erp-dropdown label="Status" [options]="statusOptions" [(ngModel)]="customer.statusId"></erp-dropdown>
+    </div>
+    <div class="wizard-inline-actions">
+      <button class="btn btn-outline btn-sm" (click)="prevCustomerStep()">Back</button>
+      <button class="btn btn-primary btn-sm" (click)="nextCustomerStep()">Next</button>
+    </div>
+  </div>
+
+  <div class="card section-card" *ngIf="type === 'customers' && customerStep === 3">
+    <div class="section-label">Know Your Customer (KYC)</div>
+    <div class="kyc-status" *ngIf="kycLocked">KYC is already approved. Existing documents are locked.</div>
+    <div class="kyc-grid">
+      <label class="file-card">
+        <span>Driving Licence</span>
+        <img *ngIf="kycPreview.drivingLicence" [src]="kycPreview.drivingLicence" alt="">
+        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'drivingLicence')">
+      </label>
+      <label class="file-card">
+        <span>Utility Bill</span>
+        <img *ngIf="kycPreview.utilityBill" [src]="kycPreview.utilityBill" alt="">
+        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'utilityBill')">
+      </label>
+      <label class="file-card">
+        <span>Bank Statement</span>
+        <img *ngIf="kycPreview.bankStatement" [src]="kycPreview.bankStatement" alt="">
+        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'bankStatement')">
+      </label>
+      <label class="file-card">
+        <span>Company Registration (ACRA)</span>
+        <img *ngIf="kycPreview.acra" [src]="kycPreview.acra" alt="">
+        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'acra')">
+      </label>
+    </div>
+    <div class="form-row cols-4 block-gap">
+      <erp-dropdown label="Approved By" [disabled]="kycLocked" [options]="approvalLevelOptions" [(ngModel)]="customer.approvedBy"></erp-dropdown>
+    </div>
+    <div class="wizard-inline-actions">
+      <button class="btn btn-outline btn-sm" (click)="prevCustomerStep()">Back</button>
+    </div>
+  </div>
+
+  <div class="card section-card" *ngIf="type === 'suppliers'">
+    <div class="section-label">Supplier Details</div>
+    <div class="form-row cols-4">
+      <erp-input label="Supplier Name" [required]="true" [(ngModel)]="supplier.name"></erp-input>
+      <erp-input label="Supplier Code" [(ngModel)]="supplier.code"></erp-input>
+      <erp-dropdown label="Country" [options]="countryOptions" [(ngModel)]="supplier.countryId"></erp-dropdown>
+      <erp-dropdown label="Status" [options]="statusOptions" [(ngModel)]="supplier.statusId"></erp-dropdown>
+    </div>
+    <div class="form-row cols-4 block-gap">
+      <erp-input label="Lead Time" type="number" [(ngModel)]="supplier.leadTime"></erp-input>
+      <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="supplier.termsId"></erp-dropdown>
+      <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="supplier.currencyId" (ngModelChange)="onSupplierCurrencyChange($event)"></erp-dropdown>
+      <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="supplier.incotermsId"></erp-dropdown>
+    </div>
+    <div class="form-row cols-4 block-gap">
+      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
+      <erp-input label="Contact" [(ngModel)]="supplier.contact"></erp-input>
+      <erp-input label="Email" type="email" [(ngModel)]="supplier.email"></erp-input>
+      <erp-input label="Phone" [(ngModel)]="supplier.phone"></erp-input>
+    </div>
+    <div class="form-row cols-2 block-gap">
+      <erp-input label="Tax Reg" [(ngModel)]="supplier.taxReg"></erp-input>
+      <erp-multiselect label="Preferred Items" [options]="itemOptions" [(ngModel)]="supplierPreferredItemIds"></erp-multiselect>
+    </div>
+    <div class="exchange-note" *ngIf="supplier.currencyId">
+      <span *ngIf="exchangeRateLoading">Fetching exchange rate...</span>
+      <span *ngIf="!exchangeRateLoading && exchangeRate !== null">Exchange Rate: {{ exchangeRate | number:'1.4-4' }}</span>
+      <span *ngIf="!exchangeRateLoading && exchangeRate === null">No exchange rate found. Add it in Exchange Rate Master.</span>
+    </div>
+    <label class="textarea-field full-width block-gap">
+      <span>Address</span>
+      <textarea [(ngModel)]="supplier.address" rows="3"></textarea>
+    </label>
+  </div>
+
+  <div class="card section-card" *ngIf="type === 'suppliers'">
+    <div class="section-label">Bank &amp; Compliance</div>
+    <div class="form-row cols-4">
+      <erp-input label="Bank Name" [(ngModel)]="supplier.bankName"></erp-input>
+      <erp-input label="Account No" [(ngModel)]="supplier.bankAcc"></erp-input>
+      <erp-input label="SWIFT" [(ngModel)]="supplier.bankSwift"></erp-input>
+      <erp-input label="Branch" [(ngModel)]="supplier.bankBranch"></erp-input>
+    </div>
+    <div class="docs-list block-gap">
+      <div class="doc-row" *ngFor="let doc of supplierDocs; let i = index">
+        <erp-input label="Document" [(ngModel)]="doc.name"></erp-input>
+        <erp-input label="Number" [(ngModel)]="doc.number"></erp-input>
+        <erp-input label="Expiry" type="date" [(ngModel)]="doc.expiry"></erp-input>
+        <label class="doc-upload">
+          <span>Upload</span>
+          <input type="file" multiple (change)="onSupplierDocFiles($event, i)">
+        </label>
+        <button class="btn btn-outline btn-sm" type="button" (click)="removeSupplierDoc(i)">Remove</button>
+        <div class="file-chip-row" *ngIf="doc.files.length">
+          <button class="file-chip" type="button" *ngFor="let file of doc.files; let fileIndex = index" (click)="removeSupplierDocFile(i, fileIndex)">
+            {{ file.name }} x
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" type="button" (click)="addSupplierDoc()">+ Add document</button>
+    </div>
+  </div>
+
+  <!-- User Details -->
+  <div class="card section-card" *ngIf="type === 'users'">
+    <div class="section-label">User Details</div>
+    <div class="form-row cols-4">
+      <erp-input label="Username" [required]="true" [(ngModel)]="user.username"></erp-input>
+      <erp-input label="Email" type="email" [required]="true" [(ngModel)]="user.email"></erp-input>
+      <erp-input
+        label="Password"
+        type="password"
+        [required]="!isEdit"
+        [placeholder]="isEdit ? 'Leave blank to keep current' : ''"
+        [(ngModel)]="user.password">
+      </erp-input>
+      <erp-dropdown
+        label="Status"
+        [options]="userStatusOptions"
+        [(ngModel)]="user.isActive">
+      </erp-dropdown>
+    </div>
+
+    <div class="form-row cols-2 block-gap">
+      <erp-dropdown
+        label="Department"
+        placeholder="Select department"
+        [required]="true"
+        [options]="departmentOptions"
+        [(ngModel)]="user.departmentId">
+      </erp-dropdown>
+      <erp-dropdown
+        label="Location"
+        placeholder="Select location"
+        [required]="true"
+        [options]="locationOptions"
+        [(ngModel)]="user.locationId">
+      </erp-dropdown>
+    </div>
+  </div>
+
+  <!-- Roles & Permissions -->
+  <div class="card section-card" *ngIf="type === 'users'">
+    <div class="section-label">Roles &amp; Permissions</div>
+    <p class="section-hint" *ngIf="approvalLevelOptions.length === 0">
+      Loading approval levels…
+    </p>
+    <div class="roles-grid" *ngIf="approvalLevelOptions.length > 0">
+      <label class="role-item" *ngFor="let opt of approvalLevelOptions"
+             [class.role-selected]="user.approvalLevelIds && user.approvalLevelIds.includes(+opt.value)"
+             (click)="toggleRole(+opt.value)">
+        <span class="role-check">
+          <svg *ngIf="user.approvalLevelIds && user.approvalLevelIds.includes(+opt.value)"
+               viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1.5,5 3.8,7.5 8.5,2"/>
+          </svg>
+        </span>
+        <span class="role-name">{{ opt.label }}</span>
+      </label>
+    </div>
+  </div>
+</div>

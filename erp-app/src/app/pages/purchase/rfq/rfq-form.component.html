@@ -1,0 +1,173 @@
+<div class="rfq-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" [disabled]="saving" (click)="save()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : '&#128190; Save' }}
+      </button>
+      <button class="btn btn-primary btn-sm" [disabled]="sending" (click)="send()">
+        <span class="btn-spinner" *ngIf="sending"></span>
+        {{ sending ? 'Sending…' : '&#9993; Send RFQ' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+  <div class="alert-success" *ngIf="successMsg">&#10003; {{ successMsg }}</div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn" [class.active]="activeTab === 'setup'" (click)="activeTab = 'setup'">Setup</button>
+    <button class="tab-btn" [class.active]="activeTab === 'quotes'" (click)="activeTab = 'quotes'">Quote Grid</button>
+    <button class="tab-btn" [class.active]="activeTab === 'winners'" (click)="activeTab = 'winners'">Winners</button>
+  </div>
+
+  <!-- SETUP TAB -->
+  <ng-container *ngIf="activeTab === 'setup'">
+    <!-- Header -->
+    <div class="card section-card">
+      <div class="section-label">RFQ Settings</div>
+      <div class="form-row cols-2">
+        <erp-input label="Valid Until" type="date" [(ngModel)]="validUntil"></erp-input>
+        <erp-dropdown label="Send Via" [options]="sendViaOptions" [(ngModel)]="sendVia"></erp-dropdown>
+      </div>
+    </div>
+
+    <!-- Suppliers -->
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Suppliers</div>
+        <button class="btn btn-outline btn-xs" (click)="addSupplier()">+ Add Supplier</button>
+      </div>
+      <table class="lines-table">
+        <thead><tr><th>#</th><th>Supplier Name *</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let s of suppliers; let i = index">
+            <td class="row-num">{{ i + 1 }}</td>
+            <td><erp-input [(ngModel)]="s.name" placeholder="Supplier name"></erp-input></td>
+            <td><erp-input type="email" [(ngModel)]="s.email" placeholder="email@supplier.com"></erp-input></td>
+            <td><erp-input [(ngModel)]="s.phone" placeholder="+65 0000 0000"></erp-input></td>
+            <td class="del-col">
+              <button class="btn-icon danger" (click)="removeSupplier(i)">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="!suppliers.length"><td colspan="5" class="empty-lines">Add at least one supplier</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Items -->
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Items Required</div>
+        <button class="btn btn-outline btn-xs" (click)="addItem()">+ Add Item</button>
+      </div>
+      <table class="lines-table">
+        <thead><tr><th>#</th><th>Item *</th><th>Qty *</th><th>UOM</th><th>Remarks</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let item of items; let i = index">
+            <td class="row-num">{{ i + 1 }}</td>
+            <td class="item-col">
+              <erp-dropdown [options]="itemOptions" [(ngModel)]="item.itemId"
+                placeholder="Select item" (ngModelChange)="onItemSelect(item)"></erp-dropdown>
+            </td>
+            <td class="qty-col"><erp-input type="number" [(ngModel)]="item.quantity" placeholder="0"></erp-input></td>
+            <td class="uom-col"><erp-dropdown [options]="uomOptions" [(ngModel)]="item.uomId" placeholder="UOM"></erp-dropdown></td>
+            <td class="remarks-col"><erp-input [(ngModel)]="item.remarks" placeholder="Remarks"></erp-input></td>
+            <td class="del-col">
+              <button class="btn-icon danger" (click)="removeItem(i)">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="!items.length"><td colspan="6" class="empty-lines">Add items to quote</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- QUOTE GRID TAB -->
+  <ng-container *ngIf="activeTab === 'quotes'">
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Quote Entry — Enter prices per supplier per item</div>
+        <button class="btn btn-primary btn-sm" (click)="calculateWinners()">&#9733; Calculate Winners</button>
+      </div>
+
+      <div class="quote-grid-wrap">
+        <table class="quote-grid" *ngIf="suppliers.length && items.length">
+          <thead>
+            <tr>
+              <th class="item-head">Item / Qty</th>
+              <th *ngFor="let s of suppliers">{{ s.name || 'Supplier ' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of items; let iIdx = index">
+              <td class="item-head-cell">
+                <div class="item-label">{{ item.itemName || getItemLabel(item.itemId) }}</div>
+                <div class="qty-label">Qty: {{ item.quantity }}</div>
+              </td>
+              <td *ngFor="let s of suppliers; let sIdx = index">
+                <erp-input type="number"
+                  [ngModel]="getQuotePrice(sIdx, iIdx)"
+                  (ngModelChange)="setQuotePrice(sIdx, iIdx, $event ? +$event : null)"
+                  placeholder="0.00">
+                </erp-input>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="empty-quote" *ngIf="!suppliers.length || !items.length">
+          Add suppliers and items in the Setup tab first.
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- WINNERS TAB -->
+  <ng-container *ngIf="activeTab === 'winners'">
+    <div class="card section-card">
+      <div class="section-label">Winner Summary</div>
+
+      <div class="empty-lines" *ngIf="!winners.length">
+        No winners calculated yet. Go to Quote Grid tab and click "Calculate Winners".
+      </div>
+
+      <table class="review-lines" *ngIf="winners.length">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Best Supplier</th>
+            <th>Best Price</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let w of winners; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ w.itemName }}</td>
+            <td>{{ w.quantity }}</td>
+            <td>{{ w.bestSupplierName }}</td>
+            <td>{{ w.bestPrice | number:'1.2-2' }}</td>
+            <td>{{ w.amount | number:'1.2-2' }}</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="5" style="text-align:right; font-weight:700;">Total</td>
+            <td style="font-weight:700;">{{ winnerTotal | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>

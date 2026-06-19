@@ -33,7 +33,7 @@ export class DropdownComponent implements ControlValueAccessor {
   constructor(private el: ElementRef) {}
 
   get selectedLabel(): string {
-    return this.options.find(o => o.value === this.value)?.label ?? '';
+    return this.options.find(o => this.sameValue(o.value, this.value))?.label ?? '';
   }
 
   toggle(): void {
@@ -89,4 +89,8 @@ export class DropdownComponent implements ControlValueAccessor {
   registerOnChange(fn: any): void { this.onChange = fn; }
   registerOnTouched(fn: any): void { this.onTouched = fn; }
   setDisabledState(d: boolean): void { this.disabled = d; }
+
+  private sameValue(a: any, b: any): boolean {
+    return String(a ?? '') === String(b ?? '');
+  }
 }

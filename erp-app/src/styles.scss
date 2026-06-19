@@ -92,6 +92,13 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
   &:hover:not(:disabled) { background: #b91c1c; }
 }
 
+.btn-success {
+  background: var(--success);
+  color: #fff;
+  border-color: var(--success);
+  &:hover:not(:disabled) { background: #15803d; }
+}
+
 .btn-sm { padding: 3px 10px; font-size: 11px; }
 
 .btn-group { display: flex; gap: 6px; }
