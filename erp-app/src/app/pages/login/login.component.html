@@ -214,19 +214,19 @@
 
       <form (ngSubmit)="onLogin()" autocomplete="on">
 
-        <!-- Username -->
+        <!-- Email -->
         <div class="f-group">
-          <label class="f-label">Username</label>
+          <label class="f-label">Email</label>
           <div class="f-control" [class.is-focused]="uFocus" [class.is-error]="error">
             <div class="f-icon">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                <path d="M17 17v-1.5A3.5 3.5 0 0 0 13.5 12h-7A3.5 3.5 0 0 0 3 15.5V17"/>
-                <circle cx="10" cy="6" r="3.5"/>
+                <rect x="2" y="5" width="16" height="12" rx="2"/>
+                <path d="M2 7l8 5 8-5"/>
               </svg>
             </div>
-            <input type="text" [(ngModel)]="username" name="username"
-                   placeholder="Enter your username"
-                   autocomplete="username"
+            <input type="email" [(ngModel)]="email" name="email"
+                   placeholder="Enter your email"
+                   autocomplete="email"
                    (focus)="uFocus=true" (blur)="uFocus=false"/>
           </div>
         </div>
@@ -295,11 +295,29 @@
 
       </form>
 
-      <div class="f-demo">
-        Use <code>admin</code> / <code>admin123</code> to demo
-      </div>
-
     </div>
   </div>
 
+</div>
+
+<!-- Company Selection Modal -->
+<div class="company-overlay" *ngIf="showCompanySelect">
+  <div class="company-modal">
+    <h2 class="company-title">Select Company</h2>
+    <p class="company-sub">Your account is linked to multiple companies. Please select one to continue.</p>
+
+    <div class="company-list">
+      <label class="company-item" *ngFor="let c of companies" [class.selected]="selectedCompanyId === c.companyId">
+        <input type="radio" name="company" [value]="c.companyId" [(ngModel)]="selectedCompanyId"/>
+        <span class="company-name">{{ c.companyName }}</span>
+      </label>
+    </div>
+
+    <div class="f-error" *ngIf="error" style="margin-top:12px">{{ error }}</div>
+
+    <button class="f-submit" [disabled]="loading || !selectedCompanyId" (click)="selectCompany()">
+      <span class="btn-spinner" *ngIf="loading"></span>
+      <span class="btn-label">{{ loading ? 'Signing in…' : 'Continue' }}</span>
+    </button>
+  </div>
 </div>
