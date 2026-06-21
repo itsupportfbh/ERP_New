@@ -1,13 +1,5 @@
 <div class="page-container">
   <div class="page-header">
-    <div class="header-left">
-      <h2>Business Partners</h2>
-      <div class="segment">
-        <button [class.active]="activeTab === 'customers'" (click)="switchTab('customers')">Customers</button>
-        <button [class.active]="activeTab === 'suppliers'" (click)="switchTab('suppliers')">Suppliers</button>
-        <button [class.active]="activeTab === 'users'" (click)="switchTab('users')">Users</button>
-      </div>
-    </div>
     <div class="btn-group">
       <button class="btn btn-outline btn-sm" (click)="load()">Refresh</button>
       <button class="btn btn-outline btn-sm" [disabled]="selectedRows.length !== 1" (click)="edit()">Edit</button>
@@ -35,7 +27,10 @@
       [loading]="loading"
       [selectable]="true"
       [rowKey]="rowKey"
+      [rowActions]="rowActions"
+      rowActionsHeader="Action"
       (rowClick)="onRowClick($event)"
+      (actionClick)="onActionClick($event)"
       (selectionChange)="onSelection($event)"
       (sortChange)="onSort($event)">
     </erp-table>

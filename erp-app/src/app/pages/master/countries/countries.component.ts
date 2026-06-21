@@ -5,6 +5,7 @@ import { MasterService } from '../../../core/services/master.service';
 export class CountriesComponent implements OnInit {
   items: any[] = []; loading = false; isFormVisible = false; isEditMode = false; selectedId: any = null; message = ''; isError = false;
   showDeleteModal = false; itemToDelete: any = null;
+  showResultPopup = false; popupIsSuccess = false; popupMessage = '';
   form: { countryName: string; gstPercentage: number | null } = { countryName: '', gstPercentage: null };
   constructor(private masterSvc: MasterService) {}
   ngOnInit(): void { this.load(); }
@@ -16,11 +17,11 @@ export class CountriesComponent implements OnInit {
   onSubmit(): void {
     if (!this.form.countryName?.trim()) { this.message = 'Country Name is required.'; this.isError = true; return; }
     const obs = this.isEditMode ? this.masterSvc.updateCountry({ ...this.form, id: this.selectedId }) : this.masterSvc.createCountry(this.form);
-    obs.subscribe({ next: () => { this.message = this.isEditMode ? 'Updated.' : 'Created.'; this.isError = false; this.cancel(); this.load(); }, error: () => { this.message = 'Save failed.'; this.isError = true; } });
+    obs.subscribe({ next: (res: any) => { this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || (this.isEditMode ? 'Updated successfully.' : 'Created successfully.'); this.showResultPopup = true; if (res?.isSuccess !== false) { this.cancel(); this.load(); } }, error: (err: any) => { this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Save failed. Please try again.'; this.showResultPopup = true; } });
   }
   openDelete(item: any): void { this.itemToDelete = item; this.showDeleteModal = true; }
   confirmDelete(): void {
     if (!this.itemToDelete) return;
-    this.masterSvc.deleteCountry(this.itemToDelete.id).subscribe({ next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); }, error: () => { this.message = 'Delete failed.'; this.isError = true; this.showDeleteModal = false; } });
+    this.masterSvc.deleteCountry(this.itemToDelete.id).subscribe({ next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } }, error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; } });
   }
 }

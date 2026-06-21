@@ -1,0 +1,27 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>Stock Transfer</h2>
+    <div class="btn-group">
+    </div>
+  </div>
+
+  <div class="card table-section">
+    <div class="table-search-bar">
+      <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search SKU / Item / Warehouse / Status"/>
+    </div>
+    <erp-table
+      [columns]="columns"
+      [data]="tableData"
+      [loading]="false"
+      [rowActions]="rowActions"
+      (actionClick)="onAction($event)">
+    </erp-table>
+    <erp-pager
+      [totalItems]="filteredRows.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </erp-pager>
+  </div>
+</div>

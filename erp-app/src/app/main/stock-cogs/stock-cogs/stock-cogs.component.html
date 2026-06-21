@@ -1,0 +1,164 @@
+<ng-container *ngIf="isPermissionLoaded; else loadingTemplate">
+  <ng-container *ngIf="canView(); else noAccessTemplate">
+    <div class="page-container">
+
+      <div class="page-header">
+        <h2>Stock COGS</h2>
+        <span class="text-muted" style="font-size:12px">Inventory COGS / Consumption Report</span>
+      </div>
+
+      <!-- KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0">
+        <div class="card" style="padding:14px 18px">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Opening Stock</div>
+          <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px">{{ money(report?.summary?.openingStock ?? 0) }}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Before period</div>
+        </div>
+        <div class="card" style="padding:14px 18px">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Purchases</div>
+          <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px">{{ money(report?.summary?.purchases ?? 0) }}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">GRN in selected period</div>
+        </div>
+        <div class="card" style="padding:14px 18px">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Closing Stock</div>
+          <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px">{{ money(report?.summary?.closingStock ?? 0) }}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Stock up to period end</div>
+        </div>
+        <div class="card" style="padding:14px 18px">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">COGS</div>
+          <div style="font-size:22px;font-weight:700;color:var(--primary);margin-top:4px">{{ money(report?.summary?.cogs ?? 0) }}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Opening + Purchases − Closing</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="padding:14px 16px;flex-shrink:0">
+        <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+          <div class="mf-group" style="margin:0;min-width:160px">
+            <label class="mf-label">From Date</label>
+            <input class="mf-input" type="date" [(ngModel)]="fromDate"/>
+          </div>
+          <div class="mf-group" style="margin:0;min-width:160px">
+            <label class="mf-label">To Date</label>
+            <input class="mf-input" type="date" [(ngModel)]="toDate"/>
+          </div>
+          <div class="mf-group" style="margin:0;min-width:200px">
+            <label class="mf-label">Warehouse</label>
+            <select class="mf-select" [(ngModel)]="warehouseId">
+              <option [ngValue]="null">All Warehouses</option>
+              <option *ngFor="let w of warehouseList" [ngValue]="w.id">{{ w.name }}</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" (click)="load()" [disabled]="loading">
+            {{ loading ? 'Loading...' : 'Load COGS' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- COGS Table -->
+      <div class="card table-section">
+        <div class="table-search-bar">
+          <div style="display:flex;gap:4px">
+            <button class="cogs-tab-btn" [class.active]="activeTab==='table'" (click)="setTab('table')">Table</button>
+            <button class="cogs-tab-btn" [class.active]="activeTab==='formula'" (click)="setTab('formula')">Formula</button>
+          </div>
+          <span style="font-size:13px;font-weight:600;color:var(--text);margin-left:8px">COGS Summary</span>
+          <div style="flex:1"></div>
+          <input class="table-search-input" [(ngModel)]="search" placeholder="Search item..."/>
+          <button class="export-btn export-btn--pdf" (click)="exportToPdf()" [disabled]="!rows?.length || !canExport()">&#128196; PDF</button>
+          <button class="export-btn export-btn--excel" (click)="exportToExcel()" [disabled]="!rows?.length || !canExport()">&#128202; Excel</button>
+        </div>
+
+        <div *ngIf="activeTab==='table'" style="flex:1;min-height:0;overflow:auto">
+          <table class="dt-table" style="width:100%">
+            <colgroup>
+              <col style="width:44px">
+              <col>
+              <col style="width:110px">
+              <col style="width:120px">
+              <col style="width:110px">
+              <col style="width:130px">
+              <col style="width:110px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th></th>
+                <th>ITEM <span class="sort-arr">⇅</span></th>
+                <th style="text-align:right">CLOSING QTY <span class="sort-arr">⇅</span></th>
+                <th>UOM</th>
+                <th style="text-align:right">AVG COST <span class="sort-arr">⇅</span></th>
+                <th style="text-align:right">TOTAL CLOSING <span class="sort-arr">⇅</span></th>
+                <th style="text-align:right">COGS <span class="sort-arr">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <ng-container *ngFor="let r of rows">
+                <tr>
+                  <td style="text-align:center;padding:8px">
+                    <button class="expand-btn" type="button" (click)="toggleRow(r.itemId)">
+                      {{ expandedRow === r.itemId ? '−' : '+' }}
+                    </button>
+                  </td>
+                  <td>
+                    <div style="font-weight:500;font-size:13px">{{ r.itemName || r.itemText || r.itemCode || ('Item #' + r.itemId) }}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">#{{ r.itemId }}<span *ngIf="r.itemCode"> · {{ r.itemCode }}</span></div>
+                  </td>
+                  <td style="text-align:right">{{ formatQty(r.closingQty) }}</td>
+                  <td>{{ r.purchaseUomName || '-' }}</td>
+                  <td style="text-align:right">{{ money(r.avgCost) }}</td>
+                  <td style="text-align:right;font-weight:600">{{ money(r.closingValue) }}</td>
+                  <td style="text-align:right;font-weight:600;color:var(--primary)">{{ money(r.cogsValue) }}</td>
+                </tr>
+                <tr *ngIf="expandedRow === r.itemId" style="background:var(--bg)">
+                  <td colspan="7" style="padding:12px 20px">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:8px 20px;font-size:12px">
+                      <div><div style="color:var(--text-muted)">Opening Qty</div><div style="font-weight:600;margin-top:2px">{{ formatQty(r.openingQty) }} {{ r.purchaseUomName }}</div></div>
+                      <div><div style="color:var(--text-muted)">Purchase Qty</div><div style="font-weight:600;margin-top:2px">{{ formatQty(r.purchaseQty) }} {{ r.purchaseUomName }}</div></div>
+                      <div><div style="color:var(--text-muted)">Closing Qty</div><div style="font-weight:600;margin-top:2px">{{ formatQty(r.closingQty) }} {{ r.purchaseUomName }}</div></div>
+                      <div><div style="color:var(--text-muted)">Consumed Qty</div><div style="font-weight:600;margin-top:2px">{{ formatQty(r.issueQty) }} {{ r.purchaseUomName }}</div></div>
+                      <div><div style="color:var(--text-muted)">Opening Value</div><div style="font-weight:600;margin-top:2px">{{ money(r.openingValue) }}</div></div>
+                      <div><div style="color:var(--text-muted)">Purchase Value</div><div style="font-weight:600;margin-top:2px">{{ money(r.purchaseValue) }}</div></div>
+                      <div><div style="color:var(--text-muted)">Closing Value</div><div style="font-weight:600;margin-top:2px">{{ money(r.closingValue) }}</div></div>
+                      <div><div style="color:var(--text-muted)">COGS</div><div style="font-weight:700;margin-top:2px;color:var(--primary)">{{ money(r.cogsValue) }}</div></div>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
+              <tr *ngIf="!(rows?.length)">
+                <td colspan="7" class="dt-empty">No data. Select date range and click Load COGS.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="activeTab==='formula'" style="padding:36px;text-align:center">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">Formula</div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:22px 28px;display:inline-block;text-align:left;min-width:300px">
+            <div style="font-size:12.5px;color:var(--text-muted)">COGS = Opening Stock + Purchases − Closing Stock</div>
+            <div style="font-size:15px;color:var(--text);margin-top:10px">
+              = {{ money(report?.summary?.openingStock ?? 0) }}
+              + {{ money(report?.summary?.purchases ?? 0) }}
+              − {{ money(report?.summary?.closingStock ?? 0) }}
+            </div>
+            <div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+              = {{ money(report?.summary?.cogs ?? 0) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+</ng-container>
+
+<ng-template #loadingTemplate>
+  <div class="page-container">
+    <div class="alert-msg">Loading permission...</div>
+  </div>
+</ng-template>
+
+<ng-template #noAccessTemplate>
+  <div class="page-container">
+    <div class="alert-msg is-error">You do not have permission to view this screen.</div>
+  </div>
+</ng-template>

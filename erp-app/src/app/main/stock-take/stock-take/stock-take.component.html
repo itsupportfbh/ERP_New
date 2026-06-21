@@ -1,0 +1,234 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <h2>{{ stockTakeId ? 'Edit Stock Take' : 'Create Stock Take' }}</h2>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" type="button" (click)="goToStockTakeList()">Cancel</button>
+      <button class="btn btn-primary btn-sm" type="button" (click)="onSave(1)">Save</button>
+    </div>
+  </div>
+
+  <!-- Header form -->
+  <div class="card">
+    <div class="form-panel">
+      <div class="form-row cols-4">
+        <div>
+          <label class="fc-label">Stock Take Date</label>
+          <input class="fc-input" type="date" [(ngModel)]="stockTakeDate" disabled />
+        </div>
+        <div>
+          <label class="fc-label">Warehouse <span style="color:red">*</span></label>
+          <ng-select class="fc-ng" [items]="warehouseTypes" bindLabel="name" bindValue="id"
+            [(ngModel)]="warehouseTypeId" placeholder="Select warehouse"
+            [clearable]="false" appendTo="body">
+          </ng-select>
+        </div>
+        <div>
+          <label class="fc-label">Supplier <span style="font-size:11px;color:var(--text-muted)">(blank = ALL)</span></label>
+          <ng-select class="fc-ng" [items]="supplierList" bindLabel="name" bindValue="id"
+            [(ngModel)]="supplierId" (ngModelChange)="onSupplierChanged($event)"
+            placeholder="ALL Suppliers" [clearable]="true" appendTo="body">
+          </ng-select>
+        </div>
+        <div>
+          <label class="fc-label">Type <span style="font-size:11px;color:var(--text-muted)">(blank = ALL)</span></label>
+          <ng-select class="fc-ng" [items]="strategies" bindLabel="strategyName" bindValue="id"
+            [(ngModel)]="strategyId" (ngModelChange)="onTypeChanged($event)"
+            placeholder="ALL Types" [clearable]="true" [disabled]="strategyCheck" appendTo="body">
+          </ng-select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-primary btn-sm" type="button" (click)="onSubmit()">Load Items</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lines table -->
+  <div class="card st-card">
+    <div class="table-search-bar">
+      <span style="font-size:13px;font-weight:600;color:var(--text)">Stock Take Lines</span>
+    </div>
+    <div class="st-table-wrap">
+      <table class="dt-table st-table">
+        <colgroup>
+          <col style="width:11%"><!-- Location -->
+          <col style="width:7%"> <!-- Supplier -->
+          <col style="width:11%"><!-- Item -->
+          <col style="width:8%"> <!-- Barcode -->
+          <col style="width:6%"> <!-- Purchase UOM -->
+          <col style="width:9%"> <!-- Accepted Qty -->
+          <col style="width:5%"> <!-- Base UOM -->
+          <col style="width:9%"> <!-- Faulty Qty -->
+          <col style="width:5%"> <!-- Base UOM -->
+          <col style="width:11%"><!-- Reason -->
+          <col style="width:18%"><!-- Remarks -->
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Location</th>
+            <th>Supplier</th>
+            <th>Item</th>
+            <th>Barcode</th>
+            <th>Purch. UOM</th>
+            <th style="text-align:right">Accepted Qty</th>
+            <th>Base UOM</th>
+            <th style="text-align:right">Faulty Qty</th>
+            <th>Base UOM</th>
+            <th>Reason</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of lines; let i = index">
+            <td>
+              <ng-select class="fc-ng-sm" [items]="LocationTypes" bindLabel="binName" bindValue="id"
+                [(ngModel)]="r.binId" placeholder="Location" [disabled]="true" appendTo="body">
+              </ng-select>
+            </td>
+            <td class="st-text">{{ r.supplierName || 'ALL' }}</td>
+            <td>
+              <ng-select class="fc-ng-sm" [items]="itemList" bindLabel="itemName" bindValue="id"
+                [(ngModel)]="r.itemId" placeholder="Item" [disabled]="true" appendTo="body">
+              </ng-select>
+            </td>
+            <td>
+              <input class="fc-tbl-input" type="text" [(ngModel)]="r.barcode"
+                (ngModelChange)="onCheckReview()" placeholder="Barcode" />
+            </td>
+            <td class="st-uom">{{ r.purchaseUomName || '-' }}</td>
+            <td>
+              <input class="fc-tbl-input" type="number" [(ngModel)]="r.countedQty"
+                (ngModelChange)="onCountChange(r)" min="0" step="0.0001" placeholder="0"
+                style="text-align:right" />
+              <div *ngIf="r._error" class="st-err">{{ r._error }}</div>
+            </td>
+            <td class="st-uom">{{ r.baseUomName || '-' }}</td>
+            <td>
+              <input class="fc-tbl-input" type="number" [(ngModel)]="r.badCountedQty"
+                (ngModelChange)="onUnCountChange(r)" min="0" step="0.0001" placeholder="0"
+                style="text-align:right" />
+            </td>
+            <td class="st-uom">{{ r.baseUomName || '-' }}</td>
+            <td>
+              <ng-select class="fc-ng-sm" [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
+                [(ngModel)]="r.reasonId" placeholder="Reason" (change)="onCheckReview()" appendTo="body">
+              </ng-select>
+            </td>
+            <td>
+              <textarea class="fc-tbl-input st-remarks" [(ngModel)]="r.remarks"
+                (ngModelChange)="onCheckReview()" placeholder="Remarks" rows="1"></textarea>
+            </td>
+          </tr>
+          <tr *ngIf="!lines.length">
+            <td colspan="11" class="dt-empty">
+              No items loaded. Select filters above and click Load Items.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Stock Review Variance -->
+  <div class="card st-card">
+    <div class="table-search-bar st-review-toggle" (click)="toggleStockReview()">
+      <span style="font-size:13px;font-weight:600;color:var(--text)">Stock Review Variance</span>
+      <svg class="st-caret" [style.transform]="showStockReview ? 'rotate(180deg)' : 'none'"
+           viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="5 8 10 13 15 8"/>
+      </svg>
+    </div>
+
+    <ng-container *ngIf="showStockReview">
+      <div class="st-review-bar">
+        <label class="st-select-all">
+          <input #chkSelectAllRef type="checkbox" [(ngModel)]="selectAllReview" (change)="toggleSelectAllReview()" />
+          Select all
+        </label>
+      </div>
+
+      <div class="st-table-wrap">
+        <table class="dt-table st-table st-review-table">
+          <colgroup>
+            <col style="width:3%">  <!-- checkbox -->
+            <col style="width:8%">  <!-- Location -->
+            <col style="width:6%">  <!-- Supplier -->
+            <col style="width:9%">  <!-- Item -->
+            <col style="width:5%">  <!-- Barcode -->
+            <col style="width:5%">  <!-- Purchase Qty -->
+            <col style="width:5%">  <!-- Purchase UOM -->
+            <col style="width:5%">  <!-- OnHand -->
+            <col style="width:4%">  <!-- Base UOM -->
+            <col style="width:5%">  <!-- OnHand Fault -->
+            <col style="width:5%">  <!-- Accepted Qty -->
+            <col style="width:5%">  <!-- Faulty Qty -->
+            <col style="width:5%">  <!-- Total Qty -->
+            <col style="width:5%">  <!-- Variance -->
+            <col style="width:10%"> <!-- Reason -->
+            <col style="width:15%"> <!-- Remarks -->
+          </colgroup>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Location</th>
+              <th>Supplier</th>
+              <th>Item</th>
+              <th>Barcode</th>
+              <th style="text-align:right">Purch Qty</th>
+              <th>Purch UOM</th>
+              <th style="text-align:right">OnHand</th>
+              <th>Base UOM</th>
+              <th style="text-align:right">Fault</th>
+              <th style="text-align:right">Accepted</th>
+              <th style="text-align:right">Faulty</th>
+              <th style="text-align:right">Total</th>
+              <th style="text-align:right">Variance</th>
+              <th>Reason</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of reviewRows">
+              <td style="text-align:center">
+                <input type="checkbox" [(ngModel)]="r.selected" (change)="onRowSelectedChanged()" />
+              </td>
+              <td class="st-text">{{ r.binName || getBinName(r.binId) }}</td>
+              <td class="st-text">{{ r.supplierName || 'ALL' }}</td>
+              <td class="st-text">{{ r.itemName || getItemName(r.itemId) }}</td>
+              <td class="st-text">{{ r.barcode || '-' }}</td>
+              <td style="text-align:right">{{ toNum(r.purchaseQty) }}</td>
+              <td class="st-uom">{{ r.purchaseUomName || '-' }}</td>
+              <td style="text-align:right">{{ toNum(r.onHand) }}</td>
+              <td class="st-uom">{{ r.baseUomName || '-' }}</td>
+              <td style="text-align:right">{{ toNum(r.badOnHand) }}</td>
+              <td style="text-align:right">{{ toNum(r.countedQty) }}</td>
+              <td style="text-align:right">{{ toNum(r.badCountedQty) }}</td>
+              <td style="text-align:right">{{ getTotalQty(r) }}</td>
+              <td style="text-align:right" [style.color]="getVariance(r) >= 0 ? '#16a34a' : '#ef4444'">
+                {{ signed(getVariance(r)) }}
+              </td>
+              <td>
+                <ng-select class="fc-ng-sm" [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
+                  [(ngModel)]="r.reasonId" placeholder="Reason" appendTo="body">
+                </ng-select>
+              </td>
+              <td>
+                <textarea class="fc-tbl-input st-remarks" [(ngModel)]="r.remarks"
+                  placeholder="Remarks" rows="1"></textarea>
+              </td>
+            </tr>
+            <tr *ngIf="!reviewRows.length">
+              <td colspan="16" class="dt-empty">No lines to review.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+        <button class="btn btn-primary btn-sm" type="button" (click)="onSaveStockReview(2)">Approved</button>
+      </div>
+    </ng-container>
+  </div>
+
+</div>

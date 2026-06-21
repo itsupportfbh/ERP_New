@@ -1,0 +1,93 @@
+/* Table — fixed layout, no horizontal scroll */
+.shd-table-wrap { overflow: visible; }
+
+.shd-table {
+  width: 100%;
+  table-layout: fixed;
+
+  th {
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  td {
+    white-space: normal;
+    word-break: break-word;
+    font-size: 12px;
+  }
+}
+
+/* Print */
+@media print {
+  .page-header .btn-group,
+  .table-search-bar select,
+  .card:has(.fc-ng),
+  .card:has(ng-select) { display: none !important; }
+
+  .shd-table-wrap { overflow: visible !important; }
+
+  .shd-table {
+    font-size: 10px !important;
+
+    th, td { padding: 5px 4px !important; font-size: 10px !important; }
+  }
+
+  .shd-badge { border: 1px solid #ccc !important; background: none !important; color: #000 !important; }
+  .shd-avatar { background: #444 !important; }
+}
+
+/* Item avatar */
+.shd-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Item chips */
+.shd-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Stock status */
+.shd-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--primary-pale);
+  color: var(--primary);
+  &.shd-ok  { background: #dcfce7; color: #16a34a; }
+  &.shd-low { background: #fef9c3; color: #d97706; }
+  &.shd-zero{ background: #fee2e2; color: #dc2626; }
+}
+
+/* Transaction type badges */
+.shd-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--primary-pale);
+  color: var(--primary);
+  &.shd-grn   { background: #dcfce7; color: #16a34a; }
+  &.shd-sales { background: #dbeafe; color: #2563eb; }
+  &.shd-adj   { background: #fef9c3; color: #d97706; }
+  &.shd-xfer  { background: var(--primary-pale); color: var(--primary); }
+}

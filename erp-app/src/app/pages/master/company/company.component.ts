@@ -50,6 +50,7 @@ export class CompanyComponent implements OnInit {
   // Delete
   showDeleteModal = false;
   itemToDelete: any = null;
+  showResultPopup = false; popupIsSuccess = false; popupMessage = '';
 
   // Forms
   general = blankGeneral();
@@ -259,8 +260,8 @@ export class CompanyComponent implements OnInit {
   confirmDelete(): void {
     if (!this.itemToDelete) return;
     this.masterSvc.deleteCompany(this.itemToDelete.id).subscribe({
-      next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); },
-      error: () => { this.message = 'Delete failed.'; this.isError = true; this.showDeleteModal = false; }
+      next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } },
+      error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; }
     });
   }
 }

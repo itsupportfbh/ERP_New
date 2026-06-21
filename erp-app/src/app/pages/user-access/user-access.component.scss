@@ -6,7 +6,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 0 40px;
+  padding: 16px 16px 40px;
   gap: 14px;
 }
 
@@ -466,6 +466,7 @@
 }
 
 @media (max-width: 768px) {
+  .wizard-page { padding: 10px 10px 28px; }
   .review-grid { grid-template-columns: 1fr; }
   .step-label  { display: none; }
 }

@@ -11,7 +11,7 @@
         <col *ngIf="selectable" style="width:32px" />
         <!-- Equal width for every column — 100% / N, no fixed px so it auto-fills viewport -->
         <col *ngFor="let col of columns" />
-        <col *ngIf="rowActions.length" style="width:1px" />
+        <col *ngIf="rowActions.length" [style.width]="actionColWidth" />
       </colgroup>
 
       <thead>
@@ -31,7 +31,12 @@
               (click)="onSort(col)">
             {{ col.header }}<span class="sort-icon" *ngIf="col.sortable">{{ sortIcon(col) }}</span>
           </th>
-          <th *ngIf="rowActions.length" [style.padding]="cellPad"></th>
+          <th *ngIf="rowActions.length"
+              class="th-actions"
+              [style.padding]="cellPad"
+              [style.fontSize]="headerFontSize">
+            {{ rowActionsHeader }}
+          </th>
         </tr>
       </thead>
 
@@ -66,10 +71,21 @@
             </ng-container>
           </td>
           <td *ngIf="rowActions.length" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="white-space:nowrap">
-            <button *ngFor="let act of rowActions"
-              class="btn-icon {{ act.btnClass ?? '' }}"
-              [title]="act.label"
-              (click)="onAction(act.key, row, $event)">{{ act.label }}</button>
+            <div style="display:flex;gap:4px;align-items:center">
+              <ng-container *ngFor="let act of rowActions">
+                <button class="dt-icon-btn"
+                  [class.view]="act.key==='view'"
+                  [class.edit]="act.key==='edit'"
+                  [class.del]="act.key==='delete'"
+                  [title]="act.label"
+                  (click)="onAction(act.key, row, $event)">
+                  <svg *ngIf="act.key==='view'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg>
+                  <svg *ngIf="act.key==='edit'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3l3 3-9.5 9.5H4v-3.5L14 3z"/></svg>
+                  <svg *ngIf="act.key==='delete'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+                  <span *ngIf="act.key!=='view' && act.key!=='edit' && act.key!=='delete'" style="font-size:11px;font-weight:600">{{ act.label }}</span>
+                </button>
+              </ng-container>
+            </div>
           </td>
         </tr>
 

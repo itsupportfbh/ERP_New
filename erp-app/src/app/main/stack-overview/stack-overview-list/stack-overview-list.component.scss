@@ -1,0 +1,15 @@
+
+/* Keep headers crisp and on-brand */
+/* NGX Datatable header: dark bar + white labels */
+.item-table .datatable-header {
+  background: #2E5F73 !important;
+  color: #fff !important;
+}
+
+.item-table .datatable-header .datatable-header-cell,
+.item-table .datatable-header .datatable-header-cell .datatable-header-cell-label,
+.item-table .datatable-header .datatable-header-cell .sort-btn,
+.item-table .datatable-header .datatable-header-cell .resize-handle {
+  color: #fff !important;
+  fill: #fff !important;   /* sort icon */
+}

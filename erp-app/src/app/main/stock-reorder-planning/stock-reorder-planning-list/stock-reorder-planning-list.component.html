@@ -1,0 +1,112 @@
+<div *ngIf="isPermissionLoaded; else loadingTemplate" class="page-container">
+  <ng-container *ngIf="canView(); else noAccessTemplate">
+    <div class="page-header">
+      <h2>Stock Reorder Planning</h2>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="openCreate()" [disabled]="isPeriodLocked">+ Add</button>
+      </div>
+    </div>
+
+    <div class="card table-section">
+      <div class="table-search-bar">
+        <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search Warehouse / Method"/>
+      </div>
+      <erp-table
+        [columns]="columns"
+        [data]="tableData"
+        [loading]="false"
+        [rowActions]="rowActions"
+        (actionClick)="onAction($event)">
+      </erp-table>
+      <erp-pager
+        [totalItems]="filteredRows.length"
+        [pageSize]="pageSize"
+        [currentPage]="currentPage"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)">
+      </erp-pager>
+    </div>
+  </ng-container>
+</div>
+
+<!-- Lines Modal -->
+<div *ngIf="showLinesModal"
+     (click)="closeLinesModal()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:1000px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eef2f7;">
+      <h3 style="margin:0;font-size:20px;line-height:1.2;font-weight:700;color:#374151;">Reorder &rarr; Purchase Request Lines</h3>
+      <button (click)="closeLinesModal()" aria-label="Close"
+              style="border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;">×</button>
+    </div>
+
+    <div style="padding:16px 20px;">
+      <div style="max-height:60vh;overflow:auto;border:1px solid #eef2f7;border-radius:10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#111827;">
+          <thead>
+            <tr style="background:#2E5F73;color:#fff;">
+              <th style="padding:10px 12px;">PR No</th>
+              <th style="padding:10px 12px;">Item</th>
+              <th style="padding:10px 12px;">Requested Qty</th>
+              <th style="padding:10px 12px;">On Hand</th>
+              <th style="padding:10px 12px;">Min</th>
+              <th style="padding:10px 12px;">Max</th>
+              <th style="padding:10px 12px;">Reorder Qty</th>
+              <th style="padding:10px 12px;">Location</th>
+              <th style="padding:10px 12px; white-space:nowrap;">Delivery Date</th>
+              <th style="padding:10px 12px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of modalLines; let i = index"
+                [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
+                style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 12px;">{{ l.prNo }}</td>
+              <td style="padding:10px 12px;">{{ l.itemCode ? (l.itemCode + ' - ' + l.itemName) : l.itemName }}</td>
+              <td style="padding:10px 12px; text-align:right;">{{ l.requestedQty }}</td>
+              <td style="padding:10px 12px; text-align:right;">{{ l.onHand }}</td>
+              <td style="padding:10px 12px; text-align:right;">{{ l.min }}</td>
+              <td style="padding:10px 12px; text-align:right;">{{ l.max }}</td>
+              <td style="padding:10px 12px; text-align:right;">{{ l.reorderQty }}</td>
+              <td style="padding:10px 12px;">{{ l.location }}</td>
+              <td style="padding:10px 12px;">{{ l.deliveryDate }}</td>
+              <td style="padding:10px 12px;">
+                <span class="erp-badge"
+                      [ngClass]="{'badge-draft': l.status === 1, 'badge-approved': l.status === 2, 'badge-posted': l.status === 3}">
+                  {{ l.status === 1 ? 'Draft' : l.status === 2 ? 'Approved' : 'Posted' }}
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="!modalLines?.length">
+              <td colspan="10" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #eef2f7;">
+      <button (click)="closeLinesModal()"
+              style="background:#2E5F73;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<ng-template #loadingTemplate>
+  <div class="content-wrapper p-0">
+    <div class="content-body">
+      <div class="alert alert-info mt-2">Loading permission...</div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #noAccessTemplate>
+  <div class="content-wrapper p-0">
+    <div class="content-body">
+      <div class="alert alert-warning mt-2">You do not have permission to view this screen.</div>
+    </div>
+  </div>
+</ng-template>

@@ -1,0 +1,141 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h2>
+      Stock Overview
+      <span *ngIf="selectedMrId" style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px">
+        MRQ: {{ selectedMrNo || ('MRQ-' + selectedMrId) }}
+      </span>
+      <span *ngIf="selectedMrId && shortageCount>0" style="font-size:12px;font-weight:500;color:var(--warning);margin-left:8px">
+        &#9888; Shortage: {{ shortageCount }}
+      </span>
+    </h2>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" type="button" (click)="goToStockOverviewList()">← List</button>
+      <button class="btn btn-primary btn-sm" type="button" [disabled]="!canTransfer()" (click)="submitTransfer()">Transfer</button>
+    </div>
+  </div>
+
+  <!-- Options card -->
+  <div class="card">
+    <div class="form-panel">
+      <div class="im-sec-head" style="margin-bottom:16px">
+        <div class="im-sec-icon"><i class="fas fa-sliders-h"></i></div>
+        <div>
+          <div class="im-sec-title">Options</div>
+          <div class="im-sec-sub">
+            Select MRQ + Warehouse, system will auto bind destination.
+            <span *ngIf="loading" style="margin-left:8px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin"></i> Loading…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row cols-3">
+        <div>
+          <label class="fc-label">Material Requisition</label>
+          <ng-select class="fc-ng" [items]="mrList" bindLabel="display" bindValue="id"
+            placeholder="Select MRQ" [(ngModel)]="selectedMrId"
+            (ngModelChange)="onMrChanged($event)" appendTo="body">
+          </ng-select>
+        </div>
+        <div>
+          <label class="fc-label">Destination Warehouse</label>
+          <input class="fc-input" [value]="destinationOutletName || ''" readonly placeholder="Auto from MRQ" />
+        </div>
+        <div>
+          <label class="fc-label">Destination Bin</label>
+          <input class="fc-input" [value]="destinationBinName || ''" readonly placeholder="Auto from MRQ" />
+        </div>
+      </div>
+
+      <div class="form-row cols-2" style="margin-top:12px">
+        <div>
+          <label class="fc-label">From Warehouse</label>
+          <ng-select class="fc-ng" [items]="fromOutletOptions" bindLabel="label" bindValue="id"
+            [compareWith]="compareById" placeholder="Select From Warehouse"
+            [(ngModel)]="selectedFromOutletId" (ngModelChange)="onFromOutletChanged($event)" appendTo="body">
+            <ng-template ng-option-tmp let-item="item">
+              <div style="font-size:13px;font-weight:600;color:var(--text)">{{ item.name }}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+                Req Base Qty: <b>{{ item.reqQty }}</b> &bull; On Hand: <b>{{ item.onHand }}</b>
+              </div>
+            </ng-template>
+            <ng-template ng-label-tmp let-item="item">
+              {{ item.name }} &mdash; Req: {{ item.reqQty }} / On Hand: {{ item.onHand }}
+            </ng-template>
+          </ng-select>
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Transfer will use selected From Warehouse.</small>
+        </div>
+        <div>
+          <label class="fc-label">Selected From Warehouse</label>
+          <input class="fc-input" [value]="selectedFromOutletName || ''" readonly placeholder="Select From Warehouse" />
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">
+            This Warehouse stock rows will be shown below.
+            <ng-container *ngIf="selectedFromOutletId && mrLines?.length">
+              &bull; Transferable Lines: <b>{{ transferableLineCount }}</b>
+            </ng-container>
+          </small>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && errorMsg" style="margin-top:10px;padding:8px 12px;border-radius:var(--radius);background:#fef2f2;border:1px solid #fca5a5;color:var(--danger);font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-exclamation-triangle"></i> {{ errorMsg }}
+      </div>
+      <div *ngIf="!loading && transferErrorText" style="margin-top:8px;padding:8px 12px;border-radius:var(--radius);background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-info-circle"></i> {{ transferErrorText }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Table -->
+  <div class="card table-section">
+    <div class="table-search-bar">
+      <span style="font-size:13px;font-weight:600;color:var(--text)">
+        Stock in selected Warehouse
+        <span *ngIf="selectedFromOutletName" style="font-weight:400;color:var(--text-muted)"> — {{ selectedFromOutletName }}</span>
+      </span>
+      <span *ngIf="filteredRows?.length" style="font-size:12px;color:var(--text-muted);margin-left:auto">{{ filteredRows.length }} row(s)</span>
+    </div>
+    <div style="flex:1;overflow:auto">
+      <table class="dt-table" style="width:100%;min-width:820px">
+        <thead>
+          <tr>
+            <th>Warehouse</th>
+            <th>SKU</th>
+            <th>Item</th>
+            <th>Supplier</th>
+            <th>Bin</th>
+            <th style="text-align:right">Req Base Qty</th>
+            <th style="text-align:right">On Hand</th>
+            <th style="text-align:right">Available</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of filteredRows; trackBy: trackByRow">
+            <td style="font-weight:600">{{ r.warehouse }}</td>
+            <td style="color:var(--text-muted)">{{ r.sku || '-' }}</td>
+            <td>{{ r.item || '-' }}</td>
+            <td style="color:var(--text-muted)">{{ r.supplierName || '-' }}</td>
+            <td style="color:var(--text-muted)">{{ r.bin || '-' }}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums">
+              <span style="display:inline-flex;justify-content:center;min-width:44px;padding:3px 8px;border-radius:9999px;border:1px solid var(--border);background:#fff;font-weight:600;font-size:12px">
+                {{ getReqBaseQtyBySku(r.sku) }}
+              </span>
+            </td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.onHand }}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums">
+              <span style="display:inline-flex;justify-content:center;min-width:44px;padding:3px 8px;border-radius:9999px;background:var(--primary-pale);color:var(--primary);font-weight:700;font-size:12px;border:1px solid var(--border)">
+                {{ r.available }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="!filteredRows?.length">
+            <td colspan="8" class="dt-empty">No rows found for selected MR items / Warehouse.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

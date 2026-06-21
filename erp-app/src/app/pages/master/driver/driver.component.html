@@ -2,7 +2,7 @@
   <div class="master-wrap" [class.split]="isFormVisible">
     <div class="mcard">
       <div class="mcard-head">
-        <div class="mcard-title"><div class="mcard-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v2H4zM4 9h12v2H4zM4 14h8v2H4z"/></svg></div><span>Driver List</span></div>
+        <div class="mcard-title"><div class="mcard-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="7" r="3"/><path d="M4 18c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg></div><span>Driver List</span></div>
         <button class="mbtn-create" (click)="showForm()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><line x1="10" y1="6" x2="10" y2="14"/><line x1="6" y1="10" x2="14" y2="10"/></svg> Create</button>
       </div>
       <div class="mcard-body">
@@ -10,7 +10,7 @@
         <div class="mlist-empty" *ngIf="!loading && items.length===0">No records found.</div>
         <div class="mlist-item" *ngFor="let item of items">
           <div class="mitem-left">
-            <div class="mitem-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="12" height="16" rx="1"/><path d="M7 7h6M7 10h6M7 13h4"/></svg></div>
+            <div class="mitem-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="14" height="10" rx="1"/><circle cx="7" cy="10" r="2"/><line x1="11" y1="8" x2="15" y2="8"/><line x1="11" y1="11" x2="14" y2="11"/></svg></div>
             <div class="mitem-info">
               <div class="mitem-name">{{ item.driverName || item.name }}</div>
               <div class="mitem-sub" *ngIf="item.contactNumber">{{ item.contactNumber }}</div>
@@ -25,7 +25,6 @@
     </div>
     <div class="mform-card" *ngIf="isFormVisible">
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Driver</h3>
-      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group"><label class="mf-label">Driver Name <span style="color:red">*</span></label><input class="mf-input" type="text" [(ngModel)]="form.driverName" name="driverName" placeholder="Driver Name"/></div>
         <div class="mf-group"><label class="mf-label">Mobile Number</label><input class="mf-input" type="text" [(ngModel)]="form.mobileNumber" name="mobileNumber" placeholder="Mobile Number"/></div>
@@ -40,11 +39,13 @@
       </form>
     </div>
   </div>
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
-    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
-      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
-      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
-      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
-    </div>
-  </div>
+  <erp-master-popup
+    [showDeleteConfirm]="showDeleteModal"
+    [showResult]="showResultPopup"
+    [isSuccess]="popupIsSuccess"
+    [message]="popupMessage"
+    (deleteConfirmed)="confirmDelete()"
+    (deleteCancelled)="showDeleteModal=false"
+    (resultClosed)="showResultPopup=false">
+  </erp-master-popup>
 </div>

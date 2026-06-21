@@ -1,0 +1,172 @@
+/* Action buttons in header */
+.rp-action-btn {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rp-btn-icon {
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.rp-run-btn {
+  border-color: var(--primary);
+  color: var(--primary);
+
+  &:hover:not(:disabled) {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  &:disabled { opacity: 0.5; }
+}
+
+.rp-run-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.rp-check-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  padding-bottom: 7px;
+
+  input[type="checkbox"] { cursor: pointer; }
+}
+
+.rp-card { overflow: visible; }
+
+.rp-table-wrap { overflow-x: auto; }
+
+.rp-table {
+  width: 100%;
+  min-width: 800px;
+  table-layout: fixed;
+
+  th {
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    font-size: 12px;
+  }
+
+  td {
+    white-space: normal;
+    word-break: break-word;
+    font-size: 12px;
+  }
+
+  ng-select { width: 100%; }
+}
+
+.rp-expand-btn {
+  text-align: center;
+  cursor: pointer;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s;
+  }
+}
+
+.rp-suggest {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.rp-sup-cell {
+  background: var(--bg);
+  padding: 10px 16px;
+}
+
+.rp-sup-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.rp-sup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.rp-sup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.rp-sup-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover { border-color: #b0c8d4; }
+
+  &.selected {
+    border-color: var(--primary);
+    background: rgba(46,95,115,0.04);
+    box-shadow: 0 0 0 2px rgba(46,95,115,0.12) inset;
+  }
+}
+
+.rp-sup-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rp-sup-name {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.rp-sup-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.rp-metric {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.rp-metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.rp-metric-val {
+  font-weight: 600;
+  font-size: 12px;
+}

@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EMPTY, forkJoin, of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 import { DropdownOption } from '../../../shared/components/dropdown/dropdown.component';
 import {
   BusinessPartnersService,
@@ -150,13 +151,22 @@ export class PartnerFormComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.error = 'Unable to load selected record.';
+        void this.showError('Load Failed', this.error);
       }
     });
   }
 
-  save(): void {
+  async save(): Promise<void> {
     this.error = '';
-    if (!this.validate()) return;
+    if (!this.validate()) {
+      if (this.error) await this.showWarning('Validation', this.error);
+      return;
+    }
+
+    if (this.type === 'customers' && !this.isEdit) {
+      const duplicateHandled = await this.handleDuplicateCustomer();
+      if (duplicateHandled) return;
+    }
 
     this.saving = true;
     const request = this.type === 'customers'
@@ -166,16 +176,26 @@ export class PartnerFormComponent implements OnInit {
         : this.saveUser();
 
     request.subscribe({
-      next: () => this.back(),
+      next: async () => {
+        this.saving = false;
+        await this.showSuccess(
+          this.isEdit ? 'Updated' : 'Created',
+          `${this.title} saved successfully.`
+        );
+        this.back();
+      },
       error: err => {
         this.saving = false;
         this.error = err?.error?.message || err?.error?.title || 'Unable to save record.';
+        void this.showError('Save Failed', this.error);
       }
     });
   }
 
   back(): void {
-    this.router.navigate(['/app/business-partners']);
+    this.router.navigate(['/app/business-partners'], {
+      queryParams: { tab: this.type }
+    });
   }
 
   onCustomerCountryChange(countryId: number | null): void {
@@ -195,10 +215,16 @@ export class PartnerFormComponent implements OnInit {
     });
   }
 
-  nextCustomerStep(): void {
+  async nextCustomerStep(): Promise<void> {
     this.error = '';
-    if (this.customerStep === 1 && !this.validateCustomerAccount()) return;
-    if (this.customerStep === 2 && !this.validateCustomerCommercial()) return;
+    if (this.customerStep === 1 && !this.validateCustomerAccount()) {
+      if (this.error) await this.showWarning('Validation', this.error);
+      return;
+    }
+    if (this.customerStep === 2 && !this.validateCustomerCommercial()) {
+      if (this.error) await this.showWarning('Validation', this.error);
+      return;
+    }
     this.customerStep = Math.min(3, this.customerStep + 1);
   }
 
@@ -280,21 +306,6 @@ export class PartnerFormComponent implements OnInit {
   }
 
   private saveCustomer() {
-    const duplicate = this.findDuplicateCustomer();
-    if (duplicate && !this.isEdit) {
-      const useExisting = confirm('Customer already exists for selected Country and Location. Load existing record instead?');
-      if (useExisting) {
-        const dupId = duplicate.customerId ?? duplicate.CustomerId ?? duplicate.id ?? duplicate.Id;
-        if (dupId) {
-          this.id = String(dupId);
-          this.router.navigate(['/app/business-partners', 'customers', dupId]);
-          this.load();
-        }
-      }
-      this.saving = false;
-      return EMPTY;
-    }
-
     const formData = new FormData();
     const append = (key: string, value: any) => {
       if (value !== undefined && value !== null && value !== '') formData.append(key, String(value));
@@ -453,6 +464,41 @@ export class PartnerFormComponent implements OnInit {
     }
 
     return true;
+  }
+
+  private async handleDuplicateCustomer(): Promise<boolean> {
+    const duplicate = this.findDuplicateCustomer();
+    if (!duplicate) return false;
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Customer Exists',
+      text: 'Customer already exists for selected Country and Location. Load existing record instead?',
+      showCancelButton: true,
+      confirmButtonText: 'Load Existing',
+      cancelButtonText: 'Stay Here',
+      confirmButtonColor: '#1a5c6e'
+    });
+    if (result.isConfirmed) {
+      const dupId = duplicate.customerId ?? duplicate.CustomerId ?? duplicate.id ?? duplicate.Id;
+      if (dupId) {
+        this.id = String(dupId);
+        this.router.navigate(['/app/business-partners', 'customers', dupId]);
+        this.load();
+      }
+    }
+    return true;
+  }
+
+  private showWarning(title: string, text: string) {
+    return Swal.fire({ icon: 'warning', title, text, confirmButtonColor: '#1a5c6e' });
+  }
+
+  private showError(title: string, text: string) {
+    return Swal.fire({ icon: 'error', title, text, confirmButtonColor: '#d33' });
+  }
+
+  private showSuccess(title: string, text: string) {
+    return Swal.fire({ icon: 'success', title, text, confirmButtonColor: '#1a5c6e' });
   }
 
   private patchCustomer(data: any): void {

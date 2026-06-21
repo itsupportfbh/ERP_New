@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
+import { SidebarService } from '../core/services/sidebar.service';
 
 interface MenuItem {
   label: string;
@@ -16,9 +19,15 @@ interface MenuItem {
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss']
 })
-export class LayoutComponent {
-  sidebarOpen = true;
-  openMenus = new Set<string>(['Business Partners', 'Purchase']);
+export class LayoutComponent implements OnInit, OnDestroy {
+  private routerSub!: Subscription;
+  get sidebarOpen(): boolean { return this.sidebar.sidebarOpen; }
+  set sidebarOpen(val: boolean) { this.sidebar.setSidebar(val); }
+  get openMenus(): Set<string> { return this.sidebar.openMenus; }
+
+  userMenuOpen = false;
+  get userName(): string { return localStorage.getItem('username') || 'User'; }
+  get userInitial(): string { return (this.userName[0] || 'U').toUpperCase(); }
 
   menus: MenuItem[] = [
     { label: 'Dashboard', icon: 'home', route: '/app/dashboard' },
@@ -46,7 +55,25 @@ export class LayoutComponent {
       ]
     },
     { label: 'Sales Order', icon: 'sales', route: '/app/sales-order' },
-    { label: 'Inventory', icon: 'inventory', route: '/app/inventory' },
+    {
+      label: 'Inventory',
+      icon: 'inventory',
+      children: [
+        { label: 'Item Master',            icon: 'circle', route: '/app/inventory/List-itemmaster' },
+        { label: 'Stock Take',             icon: 'circle', route: '/app/inventory/list-stocktake' },
+        { label: 'Stock Reorder Planning', icon: 'circle', route: '/app/inventory/list-stockreorderplanning' },
+        { label: 'Stock COGS',             icon: 'circle', route: '/app/inventory/stockcogs' },
+        { label: 'Stock History',          icon: 'circle', route: '/app/inventory/list-stock-history' },
+        {
+          label: 'Internal',
+          icon: 'internal',
+          children: [
+            { label: 'Material Request',       icon: 'circle', route: '/app/inventory/list-material-requisition' },
+            { label: 'Stock Transfer Request', icon: 'circle', route: '/app/inventory/list-stock-transfer-receipt' },
+          ]
+        },
+      ]
+    },
     {
       label: 'Master',
       icon: 'master',
@@ -67,14 +94,14 @@ export class LayoutComponent {
         { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue' },
         { label: 'Incoterms',       icon: 'm-incoterms', route: '/app/master/incoterms' },
         { label: 'Item Type',       icon: 'm-itemtype',  route: '/app/master/itemType' },
-        { label: 'Item Set',        icon: 'm-itemset',   route: '/app/master/itemSet' },
-        { label: 'Location',        icon: 'm-location',  route: '/app/master/location' },
+        { label: 'Package List',    icon: 'm-itemset',   route: '/app/master/itemSet' },
+        { label: 'Outlet',          icon: 'm-location',  route: '/app/master/location' },
         { label: 'Payment Terms',   icon: 'm-payment',   route: '/app/master/paymentTerms' },
         { label: 'Recurring',       icon: 'm-recurring', route: '/app/master/recurring' },
         { label: 'Service',         icon: 'm-service',   route: '/app/master/service' },
         { label: 'States',          icon: 'm-states',    route: '/app/master/states' },
         { label: 'Stock Issue',     icon: 'm-stock',     route: '/app/master/stockIssue' },
-        { label: 'Strategy',        icon: 'm-strategy',  route: '/app/master/strategy' },
+        { label: 'Frequency',       icon: 'm-strategy',  route: '/app/master/strategy' },
         { label: 'Supplier Groups', icon: 'm-suppgrp',   route: '/app/master/suppliergroups' },
         { label: 'Tax Code',        icon: 'm-tax',       route: '/app/master/taxcode' },
         { label: 'UOM',             icon: 'm-uom',       route: '/app/master/uom' },
@@ -88,23 +115,55 @@ export class LayoutComponent {
 
   constructor(
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    public sidebar: SidebarService
   ) {}
+
+  ngOnInit(): void {
+    this.syncMenuToRoute(this.router.url);
+    this.routerSub = this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe((e: any) => this.syncMenuToRoute(e.urlAfterRedirects));
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
+  }
+
+  private syncMenuToRoute(url: string): void {
+    const activeParent = this.menus.find(m => this.hasChildren(m) && this.isMenuActiveByUrl(m, url));
+    for (const m of this.menus) {
+      if (!this.hasChildren(m)) continue;
+      activeParent && m.label === activeParent.label
+        ? this.sidebar.openMenu(m.label)
+        : this.sidebar.closeMenu(m.label);
+    }
+  }
+
+  private isMenuActiveByUrl(menu: MenuItem, url: string): boolean {
+    return !!menu.children?.some(child => {
+      if (child.route && url.startsWith(child.route)) return true;
+      return !!child.children?.some(gc => gc.route && url.startsWith(gc.route));
+    });
+  }
 
   logout(): void { this.auth.logout(); }
 
+  hasChildren(menu: MenuItem): boolean {
+    return Array.isArray(menu.children) && menu.children.length > 0;
+  }
+
   toggleMenu(menu: MenuItem): void {
-    if (!menu.children?.length) return;
-    this.openMenus.has(menu.label) ? this.openMenus.delete(menu.label) : this.openMenus.add(menu.label);
+    if (!this.hasChildren(menu)) return;
+    this.sidebar.toggleMenu(menu.label);
   }
 
   isOpen(menu: MenuItem): boolean {
-    return this.openMenus.has(menu.label);
+    return this.sidebar.isMenuOpen(menu.label);
   }
 
   isMenuActive(menu: MenuItem): boolean {
-    if (menu.route && this.router.url.startsWith(menu.route)) return true;
-    return !!menu.children?.some(child => child.route && this.router.url.startsWith(child.route));
+    return this.isMenuActiveByUrl(menu, this.router.url);
   }
 
   isChildActive(menu: MenuItem): boolean {

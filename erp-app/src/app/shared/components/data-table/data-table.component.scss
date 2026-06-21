@@ -1,26 +1,16 @@
-/* host element must participate in flex so height is constrained → scroll works */
+/* host grows to full table height; .content in layout is the scroll container */
 :host {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  display: block;
 }
 
 .table-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  position: relative; /* anchor for the absolute loading overlay */
+  min-height: 200px;
 }
 
-/* Scrollable area — only vertical scroll allowed */
+/* no horizontal scroll; vertical scroll handled by page-level .content */
 .table-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden; /* never horizontal */
+  overflow-x: hidden;
 }
 
 .erp-table {
@@ -54,6 +44,13 @@
       }
       &.sort-active { color: #fff; }
       .sort-icon { margin-left: 2px; opacity: 0.75; }
+    }
+
+    .th-actions {
+      white-space: nowrap;
+      word-break: normal;
+      overflow-wrap: normal;
+      text-align: center;
     }
 
     .th-check { width: 32px; text-align: center; }

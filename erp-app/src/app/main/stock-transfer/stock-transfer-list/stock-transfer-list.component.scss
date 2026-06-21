@@ -1,0 +1,22 @@
+
+
+.action-edit-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.action-edit-icon {
+  font-size: 20px;
+  color: #1f5eff;
+}
+
+.action-edit-btn:hover .action-edit-icon {
+  color: #003fd6;
+}
+
+.action-edit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

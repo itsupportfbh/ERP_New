@@ -12,7 +12,6 @@
       <table class="dt-table">
         <thead><tr>
           <th (click)="sortBy('name')">WAREHOUSE NAME <span class="sort-arr">⇅</span></th>
-          <th (click)="sortBy('code')">CODE <span class="sort-arr">⇅</span></th>
           <th (click)="sortBy('phone')">PHONE <span class="sort-arr">⇅</span></th>
           <th>ADDRESS</th>
           <th>ACTIONS</th>
@@ -20,7 +19,6 @@
         <tbody>
           <tr *ngFor="let item of pagedItems">
             <td>{{ item.name }}</td>
-            <td>{{ item.code }}</td>
             <td>{{ item.phone }}</td>
             <td>{{ item.address }}</td>
             <td><div class="dt-actions-cell">
@@ -28,8 +26,8 @@
               <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>
           </tr>
-          <tr *ngIf="!loading && filteredItems.length===0"><td colspan="5" class="dt-empty">No records found.</td></tr>
-          <tr *ngIf="loading"><td colspan="5" class="dt-empty">Loading...</td></tr>
+          <tr *ngIf="!loading && filteredItems.length===0"><td colspan="4" class="dt-empty">No records found.</td></tr>
+          <tr *ngIf="loading"><td colspan="4" class="dt-empty">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -40,13 +38,24 @@
   <div class="dt-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
     <div class="dt-modal" (click)="$event.stopPropagation()">
       <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Add' }} Warehouse</h3>
-      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
-        <div class="mf-group"><label class="mf-label">Warehouse Name</label><input class="mf-input" type="text" [(ngModel)]="form.name" name="name" placeholder="Warehouse Name"/></div>
-        <div class="mf-group"><label class="mf-label">Code</label><input class="mf-input" type="text" [(ngModel)]="form.code" name="code" placeholder="Code"/></div>
-        <div class="mf-group"><label class="mf-label">Phone</label><input class="mf-input" type="text" [(ngModel)]="form.phone" name="phone" placeholder="Phone"/></div>
-        <div class="mf-group"><label class="mf-label">Description</label><input class="mf-input" type="text" [(ngModel)]="form.description" name="description" placeholder="Description"/></div>
-        <div class="mf-group"><label class="mf-label">Address</label><textarea class="mf-input mf-textarea" [(ngModel)]="form.address" name="address" placeholder="Address" rows="3"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+          <div class="mf-group"><label class="mf-label">Warehouse Name</label><input class="mf-input" type="text" [(ngModel)]="form.name" name="name" placeholder="Warehouse Name"/></div>
+          <div class="mf-group"><label class="mf-label">Phone</label><input class="mf-input" type="text" [(ngModel)]="form.phone" name="phone" placeholder="Phone"/></div>
+          <div class="mf-group"><label class="mf-label">Location <span style="color:red">*</span></label><select class="mf-select" [(ngModel)]="form.locationId" name="locationId" (ngModelChange)="onLocationChange()"><option [ngValue]="null">-- Select Location --</option><option *ngFor="let item of locations" [ngValue]="item.id">{{ item.name || item.locationName }}</option></select></div>
+          <div class="mf-group"><label class="mf-label">Description</label><input class="mf-input" type="text" [(ngModel)]="form.description" name="description" placeholder="Description"/></div>
+          <div class="mf-group" style="grid-column:1/-1"><label class="mf-label">Address</label><input class="mf-input" type="text" [(ngModel)]="form.address" name="address" placeholder="Address"/></div>
+          <div class="mf-group" style="grid-column:1/-1">
+            <erp-multiselect
+              label="Bins"
+              placeholder="-- Select Bins --"
+              [options]="binOptions"
+              [disabled]="!form.locationId"
+              [(ngModel)]="form.binIds"
+              name="binIds">
+            </erp-multiselect>
+          </div>
+        </div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit"><svg viewBox="0 0 20 20"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Submit</button>
           <button type="button" class="mf-btn cancel" (click)="cancel()"><svg viewBox="0 0 20 20"><line x1="5" y1="5" x2="15" y2="15" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="5" x2="5" y2="15" fill="none" stroke="currentColor" stroke-width="2"/></svg>Cancel</button>
@@ -56,12 +65,13 @@
     </div>
   </div>
 
-  <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
-    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
-      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
-      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
-      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
-    </div>
-  </div>
+  <erp-master-popup
+    [showDeleteConfirm]="showDeleteModal"
+    [showResult]="showResultPopup"
+    [isSuccess]="popupIsSuccess"
+    [message]="popupMessage"
+    (deleteConfirmed)="confirmDelete()"
+    (deleteCancelled)="showDeleteModal=false"
+    (resultClosed)="showResultPopup=false">
+  </erp-master-popup>
 </div>

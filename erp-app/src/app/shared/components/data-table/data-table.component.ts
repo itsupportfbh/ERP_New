@@ -31,6 +31,7 @@ export class DataTableComponent implements OnChanges {
   @Input() selectable = false;
   @Input() rowKey = 'id';
   @Input() rowActions: RowAction[] = [];
+  @Input() rowActionsHeader = 'Action';
   @Output() sortChange = new EventEmitter<SortState>();
   @Output() rowClick = new EventEmitter<any>();
   @Output() selectionChange = new EventEmitter<any[]>();
@@ -85,6 +86,11 @@ export class DataTableComponent implements OnChanges {
   get headerFontSize(): string {
     const body = parseFloat(this.fontSize);
     return `${Math.max(body - 0.5, 7.5)}px`;
+  }
+
+  get actionColWidth(): string {
+    const iconWidth = Math.max(this.rowActions.length * 36, 88);
+    return `${iconWidth}px`;
   }
 
   onSort(col: TableColumn): void {

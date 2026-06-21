@@ -1,0 +1,118 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>Receive Confirm</h2>
+    <div class="btn-group">
+      <span class="text-muted">{{ pendingCount }} pending</span>
+    </div>
+  </div>
+
+  <div class="card table-section">
+    <div class="table-search-bar">
+      <ng-select style="width:220px;display:inline-block"
+        [items]="toOutletOptions" bindLabel="name" bindValue="id"
+        [(ngModel)]="selectedToOutletId" (ngModelChange)="onToOutletChange()"
+        placeholder="Select Warehouse" [clearable]="false" [searchable]="true" appendTo="body">
+      </ng-select>
+      <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search TransferNo / SKU / From / Reason"/>
+    </div>
+    <erp-table
+      [columns]="columns"
+      [data]="tableData"
+      [loading]="isLoading"
+      [rowActions]="rowActions"
+      (actionClick)="onAction($event)">
+    </erp-table>
+    <erp-pager
+      [totalItems]="filteredRows.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </erp-pager>
+  </div>
+</div>
+
+<!-- Receive Modal -->
+<div class="rcm-backdrop" *ngIf="showReceiveModal" (click)="closeReceiveModal()">
+  <div class="rcm-modal" (click)="$event.stopPropagation()">
+
+    <div class="rcm-hdr">
+      <div class="rcm-hleft">
+        <div class="rcm-kicker">Transfer No</div>
+        <div class="rcm-no">{{ receiveForm?.transferNo }}</div>
+      </div>
+      <div class="rcm-hright">
+        <span class="rcm-pill" [class.ok]="receiveForm?.status === 'RECEIVED'">
+          {{ receiveForm?.statusLabel }}
+        </span>
+        <button class="rcm-x" type="button" (click)="closeReceiveModal()">&times;</button>
+      </div>
+    </div>
+
+    <div class="rcm-body" *ngIf="receiveForm as f">
+      <div class="rcm-grid">
+        <div class="rcm-field">
+          <label class="rcm-lbl">SKU</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" [value]="f.sku" disabled />
+          </div>
+        </div>
+        <div class="rcm-field">
+          <label class="rcm-lbl">Item Name</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" [value]="f.name" disabled />
+          </div>
+        </div>
+        <div class="rcm-field">
+          <label class="rcm-lbl">From Warehouse</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" [value]="f.fromWarehouseName" disabled />
+          </div>
+        </div>
+        <div class="rcm-field">
+          <label class="rcm-lbl">To Warehouse</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" [value]="f.toWarehouseName" disabled />
+          </div>
+        </div>
+        <div class="rcm-field">
+          <label class="rcm-lbl">Planned Qty</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" [value]="f.plannedQty" disabled />
+          </div>
+        </div>
+        <div class="rcm-field">
+          <label class="rcm-lbl">Receive Qty</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" type="number" min="0" [max]="f.plannedQty"
+                   [(ngModel)]="f.receiveQty" (input)="recalcVariance()"
+                   [disabled]="f.status !== 'IN_TRANSIT'" />
+          </div>
+          <div class="rcm-meta">
+            <span class="rcm-variance" [class.bad]="f.variance !== 0">
+              Variance: <b>{{ f.variance }}</b>
+            </span>
+            <div class="rcm-warn" *ngIf="f.receiveQty > f.plannedQty">
+              Receive qty cannot exceed planned qty.
+            </div>
+          </div>
+        </div>
+        <div class="rcm-field full">
+          <label class="rcm-lbl">Remarks</label>
+          <div class="rcm-inpwrap">
+            <input class="rcm-inp" placeholder="Damage / Short / Excess notes"
+                   [(ngModel)]="f.remarks" [disabled]="f.status !== 'IN_TRANSIT'" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rcm-ftr">
+      <button type="button" class="rcm-btn ghost" (click)="closeReceiveModal()">Back</button>
+      <button type="button" class="rcm-btn primary" *ngIf="canCreate()"
+              (click)="confirmReceive()" [disabled]="!canConfirmReceive()">
+        Confirm Receive
+      </button>
+    </div>
+  </div>
+</div>

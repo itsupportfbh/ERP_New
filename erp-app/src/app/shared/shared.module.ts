@@ -8,6 +8,8 @@ import { DropdownComponent } from './components/dropdown/dropdown.component';
 import { MultiselectDropdownComponent } from './components/multiselect-dropdown/multiselect-dropdown.component';
 import { SwitchToggleComponent } from './components/switch-toggle/switch-toggle.component';
 import { PagerComponent } from './components/pager/pager.component';
+import { MasterPopupComponent } from './components/master-popup/master-popup.component';
+import { ClickOutsideDirective } from './directives/click-outside.directive';
 
 const COMPONENTS = [
   DataTableComponent,
@@ -16,12 +18,13 @@ const COMPONENTS = [
   MultiselectDropdownComponent,
   SwitchToggleComponent,
   PagerComponent,
+  MasterPopupComponent,
+  ClickOutsideDirective,
 ];
 
 @NgModule({
   declarations: COMPONENTS,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   exports: [...COMPONENTS, CommonModule, FormsModule, ReactiveFormsModule],
-  // CommonModule, FormsModule, ReactiveFormsModule are both imported and exported so consumers get them transitively
 })
 export class SharedModule {}

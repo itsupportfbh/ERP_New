@@ -10,33 +10,47 @@
     </div>
   </div>
 
-  <div class="error-text" *ngIf="error">{{ error }}</div>
+  <div class="form-scroll">
+    <div class="error-text" *ngIf="error">{{ error }}</div>
 
-  <div class="customer-steps" *ngIf="type === 'customers'">
-    <button [class.active]="customerStep === 1" (click)="customerStep = 1">1 Account</button>
-    <button [class.active]="customerStep === 2" (click)="nextCustomerStep()">2 Commercial</button>
-    <button [class.active]="customerStep === 3" (click)="customerStep = 3">3 KYC</button>
+  <!-- Stepper -->
+  <div class="cstep-bar" *ngIf="type === 'customers'">
+    <div class="cstep" [class.cstep-active]="customerStep === 1" [class.cstep-done]="customerStep > 1" (click)="customerStep = 1">
+      <div class="cstep-circle">
+        <svg *ngIf="customerStep > 1" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+        <span *ngIf="customerStep <= 1">1</span>
+      </div>
+      <span class="cstep-label">Account</span>
+    </div>
+    <div class="cstep-line" [class.cstep-line-done]="customerStep > 1"></div>
+    <div class="cstep" [class.cstep-active]="customerStep === 2" [class.cstep-done]="customerStep > 2" (click)="customerStep >= 2 && (customerStep = 2)">
+      <div class="cstep-circle">
+        <svg *ngIf="customerStep > 2" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+        <span *ngIf="customerStep <= 2">2</span>
+      </div>
+      <span class="cstep-label">Commercial</span>
+    </div>
+    <div class="cstep-line" [class.cstep-line-done]="customerStep > 2"></div>
+    <div class="cstep" [class.cstep-active]="customerStep === 3" (click)="customerStep >= 3 && (customerStep = 3)">
+      <div class="cstep-circle"><span>3</span></div>
+      <span class="cstep-label">KYC</span>
+    </div>
   </div>
 
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 1">
     <div class="section-label">Account Details</div>
-    <div class="form-row cols-4">
+    <div class="form-row cols-3">
       <erp-input label="Customer Name" [required]="true" [(ngModel)]="customer.customerName"></erp-input>
-      <erp-input label="Customer Code" [(ngModel)]="customer.customerCode"></erp-input>
       <erp-dropdown label="Country" [required]="true" [options]="countryOptions" [(ngModel)]="customer.countryId" (ngModelChange)="onCustomerCountryChange($event)"></erp-dropdown>
       <erp-dropdown label="Location" [required]="true" [options]="locationOptions" [(ngModel)]="customer.locationId"></erp-dropdown>
     </div>
-    <div class="form-row cols-4 block-gap">
-      <erp-input label="Contact Person" [required]="true" [(ngModel)]="customer.contactPerson"></erp-input>
+    <div class="form-row cols-3 block-gap">
+      <erp-input label="Point of Contact Person" [required]="true" [(ngModel)]="customer.contactPerson"></erp-input>
       <erp-input label="Email" type="email" [(ngModel)]="customer.email"></erp-input>
-      <erp-input label="Phone" [(ngModel)]="customer.phone"></erp-input>
-      <erp-input label="Tax Reg No" [(ngModel)]="customer.taxRegNo"></erp-input>
+      <erp-input label="Contact Number" [(ngModel)]="customer.phone"></erp-input>
     </div>
-    <div class="form-row cols-2 block-gap">
-      <label class="textarea-field">
-        <span>Address</span>
-        <textarea [(ngModel)]="customer.address" rows="3"></textarea>
-      </label>
+    <div class="form-row cols-3 block-gap">
+      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
     </div>
     <div class="wizard-inline-actions">
       <button class="btn btn-primary btn-sm" (click)="nextCustomerStep()">Next</button>
@@ -44,15 +58,11 @@
   </div>
 
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 2">
-    <div class="section-label">Commercial Details</div>
-    <div class="form-row cols-4">
-      <erp-dropdown label="Customer Group" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"></erp-dropdown>
+    <div class="section-label">Personal Info</div>
+    <div class="form-row cols-3">
+      <erp-dropdown label="Customer Groups" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"></erp-dropdown>
       <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="customer.paymentTermId"></erp-dropdown>
-      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
       <erp-input label="Credit Amount" type="number" [(ngModel)]="customer.creditAmount"></erp-input>
-    </div>
-    <div class="form-row cols-4 block-gap">
-      <erp-dropdown label="Status" [options]="statusOptions" [(ngModel)]="customer.statusId"></erp-dropdown>
     </div>
     <div class="wizard-inline-actions">
       <button class="btn btn-outline btn-sm" (click)="prevCustomerStep()">Back</button>
@@ -61,29 +71,70 @@
   </div>
 
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 3">
-    <div class="section-label">Know Your Customer (KYC)</div>
-    <div class="kyc-status" *ngIf="kycLocked">KYC is already approved. Existing documents are locked.</div>
-    <div class="kyc-grid">
-      <label class="file-card">
-        <span>Driving Licence</span>
-        <img *ngIf="kycPreview.drivingLicence" [src]="kycPreview.drivingLicence" alt="">
-        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'drivingLicence')">
-      </label>
-      <label class="file-card">
-        <span>Utility Bill</span>
-        <img *ngIf="kycPreview.utilityBill" [src]="kycPreview.utilityBill" alt="">
-        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'utilityBill')">
-      </label>
-      <label class="file-card">
-        <span>Bank Statement</span>
-        <img *ngIf="kycPreview.bankStatement" [src]="kycPreview.bankStatement" alt="">
-        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'bankStatement')">
-      </label>
-      <label class="file-card">
-        <span>Company Registration (ACRA)</span>
-        <img *ngIf="kycPreview.acra" [src]="kycPreview.acra" alt="">
-        <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'acra')">
-      </label>
+    <div class="kyc-head">
+      <div class="section-label" style="margin-bottom:0">Know Your Customer (KYC) Verification</div>
+      <span class="kyc-approved-badge" *ngIf="kycLocked">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="4 10 8 14 16 6"/></svg>
+        Already Approved
+      </span>
+    </div>
+    <div class="kyc-wrap">
+      <div class="kyc-grid" [class.kyc-grid-locked]="kycLocked">
+        <label class="file-card">
+          <span>Driving Licence</span>
+          <div class="file-card-body">
+            <img *ngIf="kycPreview.drivingLicence" [src]="kycPreview.drivingLicence" alt="">
+            <div *ngIf="!kycPreview.drivingLicence" class="file-placeholder">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><path d="M10 3v10M6 7l4-4 4 4"/><rect x="3" y="14" width="14" height="4" rx="1"/></svg>
+              <span>Click or drop file here</span>
+            </div>
+          </div>
+          <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'drivingLicence')">
+        </label>
+        <label class="file-card">
+          <span>Utility Bill</span>
+          <div class="file-card-body">
+            <img *ngIf="kycPreview.utilityBill" [src]="kycPreview.utilityBill" alt="">
+            <div *ngIf="!kycPreview.utilityBill" class="file-placeholder">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><path d="M10 3v10M6 7l4-4 4 4"/><rect x="3" y="14" width="14" height="4" rx="1"/></svg>
+              <span>Click or drop file here</span>
+            </div>
+          </div>
+          <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'utilityBill')">
+        </label>
+        <label class="file-card">
+          <span>Bank Statement</span>
+          <div class="file-card-body">
+            <img *ngIf="kycPreview.bankStatement" [src]="kycPreview.bankStatement" alt="">
+            <div *ngIf="!kycPreview.bankStatement" class="file-placeholder">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><path d="M10 3v10M6 7l4-4 4 4"/><rect x="3" y="14" width="14" height="4" rx="1"/></svg>
+              <span>Click or drop file here</span>
+            </div>
+          </div>
+          <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'bankStatement')">
+        </label>
+        <label class="file-card">
+          <span>Company Registration (ACRA)</span>
+          <div class="file-card-body">
+            <img *ngIf="kycPreview.acra" [src]="kycPreview.acra" alt="">
+            <div *ngIf="!kycPreview.acra" class="file-placeholder">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28"><path d="M10 3v10M6 7l4-4 4 4"/><rect x="3" y="14" width="14" height="4" rx="1"/></svg>
+              <span>Click or drop file here</span>
+            </div>
+          </div>
+          <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'acra')">
+        </label>
+      </div>
+      <!-- Approved overlay -->
+      <div class="kyc-locked-overlay" *ngIf="kycLocked">
+        <div class="kyc-lock-badge">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
+            <rect x="4" y="9" width="12" height="9" rx="1"/>
+            <path d="M7 9V7a3 3 0 016 0v2"/>
+          </svg>
+          KYC is Already Approved
+        </div>
+      </div>
     </div>
     <div class="form-row cols-4 block-gap">
       <erp-dropdown label="Approved By" [disabled]="kycLocked" [options]="approvalLevelOptions" [(ngModel)]="customer.approvedBy"></erp-dropdown>
@@ -95,37 +146,29 @@
 
   <div class="card section-card" *ngIf="type === 'suppliers'">
     <div class="section-label">Supplier Details</div>
-    <div class="form-row cols-4">
+    <div class="supplier-grid">
       <erp-input label="Supplier Name" [required]="true" [(ngModel)]="supplier.name"></erp-input>
-      <erp-input label="Supplier Code" [(ngModel)]="supplier.code"></erp-input>
       <erp-dropdown label="Country" [options]="countryOptions" [(ngModel)]="supplier.countryId"></erp-dropdown>
       <erp-dropdown label="Status" [options]="statusOptions" [(ngModel)]="supplier.statusId"></erp-dropdown>
-    </div>
-    <div class="form-row cols-4 block-gap">
-      <erp-input label="Lead Time" type="number" [(ngModel)]="supplier.leadTime"></erp-input>
+      <erp-input label="Lead Time (days)" type="number" [(ngModel)]="supplier.leadTime"></erp-input>
+
       <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="supplier.termsId"></erp-dropdown>
       <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="supplier.currencyId" (ngModelChange)="onSupplierCurrencyChange($event)"></erp-dropdown>
       <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="supplier.incotermsId"></erp-dropdown>
-    </div>
-    <div class="form-row cols-4 block-gap">
-      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
-      <erp-input label="Contact" [(ngModel)]="supplier.contact"></erp-input>
+
+      <erp-dropdown label="Ledger Name / Account" [options]="ledgerOptions" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
+      <erp-input label="Contact Name" [(ngModel)]="supplier.contact"></erp-input>
       <erp-input label="Email" type="email" [(ngModel)]="supplier.email"></erp-input>
       <erp-input label="Phone" [(ngModel)]="supplier.phone"></erp-input>
+
+      <div class="supplier-span-2">
+        <erp-multiselect label="Preferred Items" [options]="itemOptions" [(ngModel)]="supplierPreferredItemIds"></erp-multiselect>
+      </div>
+      <label class="textarea-field supplier-span-2">
+        <span>Address</span>
+        <textarea [(ngModel)]="supplier.address" rows="3"></textarea>
+      </label>
     </div>
-    <div class="form-row cols-2 block-gap">
-      <erp-input label="Tax Reg" [(ngModel)]="supplier.taxReg"></erp-input>
-      <erp-multiselect label="Preferred Items" [options]="itemOptions" [(ngModel)]="supplierPreferredItemIds"></erp-multiselect>
-    </div>
-    <div class="exchange-note" *ngIf="supplier.currencyId">
-      <span *ngIf="exchangeRateLoading">Fetching exchange rate...</span>
-      <span *ngIf="!exchangeRateLoading && exchangeRate !== null">Exchange Rate: {{ exchangeRate | number:'1.4-4' }}</span>
-      <span *ngIf="!exchangeRateLoading && exchangeRate === null">No exchange rate found. Add it in Exchange Rate Master.</span>
-    </div>
-    <label class="textarea-field full-width block-gap">
-      <span>Address</span>
-      <textarea [(ngModel)]="supplier.address" rows="3"></textarea>
-    </label>
   </div>
 
   <div class="card section-card" *ngIf="type === 'suppliers'">
@@ -133,7 +176,7 @@
     <div class="form-row cols-4">
       <erp-input label="Bank Name" [(ngModel)]="supplier.bankName"></erp-input>
       <erp-input label="Account No" [(ngModel)]="supplier.bankAcc"></erp-input>
-      <erp-input label="SWIFT" [(ngModel)]="supplier.bankSwift"></erp-input>
+      <erp-input label="SWIFT/IFSC" [(ngModel)]="supplier.bankSwift"></erp-input>
       <erp-input label="Branch" [(ngModel)]="supplier.bankBranch"></erp-input>
     </div>
     <div class="docs-list block-gap">
@@ -143,6 +186,12 @@
         <erp-input label="Expiry" type="date" [(ngModel)]="doc.expiry"></erp-input>
         <label class="doc-upload">
           <span>Upload</span>
+          <div class="doc-upload-box">
+            <span class="doc-upload-trigger">Choose files</span>
+            <span class="doc-upload-text" [class.has-files]="doc.files.length">
+              {{ doc.files.length ? (doc.files.length + ' file(s) selected') : 'No files chosen' }}
+            </span>
+          </div>
           <input type="file" multiple (change)="onSupplierDocFiles($event, i)">
         </label>
         <button class="btn btn-outline btn-sm" type="button" (click)="removeSupplierDoc(i)">Remove</button>
@@ -152,7 +201,7 @@
           </button>
         </div>
       </div>
-      <button class="btn btn-outline btn-sm" type="button" (click)="addSupplierDoc()">+ Add document</button>
+      <button class="btn btn-outline btn-sm add-doc-btn" type="button" (click)="addSupplierDoc()">+ Add document</button>
     </div>
   </div>
 
@@ -213,6 +262,6 @@
         </span>
         <span class="role-name">{{ opt.label }}</span>
       </label>
-    </div>
+  </div>
   </div>
 </div>

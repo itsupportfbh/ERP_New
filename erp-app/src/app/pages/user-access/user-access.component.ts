@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 import { BusinessPartnersService, UserPayload } from '../business-partners/business-partners.service';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.component';
 
@@ -35,90 +36,166 @@ interface ModuleDef {
   fns: Array<{ id: string; title: string }>;
 }
 
-const FALLBACK_MODULES: ModuleDef[] = [
+interface MenuNode {
+  id: string;
+  title: string;
+  type: 'item' | 'collapsible';
+  hidden?: boolean;
+  children?: MenuNode[];
+}
+
+const APP_MENU_TREE: MenuNode[] = [
+  { id: 'home', title: 'Dashboard', type: 'item' },
   {
-    id: 'dashboard', title: 'Dashboard',
-    fns: [{ id: 'dashboard', title: 'Dashboard' }]
-  },
-  {
-    id: 'business-partners', title: 'Business Partners',
-    fns: [
-      { id: 'bp-customers',    title: 'Customers'         },
-      { id: 'bp-suppliers',    title: 'Suppliers'         },
-      { id: 'bp-users',        title: 'Users'             },
+    id: 'master',
+    title: 'Master',
+    type: 'collapsible',
+    children: [
+      { id: 'approval-level', title: 'Approval Level', type: 'item' },
+      { id: 'bank', title: 'Bank', type: 'item' },
+      { id: 'bin', title: 'Bin', type: 'item' },
+      { id: 'catagory', title: 'Category', type: 'item' },
+      { id: 'cities', title: 'Cities', type: 'item' },
+      { id: 'company', title: 'Company', type: 'item' },
+      { id: 'costingmethod', title: 'Costing Method', type: 'item' },
+      { id: 'countries', title: 'Countries', type: 'item' },
+      { id: 'currency', title: 'Currency', type: 'item' },
+      { id: 'customergroups', title: 'Customer Groups', type: 'item' },
+      { id: 'department', title: 'Department', type: 'item' },
+      { id: 'driver', title: 'Driver', type: 'item' },
+      { id: 'exchangerate', title: 'Exchange Rate', type: 'item' },
+      { id: 'flagissue', title: 'Flag Issue', type: 'item' },
+      { id: 'incoterms', title: 'Incoterms', type: 'item' },
+      { id: 'itemType', title: 'Item Type', type: 'item' },
+      { id: 'location', title: 'Outlet', type: 'item' },
+      { id: 'itemSet', title: 'Package', type: 'item' },
+      { id: 'paymentTerms', title: 'Payment Terms', type: 'item' },
+      { id: 'recurring', title: 'Recurring', type: 'item' },
+      { id: 'service', title: 'Service', type: 'item' },
+      { id: 'states', title: 'States', type: 'item' },
+      { id: 'stockissue', title: 'Stock Issue', type: 'item' },
+      { id: 'strategy', title: 'Frequency', type: 'item' },
+      { id: 'suppliergroups', title: 'Supplier Groups', type: 'item' },
+      { id: 'taxcode', title: 'Tax Code', type: 'item' },
+      { id: 'uom', title: 'UOM', type: 'item' },
+      { id: 'uomconversion', title: 'UOM Conversion', type: 'item' },
+      { id: 'vehicle', title: 'Vehicle', type: 'item' },
+      { id: 'warehouse', title: 'Warehouse', type: 'item' }
     ]
   },
   {
-    id: 'purchase', title: 'Purchase',
-    fns: [
-      { id: 'purchase-request',        title: 'Purchase Request'  },
-      { id: 'purchase-order',          title: 'Purchase Order'    },
-      { id: 'purchase-rfq',            title: 'RFQ'               },
-      { id: 'purchase-grn',            title: 'Good Receipt (GRN)'},
-      { id: 'purchase-supplier-invoice', title: 'Supplier Invoice'},
-      { id: 'purchase-debit-note',     title: 'Debit Note'        },
-      { id: 'purchase-three-way-match',title: '3-Way Match'       },
-      { id: 'purchase-scorecard',      title: 'Supplier Scorecard'},
+    id: 'businesspartners',
+    title: 'Business Partners',
+    type: 'collapsible',
+    children: [
+      { id: 'bp-customer', title: 'Customer', type: 'item' },
+      { id: 'bp-supplier', title: 'Supplier', type: 'item' },
+      { id: 'users', title: 'Users', type: 'item' }
     ]
   },
   {
-    id: 'sales-order', title: 'Sales',
-    fns: [
-      { id: 'sales-order-list', title: 'Sales Order List' },
-      { id: 'sales-order-new',  title: 'New Sales Order'  },
+    id: 'sales',
+    title: 'Sales',
+    type: 'collapsible',
+    children: [
+      { id: 'qt-list', title: 'Quotation', type: 'item' },
+      { id: 'so-list', title: 'Sales Order', type: 'item' },
+      { id: 'sales-pp-list', title: 'Picking & Packing', type: 'item' },
+      { id: 'do-list2', title: 'Delivery Order', type: 'item' },
+      { id: 'si-list', title: 'Sales Invoice', type: 'item' },
+      { id: 'cn-list', title: 'Credit Note', type: 'item' },
+      { id: 'sales-report', title: 'Report', type: 'item' }
     ]
   },
   {
-    id: 'inventory', title: 'Inventory',
-    fns: [
-      { id: 'inventory-list',   title: 'Inventory List'   },
-      { id: 'inventory-adjust', title: 'Stock Adjustment'  },
+    id: 'purchase',
+    title: 'Purchase',
+    type: 'collapsible',
+    children: [
+      { id: 'pr-list', title: 'Purchase Request', type: 'item' },
+      { id: 'po-list', title: 'Purchase Order', type: 'item' },
+      { id: 'rfq', title: 'RFQ', type: 'item' },
+      { id: 'grn-list', title: 'Goods Receipt Note', type: 'item' },
+      { id: 'pin-list', title: 'Supplier Invoice', type: 'item' },
+      { id: 'dn-list', title: 'Debit Note', type: 'item' },
+      { id: 'supplier-scorecard', title: 'Supplier Scorecard', type: 'item' },
+      { id: 'mobilereceiving', title: 'Mobile Receiving', type: 'item' }
     ]
   },
+  {
+    id: 'inventory',
+    title: 'Inventory',
+    type: 'collapsible',
+    children: [
+      { id: 'im-list', title: 'Item Master', type: 'item' },
+      { id: 'stock-overview', title: 'Stock Overview', type: 'item' },
+      { id: 'stock-transfer', title: 'Stock Transfer', type: 'item' },
+      { id: 'stock-adjustment', title: 'Stock Adjustment', type: 'item' },
+      {
+        id: 'inv-internal',
+        title: 'Internal',
+        type: 'collapsible',
+        children: [
+          { id: 'mr-list', title: 'Material Request', type: 'item' },
+          { id: 'list-stock-transfer-receipt', title: 'Stock Transfer Request', type: 'item' }
+        ]
+      },
+      { id: 'stocktake-list', title: 'Stock Take', type: 'item' },
+      { id: 'reorder-list', title: 'Stock Reorder Planning', type: 'item' },
+      { id: 'stockcogs', title: 'Stock COGS', type: 'item' },
+      { id: 'list-stock-history', title: 'Stock History', type: 'item' }
+    ]
+  },
+  {
+    id: 'financial',
+    title: 'Financial',
+    type: 'collapsible',
+    children: [
+      { id: 'finance-dashboard', title: 'Dashboard', type: 'item' },
+      { id: 'ledger', title: 'General Ledger', type: 'item' },
+      { id: 'coa', title: 'Chart of Account', type: 'item' },
+      { id: 'journal', title: 'Journal', type: 'item' },
+      { id: 'ar', title: 'Accounts Receivable', type: 'item' },
+      { id: 'ap', title: 'Accounts Payable', type: 'item' },
+      { id: 'tax', title: 'Tax & GST', type: 'item' },
+      { id: 'period', title: 'Period Close', type: 'item' },
+      { id: 'year-end', title: 'Year End Close', type: 'item' },
+      { id: 'tb', title: 'Trial Balance', type: 'item' },
+      { id: 'reports', title: 'Reports', type: 'item' }
+    ]
+  },
+  {
+    id: 'recipe',
+    title: 'Recipe',
+    type: 'collapsible',
+    children: [
+      { id: 'recipe-list', title: 'Recipe Master', type: 'item' },
+      { id: 'pp-list', title: 'Production Planning', type: 'item' },
+      { id: 'bp-list', title: 'Batch Production', type: 'item' }
+    ]
+  }
 ];
 
-const MENU_MODULES: ModuleDef[] = [
-  { id: 'dashboard', title: 'Dashboard', fns: [{ id: 'dashboard', title: 'Dashboard' }] },
-  {
-    id: 'business-partners', title: 'Business Partners',
-    fns: [
-      { id: 'bp-customer',  title: 'Customers' },
-      { id: 'bp-customers', title: 'Customers' },
-      { id: 'bp-supplier',  title: 'Suppliers' },
-      { id: 'bp-suppliers', title: 'Suppliers' },
-      { id: 'bp-users',     title: 'Users' }
-    ]
-  },
-  {
-    id: 'purchase', title: 'Purchase',
-    fns: [
-      { id: 'purchase-request',          title: 'Purchase Request'   },
-      { id: 'purchase-order',            title: 'Purchase Order'     },
-      { id: 'purchase-rfq',              title: 'RFQ'                },
-      { id: 'purchase-grn',              title: 'Good Receipt (GRN)' },
-      { id: 'purchase-supplier-invoice', title: 'Supplier Invoice'   },
-      { id: 'purchase-debit-note',       title: 'Debit Note'         },
-      { id: 'purchase-three-way-match',  title: '3-Way Match'        },
-      { id: 'purchase-scorecard',        title: 'Supplier Scorecard' },
-    ]
-  },
-  {
-    id: 'sales-order', title: 'Sales',
-    fns: [
-      { id: 'sales-order',      title: 'Sales Order'      },
-      { id: 'sales-order-list', title: 'Sales Order List' },
-      { id: 'sales-order-new',  title: 'New Sales Order'  }
-    ]
-  },
-  {
-    id: 'inventory', title: 'Inventory',
-    fns: [
-      { id: 'inventory',        title: 'Inventory'        },
-      { id: 'inventory-list',   title: 'Inventory List'   },
-      { id: 'inventory-adjust', title: 'Stock Adjustment' }
-    ]
-  },
-  { id: 'components', title: 'Components', fns: [{ id: 'components', title: 'Components' }] }
+const FALLBACK_MODULES: ModuleDef[] = [
+  { id: 'general', title: 'General', fns: [{ id: 'home', title: 'Dashboard' }] },
+  { id: 'master', title: 'Master', fns: APP_MENU_TREE.find(x => x.id === 'master')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] },
+  { id: 'businesspartners', title: 'Business Partners', fns: APP_MENU_TREE.find(x => x.id === 'businesspartners')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] },
+  { id: 'sales', title: 'Sales', fns: APP_MENU_TREE.find(x => x.id === 'sales')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] },
+  { id: 'purchase', title: 'Purchase', fns: APP_MENU_TREE.find(x => x.id === 'purchase')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] },
+  { id: 'inventory', title: 'Inventory', fns: [
+    { id: 'im-list', title: 'Item Master' },
+    { id: 'stock-overview', title: 'Stock Overview' },
+    { id: 'stock-transfer', title: 'Stock Transfer' },
+    { id: 'stock-adjustment', title: 'Stock Adjustment' },
+    { id: 'mr-list', title: 'Material Request' },
+    { id: 'list-stock-transfer-receipt', title: 'Stock Transfer Request' },
+    { id: 'stocktake-list', title: 'Stock Take' },
+    { id: 'reorder-list', title: 'Stock Reorder Planning' },
+    { id: 'stockcogs', title: 'Stock COGS' },
+    { id: 'list-stock-history', title: 'Stock History' }
+  ]},
+  { id: 'financial', title: 'Financial', fns: APP_MENU_TREE.find(x => x.id === 'financial')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] },
+  { id: 'recipe', title: 'Recipe', fns: APP_MENU_TREE.find(x => x.id === 'recipe')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] }
 ];
 
 @Component({
@@ -222,20 +299,24 @@ export class UserAccessComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.error = 'Unable to load user details.';
+        void this.showError('Load Failed', this.error);
       }
     });
   }
 
   // ── Step navigation ──────────────────────────────
-  goStep(n: number): void {
+  async goStep(n: number): Promise<void> {
     if (n < this.step) { this.step = n; this.error = ''; return; }
-    if (n >= 2 && !this.validateStep1()) return;
+    if (n >= 2 && !this.validateStep1()) {
+      if (this.error) await this.showWarning('Validation', this.error);
+      return;
+    }
     if (n >= 2) this.loadDepartmentPermissions(this.account.departmentId);
     this.step  = n;
     this.error = '';
   }
 
-  next(): void { this.goStep(this.step + 1); }
+  next(): void { void this.goStep(this.step + 1); }
   prev(): void { this.step--; this.error = ''; }
 
   private validateStep1(): boolean {
@@ -311,8 +392,12 @@ export class UserAccessComponent implements OnInit {
   }
 
   // ── Submit ───────────────────────────────────────
-  submit(): void {
-    if (!this.validateStep1()) { this.step = 1; return; }
+  async submit(): Promise<void> {
+    if (!this.validateStep1()) {
+      this.step = 1;
+      if (this.error) await this.showWarning('Validation', this.error);
+      return;
+    }
     this.saving = true;
     this.error  = '';
 
@@ -353,6 +438,7 @@ export class UserAccessComponent implements OnInit {
     if (!orgGuid) {
       this.saving = false;
       this.error = 'OrgGuid is missing in local storage.';
+      await this.showError('Missing Data', this.error);
       return;
     }
 
@@ -361,14 +447,19 @@ export class UserAccessComponent implements OnInit {
       : this.svc.submitUserAccessWizard(payload);
 
     request.subscribe({
-      next: (res: any) => {
+      next: async (_res: any) => {
         this.refreshAllowedMenuIds();
         this.saving = false;
+        await this.showSuccess(
+          this.isEdit ? 'Updated' : 'Created',
+          this.isEdit ? 'User updated successfully.' : 'User created successfully.'
+        );
         this.router.navigate(['/app/business-partners'], { queryParams: { tab: 'users' } });
       },
       error: err => {
         this.saving = false;
         this.error  = err?.error?.message || err?.error?.title || 'Unable to save user.';
+        void this.showError('Save Failed', this.error);
       }
     });
   }
@@ -380,7 +471,7 @@ export class UserAccessComponent implements OnInit {
   // ── Private helpers ──────────────────────────────
   private buildPermRows(): PermRow[] {
     const emptyFlags = (): Record<PermFlag, boolean> =>
-      ({ V: false, C: false, E: false, D: false, S: false, A: false, R: false, N: false, X: false, P: false, M: false });
+      ({ V: true, C: false, E: false, D: false, S: false, A: false, R: false, N: false, X: false, P: false, M: false });
 
     return this.modules.flatMap(mod =>
       mod.fns.map(fn => ({
@@ -409,18 +500,73 @@ export class UserAccessComponent implements OnInit {
   private buildModules(menuIds: string[]): ModuleDef[] {
     if (!menuIds.length) return FALLBACK_MODULES;
     const allowed = new Set(menuIds.map(id => id.toLowerCase()));
-    const modules = MENU_MODULES.map(module => {
-      const parentAllowed = allowed.has(module.id.toLowerCase());
-      const fns = module.fns.filter(fn => parentAllowed || allowed.has(fn.id.toLowerCase()));
-      return fns.length ? { ...module, fns } : null;
-    }).filter((module): module is ModuleDef => !!module);
-    return modules.length ? modules : FALLBACK_MODULES;
+    const topLevelFns = APP_MENU_TREE
+      .filter(item => item.type === 'item' && !item.hidden)
+      .filter(item => allowed.has(item.id.toLowerCase()))
+      .map(item => ({ id: item.id, title: item.title }));
+
+    const topLevelModule = topLevelFns.length
+      ? [{ id: 'general', title: 'General', fns: topLevelFns }]
+      : [];
+
+    const modules = APP_MENU_TREE
+      .filter(item => item.type === 'collapsible' && !item.hidden)
+      .map(module => {
+        const fns = this.flattenAllowedFns(module.children || [], allowed, allowed.has(module.id.toLowerCase()));
+        return fns.length ? { id: module.id, title: module.title, fns } : null;
+      })
+      .filter((module): module is ModuleDef => !!module);
+
+    const allModules = [...topLevelModule, ...modules];
+    const deduped = allModules.map(module => ({
+      ...module,
+      fns: module.fns.filter((fn, index, arr) =>
+        arr.findIndex(candidate => candidate.id.toLowerCase() === fn.id.toLowerCase()) === index
+      )
+    })).filter(module => module.fns.length);
+    return deduped.length ? deduped : FALLBACK_MODULES;
   }
 
   private extractMenuIds(res: any): string[] {
-    const raw = res?.menuIds ?? res?.data?.menuIds ?? res?.data ?? [];
-    if (!Array.isArray(raw)) return [];
-    return raw.map(value => String(value).trim()).filter(Boolean);
+    const raw =
+      res?.menuIds ??
+      res?.data?.menuIds ??
+      res?.data?.data?.menuIds ??
+      res?.data?.items?.menuIds ??
+      res?.data ??
+      [];
+
+    const values = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.items)
+        ? raw.items
+        : Array.isArray(raw?.rows)
+          ? raw.rows
+          : [];
+
+    return values
+      .map(value =>
+        typeof value === 'object'
+          ? value?.menuId ?? value?.MenuId ?? value?.id ?? value?.Id ?? value?.menuName ?? value?.MenuName
+          : value
+      )
+      .map(value => String(value ?? '').trim())
+      .filter(Boolean);
+  }
+
+  private flattenAllowedFns(nodes: MenuNode[], allowed: Set<string>, parentAllowed = false): Array<{ id: string; title: string }> {
+    const result: Array<{ id: string; title: string }> = [];
+    for (const node of nodes || []) {
+      if (!node || node.hidden) continue;
+      const currentAllowed = parentAllowed || allowed.has(node.id.toLowerCase());
+      if (node.type === 'item' && currentAllowed) {
+        result.push({ id: node.id, title: node.title });
+      }
+      if (node.children?.length) {
+        result.push(...this.flattenAllowedFns(node.children, allowed, currentAllowed));
+      }
+    }
+    return result;
   }
 
   private patchSavedPermissions(): void {
@@ -438,7 +584,7 @@ export class UserAccessComponent implements OnInit {
           && String(item?.ModuleId ?? item?.moduleId ?? '').toLowerCase() === row.moduleId.toLowerCase()
         );
         if (!found) return row;
-        const permissions = found.Permissions ?? found.permissions ?? {};
+        const permissions = found.Permissions ?? found.permissions ?? found.flags ?? found.Flags ?? {};
         return {
           ...row,
           flags: {
@@ -465,7 +611,25 @@ export class UserAccessComponent implements OnInit {
       moduleTitle: row.moduleTitle,
       functionId: row.functionId,
       functionTitle: row.functionTitle,
+      ModuleId: row.moduleId,
+      ModuleTitle: row.moduleTitle,
+      FunctionId: row.functionId,
+      FunctionTitle: row.functionTitle,
       flags: { ...row.flags }
+      ,
+      Permissions: {
+        View: row.flags.V === true,
+        Create: row.flags.C === true,
+        Edit: row.flags.E === true,
+        Delete: row.flags.D === true,
+        Submit: row.flags.S === true,
+        Approve: row.flags.A === true,
+        Reject: row.flags.R === true,
+        Cancel: row.flags.N === true,
+        Export: row.flags.X === true,
+        Print: row.flags.P === true,
+        Post: row.flags.M === true
+      }
     }));
   }
 
@@ -500,5 +664,17 @@ export class UserAccessComponent implements OnInit {
 
   private toNumberArray(values: any[]): number[] {
     return (values || []).map(Number).filter(v => Number.isFinite(v) && v > 0);
+  }
+
+  private showWarning(title: string, text: string) {
+    return Swal.fire({ icon: 'warning', title, text, confirmButtonColor: '#1a5c6e' });
+  }
+
+  private showError(title: string, text: string) {
+    return Swal.fire({ icon: 'error', title, text, confirmButtonColor: '#d33' });
+  }
+
+  private showSuccess(title: string, text: string) {
+    return Swal.fire({ icon: 'success', title, text, confirmButtonColor: '#1a5c6e' });
   }
 }
