@@ -1,12 +1,59 @@
-<div class="list-page">
-  <div class="page-header">
-    <h2>Good Receipt Note</h2>
-    <div class="header-actions">
-      <erp-input placeholder="Search GRN…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
-      <button class="btn btn-primary btn-sm" (click)="create()">+ New GRN</button>
+<div class="grn-page">
+
+  <!-- Header banner -->
+  <div class="grn-banner">
+    <div class="grn-banner-left">
+      <div class="grn-banner-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 10V11"/>
+        </svg>
+      </div>
+      <div class="grn-banner-text">
+        <h2>Good Receipt Note</h2>
+        <p>Manage and track incoming goods from suppliers</p>
+      </div>
+    </div>
+    <div class="grn-banner-right">
+      <div class="grn-search-box">
+        <svg class="grn-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          class="grn-search-input"
+          type="text"
+          placeholder="Search GRN or Supplier…"
+          [(ngModel)]="search"
+          (ngModelChange)="applyFilter()" />
+      </div>
+      <button class="grn-new-btn" (click)="create()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New GRN
+      </button>
     </div>
   </div>
-  <div class="card table-card">
-    <erp-table [columns]="columns" [data]="filtered" [loading]="loading" (rowClick)="onRowClick($event)"></erp-table>
+
+  <!-- Summary chips -->
+  <div class="grn-summary">
+    <div class="grn-chip">
+      <span class="chip-val">{{ rows.length }}</span>
+      <span class="chip-lbl">Total GRN</span>
+    </div>
+    <div class="grn-chip">
+      <span class="chip-val">{{ filtered.length }}</span>
+      <span class="chip-lbl">Showing</span>
+    </div>
   </div>
+
+  <!-- Table card -->
+  <div class="grn-card">
+    <erp-table
+      [columns]="columns"
+      [data]="filtered"
+      [loading]="loading"
+      (rowClick)="onRowClick($event)">
+    </erp-table>
+  </div>
+
 </div>

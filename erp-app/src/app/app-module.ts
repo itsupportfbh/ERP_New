@@ -3,6 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
+import { responseInterceptor } from './core/interceptors/response.interceptor';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
@@ -35,6 +36,40 @@ import { DebitNoteFormComponent } from './pages/purchase/debit-note/debit-note-f
 import { SupplierScorecardComponent } from './pages/purchase/supplier-scorecard/supplier-scorecard.component';
 import { ThreeWayMatchComponent } from './pages/purchase/three-way-match/three-way-match.component';
 
+
+// Master module components
+import { ApprovalLevelComponent } from './pages/master/approval-level/approval-level.component';
+import { BankComponent } from './pages/master/bank/bank.component';
+import { BinComponent } from './pages/master/bin/bin.component';
+import { CategoryComponent } from './pages/master/category/category.component';
+import { CitiesComponent } from './pages/master/cities/cities.component';
+import { CostingMethodComponent } from './pages/master/costing-method/costing-method.component';
+import { CompanyComponent } from './pages/master/company/company.component';
+import { CountriesComponent } from './pages/master/countries/countries.component';
+import { CurrencyComponent } from './pages/master/currency/currency.component';
+import { CustomerGroupsComponent } from './pages/master/customer-groups/customer-groups.component';
+import { DepartmentComponent } from './pages/master/department/department.component';
+import { DriverComponent } from './pages/master/driver/driver.component';
+import { ExchangeRateComponent } from './pages/master/exchange-rate/exchange-rate.component';
+import { FlagIssueComponent } from './pages/master/flag-issue/flag-issue.component';
+import { IncotermsComponent } from './pages/master/incoterms/incoterms.component';
+import { ItemTypeComponent } from './pages/master/item-type/item-type.component';
+import { LocationComponent } from './pages/master/location/location.component';
+import { ItemSetComponent } from './pages/master/item-set/item-set.component';
+import { PaymentTermsComponent } from './pages/master/payment-terms/payment-terms.component';
+import { RecurringComponent } from './pages/master/recurring/recurring.component';
+import { ServiceComponent } from './pages/master/service/service.component';
+import { StatesComponent } from './pages/master/states/states.component';
+import { StockIssueComponent } from './pages/master/stock-issue/stock-issue.component';
+import { StrategyComponent } from './pages/master/strategy/strategy.component';
+import { SupplierGroupsComponent } from './pages/master/supplier-groups/supplier-groups.component';
+import { TaxcodeComponent } from './pages/master/taxcode/taxcode.component';
+import { UomComponent } from './pages/master/uom/uom.component';
+import { UomConversionComponent } from './pages/master/uom-conversion/uom-conversion.component';
+import { VehicleComponent } from './pages/master/vehicle/vehicle.component';
+import { WarehouseComponent } from './pages/master/warehouse/warehouse.component'; 
+
+
 @NgModule({
   declarations: [
     App,
@@ -63,6 +98,37 @@ import { ThreeWayMatchComponent } from './pages/purchase/three-way-match/three-w
     DebitNoteFormComponent,
     SupplierScorecardComponent,
     ThreeWayMatchComponent,
+    ApprovalLevelComponent,
+    BankComponent,
+    BinComponent,
+    CategoryComponent,
+    CitiesComponent,
+    CostingMethodComponent,
+    CompanyComponent,
+    CountriesComponent,
+    CurrencyComponent,
+    CustomerGroupsComponent,
+    DepartmentComponent,
+    DriverComponent,
+    ExchangeRateComponent,
+    FlagIssueComponent,
+    IncotermsComponent,
+    ItemTypeComponent,
+    LocationComponent,
+    ItemSetComponent,
+    PaymentTermsComponent,
+    RecurringComponent,
+    ServiceComponent,
+    StatesComponent,
+    StockIssueComponent,
+    StrategyComponent,
+    SupplierGroupsComponent,
+    TaxcodeComponent,
+    UomComponent,
+    UomConversionComponent,
+    VehicleComponent,
+    WarehouseComponent,
+
   ],
   imports: [
     BrowserModule,
@@ -72,7 +138,7 @@ import { ThreeWayMatchComponent } from './pages/purchase/three-way-match/three-w
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([jwtInterceptor]))
+    provideHttpClient(withInterceptors([jwtInterceptor, responseInterceptor]))
   ],
   bootstrap: [App]
 })
