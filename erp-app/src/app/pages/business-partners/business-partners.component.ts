@@ -248,6 +248,7 @@ export class BusinessPartnersComponent implements OnInit {
       return {
         ...row,
         customerId: row?.customerId ?? row?.CustomerId ?? row?.id ?? row?.Id,
+         kycId: row?.kycId ?? row?.KycId ?? row?.id ?? row?.Id ?? null,
         customerName: row?.customerName ?? row?.CustomerName ?? row?.name ?? '',
         customerCode: row?.customerCode ?? row?.CustomerCode ?? '',
         customerGroupName: row?.customerGroupName ?? row?.CustomerGroupName ?? '',
