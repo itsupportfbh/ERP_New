@@ -1,0 +1,139 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h2>{{ isEdit ? 'Edit Material Requisition' : 'Create Material Requisition' }}</h2>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" type="button" (click)="close()">Close</button>
+      <button class="btn btn-primary btn-sm" type="button" (click)="save()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Header form -->
+  <div class="card">
+    <div class="form-panel">
+      <div class="im-sec-head" style="margin-bottom:14px">
+        <div class="im-sec-icon"><i class="fas fa-file-alt"></i></div>
+        <div>
+          <div class="im-sec-title">Details</div>
+          <div class="im-sec-sub">Warehouse, bin, requester and date</div>
+        </div>
+      </div>
+      <div class="form-row cols-4">
+        <div>
+          <label class="fc-label">Warehouse</label>
+          <ng-select class="fc-ng" [items]="OutletList" bindLabel="name" bindValue="id"
+            [(ngModel)]="header.OutletId" placeholder="Select Warehouse"
+            [searchable]="true" [clearable]="false" [disabled]="isEdit" (change)="onOutletChanged()" appendTo="body">
+          </ng-select>
+        </div>
+        <div>
+          <label class="fc-label">Bin</label>
+          <ng-select class="fc-ng" [items]="binList" bindLabel="binName" bindValue="id"
+            [(ngModel)]="header.BinId" placeholder="Select Bin"
+            [searchable]="true" [clearable]="false" [disabled]="!header.OutletId" appendTo="body">
+          </ng-select>
+          <small *ngIf="header.OutletId && !binList.length" style="font-size:11px;color:var(--text-muted);margin-top:3px;display:block">No bins found.</small>
+        </div>
+        <div>
+          <label class="fc-label">Requester Name</label>
+          <input class="fc-input" type="text" [(ngModel)]="header.requesterName" readonly />
+        </div>
+        <div>
+          <label class="fc-label">Requested Date</label>
+          <input class="fc-input" type="date" [(ngModel)]="header.date" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lines table -->
+  <div class="card">
+    <div class="table-search-bar">
+      <span style="font-size:13px;font-weight:600;color:var(--text)">Line Items</span>
+    </div>
+    <div>
+      <table class="dt-table" style="width:100%;table-layout:fixed">
+        <colgroup>
+          <col style="width:28px">
+          <col style="width:36px">
+          <col style="width:240px">
+          <col style="width:110px">
+          <col style="width:110px">
+          <col style="width:160px">
+          <col style="width:130px">
+          <col style="width:90px">
+          <col style="width:130px">
+          <col style="width:48px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th></th>
+            <th>#</th>
+            <th>Item</th>
+            <th>SKU</th>
+            <th>Base UOM</th>
+            <th>Enter UOM</th>
+            <th style="text-align:right">Qty</th>
+            <th style="text-align:right">Factor</th>
+            <th style="text-align:right">Base Qty</th>
+            <th style="text-align:center">Del</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of lines; let i=index">
+            <td style="text-align:center;color:var(--border);cursor:grab;user-select:none">
+              <svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor">
+                <circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/>
+                <circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/>
+                <circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/>
+              </svg>
+            </td>
+            <td style="color:var(--text-muted);font-size:12px">{{ i+1 }}</td>
+            <td>
+              <ng-select class="fc-ng-sm" [(ngModel)]="row.itemId" [items]="items"
+                bindLabel="name" bindValue="id" [searchable]="true" [searchFn]="searchFn"
+                [clearable]="true" appendTo="body" placeholder="Select Item"
+                dropdownPosition="bottom" (change)="onItemChanged(i)" [disabled]="isEdit">
+                <ng-template ng-option-tmp let-item="item">
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">{{ item.name }}</div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:1px">{{ item.sku }} &bull; Base: {{ item.baseUom }}</div>
+                </ng-template>
+                <ng-template ng-label-tmp let-item="item">{{ item.name }} ({{ item.sku }})</ng-template>
+              </ng-select>
+            </td>
+            <td><input class="fc-tbl-input" type="text" [value]="row.sku" readonly /></td>
+            <td><input class="fc-tbl-input" type="text" [value]="row.baseUom" readonly /></td>
+            <td>
+              <ng-select class="fc-ng-sm" [(ngModel)]="row.enterUomId" [items]="row.uomOptions"
+                bindLabel="uomName" bindValue="uomId" placeholder="UOM"
+                [searchable]="true" [clearable]="false" appendTo="body"
+                dropdownPosition="bottom" (change)="onUomChanged(i)">
+              </ng-select>
+            </td>
+            <td>
+              <input class="fc-tbl-input" type="number" min="0" placeholder="0"
+                [(ngModel)]="row.qty" (ngModelChange)="calculateLine(i)" style="text-align:right" />
+            </td>
+            <td><input class="fc-tbl-input" type="number" [value]="row.conversionFactor" readonly style="text-align:right" /></td>
+            <td><input class="fc-tbl-input" type="number" [value]="row.baseQty" readonly style="text-align:right" /></td>
+            <td style="text-align:center">
+              <button class="dt-icon-btn del" type="button" (click)="removeRow(i)"
+                [disabled]="lines.length===1" title="Remove row">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border)">
+      <button class="btn btn-outline btn-sm" type="button" (click)="addRow()">+ Add line</button>
+    </div>
+  </div>
+
+</div>

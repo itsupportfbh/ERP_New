@@ -1,0 +1,156 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <h2>Stock History</h2>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" type="button" (click)="openExportModal()">Export</button>
+      <button class="btn btn-primary btn-sm" type="button" (click)="loadData()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0">
+    <div class="card" style="padding:14px 18px">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Total Items</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px">{{ totalItems }}</div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">In Stock</div>
+      <div style="font-size:22px;font-weight:700;color:var(--success);margin-top:4px">{{ inStockCount }}</div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Low Stock</div>
+      <div style="font-size:22px;font-weight:700;color:var(--warning);margin-top:4px">{{ lowStockCount }}</div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Zero Stock</div>
+      <div style="font-size:22px;font-weight:700;color:var(--danger);margin-top:4px">{{ zeroStockCount }}</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card" style="padding:14px 16px;flex-shrink:0">
+    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+      <div class="mf-group" style="margin:0;flex:1;min-width:180px">
+        <label class="mf-label">Search Item</label>
+        <input class="mf-input" type="text" placeholder="Search item name, SKU, category" [(ngModel)]="filters.search" (ngModelChange)="onSearchChange()"/>
+      </div>
+      <div class="mf-group" style="margin:0;min-width:160px">
+        <label class="mf-label">Status</label>
+        <select class="mf-select" [(ngModel)]="filters.status" (change)="onFilterChange()">
+          <option [ngValue]="null">All Status</option>
+          <option *ngFor="let s of stockStatuses" [ngValue]="s.value">{{ s.label }}</option>
+        </select>
+      </div>
+      <div class="mf-group" style="margin:0;min-width:160px">
+        <label class="mf-label">Category</label>
+        <select class="mf-select" [(ngModel)]="filters.categoryId" (change)="onFilterChange()">
+          <option [ngValue]="null">All Category</option>
+          <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" type="button" (click)="applyFilters()">Search</button>
+        <button class="btn btn-outline btn-sm" type="button" (click)="clearFilters()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="card table-section">
+    <div class="table-search-bar">
+      <span style="font-size:13px;font-weight:600;color:var(--text)">Stock Items</span>
+      <span style="font-size:12px;color:var(--text-muted)">{{ totalItems }} records found</span>
+      <div style="flex:1"></div>
+      <select class="dt-pg-select" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+        <option [ngValue]="10">10</option>
+        <option [ngValue]="25">25</option>
+        <option [ngValue]="50">50</option>
+      </select>
+    </div>
+
+    <div *ngIf="loading" style="padding:40px;text-align:center;color:var(--text-muted)">Loading stock data...</div>
+
+    <div *ngIf="!loading" style="flex:1;min-height:0;overflow:auto">
+      <table class="dt-table" style="width:100%">
+        <thead>
+          <tr>
+            <th (click)="sortBy('name')">ITEM <span class="sort-arr">⇅</span></th>
+            <th (click)="sortBy('category')">CATEGORY <span class="sort-arr">⇅</span></th>
+            <th (click)="sortBy('onHand')" style="text-align:right">TOTAL ON HAND <span class="sort-arr">⇅</span></th>
+            <th (click)="sortBy('reserved')" style="text-align:right">RESERVED <span class="sort-arr">⇅</span></th>
+            <th (click)="sortBy('available')" style="text-align:right">AVAILABLE <span class="sort-arr">⇅</span></th>
+            <th>STATUS</th>
+            <th style="text-align:center">DETAILS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of pagedItems">
+            <td>
+              <div style="font-size:11px;color:var(--text-muted)">{{ item.sku || '-' }}</div>
+              <div style="font-weight:500">{{ item.name || '-' }}</div>
+            </td>
+            <td>{{ item.category || '-' }}</td>
+            <td style="text-align:right;font-weight:600">{{ item.onHand | number:'1.0-4' }}</td>
+            <td style="text-align:right;color:var(--text-muted)">{{ item.reserved | number:'1.0-4' }}</td>
+            <td style="text-align:right">
+              <span [style.color]="item.available > item.minQty ? 'var(--success)' : item.available > 0 ? 'var(--warning)' : 'var(--danger)'">
+                {{ item.available | number:'1.0-4' }}
+              </span>
+            </td>
+            <td>
+              <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600"
+                [style.background]="item.status==='In Stock' ? '#e6f9f0' : item.status==='Low Stock' ? '#fff7e6' : '#fef2f2'"
+                [style.color]="item.status==='In Stock' ? 'var(--success)' : item.status==='Low Stock' ? 'var(--warning)' : 'var(--danger)'">
+                {{ item.status || '-' }}
+              </span>
+            </td>
+            <td style="text-align:center">
+              <button class="dt-icon-btn edit" type="button" (click)="viewDetails(item)" title="View Details">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="pagedItems.length===0">
+            <td colspan="7" class="dt-empty">No stock items found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dt-footer" *ngIf="!loading" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Showing {{ pageStart }} - {{ pageEnd }} of {{ totalItems }}</span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="btn btn-outline btn-sm" [disabled]="currentPage===1" (click)="goToPage(currentPage-1)">‹</button>
+        <ng-container *ngFor="let p of visiblePages">
+          <span *ngIf="p==='...'" style="padding:3px 6px;color:var(--text-muted)">...</span>
+          <button *ngIf="p!=='...'" class="btn btn-sm" [class.btn-primary]="p===currentPage" [class.btn-outline]="p!==currentPage" (click)="goToPage(+p)">{{ p }}</button>
+        </ng-container>
+        <button class="btn btn-outline btn-sm" [disabled]="currentPage===totalPages" (click)="goToPage(currentPage+1)">›</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Export Modal -->
+<div class="dt-modal-overlay" *ngIf="showExportModal" (click)="closeExportModal()">
+  <div class="dt-modal" (click)="$event.stopPropagation()">
+    <h3 class="dt-modal-title">Export Stock History</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Select export format for current stock data</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button type="button" class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px;text-align:left" (click)="exportToExcel()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px;flex-shrink:0"><path d="M4 3h8l4 4v10H4z"/><path d="M12 3v4h4"/></svg>
+        <div><div style="font-weight:600">Export as Excel</div><div style="font-size:11.5px;color:var(--text-muted)">Download item stock data in .xlsx format</div></div>
+      </button>
+      <button type="button" class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px;text-align:left" (click)="exportToPdf()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px;flex-shrink:0"><path d="M4 3h8l4 4v10H4z"/><path d="M12 3v4h4"/><path d="M7 13h6M7 10h4"/></svg>
+        <div><div style="font-weight:600">Export as PDF</div><div style="font-size:11.5px;color:var(--text-muted)">Open print preview and save as PDF</div></div>
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text-muted)">{{ totalItems }} records available</span>
+      <button class="btn btn-outline btn-sm" (click)="closeExportModal()">Cancel</button>
+    </div>
+  </div>
+</div>

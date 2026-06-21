@@ -40,7 +40,6 @@
   <div class="dt-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
     <div class="dt-modal" (click)="$event.stopPropagation()">
       <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Add' }} Outlet</h3>
-      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group">
           <label class="mf-label">Location Name <span style="color:red">*</span></label>
@@ -80,12 +79,13 @@
     </div>
   </div>
 
-  <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
-    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
-      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
-      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
-      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
-    </div>
-  </div>
+  <erp-master-popup
+    [showDeleteConfirm]="showDeleteModal"
+    [showResult]="showResultPopup"
+    [isSuccess]="popupIsSuccess"
+    [message]="popupMessage"
+    (deleteConfirmed)="confirmDelete()"
+    (deleteCancelled)="showDeleteModal=false"
+    (resultClosed)="showResultPopup=false">
+  </erp-master-popup>
 </div>

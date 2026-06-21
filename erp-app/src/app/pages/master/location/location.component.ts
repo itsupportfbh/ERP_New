@@ -7,6 +7,7 @@ const blank = () => ({ name: '', countryId: null as any, stateId: null as any, c
 export class LocationComponent implements OnInit {
   items: any[] = []; loading = false; isFormVisible = false; isEditMode = false; selectedId: any = null; message = ''; isError = false;
   showDeleteModal = false; itemToDelete: any = null;
+  showResultPopup = false; popupIsSuccess = false; popupMessage = '';
   searchText = ''; pageSize = 10; sortField = ''; sortAsc = true;
 
   countries: any[] = [];
@@ -47,7 +48,7 @@ export class LocationComponent implements OnInit {
   load(): void {
     this.loading = true;
     this.masterSvc.getLocations().subscribe({
-      next: (res: any) => { this.items = res?.data || res || []; this.loading = false; },
+      next: (res: any) => { this.items = (res?.data || res || []).filter((x: any) => x.isActive !== false); this.loading = false; },
       error: () => { this.loading = false; this.message = 'Failed to load.'; this.isError = true; }
     });
   }
@@ -111,15 +112,16 @@ export class LocationComponent implements OnInit {
       countryId: this.form.countryId,
       stateId: this.form.stateId,
       cityId: this.form.cityId,
-      contactNumber: this.form.contactNumber
+      contactNumber: this.form.contactNumber,
+      companyId: Number(localStorage.getItem('companyId') || 0)
     };
     const obs = this.isEditMode ? this.masterSvc.updateLocation(this.selectedId, payload) : this.masterSvc.createLocation(payload);
-    obs.subscribe({ next: () => { this.message = this.isEditMode ? 'Updated.' : 'Created.'; this.isError = false; this.cancel(); this.load(); }, error: () => { this.message = 'Save failed.'; this.isError = true; } });
+    obs.subscribe({ next: (res: any) => { this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || (this.isEditMode ? 'Updated successfully.' : 'Created successfully.'); this.showResultPopup = true; if (res?.isSuccess !== false) { this.cancel(); this.load(); } }, error: (err: any) => { this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Save failed. Please try again.'; this.showResultPopup = true; } });
   }
 
   openDelete(item: any): void { this.itemToDelete = item; this.showDeleteModal = true; }
   confirmDelete(): void {
     if (!this.itemToDelete) return;
-    this.masterSvc.deleteLocation(this.itemToDelete.id).subscribe({ next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); }, error: () => { this.message = 'Delete failed.'; this.isError = true; this.showDeleteModal = false; } });
+    this.masterSvc.deleteLocation(this.itemToDelete.id).subscribe({ next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } }, error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; } });
   }
 }

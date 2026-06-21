@@ -178,7 +178,7 @@ export class BusinessPartnersService {
   }
 
   getItems(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/Item/GetItems`);
+    return this.http.get(`${this.apiUrl}/ItemMaster/GetItems`);
   }
 
   getChartOfAccounts(): Observable<any> {

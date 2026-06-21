@@ -4,17 +4,20 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { responseInterceptor } from './core/interceptors/response.interceptor';
+import { payloadInterceptor } from './core/interceptors/payload.interceptor';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
 import { SharedModule } from './shared/shared.module';
 
 import { LoginComponent } from './pages/login/login.component';
+import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './pages/auth/reset-password/reset-password.component';
+import { ChangePasswordComponent } from './pages/auth/change-password/change-password.component';
 import { LayoutComponent } from './layout/layout.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { SalesOrderComponent } from './pages/sales-order/sales-order.component';
 import { NewOrderComponent } from './pages/sales-order/new-order/new-order.component';
-import { InventoryComponent } from './pages/inventory/inventory.component';
 import { DemoComponent } from './pages/demo/demo.component';
 import { BusinessPartnersComponent } from './pages/business-partners/business-partners.component';
 import { PartnerFormComponent } from './pages/business-partners/partner-form/partner-form.component';
@@ -74,11 +77,14 @@ import { WarehouseComponent } from './pages/master/warehouse/warehouse.component
   declarations: [
     App,
     LoginComponent,
+    ForgotPasswordComponent,
+    ResetPasswordComponent,
+    ChangePasswordComponent,
     LayoutComponent,
     DashboardComponent,
     SalesOrderComponent,
     NewOrderComponent,
-    InventoryComponent,
+
     DemoComponent,
     BusinessPartnersComponent,
     PartnerFormComponent,
@@ -138,7 +144,7 @@ import { WarehouseComponent } from './pages/master/warehouse/warehouse.component
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([jwtInterceptor, responseInterceptor]))
+    provideHttpClient(withInterceptors([jwtInterceptor, payloadInterceptor, responseInterceptor]))
   ],
   bootstrap: [App]
 })

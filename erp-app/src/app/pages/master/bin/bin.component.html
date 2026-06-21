@@ -21,11 +21,10 @@
         <div class="mlist-item" *ngFor="let item of items">
           <div class="mitem-left">
             <div class="mitem-avatar">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="12" height="16" rx="1"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="12" rx="1"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="10" y1="4" x2="10" y2="16"/></svg>
             </div>
             <div class="mitem-info">
               <div class="mitem-name">{{ item.binName || item.name }}</div>
-              <div class="mitem-sub" *ngIf="item.description">{{ item.description }}</div>
             </div>
           </div>
           <div class="mitem-actions">
@@ -43,15 +42,10 @@
     <!-- Form -->
     <div class="mform-card" *ngIf="isFormVisible">
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Bin</h3>
-      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group">
           <label class="mf-label">Bin Name</label>
           <input class="mf-input" type="text" [(ngModel)]="form.binName" name="binName" placeholder="Bin Name"/>
-        </div>
-        <div class="mf-group">
-          <label class="mf-label">Description</label>
-          <textarea class="mf-input mf-textarea" [(ngModel)]="form.description" name="description" placeholder="Description (optional)" rows="3"></textarea>
         </div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit">
@@ -71,16 +65,13 @@
     </div>
   </div>
 
-  <!-- Delete modal -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
-    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
-      <div class="mconfirm-icon">!</div>
-      <h3 class="mconfirm-title">Confirm Delete</h3>
-      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
-      <div class="mconfirm-actions">
-        <button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button>
-        <button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button>
-      </div>
-    </div>
-  </div>
+  <erp-master-popup
+    [showDeleteConfirm]="showDeleteModal"
+    [showResult]="showResultPopup"
+    [isSuccess]="popupIsSuccess"
+    [message]="popupMessage"
+    (deleteConfirmed)="confirmDelete()"
+    (deleteCancelled)="showDeleteModal=false"
+    (resultClosed)="showResultPopup=false">
+  </erp-master-popup>
 </div>

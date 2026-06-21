@@ -119,4 +119,21 @@ export class AuthService {
   clearRememberedUser(): void {
     localStorage.removeItem(this.REMEMBER_KEY);
   }
+
+  forgotPassword(data: { email: string }): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/user/forgotPassword`, data);
+  }
+
+  resetPassword(data: { token: string; email: string; newPassword: string }): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/user/resetPassword`, data);
+  }
+
+  changePassword(data: { currentPassword: string; newPassword: string; confirmNewPassword: string }): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/user/changePassword`, {
+      ...data,
+      CreatedBy: Number(localStorage.getItem('id') || 0),
+      UpdatedBy: Number(localStorage.getItem('id') || 0),
+      UpdatedDate: new Date()
+    });
+  }
 }

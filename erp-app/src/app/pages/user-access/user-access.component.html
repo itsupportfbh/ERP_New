@@ -150,11 +150,11 @@
       <div class="perm-intro">
         <div class="section-label">Roles &amp; Permissions</div>
         <p class="perm-hint">
-          Configure which functions the user can access and what actions they can perform in each module.
+          Configure visible functions and permission flags for the selected department
         </p>
         <div class="flag-legend">
           <span *ngFor="let f of permFlags" class="legend-item">
-            <b>{{ f.key }}</b>&nbsp;{{ f.label }}
+            <strong>{{ f.key }}</strong> - {{ f.label }}
           </span>
         </div>
       </div>
@@ -189,10 +189,6 @@
                   </label>
                 </div>
               </th>
-            </tr>
-            <tr class="flag-label-row">
-              <td class="fn-label-cell"></td>
-              <td *ngFor="let f of permFlags" class="flag-label-cell">{{ f.label }}</td>
             </tr>
           </thead>
           <tbody>

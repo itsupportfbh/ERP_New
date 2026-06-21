@@ -1,0 +1,47 @@
+<div class="col-md-6">
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title mb-2">Stock History</h4>
+    </div>
+
+    <div class="card-body">
+      <ul class="timeline" *ngIf="stockHistory?.length; else noData">
+        <li class="timeline-item" *ngFor="let it of stockHistory; trackBy: trackById">
+          <span class="timeline-point timeline-point-indicator" [ngClass]="pointClass(it)"></span>
+
+          <div class="timeline-event">
+            <!-- Title & Timestamp -->
+            <div class="d-flex justify-content-between flex-sm-row flex-column mb-sm-0 mb-1">
+              <h6 class="mb-0">{{ title(it) }}</h6>
+              <span class="timeline-event-time" *ngIf="it.occurredAt">
+                {{ it.occurredAt | date:'short' }}
+              </span>
+            </div>
+
+            <!-- From → To -->
+            <p class="mb-0">
+              {{ it.fromWarehouseName }}
+              <span class="mx-1">→</span>
+              <ng-container *ngIf="it.toWarehouseId && it.toWarehouseId > 0; else pendingLabel">
+                {{ it.toWarehouseName }}
+              </ng-container>
+              <ng-template #pendingLabel>
+                <span class="badge badge-pill badge-light-warning">Pending</span>
+              </ng-template>
+            </p>
+
+            <!-- Transfer Qty & Available -->
+            <p class="mb-0 mt-1 text-muted small">
+              Transfer Qty: <strong>{{ it.transferQty }}</strong>, 
+              Available After Transfer: <strong>{{ it.available }}</strong>
+            </p>
+          </div>
+        </li>
+      </ul>
+
+      <ng-template #noData>
+        <div class="text-muted">No stock history yet.</div>
+      </ng-template>
+    </div>
+  </div>
+</div>

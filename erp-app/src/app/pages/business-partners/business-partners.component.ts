@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
-import { TableColumn, SortState } from '../../shared/components/data-table/data-table.component';
+import Swal from 'sweetalert2';
+import { RowAction, TableColumn, SortState } from '../../shared/components/data-table/data-table.component';
 import { BusinessPartnersService } from './business-partners.service';
 
 type PartnerTab = 'customers' | 'suppliers' | 'users';
@@ -23,6 +24,10 @@ export class BusinessPartnersComponent implements OnInit {
   allData: any[] = [];
   tableData: any[] = [];
   selectedRows: any[] = [];
+  readonly userRowActions: RowAction[] = [
+    { key: 'edit', label: 'Edit' },
+    { key: 'delete', label: 'Delete' }
+  ];
 
   readonly customerColumns: TableColumn[] = [
     { key: 'customerName', header: 'Customer', type: 'text', sortable: true },
@@ -48,10 +53,7 @@ export class BusinessPartnersComponent implements OnInit {
     { key: 'username', header: 'Username', type: 'text', sortable: true },
     { key: 'email', header: 'Email', type: 'text', sortable: true },
     { key: 'approvalLevelText', header: 'Roles', type: 'text' },
-    { key: 'teamText', header: 'Teams', type: 'text' },
-    { key: 'departmentId', header: 'Dept ID', type: 'number', align: 'right' },
-    { key: 'locationId', header: 'Location ID', type: 'number', align: 'right' },
-    { key: 'statusName', header: 'Status', type: 'badge', badgeMap: { Active: 'success', Inactive: 'danger' } }
+    { key: 'teamText', header: 'Teams', type: 'text' }
   ];
 
   constructor(
@@ -70,6 +72,10 @@ export class BusinessPartnersComponent implements OnInit {
 
   get rowKey(): string {
     return this.activeTab === 'customers' ? 'customerId' : 'id';
+  }
+
+  get rowActions(): RowAction[] {
+    return this.activeTab === 'users' ? this.userRowActions : [];
   }
 
   ngOnInit(): void {
@@ -113,6 +119,7 @@ export class BusinessPartnersComponent implements OnInit {
         this.allData = [];
         this.tableData = [];
         this.error = `Unable to load ${this.activeTab.replace('-', ' ')} from API.`;
+        void Swal.fire('Load Failed', this.error, 'error');
       }
     });
   }
@@ -171,6 +178,17 @@ export class BusinessPartnersComponent implements OnInit {
     }
   }
 
+  onActionClick(event: { action: string; row: any }): void {
+    if (event.action === 'edit') {
+      this.edit(event.row);
+      return;
+    }
+    if (event.action === 'delete') {
+      this.selectedRows = [event.row];
+      this.deleteSelected();
+    }
+  }
+
   create(): void {
     if (this.activeTab === 'users') {
       this.router.navigate(['/app/user-access/new']);
@@ -190,10 +208,20 @@ export class BusinessPartnersComponent implements OnInit {
     }
   }
 
-  deleteSelected(): void {
+  async deleteSelected(): Promise<void> {
     const target = this.selectedRows[0];
     const id = this.getId(target);
-    if (!id || !confirm('Deactivate/delete this record?')) return;
+    if (!id) return;
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Confirm Delete',
+      text: 'Deactivate/delete this record?',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#d33'
+    });
+    if (!result.isConfirmed) return;
 
     this.loading = true;
     const request = this.activeTab === 'customers'
@@ -203,10 +231,14 @@ export class BusinessPartnersComponent implements OnInit {
         : this.partners.deleteUser(id);
 
     request.subscribe({
-      next: () => this.load(),
+      next: async () => {
+        await Swal.fire('Deleted', 'Record deleted successfully.', 'success');
+        this.load();
+      },
       error: () => {
         this.loading = false;
         this.error = 'Unable to delete selected partner.';
+        void Swal.fire('Delete Failed', this.error, 'error');
       }
     });
   }

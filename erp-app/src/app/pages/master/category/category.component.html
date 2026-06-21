@@ -6,7 +6,7 @@
       <div class="mcard-head">
         <div class="mcard-title">
           <div class="mcard-icon">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v2H4zM4 9h12v2H4zM4 14h8v2H4z"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6a1 1 0 011-1h4l2 2h6a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V6z"/></svg>
           </div>
           <span>Category List</span>
         </div>
@@ -43,7 +43,6 @@
     <!-- Form -->
     <div class="mform-card" *ngIf="isFormVisible">
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Category</h3>
-      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group">
           <label class="mf-label">Category Name <span style="color:red">*</span></label>
@@ -90,16 +89,13 @@
     </div>
   </div>
 
-  <!-- Delete modal -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
-    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
-      <div class="mconfirm-icon">!</div>
-      <h3 class="mconfirm-title">Confirm Delete</h3>
-      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
-      <div class="mconfirm-actions">
-        <button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button>
-        <button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button>
-      </div>
-    </div>
-  </div>
+  <erp-master-popup
+    [showDeleteConfirm]="showDeleteModal"
+    [showResult]="showResultPopup"
+    [isSuccess]="popupIsSuccess"
+    [message]="popupMessage"
+    (deleteConfirmed)="confirmDelete()"
+    (deleteCancelled)="showDeleteModal=false"
+    (resultClosed)="showResultPopup=false">
+  </erp-master-popup>
 </div>

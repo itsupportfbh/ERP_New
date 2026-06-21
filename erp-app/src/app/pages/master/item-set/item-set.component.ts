@@ -1,20 +1,29 @@
 import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 
-const blank = () => ({ setName: '', selectedItemIds: [] as number[] });
+const blank = () => ({ setName: '', salesBudgetLineId: null as number | null, selectedItemIds: [] as number[] });
 
 @Component({ selector: 'erp-item-set', standalone: false, templateUrl: './item-set.component.html', styleUrls: ['./item-set.component.scss'] })
 export class ItemSetComponent implements OnInit {
   items: any[] = []; loading = false; isFormVisible = false; isEditMode = false; selectedId: any = null; message = ''; isError = false;
   showDeleteModal = false; itemToDelete: any = null;
+  showResultPopup = false; popupIsSuccess = false; popupMessage = '';
 
   itemOptions: { value: any; label: string }[] = [];
+  budgetLines: any[] = [];
   form = blank();
 
   constructor(private masterSvc: MasterService) {}
 
   ngOnInit(): void {
     this.load();
+    this.masterSvc.getChartOfAccounts().subscribe({
+      next: (res: any) => {
+        const list = res?.data || res || [];
+        this.budgetLines = list.map((x: any) => ({ id: Number(x.id), label: `${x.headCode} - ${x.headName}` }));
+      },
+      error: () => {}
+    });
     this.masterSvc.getItemMaster().subscribe({
       next: (res: any) => {
         const list = res?.data || res || [];
@@ -37,7 +46,7 @@ export class ItemSetComponent implements OnInit {
   edit(item: any): void {
     this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id;
     const ids = (item.items || item.itemSetItems || []).map((x: any) => Number(x.itemId || x.id));
-    this.form = { setName: item.setName || item.name || '', selectedItemIds: ids };
+    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesBudgetLineId ?? null, selectedItemIds: ids };
     this.message = '';
   }
 
@@ -49,18 +58,19 @@ export class ItemSetComponent implements OnInit {
     const userId = Number(localStorage.getItem('id') || 0);
     const payload = {
       setName: this.form.setName,
+      salesBudgetLineId: this.form.salesBudgetLineId,
       createdBy: userId,
       updatedBy: userId,
       isActive: true,
       items: this.form.selectedItemIds.map((id: number) => ({ itemId: id }))
     };
     const obs = this.isEditMode ? this.masterSvc.updateItemSet(this.selectedId, payload) : this.masterSvc.createItemSet(payload);
-    obs.subscribe({ next: () => { this.message = this.isEditMode ? 'Updated.' : 'Created.'; this.isError = false; this.cancel(); this.load(); }, error: () => { this.message = 'Save failed.'; this.isError = true; } });
+    obs.subscribe({ next: (res: any) => { this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || (this.isEditMode ? 'Updated successfully.' : 'Created successfully.'); this.showResultPopup = true; if (res?.isSuccess !== false) { this.cancel(); this.load(); } }, error: (err: any) => { this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Save failed. Please try again.'; this.showResultPopup = true; } });
   }
 
   openDelete(item: any): void { this.itemToDelete = item; this.showDeleteModal = true; }
   confirmDelete(): void {
     if (!this.itemToDelete) return;
-    this.masterSvc.deleteItemSet(this.itemToDelete.id).subscribe({ next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); }, error: () => { this.message = 'Delete failed.'; this.isError = true; this.showDeleteModal = false; } });
+    this.masterSvc.deleteItemSet(this.itemToDelete.id).subscribe({ next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } }, error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; } });
   }
 }

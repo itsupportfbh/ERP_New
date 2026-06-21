@@ -22,7 +22,7 @@
           <tr *ngFor="let item of pagedItems">
             <td>{{ item.bankName }}</td>
             <td>{{ item.accountHolderName || item.accountName }}</td>
-            <td>{{ item.accountNumber }}</td>
+            <td>{{ item.accountNo }}</td>
             <td>{{ item.accountType }}</td>
             <td>{{ item.branch }}</td>
             <td><div class="dt-actions-cell">
@@ -42,7 +42,6 @@
   <div class="dt-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
     <div class="dt-modal dt-modal-wide" (click)="$event.stopPropagation()">
       <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Add' }} Bank</h3>
-      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
 
         <div class="dt-form-grid">
@@ -52,7 +51,7 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Account Holder Name <span style="color:red">*</span></label>
-            <input class="mf-input" type="text" [(ngModel)]="form.accountHolderName" name="accountHolderName" placeholder="ACME Pte Ltd"/>
+            <input class="mf-input" type="text" [(ngModel)]="form.accountName" name="accountName" placeholder="ACME Pte Ltd"/>
           </div>
           <div class="mf-group">
             <label class="mf-label">Account Number <span style="color:red">*</span></label>
@@ -60,13 +59,9 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Account Type <span style="color:red">*</span></label>
-            <select class="mf-select" [(ngModel)]="form.accountType" name="accountType">
+            <select class="mf-select" [(ngModel)]="form.accountTypeId" name="accountTypeId">
               <option value="">-- Select account type --</option>
-              <option value="Savings">Savings</option>
-              <option value="Current">Current</option>
-              <option value="Fixed Deposit">Fixed Deposit</option>
-              <option value="Overdraft">Overdraft</option>
-              <option value="Cash Credit">Cash Credit</option>
+              <option *ngFor="let item of accountTypes" [ngValue]="item.id">{{ item.name }}</option>
             </select>
           </div>
           <div class="mf-group">
@@ -79,7 +74,7 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Routing / Sort Code</label>
-            <input class="mf-input" type="text" [(ngModel)]="form.routingCode" name="routingCode" placeholder="Routing number"/>
+            <input class="mf-input" type="text" [(ngModel)]="form.routingNumber" name="routingNumber" placeholder="Routing number"/>
           </div>
           <div class="mf-group">
             <label class="mf-label">Currency <span style="color:red">*</span></label>
@@ -97,7 +92,10 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Ledger Name <span style="color:red">*</span></label>
-            <input class="mf-input" type="text" [(ngModel)]="form.ledgerName" name="ledgerName" placeholder="Ledger Name"/>
+            <select class="mf-select" [(ngModel)]="form.budgetLineId" name="budgetLineId">
+              <option [ngValue]="null">-- Select ledger --</option>
+              <option *ngFor="let line of budgetLines" [ngValue]="line.id">{{ line.label }}</option>
+            </select>
           </div>
           <div class="mf-group">
             <label class="mf-label">Primary Contact</label>
@@ -111,11 +109,10 @@
             <label class="mf-label">Contact Phone</label>
             <input class="mf-input" type="text" [(ngModel)]="form.contactPhone" name="contactPhone" placeholder="+1 000 000 0000"/>
           </div>
-        </div>
-
-        <div class="mf-group">
-          <label class="mf-label">Address</label>
-          <textarea class="mf-input mf-textarea" [(ngModel)]="form.address" name="address" placeholder="Billing address" rows="3"></textarea>
+          <div class="mf-group" style="grid-column:span 2">
+            <label class="mf-label">Address</label>
+            <input class="mf-input" type="text" [(ngModel)]="form.address" name="address" placeholder="Billing address"/>
+          </div>
         </div>
 
         <div class="mf-actions">
@@ -127,12 +124,13 @@
     </div>
   </div>
 
-  <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
-    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
-      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
-      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
-      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
-    </div>
-  </div>
+  <erp-master-popup
+    [showDeleteConfirm]="showDeleteModal"
+    [showResult]="showResultPopup"
+    [isSuccess]="popupIsSuccess"
+    [message]="popupMessage"
+    (deleteConfirmed)="confirmDelete()"
+    (deleteCancelled)="showDeleteModal=false"
+    (resultClosed)="showResultPopup=false">
+  </erp-master-popup>
 </div>

@@ -19,6 +19,7 @@ export class IncotermsComponent implements OnInit {
   isError = false;
   showDeleteModal = false;
   itemToDelete: any = null;
+  showResultPopup = false; popupIsSuccess = false; popupMessage = '';
 
   form = blank();
 
@@ -53,8 +54,8 @@ export class IncotermsComponent implements OnInit {
       ? this.masterSvc.updateIncoterm(this.selectedId, this.form)
       : this.masterSvc.createIncoterm(this.form);
     obs.subscribe({
-      next: () => { this.message = this.isEditMode ? 'Updated.' : 'Created.'; this.isError = false; this.cancel(); this.load(); },
-      error: () => { this.message = 'Save failed.'; this.isError = true; }
+      next: (res: any) => { this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || (this.isEditMode ? 'Updated successfully.' : 'Created successfully.'); this.showResultPopup = true; if (res?.isSuccess !== false) { this.cancel(); this.load(); } },
+      error: (err: any) => { this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Save failed. Please try again.'; this.showResultPopup = true; }
     });
   }
 
@@ -63,8 +64,8 @@ export class IncotermsComponent implements OnInit {
   confirmDelete(): void {
     if (!this.itemToDelete) return;
     this.masterSvc.deleteIncoterm(this.itemToDelete.id).subscribe({
-      next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); },
-      error: () => { this.message = 'Delete failed.'; this.isError = true; this.showDeleteModal = false; }
+      next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } },
+      error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; }
     });
   }
 }

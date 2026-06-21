@@ -1,0 +1,223 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h2>Stock History</h2>
+      <div *ngIf="itemSku" style="font-size:11px;color:var(--text-muted);margin-top:2px">
+        Movement details for <b>{{ itemSku }}</b>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline btn-sm" type="button" (click)="goBack()">← Back</button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="exportExcel()">Export</button>
+      <button class="btn btn-primary btn-sm" type="button" (click)="printPage()">Print</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="card" style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px">
+    Loading stock history...
+  </div>
+
+  <ng-container *ngIf="!loading && itemDetail">
+
+    <!-- Item Summary Card -->
+    <div class="card" style="padding:14px">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div class="shd-avatar">{{ avatarLetters }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">{{ itemDetail.name }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <span class="shd-chip">{{ itemDetail.sku }}</span>
+            <span class="shd-chip">{{ itemDetail.category || '-' }}</span>
+            <span class="shd-chip">{{ itemDetail.uom || '-' }}</span>
+            <span class="shd-chip">{{ itemDetail.warehouse || 'All Warehouses' }}</span>
+            <span class="shd-status"
+              [class.shd-ok]="itemDetail.status==='In Stock'"
+              [class.shd-low]="itemDetail.status==='Low Stock'"
+              [class.shd-zero]="itemDetail.status==='Zero Stock'">
+              {{ itemDetail.status }}
+            </span>
+          </div>
+        </div>
+        <div style="display:flex;gap:20px;flex-shrink:0;border-left:1px solid var(--border);padding-left:20px">
+          <div style="text-align:center">
+            <div class="fc-label" style="margin-bottom:3px">On Hand</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text)">{{ itemDetail.onHand }}</div>
+          </div>
+          <div style="text-align:center">
+            <div class="fc-label" style="margin-bottom:3px">Reserved</div>
+            <div style="font-size:18px;font-weight:700;color:var(--danger)">{{ itemDetail.reserved }}</div>
+          </div>
+          <div style="text-align:center">
+            <div class="fc-label" style="margin-bottom:3px">Available</div>
+            <div style="font-size:18px;font-weight:700;color:var(--success)">{{ itemDetail.available }}</div>
+          </div>
+          <div style="text-align:center">
+            <div class="fc-label" style="margin-bottom:3px">Reorder</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text)">{{ itemDetail.reorderQty }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="card" style="padding:14px 16px">
+        <div class="fc-label">Total Received</div>
+        <div style="font-size:22px;font-weight:700;color:var(--success);margin-top:4px">+{{ totalIn }}</div>
+      </div>
+      <div class="card" style="padding:14px 16px">
+        <div class="fc-label">Total Issued</div>
+        <div style="font-size:22px;font-weight:700;color:var(--danger);margin-top:4px">-{{ totalOut }}</div>
+      </div>
+      <div class="card" style="padding:14px 16px">
+        <div class="fc-label">Adjustments</div>
+        <div style="font-size:22px;font-weight:700;color:var(--warning);margin-top:4px">{{ totalAdj >= 0 ? '+' : '' }}{{ totalAdj }}</div>
+      </div>
+      <div class="card" style="padding:14px 16px">
+        <div class="fc-label">Transactions</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px">{{ totalTransactions }}</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card" style="padding:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:12px;align-items:end">
+        <div>
+          <label class="fc-label">Warehouse</label>
+          <ng-select class="fc-ng" [items]="warehouses" bindLabel="name" bindValue="id"
+            placeholder="All Warehouses" [(ngModel)]="filters.warehouseId"
+            [clearable]="true" appendTo="body">
+          </ng-select>
+        </div>
+        <div>
+          <label class="fc-label">Txn Type</label>
+          <ng-select class="fc-ng" [items]="txnTypes" bindLabel="label" bindValue="value"
+            placeholder="All Types" [(ngModel)]="filters.txnType"
+            [clearable]="true" appendTo="body">
+          </ng-select>
+        </div>
+        <div>
+          <label class="fc-label">From Date</label>
+          <input class="fc-input" type="date" [(ngModel)]="filters.fromDate">
+        </div>
+        <div>
+          <label class="fc-label">To Date</label>
+          <input class="fc-input" type="date" [(ngModel)]="filters.toDate">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" type="button" (click)="applyFilters()">Filter</button>
+          <button class="btn btn-outline btn-sm" type="button" (click)="clearFilters()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card table-section">
+      <div class="table-search-bar">
+        <div>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">Transaction History</span>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Showing movement details for selected item</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--text-muted)">{{ totalTransactions }} records</span>
+          <select class="fc-select" style="width:110px" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+            <option [value]="10">10 / page</option>
+            <option [value]="25">25 / page</option>
+            <option [value]="50">50 / page</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="shd-table-wrap">
+        <table class="dt-table shd-table">
+          <colgroup>
+            <col style="width:3%">  <!-- # -->
+            <col style="width:8%">  <!-- Date -->
+            <col style="width:8%">  <!-- Txn Type -->
+            <col style="width:9%">  <!-- Reference No -->
+            <col style="width:9%">  <!-- Warehouse -->
+            <col style="width:6%">  <!-- Bin -->
+            <col style="width:6%">  <!-- Qty In -->
+            <col style="width:6%">  <!-- Qty Out -->
+            <col style="width:7%">  <!-- Adjustment -->
+            <col style="width:6%">  <!-- Before -->
+            <col style="width:6%">  <!-- After -->
+            <col style="width:7%">  <!-- Unit Cost -->
+            <col style="width:7%">  <!-- Total Cost -->
+            <col style="width:12%"> <!-- Reason -->
+          </colgroup>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Txn Type</th>
+              <th>Reference No</th>
+              <th>Warehouse</th>
+              <th>Bin</th>
+              <th style="text-align:right">Qty In</th>
+              <th style="text-align:right">Qty Out</th>
+              <th style="text-align:right">Adjustment</th>
+              <th style="text-align:right">Before</th>
+              <th style="text-align:right">After</th>
+              <th style="text-align:right">Unit Cost</th>
+              <th style="text-align:right">Total Cost</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedHistory; let i = index">
+              <td style="color:var(--text-muted);font-size:12px">{{ (currentPage-1)*pageSize+i+1 }}</td>
+              <td>{{ row.txnDate | date:'dd-MM-yyyy' }}</td>
+              <td>
+                <span class="shd-badge"
+                  [class.shd-grn]="row.sourceType==='GRN'"
+                  [class.shd-sales]="row.sourceType==='Sales'"
+                  [class.shd-adj]="row.sourceType==='Adjustment'||row.sourceType==='Stock Take'"
+                  [class.shd-xfer]="row.sourceType==='Transfer In'||row.sourceType==='Transfer Out'">
+                  {{ row.sourceType }}
+                </span>
+              </td>
+              <td style="font-weight:600;color:var(--text)">{{ row.referenceNo || '—' }}</td>
+              <td>{{ row.warehouseName || '—' }}</td>
+              <td>{{ row.binName || '—' }}</td>
+              <td style="text-align:right;font-weight:600;color:var(--success)">{{ row.qtyIn > 0 ? '+'+row.qtyIn : '—' }}</td>
+              <td style="text-align:right;color:var(--danger)">{{ row.qtyOut > 0 ? row.qtyOut : '—' }}</td>
+              <td style="text-align:right"
+                [style.color]="row.adjustment>0?'var(--success)':row.adjustment<0?'var(--danger)':'var(--text-muted)'">
+                {{ row.adjustment!==0 ? (row.adjustment>0?'+'+row.adjustment:row.adjustment) : '—' }}
+              </td>
+              <td style="text-align:right;color:var(--text-muted)">{{ row.qtyBefore }}</td>
+              <td style="text-align:right;font-weight:600">{{ row.qtyAfter }}</td>
+              <td style="text-align:right">{{ row.unitCost | number:'1.2-2' }}</td>
+              <td style="text-align:right">{{ row.totalCost | number:'1.2-2' }}</td>
+              <td style="color:var(--text-muted)">{{ row.reason || '—' }}</td>
+            </tr>
+            <tr *ngIf="pagedHistory.length===0">
+              <td colspan="14" class="dt-empty">No transactions found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0">
+        <span style="font-size:12px;color:var(--text-muted)">Showing {{ pageStart }}–{{ pageEnd }} of {{ totalTransactions }}</span>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-outline btn-sm" [disabled]="currentPage===1" (click)="goToPage(currentPage-1)">‹</button>
+          <ng-container *ngFor="let p of visiblePages">
+            <span *ngIf="p==='...'" style="padding:4px 8px;color:var(--text-muted);line-height:1.8">...</span>
+            <button *ngIf="p!=='...'" class="btn btn-sm"
+              [class.btn-primary]="p===currentPage"
+              [class.btn-outline]="p!==currentPage"
+              (click)="goToPage(+p)">{{ p }}</button>
+          </ng-container>
+          <button class="btn btn-outline btn-sm" [disabled]="currentPage===totalPages" (click)="goToPage(currentPage+1)">›</button>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

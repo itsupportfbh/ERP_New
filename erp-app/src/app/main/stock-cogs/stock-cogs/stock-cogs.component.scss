@@ -1,0 +1,62 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.expand-btn {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &--pdf {
+    background: #fff;
+    color: #e63946;
+    border: 1.5px solid #e63946;
+
+    &:not(:disabled):hover {
+      background: #e63946;
+      color: #fff;
+    }
+  }
+
+  &--excel {
+    background: #fff;
+    color: #217346;
+    border: 1.5px solid #217346;
+
+    &:not(:disabled):hover {
+      background: #217346;
+      color: #fff;
+    }
+  }
+}

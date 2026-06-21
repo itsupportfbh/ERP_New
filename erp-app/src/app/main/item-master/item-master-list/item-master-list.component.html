@@ -1,0 +1,118 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>Item Master</h2>
+    <div class="btn-group">
+      <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="goToCreateItem()">+ Create Item</button>
+    </div>
+  </div>
+
+  <div class="card table-section">
+    <div class="table-search-bar">
+      <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search Item / SKU / Category / UOM"/>
+    </div>
+    <erp-table
+      [columns]="columns"
+      [data]="tableData"
+      [loading]="loading"
+      [rowActions]="rowActions"
+      (actionClick)="onAction($event)">
+    </erp-table>
+    <erp-pager
+      [totalItems]="filteredRows.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </erp-pager>
+  </div>
+</div>
+
+<!-- Item View Modal -->
+<div *ngIf="showViewModal" class="dt-modal-overlay" (click)="closeModal()">
+  <div style="background:#fff;border-radius:12px;width:960px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.18);overflow:hidden" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div style="background:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#fff">Item: {{ currentItem?.name || '-' }}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px">{{ currentItem?.sku || '-' }}</div>
+      </div>
+      <button (click)="closeModal()" style="border:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="padding:12px 20px 0;display:flex;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button class="cogs-tab-btn" [class.active]="activeTab==='warehouse'" (click)="switchTab('warehouse')">View Warehouse</button>
+      <button class="cogs-tab-btn" [class.active]="activeTab==='supplier'" (click)="switchTab('supplier')">View Supplier</button>
+      <button class="cogs-tab-btn" [class.active]="activeTab==='audit'" (click)="switchTab('audit')">View Audit</button>
+    </div>
+
+    <!-- Body -->
+    <div style="flex:1;overflow:auto;padding:16px 20px">
+
+      <!-- Warehouse tab -->
+      <div *ngIf="activeTab==='warehouse'">
+        <table class="dt-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>WAREHOUSE</th><th>BIN</th>
+              <th style="text-align:right">ON HAND</th><th style="text-align:right">RESERVED</th><th style="text-align:right">AVAILABLE</th>
+              <th style="text-align:right">MIN</th><th style="text-align:right">MAX</th><th style="text-align:right">REORDER</th>
+              <th style="text-align:right">LEAD (DAYS)</th><th>BATCH</th><th>SERIAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of warehouseRows">
+              <td>{{ r.warehouseName }}</td><td>{{ r.binName || '-' }}</td>
+              <td style="text-align:right">{{ r.onHand }}</td><td style="text-align:right">{{ r.reserved }}</td><td style="text-align:right">{{ r.available }}</td>
+              <td style="text-align:right">{{ r.minQty }}</td><td style="text-align:right">{{ r.maxQty }}</td><td style="text-align:right">{{ r.reorderQty }}</td>
+              <td style="text-align:right">{{ r.leadTimeDays }}</td>
+              <td><span style="display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600" [style.background]="r.batchFlag ? '#e6f9f0' : '#fef2f2'" [style.color]="r.batchFlag ? 'var(--success)' : 'var(--danger)'">{{ r.batchFlag ? 'Yes' : 'No' }}</span></td>
+              <td><span style="display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600" [style.background]="r.serialFlag ? '#e6f9f0' : '#fef2f2'" [style.color]="r.serialFlag ? 'var(--success)' : 'var(--danger)'">{{ r.serialFlag ? 'Yes' : 'No' }}</span></td>
+            </tr>
+            <tr *ngIf="!warehouseRows?.length"><td colspan="11" class="dt-empty">No warehouse data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Supplier tab -->
+      <div *ngIf="activeTab==='supplier'">
+        <table class="dt-table" style="width:100%">
+          <thead><tr><th>SUPPLIER</th><th style="text-align:right">PRICE</th><th>BARCODE</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of supplierRows">
+              <td>{{ r.supplierName }}</td><td style="text-align:right">{{ r.price }}</td><td>{{ r.barcode || '-' }}</td>
+            </tr>
+            <tr *ngIf="!supplierRows?.length"><td colspan="3" class="dt-empty">No supplier data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Audit tab -->
+      <div *ngIf="activeTab==='audit'">
+        <table class="dt-table" style="width:100%">
+          <thead><tr><th>USER</th><th>ACTION</th><th>OCCURRED (UTC)</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of auditRows">
+              <td>{{ r.userName }}</td>
+              <td>
+                <span style="display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600"
+                  [style.background]="(r.action||'').toUpperCase()==='CREATE' ? '#e6f9f0' : (r.action||'').toUpperCase()==='DELETE' ? '#fef2f2' : '#fff7e6'"
+                  [style.color]="(r.action||'').toUpperCase()==='CREATE' ? 'var(--success)' : (r.action||'').toUpperCase()==='DELETE' ? 'var(--danger)' : 'var(--warning)'">
+                  {{ (r.action || '').toUpperCase() }}
+                </span>
+              </td>
+              <td>{{ r.occurredAtUtc | date:'yyyy-MM-dd HH:mm':'UTC' }} UTC</td>
+            </tr>
+            <tr *ngIf="!auditRows?.length"><td colspan="3" class="dt-empty">No audit data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;flex-shrink:0">
+      <button class="btn btn-outline btn-sm" (click)="closeModal()">Close</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,75 @@
+.mpopup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.mpopup-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 36px 32px 28px;
+  min-width: 300px;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.mpopup-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+
+  &.warn {
+    border: 3px solid #f59e0b;
+    color: #f59e0b;
+  }
+
+  &.success {
+    border: 3px solid var(--success);
+    color: var(--success);
+    svg { width: 32px; height: 32px; }
+  }
+
+  &.error {
+    border: 3px solid var(--danger);
+    color: var(--danger);
+    svg { width: 32px; height: 32px; }
+  }
+
+  svg { width: 32px; height: 32px; }
+}
+
+.mpopup-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.mpopup-msg {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.mpopup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  justify-content: center;
+}

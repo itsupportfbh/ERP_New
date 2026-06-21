@@ -1,0 +1,250 @@
+
+.tw-page {
+  padding: 14px;
+  background: #f6f8fc;
+  min-height: calc(100vh - 120px);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* Back button */
+.tw-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #2E5F73;
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 16px 10px 42px;
+  position: relative;
+  box-shadow: 0 6px 16px rgba(16, 24, 40, .10);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.tw-back-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(16, 24, 40, .14);
+}
+.tw-back-ico {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Card */
+.tw-card {
+  background: #fff;
+  border: 1px solid #e6edf7;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, .10);
+}
+
+/* Header */
+.tw-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 18px 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border-bottom: 1px solid #eef2f7;
+}
+
+.tw-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tw-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.tw-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* Pills / badges */
+.tw-pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.tw-pill-info {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #dbeafe;
+}
+.tw-pill-warn {
+  color: #b45309;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.tw-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.tw-metric {
+  min-width: 90px;
+}
+.tw-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+}
+.tw-metric-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+.tw-metric-sep {
+  width: 1px;
+  height: 26px;
+  background: #eef2f7;
+}
+
+.tw-card-body {
+  padding: 18px;
+  background: #fff;
+}
+
+/* Labels + fields */
+.tw-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.tw-field {
+  position: relative;
+}
+
+.tw-input {
+  border-radius: 14px;
+  border: 1px solid #e6edf7;
+  padding: 12px 14px;
+  background: #fbfdff;
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+.tw-input:focus {
+  border-color: rgba(46, 95, 115, .55);
+  box-shadow: 0 0 0 .2rem rgba(46, 95, 115, .14);
+}
+
+.tw-readonly {
+  background: #f3f6fb !important;
+  color: #475569;
+}
+
+/* ng-select */
+.tw-ng ::ng-deep .ng-select-container {
+  border-radius: 14px !important;
+  border: 1px solid #e6edf7 !important;
+  min-height: 46px !important;
+  background: #fbfdff !important;
+  box-shadow: none !important;
+}
+.tw-ng ::ng-deep .ng-select.ng-select-focused .ng-select-container {
+  border-color: rgba(46, 95, 115, .55) !important;
+  box-shadow: 0 0 0 .2rem rgba(46, 95, 115, .14) !important;
+}
+.tw-ng ::ng-deep .ng-placeholder {
+  color: #94a3b8 !important;
+  font-weight: 600;
+}
+.tw-ng ::ng-deep .ng-value {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Small helper text */
+.tw-help {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+.tw-mini {
+  font-size: 12px;
+  color: #64748b;
+}
+.tw-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.tw-inline-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+}
+.tw-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2E5F73;
+  margin-right: 8px;
+  opacity: .7;
+}
+
+/* Footer */
+.tw-card-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #fbfdff;
+  border-top: 1px solid #eef2f7;
+}
+
+.tw-btn {
+  border-radius: 14px;
+  padding: 10px 16px;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.tw-btn:active {
+  transform: translateY(1px);
+}
+
+.tw-btn-ghost {
+  background: #ffffff;
+  border-color: #e6edf7;
+  color: #0f172a;
+}
+.tw-btn-ghost:hover {
+  box-shadow: 0 8px 18px rgba(16, 24, 40, .10);
+}
+
+.tw-btn-primary {
+  background: #2E5F73;
+  color: #fff;
+  border-color: #2E5F73;
+}
+.tw-btn-primary:hover {
+  box-shadow: 0 10px 20px rgba(46, 95, 115, .24);
+}
+.tw-btn-primary:disabled {
+  opacity: .6;
+  box-shadow: none;
+}

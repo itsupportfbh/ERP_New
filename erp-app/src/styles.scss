@@ -31,13 +31,16 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
 .text-success { color: var(--success); }
 .fw-600 { font-weight: 600; }
 
+/* Router-injected components: natural height so page-level scroll works */
+.content > *:not(router-outlet) {
+  width: 100%;
+}
+
 .page-container {
   padding: 16px;
-  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow: hidden;
 }
 
 .page-header {
@@ -103,14 +106,10 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
 
 .btn-group { display: flex; gap: 6px; }
 
-/* Router-outlet renders the page component as a sibling element inside .content.
-   Give it flex so height is properly constrained (enables vertical scroll in tables). */
+/* Page components injected by router-outlet grow to natural height;
+   .content (overflow-y: auto) is the single vertical scroll container. */
 .content > * + * {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  flex-shrink: 0;
 }
 
 .form-row {
@@ -243,7 +242,6 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
   &:hover { background: var(--primary-light); }
 }
 
-.mcard-body { }
 
 .mlist-item {
   display: flex;
@@ -628,6 +626,7 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
   cursor: pointer;
   svg { width: 14px; height: 14px; fill: none; }
 
+  &.view { svg { stroke: var(--primary); } &:hover { background: var(--primary-pale); } }
   &.edit { svg { stroke: #3b82f6; } &:hover { background: #eff6ff; } }
   &.del  { svg { stroke: var(--danger); } &:hover { background: #fef2f2; } }
 }
@@ -726,6 +725,53 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
 }
 .cmp-tbl-actions { display: flex; gap: 8px; }
 
+/* Table-section card: flex-column so search-bar / table / pager stack */
+.table-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════
+   INVENTORY TABLE SEARCH BAR (inside table card)
+   ═══════════════════════════════════════════════ */
+.table-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.table-search-input {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg);
+  width: 260px;
+  outline: none;
+  font-family: inherit;
+  &:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(56,178,200,0.12); }
+  &::placeholder { color: var(--text-muted); }
+}
+
+.cogs-tab-btn {
+  padding: 4px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  &.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  &:hover:not(.active) { border-color: var(--accent); color: var(--primary); }
+}
+
 /* Company Setup (Edit/Create) */
 .cmp-setup-pg { padding: 20px; height: 100%; overflow-y: auto; }
 .cmp-setup-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -754,3 +800,223 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
   &:hover { color: #e74c3c; }
 }
 .cmp-tab-actions { display: flex; gap: 10px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* ═════════════════════════════════════════════════
+   GLOBAL FORM CONTROLS  (fc-*)
+   ═════════════════════════════════════════════════ */
+
+.fc-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.fc-input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  transition: border-color .12s, box-shadow .12s;
+  font-family: inherit;
+  &::placeholder { color: var(--text-muted); }
+  &:focus { border-color: var(--primary-light); box-shadow: 0 0 0 2px var(--primary-pale); }
+  &:disabled, &[readonly] { background: var(--bg); color: var(--text-muted); }
+}
+
+.fc-select {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 28px 0 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  transition: border-color .12s, box-shadow .12s;
+  font-family: inherit;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a8290' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  &:focus { border-color: var(--primary-light); box-shadow: 0 0 0 2px var(--primary-pale); }
+  &:disabled { background-color: var(--bg); cursor: not-allowed; }
+}
+
+/* Compact input for table cells */
+.fc-tbl-input {
+  width: 100%;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+  &::placeholder { color: var(--text-muted); }
+  &:focus { border-color: var(--primary-light); box-shadow: 0 0 0 2px var(--primary-pale); }
+  &:disabled, &[readonly] { background: var(--bg); cursor: not-allowed; }
+}
+
+/* ════════════════════════════════════════════════
+   Global ng-select theme — applies to ALL pages
+   (ng-select default.theme.css is loaded first in angular.json,
+    these rules override colours/borders to the project palette)
+   ════════════════════════════════════════════════ */
+
+/* Container */
+.ng-select .ng-select-container {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: border-color .12s, box-shadow .12s;
+  font-family: inherit !important;
+  cursor: pointer !important;
+}
+/* Closed-focused border */
+.ng-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container {
+  border-color: var(--primary-light) !important;
+  box-shadow: 0 0 0 2px var(--primary-pale) !important;
+}
+/* Value container padding */
+.ng-select .ng-value-container { padding-left: 10px !important; flex: 1 !important; overflow: hidden !important; }
+/* Placeholder */
+.ng-select .ng-placeholder { color: var(--text-muted) !important; font-size: 13px !important; font-family: inherit !important; }
+/* Selected value */
+.ng-select .ng-value { font-size: 13px !important; color: var(--text) !important; font-family: inherit !important; }
+/* Search input */
+.ng-select .ng-input > input { font-size: 13px !important; font-family: inherit !important; color: var(--text) !important; }
+/* Clear button */
+.ng-select .ng-clear-wrapper { color: var(--text-muted) !important; }
+.ng-select .ng-clear-wrapper:hover .ng-clear { color: var(--danger) !important; }
+/* Chevron arrow — same SVG as fc-select */
+.ng-select .ng-arrow-wrapper {
+  width: 32px !important;
+  padding-right: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-shrink: 0 !important;
+}
+.ng-select .ng-arrow-wrapper .ng-arrow { display: none !important; }
+.ng-select .ng-arrow-wrapper::after {
+  content: '' !important;
+  display: inline-block !important;
+  width: 12px !important;
+  height: 8px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a8290' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  background-position: center !important;
+  transition: transform .15s ease !important;
+  flex-shrink: 0 !important;
+}
+.ng-select.ng-select-opened .ng-arrow-wrapper::after {
+  transform: rotate(180deg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231a5c6e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+/* Dropdown panel */
+.ng-dropdown-panel {
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 0 var(--radius) var(--radius) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+  z-index: 10000 !important;
+}
+.ng-dropdown-panel .ng-dropdown-panel-items { background: #fff !important; }
+.ng-dropdown-panel .ng-option {
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  color: var(--text) !important;
+  font-family: inherit !important;
+}
+.ng-dropdown-panel .ng-option.ng-option-marked { background: var(--primary-pale) !important; color: var(--text) !important; }
+.ng-dropdown-panel .ng-option.ng-option-selected { background: var(--primary-pale) !important; color: var(--primary) !important; font-weight: 600 !important; }
+.ng-dropdown-panel .ng-option.ng-option-selected.ng-option-marked { background: var(--primary-pale) !important; color: var(--primary) !important; }
+.ng-dropdown-panel .ng-optgroup { font-size: 11px !important; color: var(--text-muted) !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: .06em; }
+.ng-dropdown-panel .ng-option.ng-option-disabled { color: var(--text-muted) !important; opacity: .6; }
+/* No-results text */
+.ng-dropdown-panel .ng-option.ng-option-child { padding-left: 20px !important; }
+/* ng-has-value is on .ng-select-container (inner div), not on the host */
+.ng-select-container.ng-has-value .ng-placeholder { display: none !important; }
+.ng-has-value .ng-placeholder { display: none !important; }
+
+/* Default 34px height for all single-selects (all pages) */
+.ng-select.ng-select-single .ng-select-container { height: 34px !important; min-height: 34px !important; }
+
+/* ── fc-ng: explicit 34px (same as default, kept for backward compat) ── */
+.fc-ng.ng-select .ng-select-container { height: 34px !important; min-height: 34px !important; }
+.fc-ng .ng-value-container { padding-left: 10px !important; }
+
+/* ── fc-ng-sm: compact 30px for table cells ── */
+.fc-ng-sm.ng-select .ng-select-container { height: 30px !important; min-height: 30px !important; }
+.fc-ng-sm .ng-value-container { padding-left: 6px !important; }
+.fc-ng-sm .ng-placeholder { font-size: 12px !important; }
+.fc-ng-sm .ng-value { font-size: 12px !important; }
+.fc-ng-sm .ng-input > input { font-size: 12px !important; }
+.fc-ng-sm .ng-arrow-wrapper { width: 24px !important; padding-right: 6px !important; }
+.fc-ng-sm .ng-arrow-wrapper::after { width: 10px !important; height: 7px !important; }
+
+/* Section icon + title header (im-sec-*) */
+.im-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.im-sec-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--primary-pale);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.im-sec-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.im-sec-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* Form section title (inside .form-panel) */
+.form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ===== Print styles ===== */
+@media print {
+  .sidebar,
+  .topbar,
+  .sidebar-logo,
+  .sidebar-nav { display: none !important; }
+
+  .shell { display: block !important; }
+  .main-area { margin: 0 !important; }
+  .content { overflow: visible !important; }
+  .page-container { padding: 8px !important; gap: 8px !important; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  .btn-group .btn { display: none !important; }
+  .ng-dropdown-panel { display: none !important; }
+}

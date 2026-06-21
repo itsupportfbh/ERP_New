@@ -1,0 +1,142 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>Stock Adjustment</h2>
+    <div class="btn-group">
+      <span class="badge badge-success">Adjust &amp; Post Stock</span>
+    </div>
+  </div>
+
+  <div class="card filter-bar">
+    <div class="form-row cols-2">
+      <label class="form-label small mb-1">Item List</label>
+      <ng-select #itemSelect class="ngs ngs-sm w-100 sa-ngs" [items]="itemOptions" bindLabel="display" bindValue="id"
+        [compareWith]="compareById" [clearable]="true" [searchable]="true" [typeahead]="itemSearch$"
+        [loading]="itemsLoading" placeholder="Select item" [(ngModel)]="selectedItemId" name="adjItemSelect"
+        (change)="onItemPicked($event)" appendTo="body">
+        <ng-template ng-option-tmp let-i="item">
+          <div style="display:flex;flex-direction:column;">
+            <div class="fw-semibold">{{ i.sku }} — {{ i.name }}</div>
+            <div class="small text-muted">OnHand: {{ i.onHand ?? 0 }} | Avail: {{ i.availableQty ?? 0 }}</div>
+          </div>
+        </ng-template>
+      </ng-select>
+    </div>
+  </div>
+
+  <div class="card table-section">
+    <div class="scroll-x-only">
+      <table class="sa-table table align-middle mb-0 sa-head-brand">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Item</th>
+            <th>Supplier</th>
+            <th>Warehouse</th>
+            <th>Bin</th>
+            <th class="text-end">Price</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="adjLines.length === 0">
+            <td colspan="8" class="text-center text-muted py-4">No lines yet. Select an item to load stock details.</td>
+          </tr>
+          <tr *ngFor="let row of adjLines; let i = index; trackBy: trackByIdx">
+            <td><span class="sa-pill sa-mono" [title]="row.sku">{{ row.sku || '-' }}</span></td>
+            <td><span class="sa-pill" [title]="row.item">{{ row.item || '-' }}</span></td>
+            <td><span class="sa-pill" [title]="row.supplierName">{{ row.supplierName || '-' }}</span></td>
+            <td><span class="sa-pill" [title]="row.warehouseName">{{ row.warehouseName || '-' }}</span></td>
+            <td><span class="sa-pill" [title]="row.binName">{{ row.binName || '-' }}</span></td>
+            <td class="text-end"><span class="sa-pill sa-mono">{{ row.price ?? 0 }}</span></td>
+            <td class="text-end">
+              <input type="number" class="form-control form-control-sm sa-qty text-end"
+                [(ngModel)]="row.qty" name="qty_{{i}}" placeholder="0" (ngModelChange)="onQtyChange(i)">
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm"
+                style="border:1px solid #2E5F73; color:#2E5F73; background:white;"
+                (click)="openAdjustModal(adjustModal, row)">Adjust</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Adjustment Modal -->
+<ng-template #adjustModal let-modal>
+  <div class="modal-header flex-column align-items-start">
+    <h5 class="modal-title fw-semibold text-dark mb-1">Adjust Stock</h5>
+    <div class="text-muted small">
+      <span class="fw-semibold">{{ selectedRow?.item }}</span>
+      <span class="ms-2">-</span>
+      <span class="ms-2">{{ selectedRow?.sku }}</span>
+    </div>
+    <button type="button" class="btn-close position-absolute end-0 top-0 mt-2 me-2"
+            aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body">
+    <div class="row g-2">
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Warehouse</label>
+        <input type="text" class="form-control form-control-sm" [value]="selectedRow?.warehouseName" readonly>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Bin</label>
+        <input type="text" class="form-control form-control-sm" [value]="selectedRow?.binName" readonly>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Supplier</label>
+        <input type="text" class="form-control form-control-sm" [value]="selectedRow?.supplierName" readonly>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Qty</label>
+        <input type="number" class="form-control form-control-sm" [ngModel]="selectedRow?.qty" readonly>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Type</label>
+        <ng-select class="ngs ngs-sm w-100 sa-ngs"
+             [items]="adjTypes" bindLabel="label" bindValue="value"
+             [(ngModel)]="selectedRow!.type" (change)="onTypeChange()" placeholder="Select type" appendTo="body">
+        </ng-select>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Faulty Qty</label>
+        <input type="number" class="form-control form-control-sm"
+               [(ngModel)]="selectedRow!.faultyQty" (ngModelChange)="onFaultyQtyChange($event)"
+               min="1" step="1" placeholder="Enter qty">
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Reason</label>
+        <ng-select class="ngs ngs-sm w-100 sa-ngs"
+                   [items]="stockIssueOptions" bindLabel="name" bindValue="id"
+                   [(ngModel)]="selectedRow!.reason" placeholder="Select reason" appendTo="body">
+        </ng-select>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1">Remarks</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  [(ngModel)]="selectedRow!.remarks" placeholder="Enter remarks"></textarea>
+      </div>
+      <div class="col-12" *ngIf="adjustError">
+        <div class="text-danger small mt-1">{{ adjustError }}</div>
+      </div>
+      <div class="col-12" *ngIf="previewVisible">
+        <div class="text-muted small mt-1">
+          New on-hand after {{ selectedRow?.type?.toLowerCase() }}: <b>{{ newQtyPreview }}</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="cancelModal()">Cancel</button>
+    <button type="button" class="btn btn-primary btn-sm"
+            (click)="submitAdjustment()" [disabled]="savingAdjustment || !!adjustError || !selectedRow?.type || !selectedRow?.faultyQty">
+      {{ savingAdjustment ? 'Posting...' : 'Post Adjustment' }}
+    </button>
+  </div>
+</ng-template>
