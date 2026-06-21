@@ -1,0 +1,91 @@
+<div class="dt-pg">
+  <div class="dt-card">
+    <div class="dt-card-head"><h2>Outlet List</h2></div>
+    <div class="dt-controls">
+      <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
+      <div class="dt-right">
+        <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Search..."/></div>
+        <button class="mbtn-add" (click)="showForm()">Add</button>
+      </div>
+    </div>
+    <div class="dt-table-wrap">
+      <table class="dt-table">
+        <thead><tr>
+          <th (click)="sortBy('name')">NAME <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('cityId')">CITY <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('stateId')">STATE <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('countryId')">COUNTRY <span class="sort-arr">⇅</span></th>
+          <th>ACTIONS</th>
+        </tr></thead>
+        <tbody>
+          <tr *ngFor="let item of pagedItems">
+            <td>{{ item.name || item.locationName }}</td>
+            <td>{{ item.cityName || getCityName(item.cityId) }}</td>
+            <td>{{ item.stateName || getStateName(item.stateId) }}</td>
+            <td>{{ item.countryName || getCountryName(item.countryId) }}</td>
+            <td><div class="dt-actions-cell">
+              <button class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+              <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
+            </div></td>
+          </tr>
+          <tr *ngIf="!loading && filteredItems.length===0"><td colspan="5" class="dt-empty">No records found.</td></tr>
+          <tr *ngIf="loading"><td colspan="5" class="dt-empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dt-footer">{{ filteredItems.length }} total</div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="dt-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
+    <div class="dt-modal" (click)="$event.stopPropagation()">
+      <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Add' }} Outlet</h3>
+      <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
+      <form (ngSubmit)="onSubmit()" #f="ngForm">
+        <div class="mf-group">
+          <label class="mf-label">Location Name <span style="color:red">*</span></label>
+          <input class="mf-input" type="text" [(ngModel)]="form.name" name="name" placeholder="Location Name"/>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Select Country <span style="color:red">*</span></label>
+          <select class="mf-select" [(ngModel)]="form.countryId" name="countryId" (change)="onCountryChange(form.countryId)">
+            <option [ngValue]="null">-- Select Country --</option>
+            <option *ngFor="let c of countries" [ngValue]="c.id">{{ c.countryName || c.name }}</option>
+          </select>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Select State <span style="color:red">*</span></label>
+          <select class="mf-select" [(ngModel)]="form.stateId" name="stateId" (change)="onStateChange(form.stateId)" [disabled]="!form.countryId">
+            <option [ngValue]="null">-- Select State --</option>
+            <option *ngFor="let s of filteredStates" [ngValue]="s.id">{{ s.stateName || s.name }}</option>
+          </select>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Select City <span style="color:red">*</span></label>
+          <select class="mf-select" [(ngModel)]="form.cityId" name="cityId" [disabled]="!form.stateId">
+            <option [ngValue]="null">-- Select City --</option>
+            <option *ngFor="let c of filteredCities" [ngValue]="c.id">{{ c.cityName || c.name }}</option>
+          </select>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Contact Number</label>
+          <input class="mf-input" type="text" [(ngModel)]="form.contactNumber" name="contactNumber" placeholder="Contact Number"/>
+        </div>
+        <div class="mf-actions">
+          <button type="submit" class="mf-btn submit"><svg viewBox="0 0 20 20"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Submit</button>
+          <button type="button" class="mf-btn cancel" (click)="cancel()"><svg viewBox="0 0 20 20"><line x1="5" y1="5" x2="15" y2="15" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="5" x2="5" y2="15" fill="none" stroke="currentColor" stroke-width="2"/></svg>Cancel</button>
+          <button type="button" class="mf-btn clear" (click)="clearForm()"><svg viewBox="0 0 20 20"><path d="M3 10a7 7 0 1 0 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="3 5 3 10 8 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Clear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirm -->
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
+      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
+      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
+      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
+    </div>
+  </div>
+</div>

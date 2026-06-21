@@ -1,0 +1,13 @@
+:host { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+.master-list { flex:1; overflow-y:auto; }
+.list-item { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border); }
+.list-item:hover { background:var(--bg); }
+.item-name { font-size:13px; color:var(--text); font-weight:500; }
+.item-actions { display:flex; gap:6px; }
+.list-empty { padding:24px; text-align:center; color:var(--text-muted); font-size:13px; }
+.list-loading { padding:24px; text-align:center; color:var(--text-muted); font-size:13px; }
+.form-panel { padding:16px; margin-bottom:8px; }
+.alert-msg { padding:8px 14px; border-radius:6px; font-size:12.5px; margin-bottom:8px; background:var(--primary-pale); color:var(--primary); }
+.alert-msg.is-error { background:#fef2f2; color:#dc2626; }
+.form-row { display:flex; gap:12px; flex-wrap:wrap; }
+.btn-group { display:flex; gap:8px; margin-top:12px; }

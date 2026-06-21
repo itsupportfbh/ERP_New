@@ -20,6 +20,7 @@
             <span *ngSwitchCase="'sales'">&#128722;</span>
             <span *ngSwitchCase="'inventory'">&#128230;</span>
             <span *ngSwitchCase="'components'">&#129513;</span>
+            <span *ngSwitchCase="'master'">&#9881;</span>
             <span *ngSwitchDefault>&#9679;</span>
           </span>
           <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
@@ -34,9 +35,50 @@
             [queryParams]="child.queryParams"
             [class.active]="isChildActive(child)">
             <span class="submenu-dot" [ngSwitch]="child.icon">
+              <!-- Business Partners -->
               <span *ngSwitchCase="'customer'">&#128100;</span>
               <span *ngSwitchCase="'supplier'">&#128666;</span>
               <span *ngSwitchCase="'users'">&#128101;</span>
+              <!-- Purchase -->
+              <span *ngSwitchCase="'pr'">&#128203;</span>
+              <span *ngSwitchCase="'po'">&#128230;</span>
+              <span *ngSwitchCase="'rfq'">&#128172;</span>
+              <span *ngSwitchCase="'grn'">&#128229;</span>
+              <span *ngSwitchCase="'invoice'">&#129518;</span>
+              <span *ngSwitchCase="'debit'">&#128196;</span>
+              <span *ngSwitchCase="'match'">&#9878;</span>
+              <span *ngSwitchCase="'scorecard'">&#11088;</span>
+              <!-- Master -->
+              <span *ngSwitchCase="'m-approval'">&#10004;</span>
+              <span *ngSwitchCase="'m-bank'">&#127974;</span>
+              <span *ngSwitchCase="'m-bin'">&#128230;</span>
+              <span *ngSwitchCase="'m-category'">&#127991;</span>
+              <span *ngSwitchCase="'m-cities'">&#127961;</span>
+              <span *ngSwitchCase="'m-costing'">&#128176;</span>
+              <span *ngSwitchCase="'m-company'">&#127970;</span>
+              <span *ngSwitchCase="'m-countries'">&#127757;</span>
+              <span *ngSwitchCase="'m-currency'">&#128177;</span>
+              <span *ngSwitchCase="'m-custgrp'">&#128101;</span>
+              <span *ngSwitchCase="'m-dept'">&#128202;</span>
+              <span *ngSwitchCase="'m-driver'">&#128663;</span>
+              <span *ngSwitchCase="'m-exchange'">&#128200;</span>
+              <span *ngSwitchCase="'m-flag'">&#128681;</span>
+              <span *ngSwitchCase="'m-incoterms'">&#127760;</span>
+              <span *ngSwitchCase="'m-itemtype'">&#127991;</span>
+              <span *ngSwitchCase="'m-itemset'">&#128179;</span>
+              <span *ngSwitchCase="'m-location'">&#128205;</span>
+              <span *ngSwitchCase="'m-payment'">&#128179;</span>
+              <span *ngSwitchCase="'m-recurring'">&#128260;</span>
+              <span *ngSwitchCase="'m-service'">&#128295;</span>
+              <span *ngSwitchCase="'m-states'">&#127758;</span>
+              <span *ngSwitchCase="'m-stock'">&#128228;</span>
+              <span *ngSwitchCase="'m-strategy'">&#128200;</span>
+              <span *ngSwitchCase="'m-suppgrp'">&#127981;</span>
+              <span *ngSwitchCase="'m-tax'">&#128176;</span>
+              <span *ngSwitchCase="'m-uom'">&#128208;</span>
+              <span *ngSwitchCase="'m-uomconv'">&#128260;</span>
+              <span *ngSwitchCase="'m-vehicle'">&#128665;</span>
+              <span *ngSwitchCase="'m-warehouse'">&#127981;</span>
               <span *ngSwitchDefault>&#9679;</span>
             </span>
             <span>{{ child.label }}</span>
@@ -51,6 +93,7 @@
               <span *ngSwitchCase="'sales'">&#128722;</span>
               <span *ngSwitchCase="'inventory'">&#128230;</span>
               <span *ngSwitchCase="'components'">&#129513;</span>
+              <span *ngSwitchCase="'master'">&#9881;</span>
               <span *ngSwitchDefault>&#9679;</span>
             </span>
             <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>

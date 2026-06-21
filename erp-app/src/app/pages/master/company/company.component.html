@@ -1,0 +1,406 @@
+<!-- ══════════════════════════════════════════════ LIST VIEW -->
+<ng-container *ngIf="!isFormVisible">
+  <div class="cmp-pg">
+
+    <!-- Header -->
+    <div class="cmp-header">
+      <div>
+        <h2>Organization &amp; Company List</h2>
+        <p>One organization can have single company or multiple companies.</p>
+      </div>
+      <div class="cmp-header-right">
+        <input class="cmp-search" type="text" [(ngModel)]="searchText" (input)="onSearch()" placeholder="Search organization / company / admin"/>
+        <button class="cmp-add-btn" (click)="showAddForm()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/><line x1="10" y1="6" x2="10" y2="14"/><line x1="6" y1="10" x2="14" y2="10"/></svg>
+          Add Company
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="cmp-stats">
+      <div class="cmp-stat"><span class="stat-num">{{ totalOrganizations }}</span><span class="stat-label">Organizations</span></div>
+      <div class="cmp-stat"><span class="stat-num">{{ totalCompanies }}</span><span class="stat-label">Companies</span></div>
+      <div class="cmp-stat"><span class="stat-num">{{ activeCompanies }}</span><span class="stat-label">Active Companies</span></div>
+      <div class="cmp-stat"><span class="stat-num">{{ inactiveCompanies }}</span><span class="stat-label">Inactive Companies</span></div>
+    </div>
+
+    <div class="mlist-loading" *ngIf="loading">Loading...</div>
+    <div class="mlist-empty" *ngIf="!loading && filteredOrgs.length===0">No records found.</div>
+
+    <!-- Org groups -->
+    <div class="cmp-org-group" *ngFor="let org of filteredOrgs">
+      <div class="cmp-org-hdr">
+        <div class="cmp-org-avatar">{{ getAvatar(org) }}</div>
+        <div>
+          <span class="cmp-org-name">{{ org.orgName }}</span>
+          <span class="cmp-org-code">{{ org.orgCode }}</span>
+        </div>
+        <div class="cmp-org-meta">
+          <span>{{ org.companyCount || org.companies?.length || 0 }} companies</span>
+          <span>{{ org.orgGuid }}</span>
+        </div>
+        <span class="cmp-status-tag" [class.active]="org.isActive" [class.inactive]="!org.isActive">{{ org.isActive ? 'Active' : 'Inactive' }}</span>
+      </div>
+      <table class="cmp-table" *ngIf="org.companies?.length">
+        <thead><tr>
+          <th>COMPANY</th><th>ADMIN USER</th><th>CREATED BY</th><th>CREATED DATE</th><th>UPDATED BY</th><th>UPDATED DATE</th><th>STATUS</th><th>ACTION</th>
+        </tr></thead>
+        <tbody>
+          <tr *ngFor="let c of org.companies">
+            <td><strong>{{ c.companyName }}</strong><small>{{ c.companyCode }}</small></td>
+            <td>{{ c.adminUsername }}<small>{{ c.adminEmail }}</small></td>
+            <td>{{ c.createdByName || '-' }}</td>
+            <td>{{ c.createdDate ? (c.createdDate | date:'dd-MM-yyyy') : '-' }}</td>
+            <td>{{ c.updatedByName || '-' }}</td>
+            <td>{{ c.updatedDate ? (c.updatedDate | date:'dd-MM-yyyy') : '-' }}</td>
+            <td><span class="cmp-status-tag" [class.active]="c.isActive" [class.inactive]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
+            <td><div class="cmp-tbl-actions">
+              <button class="dt-icon-btn edit" (click)="editCompany(c)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+              <button class="dt-icon-btn del" (click)="openDelete(c)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Delete modal -->
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
+      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
+      <p class="mconfirm-msg">Are you sure you want to delete this item?</p>
+      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
+    </div>
+  </div>
+</ng-container>
+
+<!-- ══════════════════════════════════════════════ SETUP VIEW -->
+<ng-container *ngIf="isFormVisible">
+  <div class="cmp-setup-pg">
+
+    <!-- Top bar -->
+    <div class="cmp-setup-top">
+      <button class="cmp-back-btn" (click)="cancel()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 4L7 10l6 6"/></svg>
+        Back
+      </button>
+    </div>
+    <h2 class="cmp-setup-title">{{ isEditMode ? 'Edit' : 'Add' }} Company</h2>
+    <p class="cmp-breadcrumb">Master → Company Setup</p>
+
+    <div class="mf-alert" *ngIf="message" [class.is-error]="isError">{{ message }}</div>
+
+    <!-- Tabs -->
+    <div class="cmp-tabs">
+      <button class="cmp-tab" [class.active]="activeTab==='general'" (click)="setTab('general')">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>General
+      </button>
+      <button class="cmp-tab" [class.active]="activeTab==='financeTax'" (click)="setTab('financeTax')">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>Finance &amp; Tax
+      </button>
+      <button class="cmp-tab" [class.active]="activeTab==='defaults'" (click)="setTab('defaults')">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M4 6h12M4 10h8M4 14h10"/></svg>Defaults
+      </button>
+      <button class="cmp-tab" [class.active]="activeTab==='numberSeries'" (click)="setTab('numberSeries')"># Number Series</button>
+      <button class="cmp-tab" [class.active]="activeTab==='adminUser'" (click)="setTab('adminUser')">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Initial Admin User
+      </button>
+      <button class="cmp-tab" [class.active]="activeTab==='audit'" (click)="setTab('audit')">Audit</button>
+    </div>
+
+    <!-- ── GENERAL TAB -->
+    <ng-container *ngIf="activeTab==='general'">
+
+      <!-- Organization mode (only for create) -->
+      <div class="cmp-section" *ngIf="!isEditMode">
+        <h3>Organization</h3>
+        <p>Select how to create this company</p>
+        <div style="display:flex;gap:16px;margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="radio" [checked]="isNewOrganization" (change)="onOrgModeChange(true)"/> New Organization
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="radio" [checked]="!isNewOrganization" (change)="onOrgModeChange(false)"/> Existing Organization
+          </label>
+        </div>
+        <div class="mf-group" *ngIf="!isNewOrganization">
+          <label class="mf-label">Select Organization</label>
+          <select class="mf-select" [(ngModel)]="selectedOrganizationId" name="orgId" (change)="onOrgSelected(selectedOrganizationId)">
+            <option [ngValue]="0">-- Select Organization --</option>
+            <option *ngFor="let o of organizations" [ngValue]="o.id">{{ o.orgName }} ({{ o.orgCode }})</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Company Logo -->
+      <div class="cmp-section">
+        <h3>Company Logo</h3>
+        <p>Used in invoice / report headers</p>
+        <div class="cmp-logo-row">
+          <img *ngIf="logoPreview" [src]="logoPreview" style="height:56px;border-radius:8px;border:1px solid #ddd;object-fit:contain;padding:4px" alt="logo"/>
+          <div class="cmp-no-logo" *ngIf="!logoPreview">No Logo</div>
+          <label class="cmp-upload-btn" style="cursor:pointer">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M10 14V6M6 10l4-4 4 4"/><rect x="3" y="15" width="14" height="2" rx="1"/></svg>
+            Upload <input type="file" accept="image/*" style="display:none" (change)="onLogoPicked($event)"/>
+          </label>
+          <button class="cmp-remove-btn" (click)="removeLogo()" *ngIf="logoPreview">Remove</button>
+        </div>
+      </div>
+
+      <!-- Company Details -->
+      <div class="cmp-section">
+        <h3>Company Details</h3>
+        <p>Basic identity and contact</p>
+        <div class="dt-form-grid">
+          <div class="mf-group">
+            <label class="mf-label">Company Code <span style="color:red">*</span></label>
+            <input class="mf-input" type="text" [(ngModel)]="general.code" name="code" placeholder="e.g. CCSPL"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Company Name <span style="color:red">*</span></label>
+            <input class="mf-input" type="text" [(ngModel)]="general.name" name="name" placeholder="Company Name"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Status</label>
+            <select class="mf-select" [(ngModel)]="general.status" name="status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Registration No</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.registrationNo" name="registrationNo" placeholder="Registration No"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Phone</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.phone" name="phone" placeholder="Phone"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Email</label>
+            <input class="mf-input" type="email" [(ngModel)]="general.email" name="email" placeholder="Email"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Legal Name</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.legalName" name="legalName" placeholder="Legal Name"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Website</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.website" name="website" placeholder="https://"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Country</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.country" name="country" placeholder="Country"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Tax Registration No</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.taxRegistrationNo" name="taxReg" placeholder="GST/VAT No"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Contact Person</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.contactPerson" name="contactPerson" placeholder="Contact Person"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Contact Mobile</label>
+            <input class="mf-input" type="text" [(ngModel)]="general.contactMobileNo" name="contactMobile" placeholder="+65 0000 0000"/>
+          </div>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Contact Email</label>
+          <input class="mf-input" type="email" [(ngModel)]="general.contactEmail" name="contactEmail" placeholder="contact@company.com"/>
+        </div>
+        <div class="dt-form-grid">
+          <div class="mf-group"><label class="mf-label">Address 1</label><input class="mf-input" [(ngModel)]="general.address1" name="addr1" placeholder="Address Line 1"/></div>
+          <div class="mf-group"><label class="mf-label">Address 2</label><input class="mf-input" [(ngModel)]="general.address2" name="addr2" placeholder="Address Line 2"/></div>
+          <div class="mf-group"><label class="mf-label">City</label><input class="mf-input" [(ngModel)]="general.city" name="city" placeholder="City"/></div>
+          <div class="mf-group"><label class="mf-label">State</label><input class="mf-input" [(ngModel)]="general.state" name="state" placeholder="State"/></div>
+          <div class="mf-group"><label class="mf-label">Postal Code</label><input class="mf-input" [(ngModel)]="general.postal" name="postal" placeholder="Postal Code"/></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ── FINANCE & TAX TAB -->
+    <ng-container *ngIf="activeTab==='financeTax'">
+      <div class="cmp-section">
+        <h3>Finance &amp; Tax</h3>
+        <p>Currency, tax mode and rounding settings</p>
+        <div class="dt-form-grid">
+          <div class="mf-group">
+            <label class="mf-label">Base Currency <span style="color:red">*</span></label>
+            <select class="mf-select" [(ngModel)]="financeTax.currencyId" name="currencyId">
+              <option [ngValue]="null">-- Select Currency --</option>
+              <option *ngFor="let c of currencies" [ngValue]="c.id">{{ c.currencyName || c.name }}</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Country</label>
+            <select class="mf-select" [(ngModel)]="financeTax.countryId" name="financeCountryId">
+              <option [ngValue]="null">-- Select Country --</option>
+              <option *ngFor="let c of countries" [ngValue]="c.id">{{ c.countryName || c.name }}</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Tax Mode</label>
+            <select class="mf-select" [(ngModel)]="financeTax.taxMode" name="taxMode">
+              <option value="Exclusive">Exclusive</option>
+              <option value="Inclusive">Inclusive</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">GST / VAT No</label>
+            <input class="mf-input" type="text" [(ngModel)]="financeTax.gstNo" name="gstNo" placeholder="GST No"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Filing Frequency</label>
+            <select class="mf-select" [(ngModel)]="financeTax.filingFrequency" name="filingFreq">
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Decimal Places</label>
+            <select class="mf-select" [(ngModel)]="financeTax.decimalPlaces" name="decimalPlaces">
+              <option [ngValue]="0">0</option>
+              <option [ngValue]="2">2</option>
+              <option [ngValue]="3">3</option>
+              <option [ngValue]="4">4</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Rounding Rule</label>
+            <select class="mf-select" [(ngModel)]="financeTax.roundingRule" name="roundingRule">
+              <option value="Round half up">Round half up</option>
+              <option value="Round down">Round down</option>
+              <option value="Round up">Round up</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Default Output Tax Code</label>
+            <input class="mf-input" type="text" [(ngModel)]="financeTax.defaultOutputTaxCode" name="outputTax" placeholder="Output Tax Code"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Default Input Tax Code</label>
+            <input class="mf-input" type="text" [(ngModel)]="financeTax.defaultInputTaxCode" name="inputTax" placeholder="Input Tax Code"/>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ── DEFAULTS TAB -->
+    <ng-container *ngIf="activeTab==='defaults'">
+      <div class="cmp-section">
+        <h3>Defaults</h3>
+        <p>Default branch, warehouse, language and timezone settings</p>
+        <div class="dt-form-grid">
+          <div class="mf-group"><label class="mf-label">Default Branch</label><input class="mf-input" [(ngModel)]="defaults.defaultBranch" name="branch" placeholder="Head Office"/></div>
+          <div class="mf-group"><label class="mf-label">Default Warehouse</label><input class="mf-input" [(ngModel)]="defaults.defaultWarehouse" name="warehouse" placeholder="Main Warehouse"/></div>
+          <div class="mf-group"><label class="mf-label">Default Bin</label><input class="mf-input" [(ngModel)]="defaults.defaultBin" name="bin" placeholder="MAIN"/></div>
+          <div class="mf-group">
+            <label class="mf-label">Language</label>
+            <select class="mf-select" [(ngModel)]="defaults.defaultLanguage" name="language">
+              <option value="EN">English</option>
+              <option value="TA">Tamil</option>
+              <option value="ZH">Chinese</option>
+              <option value="MS">Malay</option>
+            </select>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Timezone</label>
+            <select class="mf-select" [(ngModel)]="defaults.timeZone" name="timezone">
+              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+              <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+              <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ── NUMBER SERIES TAB -->
+    <ng-container *ngIf="activeTab==='numberSeries'">
+      <div class="cmp-section">
+        <h3>Number Series</h3>
+        <p>Configure document numbering prefix and sequence</p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--primary);color:#fff">
+            <th style="padding:10px 12px;text-align:left">Document</th>
+            <th style="padding:10px 12px;text-align:left">Prefix</th>
+            <th style="padding:10px 12px;text-align:left">Next No</th>
+            <th style="padding:10px 12px;text-align:left">Reset Yearly</th>
+            <th style="padding:10px 12px;width:40px"></th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let row of numberSeries; let i=index" style="border-bottom:1px solid #eee">
+              <td style="padding:8px 12px"><input class="mf-input" [(ngModel)]="row.document" [name]="'doc'+i" placeholder="Document name" style="margin:0"/></td>
+              <td style="padding:8px 12px"><input class="mf-input" [(ngModel)]="row.prefix" [name]="'pfx'+i" placeholder="SI" style="margin:0;width:80px"/></td>
+              <td style="padding:8px 12px"><input class="mf-input" type="number" [(ngModel)]="row.nextNo" [name]="'nxt'+i" style="margin:0;width:80px"/></td>
+              <td style="padding:8px 12px"><input type="checkbox" [(ngModel)]="row.reset" [name]="'rst'+i"/></td>
+              <td style="padding:8px 12px"><button class="dt-icon-btn del" (click)="removeNumberRow(i)" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="14" height="14"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="mbtn-create" (click)="addNumberRow()" style="margin-top:12px" type="button">+ Add Row</button>
+      </div>
+    </ng-container>
+
+    <!-- ── ADMIN USER TAB -->
+    <ng-container *ngIf="activeTab==='adminUser'">
+      <div class="cmp-section">
+        <h3>Initial Admin User</h3>
+        <p>Admin user who will manage this company</p>
+        <div class="dt-form-grid">
+          <div class="mf-group"><label class="mf-label">Username <span style="color:red">*</span></label><input class="mf-input" [(ngModel)]="adminUser.username" name="adminUsername" placeholder="admin"/></div>
+          <div class="mf-group"><label class="mf-label">Email <span style="color:red">*</span></label><input class="mf-input" type="email" [(ngModel)]="adminUser.email" name="adminEmail" placeholder="admin@company.com"/></div>
+          <div class="mf-group">
+            <label class="mf-label">Password {{ isEditMode ? '(leave blank to keep)' : '*' }}</label>
+            <div style="position:relative">
+              <input class="mf-input" [type]="showPassword?'text':'password'" [(ngModel)]="adminUser.password" name="adminPassword" placeholder="Min 6 characters" style="padding-right:40px"/>
+              <button type="button" (click)="showPassword=!showPassword" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><ellipse cx="10" cy="10" rx="8" ry="5"/><circle cx="10" cy="10" r="2"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="mf-group"><label class="mf-label">Department ID</label><input class="mf-input" type="number" [(ngModel)]="adminUser.departmentId" name="deptId" placeholder="1"/></div>
+          <div class="mf-group"><label class="mf-label">Location ID</label><input class="mf-input" type="number" [(ngModel)]="adminUser.locationId" name="locId" placeholder="1"/></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ── AUDIT TAB -->
+    <ng-container *ngIf="activeTab==='audit'">
+      <div class="cmp-section">
+        <h3>Audit</h3>
+        <p>Last updated by: <strong>{{ lastUpdatedBy }}</strong> at <strong>{{ lastUpdatedAt }}</strong></p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px" *ngIf="auditTrail.length">
+          <thead><tr style="background:var(--primary);color:#fff">
+            <th style="padding:10px 12px;text-align:left">Date</th>
+            <th style="padding:10px 12px;text-align:left">User</th>
+            <th style="padding:10px 12px;text-align:left">Change</th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let a of auditTrail" style="border-bottom:1px solid #eee">
+              <td style="padding:10px 12px">{{ a.date }}</td>
+              <td style="padding:10px 12px">{{ a.user }}</td>
+              <td style="padding:10px 12px">{{ a.change }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="mlist-empty" *ngIf="!auditTrail.length" style="padding:20px">No audit records.</div>
+      </div>
+    </ng-container>
+
+    <!-- Tab nav + Save -->
+    <div class="cmp-tab-actions">
+      <button class="mf-btn cancel" type="button" (click)="goPrev()" *ngIf="!isFirstTab()">← Previous</button>
+      <button class="mf-btn clear" type="button" (click)="goNext()" *ngIf="!isLastTab()">Next →</button>
+      <button class="mf-btn submit" type="button" (click)="save()" [disabled]="saving" *ngIf="isLastTab()">
+        <svg viewBox="0 0 20 20" width="14" height="14"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        {{ saving ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+
+  </div>
+</ng-container>
