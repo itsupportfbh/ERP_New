@@ -24,9 +24,10 @@
       <div class="mf-group">
         <label class="mf-label">Customer</label>
         <div class="qf-control" #customerBox>
-          <input type="text" class="mf-input" placeholder="Search customer..."
+          <input type="text" class="mf-input qf-input--icon" placeholder="Search customer..."
             [(ngModel)]="customerSearch" name="customerSearch" autocomplete="off"
             (focus)="openCustomerDropdown()" (input)="filterCustomers()" />
+          <button type="button" class="qf-dropBtn" (click)="toggleCustomerDropdown()"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <div *ngIf="customerDdOpen" class="qf-menu">
             <div class="qf-mi qf-mi--split" *ngFor="let c of filteredCustomers"
               (mousedown)="$event.preventDefault()" (click)="selectCustomer(c)">
@@ -55,6 +56,37 @@
       <div class="mf-group">
         <label class="mf-label">Validity Date</label>
         <input type="date" class="mf-input" [(ngModel)]="header.validityDate" name="validityDate" />
+      </div>
+    </div>
+
+    <!-- Cash Sales contact row (shows when Cash Sales is chosen) -->
+    <div class="qf-grid4" *ngIf="header.isCashSales">
+      <!-- Person Name -->
+      <div class="mf-group">
+        <label class="mf-label">Person Name</label>
+        <input type="text" class="mf-input" [(ngModel)]="header.personName" name="personName"
+          placeholder="Enter person name..." autocomplete="off" />
+      </div>
+
+      <!-- Contact Number -->
+      <div class="mf-group">
+        <label class="mf-label">Contact Number</label>
+        <input type="text" class="mf-input" [(ngModel)]="header.contactNumber" name="contactNumber"
+          placeholder="Enter contact number..." autocomplete="off" />
+      </div>
+
+      <!-- Email -->
+      <div class="mf-group">
+        <label class="mf-label">Email</label>
+        <input type="email" class="mf-input" [(ngModel)]="header.email" name="email"
+          placeholder="Enter email..." autocomplete="off" />
+      </div>
+
+      <!-- Delivery To -->
+      <div class="mf-group">
+        <label class="mf-label">Delivery To</label>
+        <textarea class="mf-textarea qf-ta" rows="2" [(ngModel)]="header.deliveryTo" name="deliveryToCash"
+          placeholder="Enter delivery location..."></textarea>
       </div>
     </div>
 
@@ -121,9 +153,8 @@
         <label class="mf-label">Line Source</label>
         <select class="mf-select" [(ngModel)]="header.lineSourceId" name="lineSourceId"
           (change)="onLineSourceChange()">
-          <option [ngValue]="1">Items / Custom Selection</option>
+          <option [ngValue]="1">Custom Selection</option>
           <option [ngValue]="2">Bundle Packages</option>
-          <option [ngValue]="3">Both (Items + Packages)</option>
         </select>
       </div>
 
@@ -141,8 +172,8 @@
           placeholder="Enter customer PO number..." />
       </div>
 
-      <!-- Delivery To -->
-      <div class="mf-group">
+      <!-- Delivery To (non-cash; for Cash Sales it appears in the contact row above) -->
+      <div class="mf-group" *ngIf="!header.isCashSales">
         <label class="mf-label">Delivery To</label>
         <textarea class="mf-textarea qf-ta" rows="2" [(ngModel)]="header.deliveryTo" name="deliveryTo"
           placeholder="Enter delivery location..."></textarea>
@@ -166,7 +197,7 @@
           <input type="text" class="mf-input qf-input--icon" placeholder="Search packages..."
             [(ngModel)]="itemSetSearch" name="itemSetSearch" autocomplete="off"
             (focus)="openItemSetDropdown()" (input)="filterItemSets()" />
-          <button type="button" class="qf-dropBtn" (click)="toggleItemSetDropdown()">&#9662;</button>
+          <button type="button" class="qf-dropBtn" (click)="toggleItemSetDropdown()"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <div *ngIf="itemSetDdOpen" class="qf-menu">
             <div class="qf-mi qf-mi--split" *ngFor="let s of filteredItemSets; trackBy: trackByItemSetId"
               (mousedown)="$event.preventDefault()" (click)="addItemSetDirect(s)">
@@ -348,7 +379,7 @@
             <input class="mf-input qf-input--icon" name="modalItemSearch" [(ngModel)]="modal.itemSearch"
               placeholder="Search item..." autocomplete="off"
               (click)="toggleModalItemDropdown()" (input)="onModalItemInput()" />
-            <button type="button" class="qf-dropBtn" (click)="toggleModalItemDropdown()">&#9662;</button>
+            <button type="button" class="qf-dropBtn" (click)="toggleModalItemDropdown()"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <div class="qf-menu qf-menu--modal" *ngIf="modal.dropdownOpen">
               <ng-container *ngIf="modal.filteredItems?.length; else noMatches">
                 <div class="qf-mi qf-mi--split" *ngFor="let row of modal.filteredItems; trackBy: trackByItemId"
