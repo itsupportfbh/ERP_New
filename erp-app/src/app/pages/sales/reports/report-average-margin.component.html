@@ -1,0 +1,114 @@
+<div class="dt-pg">
+  <div class="dt-card">
+    <div class="dt-card-head"><h2>Average Margin Reports</h2></div>
+
+    <div class="dt-controls">
+      <div class="dt-show">
+        Show
+        <select class="dt-pg-select" [(ngModel)]="selectedOption" name="pageSize" (change)="onLimitChange()">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+        entries
+      </div>
+
+      <div class="dt-right">
+        <div class="dt-search-wrap">
+          Search:
+          <input class="dt-search-input" type="text" [(ngModel)]="searchValue" name="search"
+            (input)="filterUpdate()" placeholder="Invoice / customer / item / category"/>
+        </div>
+
+        <select class="dt-pg-select am-sort" [(ngModel)]="sortBy" name="sortBy" (change)="onSortChange()">
+          <option value="">Sort: None</option>
+          <option value="salesInvoiceDate">Invoice Date</option>
+          <option value="customerName">Customer Name</option>
+          <option value="netSales">Net Sales</option>
+          <option value="costOfSales">Cost of Sales</option>
+          <option value="marginAmount">Margin (Value)</option>
+          <option value="marginPct">Margin (%)</option>
+          <option value="location">Branch</option>
+          <option value="salesPerson">Salesperson</option>
+        </select>
+
+        <button type="button" class="am-dir-btn" (click)="toggleSortDir()">
+          {{ sortDir === 'asc' ? '▲ Asc' : '▼ Desc' }}
+        </button>
+
+        <button type="button" class="mbtn-add" (click)="openFilters()">Filter</button>
+      </div>
+    </div>
+
+    <div class="dt-table-wrap">
+      <table class="dt-table">
+        <thead>
+          <tr>
+            <th class="am-invno">INVOICE NO</th>
+            <th class="am-nowrap">INVOICE<br>DATE</th>
+            <th class="am-nowrap">CUSTOMER</th>
+            <th class="am-nowrap">ITEM /<br>CATEGORY</th>
+            <th class="am-num">QTY</th>
+            <th class="am-num">NET SALES</th>
+            <th class="am-num">COST OF SALES</th>
+            <th class="am-num">MARGIN VALUE</th>
+            <th class="am-num">MARGIN %</th>
+            <th class="am-nowrap">BRANCH</th>
+            <th class="am-nowrap">SALES<br>PERSON</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows | slice:(currentPage-1)*selectedOption:currentPage*selectedOption">
+            <td class="am-invno"><strong>{{ row.salesInvoiceNo || '—' }}</strong></td>
+            <td class="am-nowrap">{{ row.salesInvoiceDate ? (row.salesInvoiceDate | date:'dd-MM-yyyy') : '—' }}</td>
+            <td [title]="row.customerName">{{ row.customerName || '—' }}</td>
+            <td [title]="(row.itemName || '') + ' / ' + (row.category || '')">
+              {{ row.itemName || '—' }}<span class="am-muted"> / {{ row.category || '—' }}</span>
+            </td>
+            <td class="am-num">{{ row.qty ?? 0 }}</td>
+            <td class="am-num">{{ formatMoney(row.netSales) }}</td>
+            <td class="am-num">{{ formatMoney(row.costOfSales) }}</td>
+            <td class="am-num" [ngClass]="getMarginClass(row.marginAmount)">{{ formatMoney(row.marginAmount) }}</td>
+            <td class="am-num" [ngClass]="getMarginClass(row.marginPct)">{{ formatPct(row.marginPct) }}</td>
+            <td class="am-nowrap">{{ row.location || '—' }}</td>
+            <td class="am-nowrap">{{ row.salesPerson || '—' }}</td>
+          </tr>
+          <tr *ngIf="!rows || rows.length === 0">
+            <td colspan="11" class="dt-empty">No margin data found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dt-footer">
+      <span>{{ rows.length }} total</span>
+
+      <div class="am-pager" *ngIf="totalPages > 1">
+        <span class="am-pager-info">
+          Showing {{ (currentPage-1)*selectedOption+1 }}–{{ currentPage*selectedOption < rows.length ? currentPage*selectedOption : rows.length }} of {{ rows.length }} entries
+        </span>
+        <div class="am-pager-btns">
+          <button class="am-pager-btn" [disabled]="currentPage===1" (click)="onPageChange(currentPage-1)">&#8249;</button>
+          <button *ngFor="let p of pageNumbers" class="am-pager-btn" [class.active]="p===currentPage" (click)="onPageChange(p)">{{ p }}</button>
+          <button class="am-pager-btn" [disabled]="currentPage===totalPages" (click)="onPageChange(currentPage+1)">&#8250;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared filter modal -->
+  <erp-report-filters
+    [open]="filterOpen"
+    [showCustomer]="true"
+    [showBranch]="true"
+    [showStatus]="false"
+    [showSalesperson]="true"
+    [showCategory]="false"
+    [customers]="customers"
+    [branches]="branches"
+    [salespersons]="salespersons"
+    (saved)="onFiltersApplied($event)"
+    (canceled)="onFilterCanceled()">
+  </erp-report-filters>
+</div>

@@ -1,0 +1,93 @@
+<div class="dt-pg">
+  <div class="dt-card">
+    <div class="dt-card-head"><h2>On-Time Delivery Reports</h2></div>
+
+    <div class="dt-controls">
+      <div class="dt-show">Show
+        <select class="dt-pg-select" [(ngModel)]="selectedOption" name="pageSize" (change)="onLimitChange()">
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+        entries
+      </div>
+      <div class="dt-right">
+        <div class="dt-search-wrap">Search:
+          <input class="dt-search-input" type="text" [(ngModel)]="searchValue" name="search"
+                 (input)="applyFilter()" placeholder="DO No / customer / branch / driver / status"/>
+        </div>
+        <button class="mbtn-add" (click)="openFilters()">Filters</button>
+      </div>
+    </div>
+
+    <!-- Loading / error states -->
+    <div *ngIf="loading" class="dt-empty">Loading delivery report...</div>
+    <div *ngIf="errorMsg" class="dt-error">{{ errorMsg }}</div>
+
+    <div class="dt-table-wrap" *ngIf="!loading && !errorMsg">
+      <table class="dt-table">
+        <thead>
+          <tr>
+            <th>DO NO</th>
+            <th>CUSTOMER / BRANCH</th>
+            <th>PLANNED DELIVERY</th>
+            <th>ACTUAL DELIVERY</th>
+            <th class="dt-num">DELAY (DAYS)</th>
+            <th>STATUS</th>
+            <th class="dt-num">DELIVERY QTY / %</th>
+            <th>DRIVER / VEHICLE</th>
+            <th class="dt-nowrap">REMARKS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows | slice:(currentPage-1)*selectedOption:currentPage*selectedOption">
+            <td><strong>{{ row.doNo || '—' }}</strong></td>
+            <td>{{ row.customerName }} <span class="dt-sep">/</span> {{ row.branch }}</td>
+            <td>{{ row.plannedDate | date:'dd-MM-yyyy' }}</td>
+            <td>
+              <span *ngIf="row.actualDate">{{ row.actualDate | date:'dd-MM-yyyy' }}</span>
+              <span *ngIf="!row.actualDate" class="dt-sep">—</span>
+            </td>
+            <td class="dt-num">{{ delayDays(row) }}</td>
+            <td><span [ngClass]="statusClass(row.status)">{{ row.status }}</span></td>
+            <td class="dt-num">
+              {{ row.deliveryQty | number:'1.0-2' }}
+              <span class="dt-sep">/</span>
+              {{ deliveredPct(row) | number:'1.0-0' }}%
+            </td>
+            <td>{{ row.driver }} <span class="dt-sep">/</span> {{ row.vehicle }}</td>
+            <td [title]="row.remarks || ''">{{ row.remarks || '—' }}</td>
+          </tr>
+          <tr *ngIf="rows.length === 0">
+            <td colspan="9" class="dt-empty">No delivery records found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dt-footer" *ngIf="!loading && !errorMsg">
+      <span>{{ rows.length }} total</span>
+      <div class="dt-pager" *ngIf="totalPages > 1">
+        <button class="dt-pager-btn" [disabled]="currentPage===1" (click)="onPageChange(currentPage-1)">‹</button>
+        <button *ngFor="let p of pageNumbers" class="dt-pager-btn" [class.active]="p===currentPage" (click)="onPageChange(p)">{{ p }}</button>
+        <button class="dt-pager-btn" [disabled]="currentPage===totalPages" (click)="onPageChange(currentPage+1)">›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared filter modal -->
+  <erp-report-filters
+    [open]="filterOpen"
+    [showCustomer]="true"
+    [showBranch]="true"
+    [showStatus]="true"
+    [showSalesperson]="false"
+    [showCategory]="false"
+    [customers]="customers"
+    [branches]="branches"
+    [statuses]="statuses"
+    (saved)="onFiltersApplied($event)"
+    (canceled)="onFilterCanceled()">
+  </erp-report-filters>
+</div>

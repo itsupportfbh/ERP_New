@@ -1,0 +1,197 @@
+<div class="do-page">
+
+  <!-- Back -->
+  <div class="do-back">
+    <button class="btn btn-outline btn-sm" type="button" (click)="back()">&#8592; Go to DO List</button>
+  </div>
+
+  <!-- Title bar -->
+  <div class="card do-titlebar">
+    <div class="do-title-left">
+      <div class="do-ico">&#128666;</div>
+      <div>
+        <h2>{{ title }}</h2>
+        <p>Manage delivery details, item lines, and receiver acknowledgement</p>
+      </div>
+    </div>
+    <div class="do-title-right">
+      <span class="do-status" *ngIf="isEdit">{{ statusLabel }}</span>
+      <button class="btn btn-outline btn-sm" type="button" (click)="clear()" *ngIf="!isEdit">&#10005; Clear</button>
+      <button class="btn btn-primary btn-sm" type="button" [disabled]="saving || isPosted" (click)="submit()">
+        &#128190; {{ saving ? 'Saving…' : (isEdit ? 'Update DO' : 'Save DO') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading">Loading…</div>
+  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
+  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
+
+  <!-- Delivery Information -->
+  <div class="card do-card">
+    <div class="do-sec-title">Delivery Information</div>
+    <div class="do-sec-sub">Choose the sales order and delivery details</div>
+
+    <div class="do-grid3">
+      <div class="mf-group">
+        <label class="mf-label">Sales Order <span class="req">*</span></label>
+        <select class="mf-select" [(ngModel)]="soId" name="soId" (change)="onSoChange()" [disabled]="isEdit">
+          <option [ngValue]="null">Select sales order…</option>
+          <option *ngFor="let so of soOptions" [ngValue]="so.id">{{ so.label }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Mode of Delivery</label>
+        <select class="mf-select" [(ngModel)]="modeOfDeliveryId" name="mode" (change)="onModeChange()">
+          <option *ngFor="let m of deliveryModes" [ngValue]="m.id">{{ m.name }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Delivery Time</label>
+        <input type="time" class="mf-input" [(ngModel)]="deliveryTime" name="deliveryTime" />
+      </div>
+    </div>
+
+    <div class="do-grid3 block-gap">
+      <div class="mf-group">
+        <label class="mf-label">Delivery To</label>
+        <input type="text" class="mf-input" [(ngModel)]="deliveryTo" name="deliveryTo" placeholder="Delivery location" />
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Driver</label>
+        <select class="mf-select" [(ngModel)]="driverId" name="driverId" (change)="onDriverChange()" [disabled]="isSelfMode">
+          <option [ngValue]="null">Select Driver</option>
+          <option *ngFor="let d of driverOptions" [ngValue]="d.id">{{ d.name }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Driver Mobile No</label>
+        <input type="text" class="mf-input" [value]="driverMobileNo" disabled placeholder="—" />
+      </div>
+    </div>
+
+    <div class="do-grid3 block-gap">
+      <div class="mf-group">
+        <label class="mf-label">Vehicle</label>
+        <select class="mf-select" [(ngModel)]="vehicleId" name="vehicleId" [disabled]="isSelfMode">
+          <option [ngValue]="null">Select Vehicle</option>
+          <option *ngFor="let v of vehicleOptions" [ngValue]="v.id">{{ v.label }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Delivery Date</label>
+        <input type="date" class="mf-input" [(ngModel)]="deliveryDate" name="deliveryDate" />
+      </div>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- Items from Sales Order -->
+  <div class="card do-card">
+    <div class="do-items-head">
+      <div>
+        <div class="do-sec-title">Items from Sales Order</div>
+        <div class="do-sec-sub">Select delivery quantity for each line</div>
+      </div>
+      <div class="do-pill" *ngIf="lines.length">Lines: {{ lines.length }} &middot; Total Deliver: {{ totalDeliverQty }}</div>
+    </div>
+
+    <table class="do-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>UOM</th>
+          <th class="ta-right">Ordered</th>
+          <th class="ta-right">Pending</th>
+          <th class="ta-right">Deliver Qty</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of lines; let i = index">
+          <td class="do-item">{{ l.itemName }}</td>
+          <td>{{ l.uom || '—' }}</td>
+          <td class="ta-right">{{ l.orderedQty }}</td>
+          <td class="ta-right">{{ l.pendingQty }}</td>
+          <td class="ta-right">
+            <input type="number" class="mf-input do-qty" [(ngModel)]="l.deliverQty" name="dq{{i}}"
+              min="0" [max]="l.pendingQty" (ngModelChange)="clampQty(l)" />
+          </td>
+          <td>
+            <input type="text" class="mf-input" [(ngModel)]="l.notes" name="nt{{i}}" placeholder="Optional notes" />
+          </td>
+        </tr>
+        <tr *ngIf="!lines.length">
+          <td colspan="6" class="do-empty">Select a Sales Order to load lines.</td>
+        </tr>
+      </tbody>
+      <tfoot *ngIf="lines.length">
+        <tr>
+          <td colspan="4" class="ta-right do-totlabel">Total Deliver Qty</td>
+          <td class="ta-right do-totval">{{ totalDeliverQty }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Receiver Information -->
+  <div class="card do-card">
+    <div class="do-sec-title">Receiver Information</div>
+    <div class="do-sec-sub">Capture receiver details and acknowledgement signature</div>
+
+    <div class="do-grid3 block-gap">
+      <div class="mf-group">
+        <label class="mf-label">Received By</label>
+        <input type="text" class="mf-input" [(ngModel)]="receivedPersonName" name="rcvName" placeholder="Receiver name" />
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Received Person Mobile No</label>
+        <input type="text" class="mf-input" [(ngModel)]="receivedPersonMobileNo" name="rcvMobile" placeholder="Mobile number" />
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Signature by Received By</label>
+        <div class="do-sigbox" (click)="openSignature()" *ngIf="!receivedSignature">
+          <span class="do-sigico">&#9998;</span>
+          <div>
+            <div class="do-sigt">Click to add signature</div>
+            <div class="do-sigh">Open signature pad</div>
+          </div>
+        </div>
+        <div class="do-sigpreview" *ngIf="receivedSignature">
+          <img [src]="receivedSignature" alt="signature" />
+          <div class="do-sigactions">
+            <a class="do-link" (click)="openSignature()">Redo</a>
+            <span class="do-dot">·</span>
+            <a class="do-link" (click)="removeSignature()">Remove</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="do-foot">
+    <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
+    <button class="btn btn-primary" type="button" [disabled]="saving || isPosted" (click)="submit()">
+      {{ saving ? 'Saving…' : (isEdit ? 'Update DO' : 'Save DO') }}
+    </button>
+  </div>
+</div>
+
+<!-- Signature modal -->
+<div class="do-modal-overlay" *ngIf="showSignature" (click)="showSignature=false">
+  <div class="do-modal" (click)="$event.stopPropagation()">
+    <div class="do-modal-head">
+      <span>Signature</span>
+      <button class="do-modal-close" type="button" (click)="showSignature=false">&times;</button>
+    </div>
+    <canvas #sigCanvas class="do-canvas" width="520" height="220"
+      (mousedown)="startDraw($event)" (mousemove)="moveDraw($event)" (mouseup)="endDraw()" (mouseleave)="endDraw()"
+      (touchstart)="startDraw($event)" (touchmove)="moveDraw($event)" (touchend)="endDraw()"></canvas>
+    <div class="do-modal-foot">
+      <button class="btn btn-outline btn-sm" type="button" (click)="clearSignature()">Clear</button>
+      <button class="btn btn-primary btn-sm" type="button" (click)="saveSignature()">Save Signature</button>
+    </div>
+  </div>
+</div>

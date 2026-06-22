@@ -1,0 +1,102 @@
+<div class="dt-pg">
+  <div class="dt-card">
+    <div class="dt-card-head"><h2>Item by Sales Reports</h2></div>
+
+    <div class="dt-controls">
+      <div class="dt-show">
+        Show
+        <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="onPageSizeChange()">
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+        entries
+      </div>
+
+      <div class="dt-right">
+        <div class="dt-search-wrap">
+          Search:
+          <input class="dt-search-input" type="text" [(ngModel)]="searchValue" name="search"
+                 (input)="onSearch()" placeholder="SKU / item / category" />
+        </div>
+
+        <div class="dt-search-wrap">
+          Sort:
+          <select class="dt-pg-select" [(ngModel)]="sortBy" name="sortBy" (change)="onSortChange()">
+            <option value="">None</option>
+            <option value="itemName">Item Name</option>
+            <option value="category">Category</option>
+            <option value="quantity">Quantity Sold</option>
+            <option value="netSales">Net Sales</option>
+            <option value="grossSales">Gross Sales</option>
+            <option value="marginPct">Margin (%)</option>
+          </select>
+        </div>
+
+        <button class="mbtn-add" type="button" (click)="toggleSortDir()" title="Toggle Asc / Desc">
+          {{ sortDir === 'asc' ? '▲ Asc' : '▼ Desc' }}
+        </button>
+
+        <button class="mbtn-add" type="button" (click)="openFilters()">Filter</button>
+      </div>
+    </div>
+
+    <div class="dt-table-wrap">
+      <table class="dt-table">
+        <thead>
+          <tr>
+            <th (click)="sortByField('itemName')">SKU <span class="sort-arr">⇅</span></th>
+            <th (click)="sortByField('itemName')">ITEM NAME <span class="sort-arr">⇅</span></th>
+            <th (click)="sortByField('category')">CATEGORY <span class="sort-arr">⇅</span></th>
+            <th>UOM</th>
+            <th (click)="sortByField('quantity')">QUANTITY SOLD <span class="sort-arr">⇅</span></th>
+            <th (click)="sortByField('grossSales')">GROSS SALES <span class="sort-arr">⇅</span></th>
+            <th>DISCOUNT %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of pagedRows">
+            <td><strong>{{ row.sku }}</strong></td>
+            <td>{{ row.itemName }}</td>
+            <td>{{ row.category }}</td>
+            <td>{{ row.uom }}</td>
+            <td>{{ row.quantity | number:'1.0-2' }}</td>
+            <td>{{ row.grossSales | number:'1.0-2' }}</td>
+            <td>{{ row.discount | number:'1.0-2' }}%</td>
+          </tr>
+          <tr *ngIf="!loading && filteredRows.length === 0">
+            <td colspan="7" class="dt-empty">No records found.</td>
+          </tr>
+          <tr *ngIf="loading">
+            <td colspan="7" class="dt-empty">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dt-footer">
+      <span>{{ filteredRows.length }} total</span>
+      <span class="dt-pager">
+        <button class="mbtn-add" type="button" (click)="prevPage()" [disabled]="page <= 1">Prev</button>
+        <span class="dt-page-info">Page {{ page }} of {{ totalPages }}</span>
+        <button class="mbtn-add" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+      </span>
+    </div>
+  </div>
+
+  <!-- Filter modal -->
+  <erp-report-filters
+    [open]="filtersOpen"
+    [showCustomer]="false"
+    [showBranch]="true"
+    [showStatus]="false"
+    [showSalesperson]="true"
+    [showCategory]="true"
+    [branches]="branches"
+    [salespersons]="salespersons"
+    [categories]="categories"
+    (saved)="onFiltersApplied($event)"
+    (canceled)="onFilterCanceled()">
+  </erp-report-filters>
+</div>

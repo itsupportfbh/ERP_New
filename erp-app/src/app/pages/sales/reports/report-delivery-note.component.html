@@ -1,0 +1,294 @@
+<div class="dt-pg dn-page">
+  <div class="dt-card">
+
+    <!-- =========================
+         HEAD
+    ========================== -->
+    <div class="dt-card-head dn-head">
+      <h2>{{ title }}</h2>
+
+      <div class="dn-head-actions">
+        <!-- summary mode -->
+        <ng-container *ngIf="summaryVisible; else listActions">
+          <button class="mbtn-add dn-btn-ghost" type="button" (click)="backToList()">Back to list</button>
+          <button class="mbtn-add dn-btn-ghost" type="button" (click)="openHeaderModal(false)">Re-pick columns</button>
+          <button class="mbtn-add" type="button" (click)="printSummary()" title="Print">
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:middle;margin-right:4px;">
+              <path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/>
+            </svg>
+            Print
+          </button>
+        </ng-container>
+
+        <!-- list mode -->
+        <ng-template #listActions>
+          <button class="mbtn-add dn-btn-ghost" type="button"
+                  (click)="openHeaderModal(false)"
+                  [disabled]="!listLoaded && mustPickColumns">
+            Re-pick columns
+          </button>
+          <button class="mbtn-add" type="button"
+                  (click)="submitSelected()"
+                  [disabled]="!listLoaded || selectedRowIds.size === 0">
+            Submit Selected ({{ selectedRowIds.size }})
+          </button>
+        </ng-template>
+
+        <button class="mbtn-add dn-btn-ghost" type="button" (click)="back()">Back</button>
+      </div>
+    </div>
+
+    <!-- inline message -->
+    <div class="dn-msg" *ngIf="message">{{ message }}</div>
+
+    <!-- =========================
+         LIST CONTROLS
+    ========================== -->
+    <div class="dt-controls" *ngIf="listLoaded && !summaryVisible">
+      <div class="dt-show">
+        Show
+        <select class="dt-pg-select" [(ngModel)]="selectedOption" name="selectedOption" (change)="onLimitChange()">
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+        entries
+      </div>
+      <div class="dt-right">
+        <div class="dt-search-wrap">
+          Search:
+          <input class="dt-search-input" type="text"
+                 [(ngModel)]="searchValue" name="search"
+                 (input)="filterUpdate()"
+                 placeholder="DO No / Driver / Customer / SO" />
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================
+         FIRST LOAD HINT
+    ========================== -->
+    <div class="dn-hint" *ngIf="!listLoaded && !summaryVisible">
+      <div class="h1">Select columns to load the report</div>
+      <div class="h2">A popup will open automatically. Choose columns and click <b>Apply</b>.</div>
+    </div>
+
+    <!-- =========================
+         MAIN TABLE
+    ========================== -->
+    <div class="dt-table-wrap" *ngIf="listLoaded && !summaryVisible">
+      <table class="dt-table">
+        <thead>
+          <tr>
+            <th class="dn-chk-col">
+              <input type="checkbox"
+                     [checked]="allVisibleSelected"
+                     (change)="onToggleAllRows($event)" />
+            </th>
+            <th *ngFor="let c of selectedColumnsOrdered"
+                [class.ta-right]="isNumericCol(c.key)">
+              {{ c.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of pagedRows">
+            <td class="dn-chk-col">
+              <input type="checkbox"
+                     [checked]="isRowSelected(row)"
+                     (change)="onToggleRow(row, $event)" />
+            </td>
+            <td *ngFor="let c of selectedColumnsOrdered"
+                [class.ta-right]="isNumericCol(c.key)">
+              <ng-container [ngSwitch]="c.key">
+                <span *ngSwitchCase="'posted'" class="dn-pill"
+                      [class.ok]="!!row.isPosted" [class.no]="!row.isPosted">
+                  {{ row.isPosted ? 'Posted' : 'Not Posted' }}
+                </span>
+                <ng-container *ngSwitchDefault>{{ getColDisplay(row, c.key) }}</ng-container>
+              </ng-container>
+            </td>
+          </tr>
+          <tr *ngIf="loading">
+            <td [attr.colspan]="selectedColumnsOrdered.length + 1" class="dt-empty">Loading...</td>
+          </tr>
+          <tr *ngIf="!loading && rows.length === 0">
+            <td [attr.colspan]="selectedColumnsOrdered.length + 1" class="dt-empty">No delivery notes found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dt-footer" *ngIf="listLoaded && !summaryVisible">
+      {{ rows.length }} total &middot; {{ selectedRowIds.size }} selected
+    </div>
+
+    <!-- =========================
+         SUMMARY
+    ========================== -->
+    <div class="dn-sum" *ngIf="summaryVisible" id="dnSummaryRoot">
+
+      <div class="dn-sum-top">
+        <div class="dn-sum-left">
+          <div class="dn-sum-title">Delivery Note Summary</div>
+          <div class="dn-sum-sub">
+            <span>{{ summaryMeta.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+            <span class="sep">&bull;</span>
+            <span><b>{{ summaryMeta.selectedDocs }}</b> docs</span>
+          </div>
+        </div>
+
+        <div class="dn-kpis">
+          <div class="dn-kpi">
+            <div class="k">Docs</div>
+            <div class="v">{{ summaryMeta.selectedDocs }}</div>
+          </div>
+          <div class="dn-kpi" *ngIf="summaryMeta.groupsCount">
+            <div class="k">Groups</div>
+            <div class="v">{{ summaryMeta.groupsCount }}</div>
+          </div>
+          <div class="dn-kpi dn-kpi-accent" *ngIf="summaryMeta.sumLabel">
+            <div class="k">{{ summaryMeta.sumLabel }}</div>
+            <div class="v">{{ summaryMeta.sumValue | number:'1.0-3' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- selected header chips -->
+      <div class="dn-chips">
+        <span class="dn-chip" *ngFor="let h of summarySelectedHeaders">{{ h }}</span>
+      </div>
+
+      <!-- group summary -->
+      <div class="dn-panel">
+        <div class="dn-panel-head">
+          <div class="t">Group Summary</div>
+          <div class="tag">{{ summaryMeta.groupByLabel }}</div>
+        </div>
+        <div class="dt-table-wrap">
+          <table class="dt-table">
+            <thead>
+              <tr>
+                <th>{{ summaryMeta.groupByLabel }}</th>
+                <th class="ta-center">Docs</th>
+                <th class="ta-right" *ngFor="let col of summaryNumericCols">{{ col.label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let g of summaryGroups">
+                <td><strong>{{ g.group }}</strong></td>
+                <td class="ta-center">{{ g.docs }}</td>
+                <td class="ta-right" *ngFor="let col of summaryNumericCols">
+                  {{ (g.sums[col.key] ?? 0) | number:'1.0-3' }}
+                </td>
+              </tr>
+              <tr *ngIf="summaryGroups.length === 0">
+                <td [attr.colspan]="2 + summaryNumericCols.length" class="dt-empty">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- selected documents -->
+      <div class="dn-panel dn-mt">
+        <div class="dn-panel-head">
+          <div class="t">Selected Documents</div>
+          <div class="tag">{{ summaryDetailRows.length }}</div>
+        </div>
+        <div class="dt-table-wrap">
+          <table class="dt-table">
+            <thead>
+              <tr>
+                <th *ngFor="let c of selectedColumnsOrdered"
+                    [class.ta-right]="isNumericCol(c.key)">
+                  {{ c.label }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of summaryDetailRows">
+                <td *ngFor="let c of selectedColumnsOrdered"
+                    [class.ta-right]="isNumericCol(c.key)">
+                  <ng-container [ngSwitch]="c.key">
+                    <span *ngSwitchCase="'posted'" class="dn-pill"
+                          [class.ok]="!!r.isPosted" [class.no]="!r.isPosted">
+                      {{ r.isPosted ? 'Posted' : 'Not Posted' }}
+                    </span>
+                    <ng-container *ngSwitchDefault>{{ getColDisplay(r, c.key) }}</ng-container>
+                  </ng-container>
+                </td>
+              </tr>
+              <tr *ngIf="summaryDetailRows.length === 0">
+                <td [attr.colspan]="selectedColumnsOrdered.length" class="dt-empty">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =========================
+       COLUMN PICKER MODAL
+  ========================== -->
+  <div class="dn-modal" *ngIf="showHeaderModal" (click)="onOverlayClickClose()">
+    <div class="dn-modal-card" (click)="$event.stopPropagation()">
+
+      <div class="dn-modal-head">
+        <div>
+          <div class="t">Headers (Columns)</div>
+          <div class="s">Pick columns for the list and summary.</div>
+        </div>
+        <button class="dn-x" type="button"
+                (click)="cancelHeaderModal()"
+                title="Close">
+          &#10005;
+        </button>
+      </div>
+
+      <!-- tabs -->
+      <div class="dn-tabs">
+        <button type="button" class="dn-tab" [class.active]="activeTab==='basic'" (click)="setTab('basic')">Basic</button>
+        <button type="button" class="dn-tab" [class.active]="activeTab==='logistics'" (click)="setTab('logistics')">Logistics</button>
+        <button type="button" class="dn-tab" [class.active]="activeTab==='all'" (click)="setTab('all')">All</button>
+        <div class="dn-tabs-meta">Selected: <b>{{ selectedColumnCount }}</b> / {{ columns.length }}</div>
+      </div>
+
+      <div class="dn-modal-search">
+        <input type="text" placeholder="Search header..." [(ngModel)]="headerSearch" name="headerSearch" />
+      </div>
+
+      <div class="dn-modal-top">
+        <label class="dn-check">
+          <input type="checkbox" [checked]="isAllColumnsChecked" (change)="onToggleAllColumns($event)" />
+          <span>Select All</span>
+        </label>
+        <div class="dn-top-actions">
+          <button type="button" class="dn-mini-btn" (click)="selectAllInTab()">Select Tab</button>
+          <button type="button" class="dn-mini-btn" (click)="clearAllInTab()">Clear Tab</button>
+        </div>
+      </div>
+
+      <div class="dn-modal-list">
+        <label class="dn-col-card" *ngFor="let c of filteredColumns">
+          <div class="left">
+            <div class="lbl">{{ c.label }}</div>
+            <div class="sub">{{ c.groupLabel }}</div>
+          </div>
+          <input type="checkbox" [(ngModel)]="c.checked" [name]="'col_' + c.key" />
+        </label>
+        <div class="dn-modal-empty" *ngIf="filteredColumns.length === 0">No columns match.</div>
+      </div>
+
+      <div class="dn-modal-foot">
+        <button class="dn-mini-btn" type="button" (click)="cancelHeaderModal()">Cancel</button>
+        <button class="mbtn-add" type="button" (click)="applyHeadersAndClose()">Apply</button>
+      </div>
+
+    </div>
+  </div>
+</div>

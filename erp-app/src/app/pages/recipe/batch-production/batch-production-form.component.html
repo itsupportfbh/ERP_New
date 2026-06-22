@@ -1,0 +1,82 @@
+<div class="wizard-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <span class="status-badge status-{{ statusClass }}">{{ status }}</span>
+    <div class="header-actions" *ngIf="isEdit">
+      <button class="btn btn-success btn-sm" (click)="postToInventory()" [disabled]="posting || saving">
+        <span class="btn-spinner" *ngIf="posting"></span>
+        {{ posting ? 'Posting…' : 'Post to Inventory' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+  <div class="alert-success" *ngIf="success">&#10003; {{ success }}</div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Header card -->
+    <div class="card section-card">
+      <div class="section-label">Batch Details</div>
+      <div class="form-row cols-3">
+        <erp-dropdown label="Production Plan" [required]="true" [options]="planOptions"
+          [(ngModel)]="productionPlanId" (ngModelChange)="onPlanChange()" placeholder="Select production plan"></erp-dropdown>
+        <erp-dropdown label="Warehouse" [required]="true" [options]="warehouseOptions"
+          [(ngModel)]="warehouseId" placeholder="Select warehouse"></erp-dropdown>
+        <erp-input label="Batch No" [(ngModel)]="batchNo" placeholder="Auto / optional"></erp-input>
+      </div>
+    </div>
+
+    <!-- Lines table -->
+    <div class="card section-card block-gap">
+      <div class="section-label">Batch Lines</div>
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Recipe</th>
+              <th>Finished Item</th>
+              <th>Planned Qty</th>
+              <th>Actual Qty</th>
+              <th>UOM</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of lines; let i = index">
+              <td class="row-num">{{ i + 1 }}</td>
+              <td class="item-col">{{ line.recipeName || '-' }}</td>
+              <td class="item-col">{{ line.finishedItemName || '-' }}</td>
+              <td class="qty-col">{{ line.plannedQty }}</td>
+              <td class="qty-col">
+                <erp-input type="number" [(ngModel)]="line.actualQty" placeholder="0"></erp-input>
+              </td>
+              <td class="uom-col">{{ line.uom || '-' }}</td>
+              <td class="del-col">
+                <button class="btn-icon danger" (click)="removeLine(i)" title="Remove">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!lines.length">
+              <td colspan="7" class="empty-lines">Select a production plan to load batch lines</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="save()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : (isEdit ? 'Update Batch' : 'Save Batch') }}
+      </button>
+    </div>
+  </ng-container>
+</div>

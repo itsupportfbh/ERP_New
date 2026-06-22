@@ -1,0 +1,128 @@
+<div class="si-page">
+
+  <!-- Title bar -->
+  <div class="card si-titlebar">
+    <div class="si-title-left">
+      <button class="btn btn-outline btn-sm" type="button" (click)="back()">&#8592; Back</button>
+      <h2>{{ title }}</h2>
+      <span class="si-status" *ngIf="isEdit">{{ status }}</span>
+    </div>
+    <div class="si-title-right">
+      <label class="btn btn-outline btn-sm si-ocr">
+        &#128196; OCR Upload
+        <input type="file" hidden accept="image/*,application/pdf" #ocrInput (change)="onOcrUpload(ocrInput)" />
+      </label>
+      <button class="btn btn-primary btn-sm" type="button" [disabled]="saving" (click)="submit()">
+        &#128190; {{ saving ? 'Saving…' : (isEdit ? 'Update Invoice' : 'Create Invoice') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading">Loading…</div>
+  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
+  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
+
+  <!-- Header fields -->
+  <div class="card si-card">
+    <div class="si-grid4">
+      <div class="mf-group">
+        <label class="mf-label">Source</label>
+        <select class="mf-select" [(ngModel)]="sourceType" name="sourceType" (change)="onSourceTypeChange()" [disabled]="isEdit">
+          <option *ngFor="let s of sourceTypeOptions" [ngValue]="s.value">{{ s.label }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">{{ sourceType === 1 ? 'Sales Order' : 'Delivery Order' }}</label>
+        <input *ngIf="isEdit" type="text" class="mf-input" [value]="sourceRef" disabled placeholder="—" />
+        <select *ngIf="!isEdit" class="mf-select" [(ngModel)]="sourceId" name="sourceId" (change)="onSourceDocChange()">
+          <option [ngValue]="null">{{ sourceType === 1 ? 'Select SO…' : 'Select DO…' }}</option>
+          <option *ngFor="let d of sourceDocOptions" [ngValue]="d.value">{{ d.label }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Invoice Date</label>
+        <input type="date" class="mf-input" [(ngModel)]="invoiceDate" name="invoiceDate" />
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Customer</label>
+        <input type="text" class="mf-input" [value]="customerName" disabled placeholder="—" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Lines + summary -->
+  <!-- Lines (full width) -->
+  <div class="card si-card si-lines">
+      <div class="si-lines-head">
+        <div class="si-sec-title">Line Items</div>
+        <button class="btn btn-outline btn-sm" type="button" (click)="addLine()">+ Add Line</button>
+      </div>
+      <div class="si-table-wrap">
+        <table class="si-table">
+          <thead>
+            <tr>
+              <th style="width:14%">Item</th>
+              <th style="width:12%">Description</th>
+              <th style="width:16%">Ledger Name</th>
+              <th style="width:9%">UOM</th>
+              <th class="ta-right" style="width:6%">Qty</th>
+              <th class="ta-right" style="width:8%">Unit Price</th>
+              <th class="ta-right" style="width:7%">Disc %</th>
+              <th class="ta-right" style="width:7%">GST %</th>
+              <th class="ta-right" style="width:7%">Tax</th>
+              <th class="ta-right" style="width:8%">Amount</th>
+              <th style="width:6%">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of lines; let i = index">
+              <td class="si-item">
+                <select class="mf-select si-cell" [(ngModel)]="l.itemId" name="item{{i}}" (change)="onItemSelect(l)">
+                  <option [ngValue]="null">{{ l.itemName || 'Select item…' }}</option>
+                  <option *ngFor="let it of itemOptions" [ngValue]="it.value">{{ it.label }}</option>
+                </select>
+              </td>
+              <td><input class="mf-input si-cell" [(ngModel)]="l.description" name="desc{{i}}" placeholder="-" /></td>
+              <td>
+                <select class="mf-select si-cell" [(ngModel)]="l.ledgerId" name="ledger{{i}}">
+                  <option [ngValue]="null">Select ledger…</option>
+                  <option *ngFor="let g of ledgerOptions" [ngValue]="g.value">{{ g.label }}</option>
+                </select>
+              </td>
+              <td>{{ l.uom || '—' }}</td>
+              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.qty" name="qty{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
+              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.unitPrice" name="price{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
+              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.discountPct" name="disc{{i}}" min="0" max="100" (ngModelChange)="recalcLine(l)" /></td>
+              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.gstPct" name="gst{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
+              <td class="ta-right">{{ l.taxAmount | number:'1.2-2' }}</td>
+              <td class="ta-right si-amt">{{ l.lineAmount | number:'1.2-2' }}</td>
+              <td class="ta-center">
+                <button class="si-del" type="button" (click)="removeLine(i)" title="Remove">&times;</button>
+              </td>
+            </tr>
+            <tr *ngIf="!lines.length">
+              <td colspan="11" class="si-empty">No lines. Select a source document to load items or click "Add Line".</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  <!-- Summary (below table, right-aligned) -->
+  <div class="si-totals">
+    <div class="si-totals-spacer"></div>
+    <div class="card si-card si-summary">
+      <div class="si-sum-row"><span>Currency</span><strong>{{ currencyName }}</strong></div>
+      <div class="si-sum-row"><span>Sub Total</span><strong>{{ subTotal | number:'1.2-2' }}</strong></div>
+      <div class="si-sum-row"><span>Discount</span><strong>{{ discountAmount | number:'1.2-2' }}</strong></div>
+      <div class="si-sum-row"><span>Net Total</span><strong>{{ netAfterDiscount | number:'1.2-2' }}</strong></div>
+      <div class="si-sum-row"><span>Tax (GST)</span><strong>{{ taxAmount | number:'1.2-2' }}</strong></div>
+      <div class="si-sum-row">
+        <span>Shipping</span>
+        <input type="number" class="mf-input si-ship" [(ngModel)]="shippingCost" name="shipping" min="0" />
+      </div>
+      <div class="si-divider"></div>
+      <div class="si-sum-row si-grand"><span>Grand Total <small>({{ currencyName }})</small></span><strong>{{ grandTotal | number:'1.2-2' }}</strong></div>
+    </div>
+  </div>
+</div>
