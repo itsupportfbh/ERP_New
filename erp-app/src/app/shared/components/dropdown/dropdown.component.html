@@ -16,13 +16,19 @@
 
   <!-- Menu rendered at fixed position — escapes overflow:hidden parents -->
   <div class="dd-menu" *ngIf="open" [ngStyle]="menuStyle">
-    <div class="dd-item"
-         *ngFor="let opt of options"
-         [class.selected]="opt.value === value"
-         (click)="select(opt)">
-      {{ opt.label }}
+    <div class="dd-search-wrap" (click)="$event.stopPropagation()">
+      <input #searchInput class="dd-search" [(ngModel)]="searchText"
+             placeholder="Search..." autocomplete="off">
     </div>
-    <div class="dd-empty" *ngIf="options.length === 0">No options</div>
+    <div class="dd-list">
+      <div class="dd-item"
+           *ngFor="let opt of filteredOptions"
+           [class.selected]="sameValue(opt.value, value)"
+           (click)="select(opt)">
+        {{ opt.label }}
+      </div>
+      <div class="dd-empty" *ngIf="filteredOptions.length === 0">No results</div>
+    </div>
   </div>
 
   <span class="field-error" *ngIf="errorMsg && touched">{{ errorMsg }}</span>

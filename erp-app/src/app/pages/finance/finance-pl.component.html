@@ -1,0 +1,111 @@
+<div class="pl-page">
+
+  <!-- Header -->
+  <div class="rpt-head">
+    <div class="rpt-head-left">
+      <div class="rpt-icon">&#128200;</div>
+      <div>
+        <h2>Profit &amp; Loss</h2>
+        <p>Income and expense statement</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="sum-grid">
+    <div class="sum-card sum-c3">
+      <div class="sum-icon">&#8595;</div>
+      <div>
+        <span class="sum-label">Total Expense</span>
+        <strong class="sum-val">{{ totalExpense | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+    <div class="sum-card sum-c2">
+      <div class="sum-icon">&#8593;</div>
+      <div>
+        <span class="sum-label">Total Revenue</span>
+        <strong class="sum-val">{{ totalIncome | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+    <div class="sum-card" [ngClass]="netProfit >= 0 ? 'sum-c1' : 'sum-c3'">
+      <div class="sum-icon">&#36;</div>
+      <div>
+        <span class="sum-label">{{ netProfit >= 0 ? 'Net Profit' : 'Net Loss' }}</span>
+        <strong class="sum-val">{{ netProfit | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="rpt-filter-bar">
+    <label class="filter-lbl">
+      <span>From Date</span>
+      <input type="date" [(ngModel)]="fromDate">
+    </label>
+    <label class="filter-lbl">
+      <span>To Date</span>
+      <input type="date" [(ngModel)]="toDate">
+    </label>
+    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()">Run Report</button>
+  </div>
+
+  <div class="rpt-alert rpt-danger" *ngIf="error">{{ error }}</div>
+  <div class="rpt-loading" *ngIf="loading">Loading...</div>
+
+  <!-- Two Column Layout -->
+  <div class="two-col-card rpt-card" *ngIf="!loading">
+    <div class="col-section">
+      <div class="col-header expense-hdr">Expense Accounts</div>
+      <div class="acc-list">
+        <div class="acc-row" *ngFor="let row of expenseRows">
+          <div class="acc-left">
+            <span class="drag-icon">&#9776;</span>
+            <span class="acc-name">{{ row.accountName }}</span>
+            <span class="acc-code" *ngIf="row.accountCode">{{ row.accountCode }}</span>
+          </div>
+          <div class="acc-right">
+            <span class="acc-amt">{{ (row.amount || 0) | number:'1.2-2' }}</span>
+            <span class="avatar avatar-red">{{ initials(row.accountName) }}</span>
+          </div>
+        </div>
+        <div class="acc-empty" *ngIf="expenseRows.length === 0">No expense data.</div>
+        <div class="total-row" *ngIf="expenseRows.length > 0">
+          <strong>Total Expenses</strong>
+          <strong>{{ totalExpense | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-divider"></div>
+
+    <div class="col-section">
+      <div class="col-header income-hdr">Revenue Accounts</div>
+      <div class="acc-list">
+        <div class="acc-row" *ngFor="let row of incomeRows">
+          <div class="acc-left">
+            <span class="drag-icon">&#9776;</span>
+            <span class="acc-name">{{ row.accountName }}</span>
+            <span class="acc-code" *ngIf="row.accountCode">{{ row.accountCode }}</span>
+          </div>
+          <div class="acc-right">
+            <span class="acc-amt">{{ (row.amount || 0) | number:'1.2-2' }}</span>
+            <span class="avatar avatar-teal">{{ initials(row.accountName) }}</span>
+          </div>
+        </div>
+        <div class="acc-empty" *ngIf="incomeRows.length === 0">No revenue data.</div>
+        <div class="total-row" *ngIf="incomeRows.length > 0">
+          <strong>Total Revenue</strong>
+          <strong>{{ totalIncome | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Net Profit/Loss Row -->
+  <div class="net-row rpt-card" *ngIf="!loading && (incomeRows.length > 0 || expenseRows.length > 0)"
+    [ngClass]="netProfit >= 0 ? 'net-profit' : 'net-loss'">
+    <strong>{{ netProfit >= 0 ? 'Net Profit' : 'Net Loss' }}</strong>
+    <strong>{{ netProfit | number:'1.2-2' }}</strong>
+  </div>
+
+</div>

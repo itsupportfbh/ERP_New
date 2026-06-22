@@ -1,7 +1,17 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+
+type ApprovalDocumentType = 'PR' | 'PO' | 'PIN' | 'JOURNAL' | 'SO';
+
+export interface ApprovalActionRequest {
+  documentType: ApprovalDocumentType;
+  documentId: number;
+  amount?: number;
+  remarks?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class PurchaseService {
@@ -31,6 +41,34 @@ export class PurchaseService {
   }
   getAvailablePurchaseRequests(): Observable<any> {
     return this.http.get(`${this.api}/PurchaseRequest/GetAvailablePurchaseRequests`);
+  }
+  approvePurchaseRequest(id: number | string, amount?: number): Observable<any> {
+    return this.approveDocument({ documentType: 'PR', documentId: Number(id), amount, remarks: 'PR approved from list' });
+  }
+  rejectPurchaseRequest(id: number | string, amount?: number): Observable<any> {
+    return this.rejectDocument({ documentType: 'PR', documentId: Number(id), amount, remarks: 'PR rejected from list' });
+  }
+  getPurchaseRequestDrafts(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseRequestTemp/GetPurchaseRequestTemp`);
+  }
+  getPurchaseRequestDraftById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseRequestTemp/GetPurchaseRequestTempById/${id}`);
+  }
+  createPurchaseRequestDraft(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequestTemp/CreatePurchaseRequestTemp`, data);
+  }
+  updatePurchaseRequestDraft(id: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseRequestTemp/UpdatePurchaseRequestTempById/${id}`, data);
+  }
+  deletePurchaseRequestDraft(id: number | string, userId: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/PurchaseRequestTemp/DeletePurchaseRequestTempById/${id}`, {
+      params: { userId: String(userId) }
+    });
+  }
+  promotePurchaseRequestDraft(id: number | string, userId: number | string): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequestTemp/PromotePurchaseRequestTempById/${id}`, null, {
+      params: { userId: String(userId) }
+    });
   }
   createPurchaseRequest(data: any): Observable<any> {
     return this.http.post(`${this.api}/PurchaseRequest/CreatePurchaseRequest`, data);
@@ -65,7 +103,36 @@ export class PurchaseService {
     return this.http.get(`${this.api}/PurchaseOrder/${poNo}/qr`);
   }
   emailSupplierPo(id: number | string): Observable<any> {
-    return this.http.post(`${this.api}/PurchaseOrder/${id}/email-supplier`, {});
+    return this.http.post(`${this.api}/PurchaseOrder/${id}/email-supplier`, null);
+  }
+  updatePurchaseOrderApprovalStatus(id: number | string, status: number): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseOrder/UpdateApprovalStatus/${id}`, { approvalStatus: status });
+  }
+  approvePurchaseOrder(id: number | string, amount?: number): Observable<any> {
+    return this.approveDocument({ documentType: 'PO', documentId: Number(id), amount, remarks: 'PO approved from list' });
+  }
+  rejectPurchaseOrder(id: number | string, amount?: number): Observable<any> {
+    return this.rejectDocument({ documentType: 'PO', documentId: Number(id), amount, remarks: 'PO rejected from list' });
+  }
+  getPurchaseOrderDrafts(): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrderTemp/getAll`);
+  }
+  getPurchaseOrderDraftById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrderTemp/get/${id}`);
+  }
+  createPurchaseOrderDraft(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseOrderTemp/insert`, data);
+  }
+  updatePurchaseOrderDraft(data: any): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseOrderTemp/update`, data);
+  }
+  deletePurchaseOrderDraft(id: number | string): Observable<any> {
+    return this.http.delete(`${this.api}/PurchaseOrderTemp/Delete/${id}`);
+  }
+  promotePurchaseOrderDraft(id: number | string, userId?: number | string): Observable<any> {
+    let params = new HttpParams();
+    if (userId !== undefined && userId !== null) params = params.set('userId', String(userId));
+    return this.http.post(`${this.api}/PurchaseOrderTemp/promote/${id}`, null, { params });
   }
   getItemSupplierPrices(itemId: number | string): Observable<any> {
     return this.http.get(`${this.api}/Item/GetItemById/${itemId}`);
@@ -151,6 +218,12 @@ export class PurchaseService {
   postPinToAP(pinId: number | string): Observable<any> {
     return this.http.post(`${this.api}/SupplierInvoicePin/PostToAp/${pinId}`, {});
   }
+  approveSupplierInvoice(pinId: number | string, amount?: number): Observable<any> {
+    return this.approveDocument({ documentType: 'PIN', documentId: Number(pinId), amount, remarks: 'PIN approved from list' });
+  }
+  rejectSupplierInvoice(pinId: number | string, amount?: number): Observable<any> {
+    return this.rejectDocument({ documentType: 'PIN', documentId: Number(pinId), amount, remarks: 'PIN rejected from list' });
+  }
   getSupplierAdvanceByGrn(grnNos: string): Observable<any> {
     return this.http.get(`${this.api}/finance/ap/supplier-advance-by-grn?grnNos=${grnNos}`);
   }
@@ -173,6 +246,17 @@ export class PurchaseService {
   }
   deleteDebitNote(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/SupplierDebitNote/Delete/${id}`);
+  }
+
+  // ── Mobile Receiving ─────────────────────────────────
+  getMobileReceivingPo(poNo: string): Observable<any> {
+    return this.http.get(`${this.api}/mobile-receiving/po`, { params: { poNo } });
+  }
+  validateMobileScan(poNo: string, barcode: string, qty: number, createdBy: number): Observable<any> {
+    return this.http.post(`${this.api}/mobile-receiving/scan`, { purchaseOrderNo: poNo, itemKey: barcode, qty, createdBy });
+  }
+  syncMobileReceiving(body: { purchaseOrderNo: string; lines: any[] }): Observable<any> {
+    return this.http.post(`${this.api}/mobile-receiving/sync`, body);
   }
 
   // ── Supplier Scorecard ───────────────────────────────
@@ -248,5 +332,24 @@ export class PurchaseService {
   }
   checkGstLock(date: string): Observable<any> {
     return this.http.get(`${this.api}/GstLock/Check/${date}`);
+  }
+
+  // Approval workflow shared by PR, PO and PIN screens.
+  submitDocument(request: ApprovalActionRequest): Observable<any> {
+    return this.http.post(`${this.api}/ApprovalWorkflow/submit`, request);
+  }
+  approveDocument(request: ApprovalActionRequest): Observable<any> {
+    return this.http.post(`${this.api}/ApprovalWorkflow/approve`, request);
+  }
+  rejectDocument(request: ApprovalActionRequest): Observable<any> {
+    return this.http.post(`${this.api}/ApprovalWorkflow/reject`, request);
+  }
+  getApprovalStatus(documentType: ApprovalDocumentType, documentId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/ApprovalWorkflow/status/${documentType}/${documentId}`);
+  }
+  getPendingApprovals(documentType?: ApprovalDocumentType): Observable<any> {
+    let params = new HttpParams();
+    if (documentType) params = params.set('documentType', documentType);
+    return this.http.get(`${this.api}/ApprovalWorkflow/pending`, { params });
   }
 }

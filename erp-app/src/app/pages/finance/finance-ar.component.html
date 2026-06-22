@@ -1,0 +1,343 @@
+<div class="ar-page">
+
+  <!-- Page Header -->
+  <div class="ar-page-head">
+    <div>
+      <h2>Accounts Receivable</h2>
+      <p>Invoices &middot; Receipts &middot; Advances &middot; AR Aging</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="ar-alert ar-success" *ngIf="message">{{ message }}</div>
+  <div class="ar-alert ar-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Tabs -->
+  <div class="ar-tabs">
+    <button class="ar-tab" [class.active]="activeTab === 'invoices'"  type="button" (click)="setTab('invoices')">Invoices</button>
+    <button class="ar-tab" [class.active]="activeTab === 'receipts'"  type="button" (click)="setTab('receipts')">Receipts</button>
+    <button class="ar-tab" [class.active]="activeTab === 'advances'"  type="button" (click)="setTab('advances')">Advances</button>
+    <button class="ar-tab" [class.active]="activeTab === 'aging'"     type="button" (click)="setTab('aging')">AR Aging</button>
+  </div>
+
+  <!-- ══ TAB 1: INVOICES ══ -->
+  <ng-container *ngIf="activeTab === 'invoices'">
+
+    <!-- Summary Cards -->
+    <div class="sum-grid">
+      <div class="sum-card sum-c1">
+        <span class="sum-label">Total Invoice Amount</span>
+        <strong class="sum-val">{{ invoiceSummary.total | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-label">Total Paid</span>
+        <strong class="sum-val">{{ invoiceSummary.paid | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-label">Credit Notes</span>
+        <strong class="sum-val">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c4">
+        <span class="sum-label">Net Outstanding</span>
+        <strong class="sum-val">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="ar-card">
+      <div class="ar-card-head">
+        <input class="ar-search" type="text" placeholder="Search customer, invoice..." [(ngModel)]="search" (ngModelChange)="applyInvoiceFilter()">
+      </div>
+      <div class="ar-loading" *ngIf="loading">Loading...</div>
+      <div class="ar-table-wrap" *ngIf="!loading">
+        <table class="ar-table">
+          <thead>
+            <tr>
+              <th style="width:32px"></th>
+              <th>Customer</th>
+              <th class="right">Invoices</th>
+              <th class="right">Total Amount</th>
+              <th class="right">Paid</th>
+              <th class="right">Credit Note</th>
+              <th class="right teal-hdr">Net Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let grp of customerGroups">
+              <tr class="customer-row" (click)="toggleCustomer(grp.customer)">
+                <td class="expand-cell">
+                  <button class="expand-btn" type="button">{{ isExpanded(grp.customer) ? '−' : '+' }}</button>
+                </td>
+                <td class="customer-name">{{ grp.customer }}</td>
+                <td class="right muted">{{ grp.invoices.length }}</td>
+                <td class="right">{{ grp.total | number:'1.2-2' }}</td>
+                <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
+                <td class="right info-text">0.00</td>
+                <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
+              </tr>
+              <ng-container *ngIf="isExpanded(grp.customer)">
+                <tr class="invoice-row" *ngFor="let inv of grp.invoices">
+                  <td></td>
+                  <td class="invoice-no">{{ inv.invoiceNo || '—' }}</td>
+                  <td class="right muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                  <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }}</td>
+                  <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
+                  <td class="right info-text">0.00</td>
+                  <td class="right">
+                    <span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span>
+                  </td>
+                </tr>
+              </ng-container>
+            </ng-container>
+            <tr *ngIf="customerGroups.length === 0 && !loading">
+              <td colspan="7" class="ar-empty">No AR invoices found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 2: RECEIPTS ══ -->
+  <ng-container *ngIf="activeTab === 'receipts'">
+
+    <!-- Receipt Form -->
+    <div class="ar-card form-card" *ngIf="showReceiptForm">
+      <div class="ar-card-head">
+        <strong class="ar-card-title">New Receipt</strong>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="showReceiptForm = false">&#215; Close</button>
+      </div>
+      <div class="form-grid">
+        <label class="form-field">
+          <span>Customer ID <span class="req">*</span></span>
+          <input type="number" [(ngModel)]="receiptForm.customerId" placeholder="Customer ID">
+        </label>
+        <label class="form-field">
+          <span>Receipt Date <span class="req">*</span></span>
+          <input type="date" [(ngModel)]="receiptForm.receiptDate">
+        </label>
+        <label class="form-field">
+          <span>Amount <span class="req">*</span></span>
+          <input type="number" min="0" [(ngModel)]="receiptForm.amount" placeholder="0.00">
+        </label>
+        <label class="form-field">
+          <span>Payment Mode</span>
+          <select [(ngModel)]="receiptForm.paymentMode">
+            <option value="BANK">Bank Transfer</option>
+            <option value="CASH">Cash</option>
+            <option value="CHEQUE">Cheque</option>
+            <option value="UPI">UPI</option>
+          </select>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Remarks</span>
+          <textarea rows="2" [(ngModel)]="receiptForm.remarks"></textarea>
+        </label>
+      </div>
+      <div class="form-footer">
+        <button class="ar-btn ar-btn-outline" type="button" (click)="showReceiptForm = false">Cancel</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="saveReceipt()" [disabled]="savingReceipt">
+          {{ savingReceipt ? 'Saving...' : 'Post Receipt' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="ar-card">
+      <div class="ar-card-head">
+        <strong class="ar-card-title">Customer Receipts</strong>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="showReceiptForm = true; message = ''; error = ''">+ New Receipt</button>
+      </div>
+      <div class="ar-loading" *ngIf="loading">Loading...</div>
+      <div class="ar-table-wrap" *ngIf="!loading">
+        <table class="ar-table">
+          <thead>
+            <tr>
+              <th>Receipt No</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Payment Mode</th>
+              <th class="right">Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of filteredReceipts">
+              <td class="mono">{{ r.receiptNo || '—' }}</td>
+              <td>{{ r.customerName || '—' }}</td>
+              <td>{{ r.receiptDate | date:'dd-MMM-yyyy' }}</td>
+              <td>{{ r.paymentMode || '—' }}</td>
+              <td class="right teal-bold">{{ (r.amount || 0) | number:'1.2-2' }}</td>
+              <td><span class="status-badge" [ngClass]="statusClass(r.status)">{{ r.status || 'Open' }}</span></td>
+            </tr>
+            <tr *ngIf="filteredReceipts.length === 0 && !loading">
+              <td colspan="6" class="ar-empty">No receipts found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 3: ADVANCES ══ -->
+  <ng-container *ngIf="activeTab === 'advances'">
+
+    <!-- Summary Pills -->
+    <div class="adv-pills">
+      <div class="adv-pill">
+        <span>Total Advance</span>
+        <strong>{{ advanceSummary.total | number:'1.2-2' }}</strong>
+      </div>
+      <div class="adv-pill adv-pill-teal">
+        <span>Balance</span>
+        <strong>{{ advanceSummary.balance | number:'1.2-2' }}</strong>
+      </div>
+      <div class="adv-pill adv-pill-green">
+        <span>Utilised</span>
+        <strong>{{ advanceSummary.utilised | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- Advance Form -->
+    <div class="ar-card form-card" *ngIf="showAdvanceForm">
+      <div class="ar-card-head">
+        <strong class="ar-card-title">New Customer Advance</strong>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="showAdvanceForm = false">&#215; Close</button>
+      </div>
+      <div class="form-grid">
+        <label class="form-field">
+          <span>Customer ID <span class="req">*</span></span>
+          <input type="number" [(ngModel)]="advanceForm.customerId">
+        </label>
+        <label class="form-field">
+          <span>Advance Date <span class="req">*</span></span>
+          <input type="date" [(ngModel)]="advanceForm.advanceDate">
+        </label>
+        <label class="form-field">
+          <span>Amount <span class="req">*</span></span>
+          <input type="number" min="0" [(ngModel)]="advanceForm.amount" placeholder="0.00">
+        </label>
+        <label class="form-field">
+          <span>Payment Mode</span>
+          <select [(ngModel)]="advanceForm.paymentMode">
+            <option value="BANK">Bank Transfer</option>
+            <option value="CASH">Cash</option>
+            <option value="UPI">UPI</option>
+          </select>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Remarks</span>
+          <textarea rows="2" [(ngModel)]="advanceForm.remarks"></textarea>
+        </label>
+      </div>
+      <div class="form-footer">
+        <button class="ar-btn ar-btn-outline" type="button" (click)="showAdvanceForm = false">Cancel</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="saveAdvance()" [disabled]="savingAdvance">
+          {{ savingAdvance ? 'Saving...' : 'Save Advance' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="ar-card">
+      <div class="ar-card-head">
+        <strong class="ar-card-title">AR Advances</strong>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="showAdvanceForm = true; message = ''; error = ''">+ New Advance</button>
+      </div>
+      <div class="ar-loading" *ngIf="loading">Loading...</div>
+      <div class="ar-table-wrap" *ngIf="!loading">
+        <table class="ar-table">
+          <thead>
+            <tr>
+              <th>Advance No</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Mode</th>
+              <th class="right">Amount</th>
+              <th class="right success-hdr">Utilised</th>
+              <th class="right teal-hdr">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let adv of advances">
+              <td class="mono">{{ adv.advanceNo || '—' }}</td>
+              <td>{{ adv.customerName || '—' }}</td>
+              <td>{{ adv.advanceDate | date:'dd-MMM-yyyy' }}</td>
+              <td>{{ adv.paymentMode || '—' }}</td>
+              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}</td>
+              <td class="right success-text">{{ (adv.utilised || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (adv.balance || 0) | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="advances.length === 0 && !loading">
+              <td colspan="7" class="ar-empty">No advances found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 4: AR AGING ══ -->
+  <ng-container *ngIf="activeTab === 'aging'">
+
+    <div class="sum-grid">
+      <div class="sum-card sum-c1">
+        <span class="sum-label">Total Outstanding</span>
+        <strong class="sum-val">{{ agingSummary.total | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-label">0 – 30 Days</span>
+        <strong class="sum-val">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-label">31 – 60 Days</span>
+        <strong class="sum-val">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c4">
+        <span class="sum-label">61+ Days</span>
+        <strong class="sum-val">{{ agingSummary.days61plus | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="ar-filter-bar">
+      <label class="filter-lbl">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="agingFromDate">
+      </label>
+      <label class="filter-lbl">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="agingToDate">
+      </label>
+      <button class="ar-btn ar-btn-primary" type="button" (click)="runAging()">Run Aging</button>
+    </div>
+
+    <div class="ar-card">
+      <div class="ar-loading" *ngIf="loading">Loading...</div>
+      <div class="ar-table-wrap" *ngIf="!loading">
+        <table class="ar-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th class="right teal-hdr">Total Outstanding</th>
+              <th class="right">0 – 30</th>
+              <th class="right">31 – 60</th>
+              <th class="right">61 – 90</th>
+              <th class="right">90+</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of agingRows">
+              <td>{{ row.customerName || row.supplierName }}</td>
+              <td class="right teal-bold">{{ (row.total || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.current || row.days30 || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.days60 || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.days90 || 0) | number:'1.2-2' }}</td>
+              <td class="right danger-text">{{ (row.days90plus || 0) | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="agingRows.length === 0 && !loading">
+              <td colspan="6" class="ar-empty">No aging data. Run with date filters.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+</div>

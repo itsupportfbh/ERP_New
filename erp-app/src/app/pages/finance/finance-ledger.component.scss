@@ -1,0 +1,153 @@
+$teal:      #2E5F73;
+$teal-lt:   #3a7a96;
+$teal-pale: #e8f4f8;
+$border:    #e7e9ee;
+$muted:     #6c757d;
+$row-hover: #f5f9fb;
+
+:host { display: block; }
+
+.ledger-page {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 16px 16px 40px;
+}
+
+/* ── Header ── */
+.gl-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 14px; border-bottom: 1px solid $border;
+}
+.gl-head-left { display: flex; align-items: center; gap: 14px; }
+.gl-icon {
+  width: 44px; height: 44px; background: $teal-pale; color: $teal;
+  border-radius: 10px; display: grid; place-items: center;
+}
+.gl-head-left h2 { margin: 0; font-size: 20px; font-weight: 700; color: #1a2e38; }
+.gl-head-left p  { margin: 3px 0 0; font-size: 12.5px; color: $muted; }
+
+.gl-filter-btn {
+  width: 38px; height: 38px; border-radius: 8px; border: 1px solid $border;
+  background: #fff; color: #444; cursor: pointer;
+  display: grid; place-items: center; transition: all 0.15s;
+  &:hover { background: $teal-pale; color: $teal; border-color: $teal; }
+}
+
+/* ── Filter Popup ── */
+.filter-popup {
+  background: #fff; border: 1px solid $border; border-radius: 10px;
+  padding: 16px 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+}
+.filter-row { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.filter-field {
+  display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 700;
+  color: $muted; text-transform: uppercase;
+  input { height: 34px; border: 1px solid $border; border-radius: 6px; padding: 0 10px; font: inherit; font-size: 13px; font-weight: 400; text-transform: none; &:focus { outline: none; border-color: $teal; } }
+}
+.gl-btn-primary {
+  height: 36px; padding: 0 16px; background: $teal; color: #fff;
+  border: none; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer;
+  &:hover { background: $teal-lt; }
+}
+.gl-btn-outline {
+  height: 36px; padding: 0 16px; background: transparent; color: #444;
+  border: 1px solid $border; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer;
+  &:hover { background: $teal-pale; }
+}
+
+/* ── Alerts ── */
+.gl-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
+.gl-danger { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+
+/* ── Controls Row ── */
+.gl-controls {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.gl-show-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #444;
+}
+.gl-select-wrap {
+  position: relative; display: inline-flex; align-items: center;
+  border: 1px solid $border; border-radius: 6px; background: #fff; overflow: hidden;
+  select {
+    height: 34px; padding: 0 28px 0 10px; border: none; outline: none;
+    font: inherit; font-size: 13px; background: transparent;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+  }
+  .select-arrow { position: absolute; right: 8px; pointer-events: none; font-size: 10px; color: $muted; }
+}
+.gl-search-wrap {
+  position: relative; display: flex; align-items: center;
+  .search-icon { position: absolute; left: 10px; color: $muted; pointer-events: none; }
+}
+.gl-search {
+  height: 36px; border: 1px solid $border; border-radius: 8px;
+  padding: 0 12px 0 32px; font: inherit; font-size: 13px; width: 280px;
+  &:focus { outline: none; border-color: $teal; }
+}
+
+/* ── Table ── */
+.gl-table-card { background: #fff; border: 1px solid $border; border-radius: 10px; overflow: hidden; }
+.gl-loading { padding: 28px; text-align: center; color: $muted; font-size: 13px; }
+.gl-empty   { padding: 28px; text-align: center; color: $muted; font-size: 13px; }
+.gl-table-wrap { overflow-x: auto; }
+
+.gl-table {
+  width: 100%; border-collapse: collapse; min-width: 720px;
+  thead tr { background: $teal; }
+  thead th {
+    padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: #fff;
+    text-transform: uppercase; letter-spacing: 0.06em; text-align: left; white-space: nowrap;
+    &.right { text-align: right; }
+  }
+  tbody tr { border-bottom: 1px solid #f0f2f5; &:hover { background: $row-hover; } &:last-child { border-bottom: none; } }
+  tbody td { vertical-align: middle; }
+  tfoot tr { background: #f8fafc; border-top: 2px solid $teal; }
+  tfoot td { padding: 10px 16px; font-size: 13px; &.right { text-align: right; } }
+}
+
+/* ── Level coloring ── */
+.lvl-0 { background: #f0f6f9; }
+
+/* ── Cell sizing ── */
+.th-code { width: 140px; }
+.td-code { padding: 12px 16px; font-size: 13px; color: $muted; font-family: 'Courier New', monospace; }
+.td-name { padding: 8px 16px; }
+
+/* ── Name cell with toggle (matches COA exactly) ── */
+.name-wrap { display: flex; align-items: center; gap: 10px; }
+.toggle-btn {
+  width: 28px; height: 28px; min-width: 28px; border-radius: 6px;
+  background: $teal; color: #fff; border: none;
+  font-size: 18px; font-weight: 400; line-height: 1;
+  cursor: pointer; display: grid; place-items: center;
+  transition: background 0.12s;
+  &.toggle-expanded { background: $teal-lt; }
+  &:hover { background: $teal-lt; }
+}
+
+/* ── Pagination ── */
+.gl-pager {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-top: 1px solid $border;
+}
+.pager-info { font-size: 12.5px; color: $muted; }
+.pager-btns { display: flex; align-items: center; gap: 4px; }
+.pager-btn {
+  min-width: 34px; height: 34px; border-radius: 50%; border: none; background: #f5f6f8;
+  color: #444; font-size: 13.5px; cursor: pointer; display: grid; place-items: center;
+  transition: all 0.15s;
+  &:hover:not(:disabled) { background: $teal-pale; color: $teal; }
+  &.active { background: $teal; color: #fff; font-weight: 700; }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+}
+
+/* ── Value styles ── */
+.right      { text-align: right; }
+.muted      { color: $muted; padding: 10px 16px; font-size: 13px; }
+.fw-bold    { font-weight: 700; }
+.mono       { font-family: 'Courier New', monospace; font-size: 12.5px; }
+.debit-val  { color: #2563eb; padding: 10px 16px; font-size: 13px; }
+.credit-val { color: #27ae60; padding: 10px 16px; font-size: 13px; }
+.teal-bold  { color: $teal; font-weight: 700; padding: 10px 16px; font-size: 13px; }
+.foot-row td { font-size: 13px; font-weight: 600; }

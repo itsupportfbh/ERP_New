@@ -1,5 +1,5 @@
 :host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.dn-page { display: flex; flex-direction: column; flex: 1; gap: 14px; padding: 0 0 40px; overflow-y: auto; }
+.dn-page { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 14px; padding: 20px 20px 40px; overflow-y: auto; background: var(--bg); }
 .page-header { display: flex; align-items: center; gap: 12px; padding: 10px 0 4px; flex-shrink: 0; h2 { margin: 0; flex: 1; } }
 .status-badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); &.posted { background: rgba(72,199,142,0.12); color: #1a7a4a; border-color: rgba(72,199,142,0.4); } }
 .loading-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); padding: 20px 0; }

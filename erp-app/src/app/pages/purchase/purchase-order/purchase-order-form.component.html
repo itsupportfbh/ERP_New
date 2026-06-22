@@ -52,7 +52,7 @@
         <erp-dropdown label="Payment Terms" [options]="paymentTermOptions"
           [(ngModel)]="paymentTermId" placeholder="Select payment terms"></erp-dropdown>
         <erp-dropdown label="Currency" [options]="currencyOptions"
-          [(ngModel)]="currencyId" placeholder="Select currency"></erp-dropdown>
+          [(ngModel)]="currencyId" (ngModelChange)="onCurrencyChange()" placeholder="Select currency"></erp-dropdown>
       </div>
       <div class="form-row cols-3 block-gap">
         <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate"></erp-input>
@@ -103,74 +103,44 @@
   <ng-container *ngIf="step === 2 && !loading">
     <div class="card section-card">
       <div class="section-label-row">
-        <div class="section-label">Line Items</div>
+        <div class="section-label">Line Items ({{ lines.length }})</div>
         <button class="btn btn-outline btn-xs" (click)="addLine()">+ Add Line</button>
       </div>
 
-      <div class="lines-table-wrap">
-        <table class="lines-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>PR No</th>
-              <th>Item *</th>
-              <th>Qty *</th>
-              <th>UOM</th>
-              <th>Unit Price</th>
-              <th>Disc %</th>
-              <th>Tax Code</th>
-              <th>Location</th>
-              <th>Budget Line</th>
-              <th>Remarks</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let line of lines; let i = index">
-              <td class="row-num">{{ i + 1 }}</td>
-              <td class="pr-col">
-                <erp-dropdown [options]="availablePROptions" [(ngModel)]="line.prId"
-                  placeholder="PR" (ngModelChange)="onPrSelect(line)"></erp-dropdown>
-              </td>
-              <td class="item-col">
-                <erp-dropdown [options]="itemOptions" [(ngModel)]="line.itemId"
-                  placeholder="Select item" (ngModelChange)="onItemSelect(line)"></erp-dropdown>
-              </td>
-              <td class="qty-col">
-                <erp-input type="number" [(ngModel)]="line.quantity" placeholder="0"></erp-input>
-              </td>
-              <td class="uom-col">
-                <erp-dropdown [options]="uomOptions" [(ngModel)]="line.uomId" placeholder="UOM"></erp-dropdown>
-              </td>
-              <td class="price-col">
-                <erp-input type="number" [(ngModel)]="line.unitPrice" placeholder="0.00"></erp-input>
-              </td>
-              <td class="disc-col">
-                <erp-input type="number" [(ngModel)]="line.discountPct" placeholder="0"></erp-input>
-              </td>
-              <td class="tax-col">
-                <erp-dropdown [options]="taxCodeOptions" [(ngModel)]="line.taxCodeId" placeholder="Tax"></erp-dropdown>
-              </td>
-              <td class="loc-col">
-                <erp-dropdown [options]="locationOptions" [(ngModel)]="line.locationId" placeholder="Loc"></erp-dropdown>
-              </td>
-              <td class="ledger-col">
-                <erp-dropdown [options]="ledgerOptions" [(ngModel)]="line.budgetLineId" placeholder="Budget"></erp-dropdown>
-              </td>
-              <td class="remarks-col">
-                <erp-input [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
-              </td>
-              <td class="del-col">
-                <button class="btn-icon danger" (click)="removeLine(i)" title="Remove">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="!lines.length">
-              <td colspan="12" class="empty-lines">Click "+ Add Line" to add items</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Card per line -->
+      <div class="po-line-card" *ngFor="let line of lines; let i = index">
+        <div class="line-card-header">
+          <span class="line-badge">#{{ i + 1 }}</span>
+          <div class="line-header-fields">
+            <erp-dropdown label="PR No" [options]="availablePROptions" [(ngModel)]="line.prId"
+              placeholder="Link to PR" (ngModelChange)="onPrSelect(line)"></erp-dropdown>
+            <erp-dropdown label="Item *" [required]="true" [options]="itemOptions" [(ngModel)]="line.itemId"
+              placeholder="Select item" (ngModelChange)="onItemSelect(line)"></erp-dropdown>
+          </div>
+          <button class="btn-icon info" (click)="viewLineDetail(line)" title="View details">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+          </button>
+          <button class="btn-icon danger line-del" (click)="removeLine(i)" title="Remove line">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+          </button>
+        </div>
+        <div class="line-card-body">
+          <erp-input label="Qty *" type="number" [required]="true" [(ngModel)]="line.quantity" placeholder="0"></erp-input>
+          <erp-dropdown label="UOM" [options]="uomOptions" [(ngModel)]="line.uomId" placeholder="UOM"></erp-dropdown>
+          <erp-input label="Unit Price" type="number" [(ngModel)]="line.unitPrice" placeholder="0.00"></erp-input>
+          <erp-input label="Disc %" type="number" [(ngModel)]="line.discountPct" placeholder="0"></erp-input>
+          <erp-dropdown label="Tax Code" [options]="taxCodeOptions" [(ngModel)]="line.taxCodeId" placeholder="Tax"></erp-dropdown>
+          <erp-dropdown label="Location" [options]="locationOptions" [(ngModel)]="line.locationId" placeholder="Location"></erp-dropdown>
+          <erp-dropdown label="Budget Line" [options]="ledgerOptions" [(ngModel)]="line.budgetLineId" placeholder="Budget"></erp-dropdown>
+          <erp-input label="Remarks" [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
+        </div>
+        <div class="line-card-total">
+          Line Total: <strong>{{ ((line.quantity ?? 0) * (line.unitPrice ?? 0) * (1 - (line.discountPct ?? 0) / 100)) | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <div class="empty-lines" *ngIf="!lines.length">
+        Click "+ Add Line" to add items
       </div>
 
       <!-- Totals -->
@@ -237,10 +207,13 @@
         <button class="btn btn-success btn-sm" (click)="approve(2)" [disabled]="saving">&#10003; Approve</button>
         <button class="btn btn-danger btn-sm" (click)="approve(3)" [disabled]="saving">&#10007; Reject</button>
       </div>
-      <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
-        <span class="btn-spinner" *ngIf="saving"></span>
-        {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update PO' : '&#10003; Submit PO') }}
-      </button>
+      <div class="footer-approve-group">
+        <button class="btn btn-outline btn-sm" [disabled]="saving" (click)="saveDraft()">&#128190; Save as Draft</button>
+        <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
+          <span class="btn-spinner" *ngIf="saving"></span>
+          {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update PO' : '&#10003; Submit PO') }}
+        </button>
+      </div>
     </div>
   </ng-container>
 </div>

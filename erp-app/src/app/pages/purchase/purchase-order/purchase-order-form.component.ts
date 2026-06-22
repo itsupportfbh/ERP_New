@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import Swal from 'sweetalert2';
 
 interface POLine {
   prId: number | null;
@@ -29,6 +30,8 @@ const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Appro
 export class PurchaseOrderFormComponent implements OnInit {
   isEdit = false;
   id: number | null = null;
+  draftId: number | null = null;
+  fromPrId: number | null = null;
   step = 1;
   loading = false;
   saving = false;
@@ -69,8 +72,6 @@ export class PurchaseOrderFormComponent implements OnInit {
   availablePROptions: any[] = [];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
-  companyId = Number(localStorage.getItem('companyId')) || null;
-
   private _locationNameFromEdit = '';
 
   constructor(
@@ -81,9 +82,13 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   ngOnInit(): void {
     const paramId = this.route.snapshot.paramMap.get('id');
+    const draftParam = this.route.snapshot.queryParamMap.get('draftId');
+    const fromPR = this.route.snapshot.queryParamMap.get('fromPR');
     this.isEdit = !!paramId && paramId !== 'new';
-    if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
     this.loadLookups();
+    if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
+    else if (draftParam) { this.draftId = Number(draftParam); this.loadFromDraft(); }
+    else if (fromPR) { this.fromPrId = Number(fromPR); this.loadFromPR(this.fromPrId); }
   }
 
   loadLookups(): void {
@@ -115,7 +120,6 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id
       }));
-      // Reverse-lookup location name → id when loading for edit
       if (this._locationNameFromEdit) {
         const found = this.locationOptions.find(o => o.label === this._locationNameFromEdit);
         if (found) this.locationId = found.value;
@@ -133,6 +137,27 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.availablePROptions = this.svc.unwrap(r).map((pr: any) => ({
         label: `${pr.purchaseRequestNo} - ${pr.requester ?? ''}`, value: pr.id, raw: pr
       })));
+  }
+
+  private parsePoLines(raw: any): POLine[] {
+    const parsed: any[] = typeof raw === 'string'
+      ? JSON.parse(raw || '[]')
+      : (Array.isArray(raw) ? raw : []);
+    return parsed.map((l: any) => ({
+      prId: l.prId ?? null,
+      prNumber: l.prNo ?? l.prNumber ?? '',
+      itemId: l.itemId ?? null,
+      itemCode: l.itemCode ?? '',
+      itemName: l.itemSearch ?? l.itemName ?? '',
+      quantity: l.qty ?? l.quantity ?? null,
+      uomId: l.uomId ?? null,
+      unitPrice: l.unitPrice ?? null,
+      discountPct: l.discountPct ?? null,
+      taxCodeId: l.taxCodeId ?? null,
+      budgetLineId: l.budgetLineId ?? null,
+      locationId: l.locationId ?? null,
+      remarks: l.remarks ?? ''
+    }));
   }
 
   loadForEdit(): void {
@@ -155,38 +180,75 @@ export class PurchaseOrderFormComponent implements OnInit {
         this.isOverseas = !!(this.tax || this.shipping || this.discount);
         this.incotermsId = d.incotermsId ?? null;
         this.approvalStatus = d.approvalStatus ?? 1;
-
-        // Location is stored as a string — store name, resolve to id after options load
         this._locationNameFromEdit = d.location ?? d.Location ?? '';
         const locFound = this.locationOptions.find(o => o.label === this._locationNameFromEdit);
         if (locFound) this.locationId = locFound.value;
+        this.lines = this.parsePoLines(d.poLines ?? d.PoLines ?? '[]');
+        if (!this.lines.length) this.addLine();
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
 
-        // PoLines is stored as a JSON string in the DB
-        const rawLines = d.poLines ?? d.PoLines ?? '[]';
+  loadFromDraft(): void {
+    this.loading = true;
+    this.svc.getPurchaseOrderDraftById(this.draftId!).subscribe({
+      next: res => {
+        const d = this.svc.unwrapOne(res);
+        this.supplierId = d.supplierId ?? null;
+        this.paymentTermId = d.paymentTermId ?? null;
+        this.currencyId = d.currencyId ?? null;
+        this.fxRate = d.fxRate ?? 1;
+        this.poDate = d.poDate ? d.poDate.substring(0, 10) : this.poDate;
+        this.deliveryDate = d.deliveryDate ? d.deliveryDate.substring(0, 10) : '';
+        this.contactNumber = d.contactNumber ?? '';
+        this.remarks = d.remarks ?? '';
+        this.tax = d.tax ?? null;
+        this.shipping = d.shipping ?? null;
+        this.discount = d.discount ?? null;
+        this.isOverseas = !!(this.tax || this.shipping || this.discount);
+        this.incotermsId = d.incotermsId ?? null;
+        this._locationNameFromEdit = d.location ?? d.Location ?? '';
+        const locFound = this.locationOptions.find(o => o.label === this._locationNameFromEdit);
+        if (locFound) this.locationId = locFound.value;
+        this.lines = this.parsePoLines(d.poLines ?? d.PoLines ?? '[]');
+        if (!this.lines.length) this.addLine();
+        this.loading = false;
+      },
+      error: () => { this.loading = false; this.addLine(); }
+    });
+  }
+
+  loadFromPR(prId: number): void {
+    this.loading = true;
+    this.svc.getPurchaseRequestById(prId).subscribe({
+      next: res => {
+        const d = this.svc.unwrapOne(res);
+        this.deliveryDate = d.deliveryDate ? d.deliveryDate.substring(0, 10) : '';
+        const rawLines = d.pRLines ?? d.prLines ?? d.PRLines ?? '[]';
         const parsed: any[] = typeof rawLines === 'string'
           ? JSON.parse(rawLines || '[]')
           : (Array.isArray(rawLines) ? rawLines : []);
-
         this.lines = parsed.map((l: any) => ({
-          prId: l.prId ?? null,
-          prNumber: l.prNo ?? l.prNumber ?? '',
+          prId: prId,
+          prNumber: d.purchaseRequestNo ?? '',
           itemId: l.itemId ?? null,
           itemCode: l.itemCode ?? '',
           itemName: l.itemSearch ?? l.itemName ?? '',
           quantity: l.qty ?? l.quantity ?? null,
           uomId: l.uomId ?? null,
-          unitPrice: l.unitPrice ?? null,
-          discountPct: l.discountPct ?? null,
-          taxCodeId: l.taxCodeId ?? null,
+          unitPrice: null,
+          discountPct: null,
+          taxCodeId: null,
           budgetLineId: l.budgetLineId ?? null,
           locationId: l.locationId ?? null,
           remarks: l.remarks ?? ''
         }));
-
         if (!this.lines.length) this.addLine();
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => { this.loading = false; this.addLine(); }
     });
   }
 
@@ -195,9 +257,25 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (found?.raw) {
       const s = found.raw;
       if (s.paymentTermId) this.paymentTermId = s.paymentTermId;
-      if (s.currencyId) this.currencyId = s.currencyId;
+      if (s.currencyId) { this.currencyId = s.currencyId; this.onCurrencyChange(); }
       if (s.incotermsId) this.incotermsId = s.incotermsId;
     }
+  }
+
+  onCurrencyChange(): void {
+    const baseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
+    if (!this.currencyId || !baseCurrencyId || this.currencyId === baseCurrencyId) {
+      this.fxRate = 1;
+      return;
+    }
+    const today = new Date().toISOString().substring(0, 10);
+    this.svc.getExchangeRate(this.currencyId, baseCurrencyId, today).subscribe({
+      next: (res: any) => {
+        const rate = res?.data?.rate ?? res?.data?.exchangeRate ?? res?.rate ?? res?.exchangeRate ?? (typeof res === 'number' ? res : null);
+        if (rate && Number(rate) > 0) this.fxRate = Number(rate);
+      },
+      error: () => {}
+    });
   }
 
   addLine(): void {
@@ -306,36 +384,92 @@ export class PurchaseOrderFormComponent implements OnInit {
     };
   }
 
+  saveDraft(): void {
+    this.saving = true;
+    this.error = '';
+    const payload = { ...this.buildPayload(0), ApprovalStatus: 0 };
+    const obs$ = this.draftId
+      ? this.svc.updatePurchaseOrderDraft({ Id: this.draftId, ...payload })
+      : this.svc.createPurchaseOrderDraft(payload);
+    obs$.subscribe({
+      next: () => { this.saving = false; Swal.fire('Saved', 'Purchase order saved as draft.', 'success').then(() => this.back()); },
+      error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Draft save failed.'; }
+    });
+  }
+
   submit(): void {
     this.saving = true;
     this.error = '';
     this.success = '';
-    const payload = this.buildPayload();
-
-    const obs$ = this.isEdit
-      ? this.svc.updatePurchaseOrder({ Id: this.id, ...payload })
-      : this.svc.createPurchaseOrder(payload);
-
-    obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed. Please try again.'; }
+    this.svc.checkPeriodLock(this.poDate).subscribe({
+      next: (res: any) => {
+        const d = res?.data ?? res ?? {};
+        if (d.isClosed || d.IsClosed || d.status === 'Closed' || d.Status === 'Closed') {
+          this.saving = false;
+          this.error = `The accounting period for ${this.poDate} is closed. Please contact Finance.`;
+          return;
+        }
+        this.doSubmit();
+      },
+      error: () => this.doSubmit()
     });
   }
 
-  approve(status: number): void {
-    if (!this.id) return;
-    this.saving = true;
-    this.error = '';
-    this.success = '';
-    const payload = { Id: this.id, ...this.buildPayload(status) };
-    this.svc.updatePurchaseOrder(payload).subscribe({
+  private doSubmit(): void {
+    const payload = this.buildPayload();
+    const obs$ = this.isEdit
+      ? this.svc.updatePurchaseOrder({ Id: this.id, ...payload })
+      : this.svc.createPurchaseOrder(payload);
+    obs$.subscribe({
       next: () => {
         this.saving = false;
-        this.approvalStatus = status;
-        this.success = status === 2 ? 'Purchase Order approved.' : 'Purchase Order rejected.';
+        if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
+        Swal.fire('Submitted!', this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', 'success').then(() => this.back());
       },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Update failed.'; }
+      error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Save failed. Please try again.'; }
     });
+  }
+
+  approve(status: 2 | 3): void {
+    if (!this.id) return;
+    const action = status === 2 ? 'Approve' : 'Reject';
+    const color  = status === 2 ? '#22c55e' : '#ef4444';
+    Swal.fire({ title: `${action} PO?`, text: `${action} purchase order ${this.purchaseOrderNo}?`, icon: 'question', showCancelButton: true, confirmButtonText: action, confirmButtonColor: color })
+      .then(r => { if (!r.isConfirmed) return;
+        this.saving = true; this.error = ''; this.success = '';
+        const amount = this.netTotal;
+        const req$ = status === 2
+          ? this.svc.approvePurchaseOrder(this.id!, amount)
+          : this.svc.rejectPurchaseOrder(this.id!, amount);
+        req$.subscribe({
+          next: () => {
+            this.saving = false;
+            this.approvalStatus = status;
+            Swal.fire(status === 2 ? 'Approved!' : 'Rejected', `Purchase order ${status === 2 ? 'approved' : 'rejected'} successfully.`, status === 2 ? 'success' : 'info');
+          },
+          error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? `${action} failed.`; }
+        });
+      });
+  }
+
+  viewLineDetail(line: POLine): void {
+    const net = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0) * (1 - (Number(line.discountPct) || 0) / 100);
+    this.showDetailSwal(line.itemName || 'Line Detail', [
+      ['Item Code', line.itemCode],
+      ['Item Name', line.itemName],
+      ['PR Reference', line.prNumber],
+      ['Quantity', line.quantity],
+      ['Unit Price', line.unitPrice != null ? Number(line.unitPrice).toFixed(2) : null],
+      ['Discount %', line.discountPct],
+      ['Line Net', net.toFixed(2)],
+      ['Remarks', line.remarks],
+    ]);
+  }
+
+  private showDetailSwal(title: string, rows: [string, any][]): void {
+    const html = rows.filter(([, v]) => v != null && v !== '')
+      .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
+    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
   }
 
   back(): void { this.router.navigate(['/app/purchase/orders']); }
@@ -345,9 +479,10 @@ export class PurchaseOrderFormComponent implements OnInit {
   }
 
   get title(): string {
-    return this.isEdit
-      ? `Edit PO${this.purchaseOrderNo ? ' – ' + this.purchaseOrderNo : ''}`
-      : 'New Purchase Order';
+    if (this.isEdit) return `Edit PO${this.purchaseOrderNo ? ' – ' + this.purchaseOrderNo : ''}`;
+    if (this.draftId) return 'Edit PO Draft';
+    if (this.fromPrId) return 'New PO from PR';
+    return 'New Purchase Order';
   }
   get today(): string { return new Date().toISOString().substring(0, 10); }
 }

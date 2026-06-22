@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef, HostListener, ElementRef } from '@angular/core';
+import { Component, Input, forwardRef, HostListener, ElementRef, ViewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface DropdownOption { label: string; value: any; }
@@ -22,9 +22,12 @@ export class DropdownComponent implements ControlValueAccessor {
   @Input() disabled = false;
   @Input() errorMsg = '';
 
+  @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
+
   value: any = null;
   open = false;
   touched = false;
+  searchText = '';
   menuStyle: { [key: string]: string } = {};
 
   onChange = (_: any) => {};
@@ -36,12 +39,22 @@ export class DropdownComponent implements ControlValueAccessor {
     return this.options.find(o => this.sameValue(o.value, this.value))?.label ?? '';
   }
 
+  get filteredOptions(): DropdownOption[] {
+    const q = this.searchText.trim().toLowerCase();
+    if (!q) return this.options;
+    return this.options.filter(o => o.label.toLowerCase().includes(q));
+  }
+
   toggle(): void {
     if (this.disabled) return;
     this.open = !this.open;
     this.touched = true;
     this.onTouched();
-    if (this.open) this.positionMenu();
+    if (this.open) {
+      this.searchText = '';
+      this.positionMenu();
+      setTimeout(() => this.searchInputRef?.nativeElement?.focus(), 30);
+    }
   }
 
   /** Calculate fixed position so the menu escapes overflow:hidden parents */
@@ -90,7 +103,7 @@ export class DropdownComponent implements ControlValueAccessor {
   registerOnTouched(fn: any): void { this.onTouched = fn; }
   setDisabledState(d: boolean): void { this.disabled = d; }
 
-  private sameValue(a: any, b: any): boolean {
+  sameValue(a: any, b: any): boolean {
     return String(a ?? '') === String(b ?? '');
   }
 }

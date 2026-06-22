@@ -1,0 +1,148 @@
+<div class="fin-workspace" *ngIf="config">
+
+  <!-- ── Standard Page Header ── -->
+  <div class="fw-page-head" *ngIf="config.key !== 'general-ledger'">
+    <div class="fw-head-left">
+      <h2>{{ config.title }}</h2>
+      <p>{{ config.subtitle }}</p>
+    </div>
+    <div class="fw-head-right">
+      <erp-input placeholder="Search..." [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+      <button class="fw-btn fw-btn-outline" type="button" (click)="load()">
+        &#8635; Refresh
+      </button>
+      <button class="fw-btn fw-btn-outline" type="button"
+        *ngIf="config.actions.includes('import')" (click)="run('import', {})">
+        Import
+      </button>
+      <button class="fw-btn fw-btn-primary" type="button"
+        *ngIf="config.actions.includes('create')" (click)="openCreate()">
+        + New {{ config.title }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── General Ledger Header ── -->
+  <div class="gl-card" *ngIf="config.key === 'general-ledger'">
+    <div class="gl-toolbar">
+      <div class="gl-title-wrap">
+        <div class="gl-icon">&#9664;</div>
+        <div>
+          <h2>General Ledger</h2>
+          <p>Account balances &amp; movements <span class="separator">·</span> <strong>SGD</strong></p>
+        </div>
+      </div>
+      <div class="gl-controls">
+        <button class="gl-icon-btn" type="button" title="Toggle filters"
+          (click)="showLedgerFilters = !showLedgerFilters">&#9660;</button>
+        <label class="gl-show-label">Show</label>
+        <select class="gl-select" [(ngModel)]="ledgerPageSize">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        <span>entries</span>
+      </div>
+    </div>
+
+    <div class="gl-filters" *ngIf="showLedgerFilters">
+      <label class="gl-filter-field">
+        <span>From</span>
+        <input type="date" [(ngModel)]="fromDate">
+      </label>
+      <label class="gl-filter-field">
+        <span>To</span>
+        <input type="date" [(ngModel)]="toDate">
+      </label>
+      <button class="fw-btn fw-btn-primary" type="button" (click)="load()">Run Report</button>
+    </div>
+
+    <div class="gl-table-wrap">
+      <table class="gl-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Account Name</th>
+            <th class="num">Opening Bal</th>
+            <th class="num">Debit (SGD)</th>
+            <th class="num">Credit (SGD)</th>
+            <th class="num">Balance (SGD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of ledgerSummaryRows">
+            <td class="code-cell">{{ row.code }}</td>
+            <td class="account-cell">
+              <button class="expand-btn" type="button">+</button>
+              <strong>{{ row.accountName }}</strong>
+            </td>
+            <td class="num muted">{{ row.opening | number:'1.2-2' }}</td>
+            <td class="num debit">{{ row.debit | number:'1.2-2' }}</td>
+            <td class="num credit">{{ row.credit | number:'1.2-2' }}</td>
+            <td class="num balance">{{ row.balance | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Date Filter Bar (report pages) ── -->
+  <div class="fw-filter-bar" *ngIf="config.reportFilters && config.key !== 'general-ledger'">
+    <label class="filter-field">
+      <span>From Date</span>
+      <input type="date" [(ngModel)]="fromDate">
+    </label>
+    <label class="filter-field">
+      <span>To Date</span>
+      <input type="date" [(ngModel)]="toDate">
+    </label>
+    <button class="fw-btn fw-btn-primary" type="button" (click)="load()">Run Report</button>
+  </div>
+
+  <!-- ── Alert Messages ── -->
+  <div class="fw-alert fw-success" *ngIf="message">{{ message }}</div>
+  <div class="fw-alert fw-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- ── Inline Create / Edit Form ── -->
+  <div class="fw-form-card" *ngIf="formOpen">
+    <div class="fw-form-head">
+      <strong class="fw-form-title">
+        {{ formMode === 'create' ? 'New' : 'Edit' }} {{ config.title }}
+      </strong>
+      <button class="fw-btn fw-btn-outline fw-btn-sm" type="button" (click)="formOpen = false">
+        &#215; Close
+      </button>
+    </div>
+    <div class="fw-form-grid">
+      <ng-container *ngFor="let field of config.formFields">
+        <label class="fw-field" *ngIf="field.type !== 'textarea'">
+          <span>{{ field.label }}</span>
+          <input [type]="field.type || 'text'" [(ngModel)]="form[field.key]">
+        </label>
+        <label class="fw-field fw-field-wide" *ngIf="field.type === 'textarea'">
+          <span>{{ field.label }}</span>
+          <textarea rows="3" [(ngModel)]="form[field.key]"></textarea>
+        </label>
+      </ng-container>
+    </div>
+    <div class="fw-form-footer">
+      <button class="fw-btn fw-btn-outline fw-btn-sm" type="button" (click)="formOpen = false">Cancel</button>
+      <button class="fw-btn fw-btn-primary fw-btn-sm" type="button" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Data Table ── -->
+  <div class="fw-table-card" *ngIf="config.key !== 'general-ledger'">
+    <erp-table
+      [columns]="columns"
+      [data]="filtered"
+      [loading]="loading"
+      [rowActions]="rowActions"
+      (rowClick)="onRowClick($event)"
+      (actionClick)="onAction($event)">
+    </erp-table>
+  </div>
+
+</div>

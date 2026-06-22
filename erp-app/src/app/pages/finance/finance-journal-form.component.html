@@ -1,0 +1,161 @@
+<div class="journal-page">
+
+  <!-- Page Header -->
+  <div class="journal-header">
+    <div class="header-left">
+      <button class="btn-back" type="button" (click)="cancel()">&#8592; Back</button>
+      <div>
+        <h2>Manual Journal Entry</h2>
+        <p>Capture multiple debit &amp; credit lines in a single balanced journal</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-error" *ngIf="error">{{ error }}</div>
+
+  <!-- Journal Header Card -->
+  <div class="jcard">
+    <div class="jcard-header">
+      <span class="jcard-header-title">Journal Header</span>
+    </div>
+    <div class="jform-row">
+      <label class="jfield">
+        <span>Journal Date <span class="req">*</span></span>
+        <input type="date" [(ngModel)]="journalDate">
+      </label>
+      <label class="jfield">
+        <span>Description / Narration</span>
+        <input type="text" [(ngModel)]="description" (ngModelChange)="onDescriptionChange()" placeholder="Enter narration for this journal">
+      </label>
+    </div>
+  </div>
+
+  <!-- Journal Lines Card -->
+  <div class="jcard">
+    <div class="jcard-header">
+      <span class="jcard-header-title">Journal Lines</span>
+      <button class="btn-add-line" type="button" (click)="addLine()">+ Add Line</button>
+    </div>
+
+    <div class="lines-wrap">
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th class="col-desc">Description</th>
+            <th class="col-account">Ledger Account</th>
+            <th class="col-amt">Debit</th>
+            <th class="col-amt">Credit</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="lines.length === 0">
+            <td colspan="5" class="empty-lines">No lines yet — click <strong>+ Add Line</strong> to begin.</td>
+          </tr>
+          <tr *ngFor="let line of lines; let i = index">
+            <td>
+              <input class="cell-input" type="text" [(ngModel)]="line.lineDescription" placeholder="Line description">
+            </td>
+            <td>
+              <select class="cell-select" [(ngModel)]="line.ledgerId">
+                <option [ngValue]="null" disabled>Select account...</option>
+                <option *ngFor="let a of accounts" [ngValue]="a.id">{{ a.label }}</option>
+              </select>
+            </td>
+            <td>
+              <input class="cell-input num-input" type="number" min="0" [(ngModel)]="line.debit"
+                (ngModelChange)="onDebitChange(line)" placeholder="0.00">
+            </td>
+            <td>
+              <input class="cell-input num-input" type="number" min="0" [(ngModel)]="line.credit"
+                (ngModelChange)="onCreditChange(line)" placeholder="0.00">
+            </td>
+            <td class="del-cell">
+              <button class="del-btn" type="button" [disabled]="lines.length === 1" (click)="removeLine(i)">&#215;</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals Strip -->
+    <div class="totals-strip">
+      <div class="total-item">
+        <span class="total-label">Total Debit</span>
+        <span class="total-val">{{ totalDebit | number:'1.2-2' }}</span>
+      </div>
+      <div class="total-divider"></div>
+      <div class="total-item">
+        <span class="total-label">Total Credit</span>
+        <span class="total-val">{{ totalCredit | number:'1.2-2' }}</span>
+      </div>
+      <div class="balance-badge"
+        [class.ok]="isBalanced"
+        [class.err]="!isBalanced && totalDebit > 0">
+        {{ isBalanced ? '&#10003; Balanced' : (totalDebit > 0 ? '&#10007; Not Balanced' : 'Enter amounts') }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recurring Journal Card -->
+  <div class="jcard">
+    <div class="recurring-toggle">
+      <label class="toggle-row">
+        <input type="checkbox" [(ngModel)]="isRecurring">
+        <span>Make this a recurring journal</span>
+        <span class="toggle-hint">— Automatically post this entry on a schedule</span>
+      </label>
+    </div>
+
+    <div class="recurring-fields" *ngIf="isRecurring">
+      <div class="jform-row jform-row-4" style="padding-top: 0;">
+        <label class="jfield">
+          <span>Frequency</span>
+          <select [(ngModel)]="recurringFrequency">
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Quarterly">Quarterly</option>
+            <option value="Yearly">Yearly</option>
+          </select>
+        </label>
+        <label class="jfield">
+          <span>Every (intervals)</span>
+          <input type="number" min="1" [(ngModel)]="recurringInterval">
+        </label>
+        <label class="jfield">
+          <span>Start Date</span>
+          <input type="date" [(ngModel)]="recurringStartDate">
+        </label>
+        <label class="jfield">
+          <span>End Type</span>
+          <select [(ngModel)]="recurringEndType">
+            <option value="NoEnd">Never ends</option>
+            <option value="EndByDate">End by date</option>
+            <option value="EndByCount">End after N times</option>
+          </select>
+        </label>
+      </div>
+      <div class="jform-row" style="padding-top: 0;" *ngIf="recurringEndType !== 'NoEnd'">
+        <label class="jfield" *ngIf="recurringEndType === 'EndByDate'">
+          <span>End Date</span>
+          <input type="date" [(ngModel)]="recurringEndDate">
+        </label>
+        <label class="jfield" *ngIf="recurringEndType === 'EndByCount'">
+          <span>Occurrences</span>
+          <input type="number" min="1" [(ngModel)]="recurringCount">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Buttons -->
+  <div class="journal-footer">
+    <button class="btn-cancel" type="button" (click)="cancel()">Cancel</button>
+    <button class="btn-submit" type="button" (click)="submit()"
+      [disabled]="saving || !isBalanced || !hasValidLines">
+      {{ saving ? 'Saving...' : 'Submit Journal' }}
+    </button>
+  </div>
+
+</div>

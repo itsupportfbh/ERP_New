@@ -1,32 +1,24 @@
 <div class="wizard-page">
+
+  <!-- Back + Title -->
   <div class="page-header">
-    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
-    <h2>{{ title }}</h2>
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back to PR List</button>
+    <h2>{{ isEdit ? 'Edit Purchase Request' : 'PR Wizard' }}</h2>
     <span class="status-badge" *ngIf="isEdit">{{ status }}</span>
   </div>
 
   <!-- Step bar -->
   <div class="step-bar">
-    <div class="step-item" [class.active]="step >= 1" [class.done]="step > 1" (click)="step > 1 && (step = 1)">
-      <div class="step-circle">
-        <svg *ngIf="step > 1" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
-        <span *ngIf="step <= 1">1</span>
+    <ng-container *ngFor="let s of prSteps; let i = index">
+      <div class="step-item" [class.active]="i <= prStep" [class.done]="i < prStep" (click)="i < prStep && (prStep = i)">
+        <div class="step-circle">
+          <svg *ngIf="i < prStep" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+          <span *ngIf="i >= prStep">{{ i + 1 }}</span>
+        </div>
+        <span class="step-label">{{ s }}</span>
       </div>
-      <span class="step-label">Header</span>
-    </div>
-    <div class="step-line" [class.done]="step > 1"></div>
-    <div class="step-item" [class.active]="step >= 2" [class.done]="step > 2">
-      <div class="step-circle">
-        <svg *ngIf="step > 2" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
-        <span *ngIf="step <= 2">2</span>
-      </div>
-      <span class="step-label">Line Items</span>
-    </div>
-    <div class="step-line" [class.done]="step > 2"></div>
-    <div class="step-item" [class.active]="step >= 3">
-      <div class="step-circle"><span>3</span></div>
-      <span class="step-label">Review &amp; Submit</span>
-    </div>
+      <div class="step-line" *ngIf="i < prSteps.length - 1" [class.done]="i < prStep"></div>
+    </ng-container>
   </div>
 
   <!-- Loading -->
@@ -38,131 +30,164 @@
     {{ error }}
   </div>
 
-  <!-- STEP 1: Header -->
-  <ng-container *ngIf="step === 1 && !loading">
+  <!-- ── STEP 0: Header ─────────────────────────────── -->
+  <ng-container *ngIf="prStep === 0 && !loading">
     <div class="card section-card">
       <div class="section-label">Request Details</div>
       <div class="form-row cols-3">
         <erp-input label="Requester" [(ngModel)]="requester" [disabled]="true"></erp-input>
-        <erp-dropdown label="Department" [required]="true" [options]="departmentOptions"
-          [(ngModel)]="departmentId" placeholder="Select department"></erp-dropdown>
-        <erp-input label="Delivery Date" type="date" [required]="true"
-          [(ngModel)]="deliveryDate"></erp-input>
+        <erp-dropdown label="Department *" [options]="departmentOptions" [(ngModel)]="departmentId"
+          placeholder="Select department" (ngModelChange)="onDeptChange()"></erp-dropdown>
+        <erp-input label="Delivery Date *" type="date" [(ngModel)]="deliveryDate"></erp-input>
       </div>
       <div class="form-row cols-1 block-gap">
-        <erp-input label="Description / Purpose" [(ngModel)]="description"
-          placeholder="Enter reason or purpose for this request"></erp-input>
+        <erp-input label="Description / Purpose" [(ngModel)]="description" placeholder="Reason or purpose for this request"></erp-input>
       </div>
     </div>
     <div class="wizard-footer">
       <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
-      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+      <button class="btn btn-primary btn-sm" (click)="prGo(1)">Next: Lines &#8594;</button>
     </div>
   </ng-container>
 
-  <!-- STEP 2: Line Items -->
-  <ng-container *ngIf="step === 2 && !loading">
+  <!-- ── STEP 1: Lines ──────────────────────────────── -->
+  <ng-container *ngIf="prStep === 1 && !loading">
     <div class="card section-card">
-      <div class="section-label-row">
-        <div class="section-label">Line Items</div>
-        <button class="btn btn-outline btn-xs" (click)="addLine()">+ Add Line</button>
-      </div>
-
       <div class="lines-table-wrap">
         <table class="lines-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Item *</th>
-              <th>Qty *</th>
+              <th>Item</th>
+              <th>Qty</th>
               <th>UOM</th>
-              <th>Location</th>
-              <th>Budget Line</th>
+              <th>Outlet</th>
               <th>Remarks</th>
-              <th></th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let line of lines; let i = index">
-              <td class="row-num">{{ i + 1 }}</td>
-              <td class="item-col">
-                <erp-dropdown [options]="itemOptions" [(ngModel)]="line.itemId"
-                  placeholder="Select item" (ngModelChange)="onItemSelect(line)"></erp-dropdown>
-              </td>
-              <td class="qty-col">
-                <erp-input type="number" [(ngModel)]="line.quantity" placeholder="0"></erp-input>
-              </td>
-              <td class="uom-col">
-                <erp-dropdown [options]="uomOptions" [(ngModel)]="line.uomId"
-                  placeholder="UOM" (ngModelChange)="onUomSelect(line)"></erp-dropdown>
-              </td>
-              <td class="loc-col">
-                <erp-dropdown [options]="locationOptions" [(ngModel)]="line.locationId"
-                  placeholder="Location" (ngModelChange)="onLocationSelect(line)"></erp-dropdown>
-              </td>
-              <td class="ledger-col">
-                <erp-dropdown [options]="ledgerOptions" [(ngModel)]="line.budgetLineId"
-                  placeholder="Budget line" (ngModelChange)="onLedgerSelect(line)"></erp-dropdown>
-              </td>
-              <td class="remarks-col">
-                <erp-input [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
-              </td>
-              <td class="del-col">
+            <tr *ngIf="!prLines.length">
+              <td colspan="6" class="empty-lines">No lines yet — click "+ Add line" below.</td>
+            </tr>
+            <tr *ngFor="let l of prLines; let i = index">
+              <td>{{ l.itemSearch || '—' }}</td>
+              <td class="num-cell">{{ l.qty }}</td>
+              <td>{{ l.uomSearch || l.uom || '—' }}</td>
+              <td>{{ l.locationSearch || l.location || '—' }}</td>
+              <td>{{ l.remarks || '—' }}</td>
+              <td class="action-cell">
+                <button class="btn-icon info" (click)="viewLineDetail(l)" title="View details">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+                </button>
+                <button class="btn-icon" (click)="editLine(i)" title="Edit">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg>
+                </button>
                 <button class="btn-icon danger" (click)="removeLine(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
                 </button>
               </td>
             </tr>
-            <tr *ngIf="!lines.length">
-              <td colspan="8" class="empty-lines">Click "+ Add Line" to add items</td>
-            </tr>
           </tbody>
         </table>
       </div>
+      <div class="add-line-row">
+        <button class="btn btn-primary btn-sm" (click)="openAddLine()">+ Add line</button>
+      </div>
     </div>
-
     <div class="wizard-footer">
-      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
-      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+      <button class="btn btn-outline btn-sm" (click)="prGo(-1)">&#8592; Back</button>
+      <button class="btn btn-primary btn-sm" (click)="prGo(1)">Review &#8594;</button>
     </div>
   </ng-container>
 
-  <!-- STEP 3: Review -->
-  <ng-container *ngIf="step === 3 && !loading">
+  <!-- ── STEP 2: Review ─────────────────────────────── -->
+  <ng-container *ngIf="prStep === 2 && !loading">
     <div class="card section-card">
-      <div class="section-label">Review Purchase Request</div>
+      <div class="review-header-band">
+        <span>Purchase Request Preview</span>
+      </div>
       <div class="review-grid">
-        <div class="review-row"><span class="review-key">Requester</span><span class="review-val">{{ requester }}</span></div>
-        <div class="review-row"><span class="review-key">Department</span>
-          <span class="review-val">{{ getLabel(departmentOptions, departmentId) }}</span></div>
-        <div class="review-row"><span class="review-key">Delivery Date</span><span class="review-val">{{ deliveryDate }}</span></div>
+        <div class="review-row"><span class="review-key">Requester</span><span class="review-val">{{ requester || '—' }}</span></div>
+        <div class="review-row"><span class="review-key">Department</span><span class="review-val">{{ departmentName || getLabel(departmentOptions, departmentId) }}</span></div>
+        <div class="review-row"><span class="review-key">Delivery Date</span><span class="review-val">{{ deliveryDate || '—' }}</span></div>
         <div class="review-row"><span class="review-key">Description</span><span class="review-val">{{ description || '—' }}</span></div>
       </div>
     </div>
 
     <div class="card section-card">
-      <div class="section-label">Line Items ({{ lines.length }})</div>
-      <table class="review-lines">
-        <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>UOM</th><th>Location</th><th>Remarks</th></tr></thead>
-        <tbody>
-          <tr *ngFor="let l of lines; let i = index">
-            <td>{{ i + 1 }}</td>
-            <td>{{ getLabel(itemOptions, l.itemId) }}</td>
-            <td>{{ l.quantity }}</td>
-            <td>{{ getLabel(uomOptions, l.uomId) }}</td>
-            <td>{{ getLabel(locationOptions, l.locationId) }}</td>
-            <td>{{ l.remarks }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="section-label">Line Items ({{ prLines.length }}) &nbsp;·&nbsp; Total Qty: {{ totalQty }}</div>
+      <div class="tiles-grid">
+        <div *ngFor="let l of prLines; let i = index" class="line-tile">
+          <div class="tile-icon">&#128230;</div>
+          <div class="tile-body">
+            <div class="tile-title">{{ l.itemSearch || '—' }}</div>
+            <div class="tile-meta">
+              <span class="meta-chip">&#128205; {{ l.locationSearch || l.location || '—' }}</span>
+              <span class="meta-chip muted" *ngIf="l.remarks">&#128172; {{ l.remarks }}</span>
+            </div>
+          </div>
+          <div class="tile-right">
+            <div class="qty-pill">{{ l.qty }}</div>
+            <div class="uom-pill">{{ l.uomSearch || l.uom || '—' }}</div>
+          </div>
+        </div>
+        <div *ngIf="!prLines.length" class="empty-tile">No lines added</div>
+      </div>
     </div>
 
     <div class="wizard-footer">
-      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
-      <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
-        <span class="btn-spinner" *ngIf="saving"></span>
-        {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update PR' : '&#10003; Submit PR') }}
-      </button>
+      <button class="btn btn-outline btn-sm" (click)="prGo(-1)">&#8592; Back</button>
+      <div class="footer-right">
+        <button class="btn btn-outline btn-sm" [disabled]="saving" (click)="saveDraft()">
+          <span class="btn-spinner" *ngIf="saving"></span>
+          &#128190; Save as Draft
+        </button>
+        <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
+          <span class="btn-spinner" *ngIf="saving"></span>
+          {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update PR' : '&#10003; Submit PR') }}
+        </button>
+      </div>
     </div>
   </ng-container>
+</div>
+
+<!-- ── Modal: Add / Edit Line ──────────────────────── -->
+<div class="prl-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="prl-modal" (click)="$event.stopPropagation()">
+    <div class="prl-head">
+      <h2 class="prl-title">{{ editingIndex !== null ? 'Edit Line' : 'Add Purchase Request Line' }}</h2>
+      <button class="prl-close" (click)="closeModal()">&#10005;</button>
+    </div>
+
+    <div class="prl-body">
+      <div class="alert-error" *ngIf="error" style="margin-bottom:10px;">{{ error }}</div>
+
+      <div class="form-row cols-2">
+        <erp-dropdown label="Item *" [options]="itemOptions" [(ngModel)]="modalLine.itemId"
+          placeholder="Search item…" (ngModelChange)="onModalItemChange()"></erp-dropdown>
+        <div class="form-row cols-2" style="gap:8px;margin:0;">
+          <erp-input label="Qty *" type="number" [(ngModel)]="modalLine.qty" placeholder="0"></erp-input>
+          <erp-dropdown label="UOM" [options]="uomOptions" [(ngModel)]="modalLine.uomId"
+            placeholder="UOM" (ngModelChange)="onModalUomChange()"></erp-dropdown>
+        </div>
+      </div>
+
+      <div class="form-row cols-1 block-gap">
+        <erp-dropdown label="Outlet *" [options]="locationOptions" [(ngModel)]="modalLine.locationId"
+          placeholder="Select outlet…" (ngModelChange)="onModalLocationChange()"></erp-dropdown>
+      </div>
+
+      <div class="form-row cols-1 block-gap">
+        <erp-input label="Remarks" [(ngModel)]="modalLine.remarks" placeholder="Optional remarks"></erp-input>
+      </div>
+    </div>
+
+    <div class="prl-foot">
+      <button class="btn btn-outline btn-sm" (click)="closeModal()">Cancel</button>
+      <button class="btn btn-outline btn-sm" *ngIf="editingIndex === null" (click)="addAndContinue()">Add Another</button>
+      <button class="btn btn-primary btn-sm" (click)="saveModal()">
+        {{ editingIndex !== null ? 'Save Changes' : 'Add &amp; Close' }}
+      </button>
+    </div>
+  </div>
 </div>

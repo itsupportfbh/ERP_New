@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
-import { TableColumn } from '../../../shared/components/data-table/data-table.component';
+import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-debit-note-list',
@@ -15,15 +16,30 @@ export class DebitNoteListComponent implements OnInit {
   filtered: any[] = [];
   search = '';
 
+  showLinesModal = false;
+  modalLines: any[] = [];
+  modalDnNo = '';
+  modalSupplier = '';
+  modalStatus = '';
+  modalTotal: number | null = null;
+
   columns: TableColumn[] = [
-    { key: 'dnNumber',     header: 'DN No',         sortable: true },
-    { key: 'invoiceNo',    header: 'Invoice No',     sortable: true },
-    { key: 'supplierName', header: 'Supplier',        sortable: true },
-    { key: 'reason',       header: 'Reason' },
-    { key: 'noteDate',     header: 'Note Date',       sortable: true, type: 'date' },
-    { key: 'amount',       header: 'Amount',          type: 'number', align: 'right' },
-    { key: 'status',       header: 'Status',          type: 'badge',
-      badgeMap: { Draft: 'default', Posted: 'success' } },
+    { key: 'debitNoteNo', header: 'DN No', sortable: true },
+    { key: 'supplierName', header: 'Supplier', sortable: true },
+    { key: 'reason', header: 'Reason' },
+    { key: 'noteDate', header: 'Note Date', sortable: true, type: 'date' },
+    { key: 'amount', header: 'Amount', type: 'number', align: 'right' },
+    {
+      key: 'status',
+      header: 'Status',
+      type: 'badge',
+      badgeMap: { Draft: 'default', Posted: 'success' }
+    },
+  ];
+
+  rowActions: RowAction[] = [
+    { key: 'edit',   label: 'Edit',   btnClass: 'default', icon: 'edit'   },
+    { key: 'delete', label: 'Delete', btnClass: 'danger',  icon: 'delete' },
   ];
 
   constructor(private svc: PurchaseService, private router: Router) {}
@@ -33,7 +49,16 @@ export class DebitNoteListComponent implements OnInit {
   load(): void {
     this.loading = true;
     this.svc.getDebitNotes().subscribe({
-      next: res => { this.rows = this.svc.unwrap(res); this.applyFilter(); this.loading = false; },
+      next: res => {
+        this.rows = this.svc.unwrap(res).map((r: any) => ({
+          ...r,
+          id: r.id ?? r.iD,
+          debitNoteNo: r.debitNoteNo ?? r.DebitNoteNo ?? '',
+          supplierName: r.name ?? r.supplierName ?? '',
+        }));
+        this.applyFilter();
+        this.loading = false;
+      },
       error: () => { this.loading = false; }
     });
   }
@@ -42,7 +67,7 @@ export class DebitNoteListComponent implements OnInit {
     const q = this.search.toLowerCase();
     this.filtered = q
       ? this.rows.filter(r =>
-          (r.dnNumber ?? '').toLowerCase().includes(q) ||
+          (r.debitNoteNo ?? '').toLowerCase().includes(q) ||
           (r.supplierName ?? '').toLowerCase().includes(q) ||
           (r.reason ?? '').toLowerCase().includes(q))
       : [...this.rows];
@@ -53,4 +78,47 @@ export class DebitNoteListComponent implements OnInit {
   onRowClick(row: any): void {
     this.router.navigate(['/app/purchase/debit-note', row.id]);
   }
+
+  openLinesModal(row: any): void {
+    const raw = row?.debitNoteLines ?? row?.DebitNoteLines ?? row?.lines ?? [];
+    const lines: any[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw || '[]'); } catch { return []; } })();
+    this.modalLines = lines;
+    this.modalDnNo = row.debitNoteNo ?? '';
+    this.modalSupplier = row.supplierName ?? '';
+    this.modalStatus = row.status ?? '';
+    this.modalTotal = row.amount ?? null;
+    if (!lines.length) {
+      this.svc.getDebitNoteById(row.id).subscribe({
+        next: res => {
+          const d = this.svc.unwrapOne(res);
+          const r2 = d.debitNoteLines ?? d.DebitNoteLines ?? d.lines ?? [];
+          this.modalLines = Array.isArray(r2) ? r2 : (() => { try { return JSON.parse(r2 || '[]'); } catch { return []; } })();
+          this.modalTotal = d.amount ?? d.netTotal ?? this.modalTotal;
+        }
+      });
+    }
+    this.showLinesModal = true;
+  }
+
+  closeLinesModal(): void { this.showLinesModal = false; }
+
+  onAction(e: { action: string; row: any }): void {
+    if (e.action === 'view')   this.openLinesModal(e.row);
+    if (e.action === 'edit')   this.router.navigate(['/app/purchase/debit-note', e.row.id]);
+    if (e.action === 'delete') this.delete(e.row);
+  }
+
+  delete(row: any): void {
+    if (String(row.status ?? '').toLowerCase() === 'posted') { Swal.fire('Cannot Delete', 'Posted debit notes cannot be deleted.', 'warning'); return; }
+    Swal.fire({ title: 'Delete Debit Note?', text: `Delete ${row.debitNoteNo}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
+      .then(r => { if (!r.isConfirmed) return;
+        this.svc.deleteDebitNote(row.id).subscribe({
+          next: () => { Swal.fire('Deleted', 'Debit note deleted.', 'success'); this.load(); },
+          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete debit note.', 'error')
+        });
+      });
+  }
+
+  get pendingCount(): number { return this.rows.filter(r => !r.status || String(r.status).toLowerCase() === 'pending').length; }
+  get approvedCount(): number { return this.rows.filter(r => String(r.status ?? '').toLowerCase() === 'posted').length; }
 }

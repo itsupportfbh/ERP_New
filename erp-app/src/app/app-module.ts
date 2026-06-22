@@ -71,7 +71,9 @@ import { UomComponent } from './pages/master/uom/uom.component';
 import { UomConversionComponent } from './pages/master/uom-conversion/uom-conversion.component';
 import { VehicleComponent } from './pages/master/vehicle/vehicle.component';
 import { WarehouseComponent } from './pages/master/warehouse/warehouse.component'; 
-
+import { FinanceDashboardComponent } from './pages/finance/finance-dashboard.component';
+import { FinanceWorkspaceComponent } from './pages/finance/finance-workspace.component';
+import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 
 @NgModule({
   declarations: [
@@ -134,6 +136,9 @@ import { WarehouseComponent } from './pages/master/warehouse/warehouse.component
     UomConversionComponent,
     VehicleComponent,
     WarehouseComponent,
+     FinanceDashboardComponent,
+    FinanceWorkspaceComponent,
+MobileReceivingComponent,
 
   ],
   imports: [

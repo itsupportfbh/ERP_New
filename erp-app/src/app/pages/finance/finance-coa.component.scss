@@ -1,0 +1,178 @@
+$teal:      #2E5F73;
+$teal-lt:   #3a7a96;
+$teal-pale: #e8f4f8;
+$border:    #e7e9ee;
+$muted:     #6c757d;
+$row-hover: #f5f9fb;
+
+:host { display: block; }
+
+.coa-page {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 16px 16px 40px;
+}
+
+/* ── Header ── */
+.coa-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 14px; border-bottom: 1px solid $border;
+}
+.coa-head-left { display: flex; align-items: center; gap: 14px; }
+.coa-icon {
+  width: 44px; height: 44px; background: $teal-pale; color: $teal;
+  border-radius: 10px; display: grid; place-items: center;
+}
+.coa-head-left h2 { margin: 0; font-size: 20px; font-weight: 700; color: #1a2e38; }
+.coa-head-left p  { margin: 3px 0 0; font-size: 12.5px; color: $muted; }
+
+/* ── Add Button ── */
+.coa-add-btn {
+  height: 38px; padding: 0 20px; background: $teal; color: #fff;
+  border: none; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  transition: background 0.15s;
+  &:hover { background: $teal-lt; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+.coa-outline-btn {
+  height: 34px; padding: 0 16px; background: transparent; color: $teal;
+  border: 1px solid $teal; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+  &:hover { background: $teal-pale; }
+}
+
+/* ── Alerts ── */
+.coa-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
+.coa-success { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
+.coa-danger  { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+
+/* ── Form Card ── */
+.coa-form-card {
+  background: #fff; border: 1px solid $border; border-radius: 10px; overflow: hidden;
+}
+.coa-form-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; border-bottom: 1px solid $border; background: $teal-pale;
+  strong { font-size: 13.5px; font-weight: 700; color: $teal; }
+}
+.coa-form-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px; padding: 16px 18px;
+}
+.coa-field {
+  display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 700;
+  color: $muted; text-transform: uppercase; letter-spacing: 0.04em;
+  input, select, textarea {
+    border: 1px solid $border; border-radius: 6px; padding: 7px 10px;
+    font: inherit; font-size: 13px; font-weight: 400; text-transform: none;
+    color: #1a2e38; &:focus { outline: none; border-color: $teal; }
+  }
+  input, select { height: 36px; }
+}
+.coa-field-wide { grid-column: 1 / -1; }
+.coa-form-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid $border;
+}
+.req { color: #e74c3c; }
+
+/* ── Controls Row ── */
+.coa-controls {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.coa-show-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #444;
+}
+.coa-select-wrap {
+  position: relative; display: inline-flex; align-items: center;
+  border: 1px solid $border; border-radius: 6px; background: #fff; overflow: hidden;
+  select {
+    height: 34px; padding: 0 28px 0 10px; border: none; outline: none;
+    font: inherit; font-size: 13px; background: transparent;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+  }
+  .select-arrow {
+    position: absolute; right: 8px; pointer-events: none;
+    font-size: 10px; color: $muted;
+  }
+}
+.coa-search-wrap {
+  position: relative; display: flex; align-items: center;
+  .search-icon { position: absolute; left: 10px; color: $muted; pointer-events: none; }
+}
+.coa-search {
+  height: 36px; border: 1px solid $border; border-radius: 8px;
+  padding: 0 12px 0 32px; font: inherit; font-size: 13px; width: 280px;
+  &:focus { outline: none; border-color: $teal; }
+}
+
+/* ── Table ── */
+.coa-table-card {
+  background: #fff; border: 1px solid $border; border-radius: 10px; overflow: hidden;
+}
+.coa-loading { padding: 28px; text-align: center; color: $muted; font-size: 13px; }
+.coa-empty   { padding: 28px; text-align: center; color: $muted; font-size: 13px; }
+.coa-table-wrap { overflow-x: auto; }
+
+.coa-table {
+  width: 100%; border-collapse: collapse; min-width: 500px;
+
+  thead tr { background: $teal; }
+  thead th {
+    padding: 12px 16px; font-size: 11.5px; font-weight: 700; color: #fff;
+    text-transform: uppercase; letter-spacing: 0.06em; text-align: left; white-space: nowrap;
+    &.th-action { text-align: right; padding-right: 20px; }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f0f2f5;
+    &:hover { background: $row-hover; }
+    &:last-child { border-bottom: none; }
+  }
+  tbody td { vertical-align: middle; }
+}
+
+.th-code  { width: 140px; }
+.th-name  { }
+.th-action { width: 100px; }
+
+.td-code {
+  padding: 12px 16px; font-size: 13px; color: $muted; font-family: 'Courier New', monospace;
+}
+.td-name { padding: 8px 16px; }
+.td-action { padding: 8px 16px; text-align: right; }
+
+/* ── Name cell ── */
+.name-wrap {
+  display: flex; align-items: center; gap: 10px;
+}
+.toggle-btn {
+  width: 28px; height: 28px; min-width: 28px; border-radius: 6px;
+  background: $teal; color: #fff; border: none;
+  font-size: 18px; font-weight: 400; line-height: 1;
+  cursor: pointer; display: grid; place-items: center;
+  transition: background 0.12s;
+  &.toggle-expanded { background: $teal-lt; }
+  &:hover { background: $teal-lt; }
+}
+.acct-label {
+  font-size: 13px; color: #1a2e38;
+}
+.parent-label { font-weight: 600; }
+
+/* ── Action Icons ── */
+.icon-btn {
+  width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer;
+  display: inline-grid; place-items: center; background: transparent;
+  transition: background 0.12s;
+  & + .icon-btn { margin-left: 4px; }
+}
+.edit-icon {
+  color: #444;
+  &:hover { background: $teal-pale; color: $teal; }
+}
+.del-icon {
+  color: #c0392b;
+  &:hover { background: #fdecea; }
+}

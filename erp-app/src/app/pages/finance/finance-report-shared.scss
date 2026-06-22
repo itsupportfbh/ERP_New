@@ -1,0 +1,20 @@
+/* ── Shared Finance Report Styles ── */
+$teal:      #2E5F73;
+$teal-lt:   #3a7a96;
+$teal-pale: #e8f4f8;
+$border:    #e7e9ee;
+$muted:     #6c757d;
+$row-hover: #ebf4f7;
+
+/* Page wrapper */
+%page-base {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px 40px;
+}
+
+/* Host */
+%host-base {
+  display: block;
+}

@@ -1,0 +1,415 @@
+<div class="ap-page">
+
+  <!-- Page Header -->
+  <div class="ap-page-head">
+    <div>
+      <h2>Accounts Payable</h2>
+      <p>Supplier invoices &middot; Payments &middot; Aging &middot; Advances &middot; 3-Way Match</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="ap-alert ap-success" *ngIf="message">{{ message }}</div>
+  <div class="ap-alert ap-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Tab Navigation -->
+  <div class="ap-tabs">
+    <button class="ap-tab" [class.active]="activeTab === 'invoices'"  type="button" (click)="setTab('invoices')">Supplier Invoices</button>
+    <button class="ap-tab" [class.active]="activeTab === 'payments'"  type="button" (click)="setTab('payments')">Payments</button>
+    <button class="ap-tab" [class.active]="activeTab === 'aging'"     type="button" (click)="setTab('aging')">Aging</button>
+    <button class="ap-tab" [class.active]="activeTab === 'advances'"  type="button" (click)="setTab('advances')">Advances</button>
+    <button class="ap-tab" [class.active]="activeTab === 'match'"     type="button" (click)="setTab('match')">3-Way Match</button>
+  </div>
+
+  <!-- ══ TAB 1: SUPPLIER INVOICES ══ -->
+  <ng-container *ngIf="activeTab === 'invoices'">
+
+    <!-- Summary Cards -->
+    <div class="sum-grid">
+      <div class="sum-card sum-c1">
+        <span class="sum-label">Total Invoice</span>
+        <strong class="sum-val">{{ invoiceSummary.totalInvoice | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-label">Total Paid</span>
+        <strong class="sum-val">{{ invoiceSummary.paid | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-label">Debit Notes</span>
+        <strong class="sum-val">{{ invoiceSummary.debitNote | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c4">
+        <span class="sum-label">Advance Applied</span>
+        <strong class="sum-val">{{ invoiceSummary.advance | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c5">
+        <span class="sum-label">Net Outstanding</span>
+        <strong class="sum-val">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- Search & Table -->
+    <div class="ap-card">
+      <div class="ap-card-head">
+        <input class="ap-search" type="text" placeholder="Search supplier, invoice..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+      </div>
+
+      <!-- Loading -->
+      <div class="ap-loading" *ngIf="loading">Loading...</div>
+
+      <!-- Grouped Invoice Table -->
+      <div class="ap-table-wrap" *ngIf="!loading">
+        <table class="ap-table">
+          <thead>
+            <tr>
+              <th style="width:32px"></th>
+              <th>Supplier</th>
+              <th class="right">Invoices</th>
+              <th class="right">Total Amount</th>
+              <th class="right">Paid</th>
+              <th class="right">Debit Note</th>
+              <th class="right">Advance</th>
+              <th class="right">Net Payable</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let grp of supplierGroups">
+              <!-- Supplier Row -->
+              <tr class="supplier-row" (click)="toggleSupplier(grp.supplier)">
+                <td class="expand-cell">
+                  <button class="expand-btn" type="button">{{ isExpanded(grp.supplier) ? '−' : '+' }}</button>
+                </td>
+                <td class="supplier-name">{{ grp.supplier }}</td>
+                <td class="right muted">{{ grp.invoices.length }}</td>
+                <td class="right">{{ grp.total | number:'1.2-2' }}</td>
+                <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
+                <td class="right danger-text">0.00</td>
+                <td class="right success-text">0.00</td>
+                <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
+              </tr>
+              <!-- Invoice Detail Rows -->
+              <ng-container *ngIf="isExpanded(grp.supplier)">
+                <tr class="invoice-row" *ngFor="let inv of grp.invoices">
+                  <td></td>
+                  <td class="invoice-no">{{ inv.invoiceNo || '—' }}</td>
+                  <td class="right muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                  <td class="right">{{ inv.amount | number:'1.2-2' }}</td>
+                  <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
+                  <td class="right danger-text">{{ (inv.debitNote || 0) | number:'1.2-2' }}</td>
+                  <td class="right">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
+                  <td class="right">
+                    <span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span>
+                    <button class="pay-btn" type="button" (click)="payInvoice(inv); $event.stopPropagation()">Pay</button>
+                  </td>
+                </tr>
+              </ng-container>
+            </ng-container>
+            <tr *ngIf="supplierGroups.length === 0 && !loading">
+              <td colspan="8" class="ap-empty">No AP invoices found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 2: PAYMENTS ══ -->
+  <ng-container *ngIf="activeTab === 'payments'">
+
+    <!-- New Payment Form -->
+    <div class="ap-card adv-form-card" *ngIf="showPaymentForm">
+      <div class="ap-card-head">
+        <strong class="ap-card-title">New Supplier Payment</strong>
+        <button class="ap-btn ap-btn-outline" type="button" (click)="showPaymentForm = false">&#215; Close</button>
+      </div>
+      <div class="adv-form-grid">
+        <label class="adv-field">
+          <span>Supplier ID <span class="req">*</span></span>
+          <input type="number" [(ngModel)]="paymentForm.supplierId" placeholder="Supplier ID">
+        </label>
+        <label class="adv-field">
+          <span>Invoice ID</span>
+          <input type="number" [(ngModel)]="paymentForm.invoiceId" placeholder="Invoice ID (optional)">
+        </label>
+        <label class="adv-field">
+          <span>Payment Date <span class="req">*</span></span>
+          <input type="date" [(ngModel)]="paymentForm.paymentDate">
+        </label>
+        <label class="adv-field">
+          <span>Amount <span class="req">*</span></span>
+          <input type="number" min="0" [(ngModel)]="paymentForm.amount" placeholder="0.00">
+        </label>
+        <label class="adv-field">
+          <span>Payment Mode</span>
+          <select [(ngModel)]="paymentForm.paymentMode">
+            <option>Bank Transfer</option>
+            <option>Cheque</option>
+            <option>Cash</option>
+            <option>GIRO</option>
+            <option>PayNow</option>
+          </select>
+        </label>
+        <label class="adv-field">
+          <span>Reference No</span>
+          <input type="text" [(ngModel)]="paymentForm.referenceNo" placeholder="Cheque / Transfer No">
+        </label>
+        <label class="adv-field adv-field-wide">
+          <span>Notes</span>
+          <textarea rows="2" [(ngModel)]="paymentForm.notes"></textarea>
+        </label>
+      </div>
+      <div class="adv-form-footer">
+        <button class="ap-btn ap-btn-outline" type="button" (click)="showPaymentForm = false">Cancel</button>
+        <button class="ap-btn ap-btn-primary" type="button" (click)="savePayment()" [disabled]="savingPayment">
+          {{ savingPayment ? 'Saving...' : 'Save Payment' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="ap-card">
+      <div class="ap-card-head">
+        <strong class="ap-card-title">Supplier Payments</strong>
+        <button class="ap-btn ap-btn-primary" type="button" (click)="showPaymentForm = true; message = ''; error = ''">
+          + New Payment
+        </button>
+      </div>
+      <div class="ap-loading" *ngIf="loading">Loading...</div>
+      <div class="ap-table-wrap" *ngIf="!loading">
+        <table class="ap-table">
+          <thead>
+            <tr>
+              <th>Payment No</th>
+              <th>Supplier</th>
+              <th>Invoice</th>
+              <th>Date</th>
+              <th>Method</th>
+              <th>Reference</th>
+              <th class="right">Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of payments">
+              <td class="mono">{{ p.paymentNo || p.referenceNo || '—' }}</td>
+              <td>{{ p.supplierName || '—' }}</td>
+              <td class="mono">{{ p.invoiceNo || '—' }}</td>
+              <td>{{ p.paymentDate | date:'dd-MMM-yyyy' }}</td>
+              <td>{{ p.paymentMode || 'Bank Transfer' }}</td>
+              <td class="mono muted">{{ p.referenceNo || '—' }}</td>
+              <td class="right teal-bold">{{ (p.amount || 0) | number:'1.2-2' }}</td>
+              <td><span class="status-badge" [ngClass]="statusClass(p.status)">{{ p.status || 'Posted' }}</span></td>
+            </tr>
+            <tr *ngIf="payments.length === 0 && !loading">
+              <td colspan="8" class="ap-empty">No payment records found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 3: AGING ══ -->
+  <ng-container *ngIf="activeTab === 'aging'">
+
+    <!-- Aging Summary Cards -->
+    <div class="sum-grid">
+      <div class="sum-card sum-c1">
+        <span class="sum-label">Total Outstanding</span>
+        <strong class="sum-val">{{ agingSummary.total | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-label">0 – 30 Days</span>
+        <strong class="sum-val">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-label">31 – 60 Days</span>
+        <strong class="sum-val">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c4">
+        <span class="sum-label">61+ Days</span>
+        <strong class="sum-val">{{ agingSummary.days61plus | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="ap-filter-bar">
+      <label class="filter-lbl">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="agingFromDate">
+      </label>
+      <label class="filter-lbl">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="agingToDate">
+      </label>
+      <button class="ap-btn ap-btn-primary" type="button" (click)="runAging()">Run Aging</button>
+    </div>
+
+    <div class="ap-card">
+      <div class="ap-loading" *ngIf="loading">Loading...</div>
+      <div class="ap-table-wrap" *ngIf="!loading">
+        <table class="ap-table">
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th class="right teal-hdr">Total Outstanding</th>
+              <th class="right">0 – 30</th>
+              <th class="right">31 – 60</th>
+              <th class="right">61 – 90</th>
+              <th class="right">90+</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of agingRows" class="aging-row">
+              <td>{{ row.supplierName || row.customerName }}</td>
+              <td class="right teal-bold">{{ (row.total || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.current || row.days30 || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.days60 || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.days90 || 0) | number:'1.2-2' }}</td>
+              <td class="right danger-text">{{ (row.days90plus || 0) | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="agingRows.length === 0 && !loading">
+              <td colspan="6" class="ap-empty">No aging data found. Run aging with date filters.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 4: ADVANCES ══ -->
+  <ng-container *ngIf="activeTab === 'advances'">
+
+    <!-- Advance Summary Pills -->
+    <div class="adv-pills">
+      <div class="adv-pill">
+        <span>Total Advance</span>
+        <strong>{{ advanceSummary.total | number:'1.2-2' }}</strong>
+      </div>
+      <div class="adv-pill adv-pill-green">
+        <span>Utilised</span>
+        <strong>{{ advanceSummary.utilised | number:'1.2-2' }}</strong>
+      </div>
+      <div class="adv-pill adv-pill-teal">
+        <span>Balance</span>
+        <strong>{{ advanceSummary.balance | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- Advance Form -->
+    <div class="ap-card adv-form-card" *ngIf="showAdvanceForm">
+      <div class="ap-card-head">
+        <strong class="ap-card-title">New Supplier Advance</strong>
+        <button class="ap-btn ap-btn-outline" type="button" (click)="showAdvanceForm = false">&#215; Close</button>
+      </div>
+      <div class="adv-form-grid">
+        <label class="adv-field">
+          <span>Supplier ID <span class="req">*</span></span>
+          <input type="number" [(ngModel)]="advanceForm.supplierId" placeholder="Supplier ID">
+        </label>
+        <label class="adv-field">
+          <span>Advance Date <span class="req">*</span></span>
+          <input type="date" [(ngModel)]="advanceForm.advanceDate">
+        </label>
+        <label class="adv-field">
+          <span>Amount <span class="req">*</span></span>
+          <input type="number" min="0" [(ngModel)]="advanceForm.amount" placeholder="0.00">
+        </label>
+        <label class="adv-field">
+          <span>Reference No</span>
+          <input type="text" [(ngModel)]="advanceForm.referenceNo">
+        </label>
+        <label class="adv-field adv-field-wide">
+          <span>Notes</span>
+          <textarea rows="2" [(ngModel)]="advanceForm.notes"></textarea>
+        </label>
+      </div>
+      <div class="adv-form-footer">
+        <button class="ap-btn ap-btn-outline" type="button" (click)="showAdvanceForm = false">Cancel</button>
+        <button class="ap-btn ap-btn-primary" type="button" (click)="saveAdvance()" [disabled]="savingAdvance">
+          {{ savingAdvance ? 'Saving...' : 'Save Advance' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Advances Table -->
+    <div class="ap-card">
+      <div class="ap-card-head">
+        <strong class="ap-card-title">AP Advances</strong>
+        <button class="ap-btn ap-btn-primary" type="button" (click)="showAdvanceForm = true; message = ''; error = ''">
+          + New Advance
+        </button>
+      </div>
+      <div class="ap-loading" *ngIf="loading">Loading...</div>
+      <div class="ap-table-wrap" *ngIf="!loading">
+        <table class="ap-table">
+          <thead>
+            <tr>
+              <th>Advance No</th>
+              <th>Supplier</th>
+              <th>Date</th>
+              <th class="right">Amount</th>
+              <th class="right">Utilised</th>
+              <th class="right teal-hdr">Balance</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let adv of advances">
+              <td class="mono">{{ adv.advanceNo || '—' }}</td>
+              <td>{{ adv.supplierName || '—' }}</td>
+              <td>{{ adv.advanceDate | date:'dd-MMM-yyyy' }}</td>
+              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}</td>
+              <td class="right success-text">{{ (adv.utilised || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (adv.balance || 0) | number:'1.2-2' }}</td>
+              <td><span class="status-badge" [ngClass]="statusClass(adv.status)">{{ adv.status || 'Open' }}</span></td>
+            </tr>
+            <tr *ngIf="advances.length === 0 && !loading">
+              <td colspan="7" class="ap-empty">No advances found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 5: 3-WAY MATCH ══ -->
+  <ng-container *ngIf="activeTab === 'match'">
+    <div class="ap-card">
+      <div class="ap-card-head">
+        <strong class="ap-card-title">3-Way Match — PO vs GRN vs Invoice</strong>
+      </div>
+      <div class="ap-loading" *ngIf="loading">Loading...</div>
+      <div class="ap-table-wrap" *ngIf="!loading">
+        <table class="ap-table">
+          <thead>
+            <tr>
+              <th>PO No</th>
+              <th>GRN No</th>
+              <th>Invoice No</th>
+              <th>Supplier</th>
+              <th class="right">PO Amount</th>
+              <th class="right">Invoice Amount</th>
+              <th class="center">Match Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of matchRows">
+              <td class="mono">{{ m.poNo || '—' }}</td>
+              <td class="mono">{{ m.grnNo || '—' }}</td>
+              <td class="mono">{{ m.invoiceNo || '—' }}</td>
+              <td>{{ m.supplierName || '—' }}</td>
+              <td class="right">{{ (m.poAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (m.invoiceAmount || 0) | number:'1.2-2' }}</td>
+              <td class="center"><span class="status-badge" [ngClass]="statusClass(m.matchStatus)">{{ m.matchStatus || 'Pending' }}</span></td>
+            </tr>
+            <tr *ngIf="matchRows.length === 0 && !loading">
+              <td colspan="7" class="ap-empty">No 3-way match records found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+</div>

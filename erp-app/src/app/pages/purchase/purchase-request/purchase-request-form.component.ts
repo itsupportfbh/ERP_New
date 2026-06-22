@@ -1,18 +1,21 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import Swal from 'sweetalert2';
 
 interface PRLine {
   itemId: number | null;
   itemCode: string;
-  itemName: string;
-  quantity: number | null;
+  itemSearch: string;
+  qty: number | null;
   uomId: number | null;
-  uomName: string;
+  uom: string;
+  uomSearch: string;
   locationId: number | null;
-  locationName: string;
+  location: string;
+  locationSearch: string;
   budgetLineId: number | null;
-  budgetLineName: string;
+  budget: string;
   remarks: string;
 }
 
@@ -25,32 +28,38 @@ interface PRLine {
 export class PurchaseRequestFormComponent implements OnInit {
   isEdit = false;
   id: number | null = null;
-  step = 1;
+  draftId: number | null = null;
+  prStep = 0;
+  prSteps = ['Header', 'Lines', 'Review'];
   loading = false;
   saving = false;
+  approving = false;
   error = '';
 
   // Header
   requester = localStorage.getItem('username') || '';
   departmentId: number | null = null;
+  departmentName = '';
   deliveryDate = '';
   description = '';
-
-  // Lines
-  lines: PRLine[] = [];
-
-  // Status (view-only for existing)
   status = 'Pending';
+  numericStatus = 1;
 
-  // Dropdowns
+  // Lines (committed)
+  prLines: PRLine[] = [];
+
+  // Modal state
+  showModal = false;
+  editingIndex: number | null = null;
+  modalLine: PRLine = this.emptyLine();
+
+  // Dropdown options
   departmentOptions: any[] = [];
   itemOptions: any[] = [];
   uomOptions: any[] = [];
   locationOptions: any[] = [];
-  ledgerOptions: any[] = [];
 
-  loginUserId = Number(localStorage.getItem('id')) || null;
-  companyId = Number(localStorage.getItem('companyId')) || null;
+  loginUserId = Number(localStorage.getItem('id')) || 0;
 
   constructor(
     private svc: PurchaseService,
@@ -60,67 +69,109 @@ export class PurchaseRequestFormComponent implements OnInit {
 
   ngOnInit(): void {
     const paramId = this.route.snapshot.paramMap.get('id');
+    const draftParam = this.route.snapshot.queryParamMap.get('draftId');
     this.isEdit = !!paramId && paramId !== 'new';
     this.loadLookups();
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
+    else if (draftParam) { this.draftId = Number(draftParam); this.loadFromDraft(); }
+  }
+
+  private emptyLine(): PRLine {
+    return {
+      itemId: null, itemCode: '', itemSearch: '',
+      qty: null,
+      uomId: null, uom: '', uomSearch: '',
+      locationId: null, location: '', locationSearch: '',
+      budgetLineId: null, budget: '',
+      remarks: ''
+    };
   }
 
   loadLookups(): void {
-    const storedRaw = localStorage.getItem('departmentId');
-    const storedDeptId = storedRaw && storedRaw !== 'null' && storedRaw !== 'undefined'
-      ? parseInt(storedRaw, 10)
-      : 0;
-    const userId = Number(localStorage.getItem('id')) || 0;
-
     this.svc.getDepartments().subscribe({
       next: r => {
-        this.departmentOptions = this.svc.unwrap(r).map((d: any) => ({
-          label: d.departmentName ?? d.departmentCode ?? d.name,
-          value: d.id
+        const depts = this.svc.unwrap(r);
+        this.departmentOptions = depts.map((d: any) => ({
+          label: d.departmentName ?? d.name ?? '',
+          value: d.id,
+          raw: d
         }));
-
-        if (this.isEdit) return;
-
-        if (storedDeptId > 0) {
-          // localStorage already has a valid department (post-fix login)
-          this.departmentId = storedDeptId;
-        } else if (userId > 0) {
-          // Fallback: fetch from User profile API (works before re-login too)
-          this.svc.getCurrentUserProfile(userId).subscribe({
-            next: (profile: any) => {
-              const deptId = profile?.departmentId ?? profile?.DepartmentId ?? 0;
-              if (deptId > 0) this.departmentId = deptId;
-            },
-            error: () => {}
-          });
+        if (!this.isEdit && !this.draftId) {
+          this.autoBindDepartment(depts);
         }
       },
       error: () => {}
     });
-    this.svc.getItems().subscribe(r => {
+
+    this.svc.getItems().subscribe((r: any) => {
       this.itemOptions = this.svc.unwrap(r).map((i: any) => ({
-        label: `${i.itemCode ?? ''} - ${i.itemName ?? i.name}`,
+        label: `${i.itemCode ?? ''} - ${i.itemName ?? i.name ?? ''}`,
         value: i.id,
         raw: i
       }));
     });
+
     this.svc.getUOMs().subscribe(r => {
       this.uomOptions = this.svc.unwrap(r).map((u: any) => ({
-        label: u.name ?? u.uomName,
-        value: u.id
+        label: u.name ?? u.uomName ?? '',
+        value: u.id,
+        raw: u
       }));
     });
+
     this.svc.getLocations().subscribe(r => {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
-        label: l.name ?? l.locationName,
-        value: l.id
+        label: l.name ?? l.locationName ?? '',
+        value: l.id,
+        raw: l
       }));
     });
-    this.svc.getChartOfAccounts().subscribe(r => {
-      this.ledgerOptions = this.svc.unwrap(r).map((c: any) => ({
-        label: `${c.headCode ?? ''} ${c.headName ?? c.accountName ?? ''}`.trim(),
-        value: c.id
-      }));
+  }
+
+  private autoBindDepartment(depts: any[]): void {
+    const storedId = Number(localStorage.getItem('departmentId') || 0);
+    if (storedId > 0) {
+      const opt = this.departmentOptions.find(o => Number(o.value) === storedId);
+      if (opt) { this.departmentId = storedId; this.departmentName = opt.label; return; }
+    }
+    if (depts.length > 0) {
+      const first = depts[0];
+      this.departmentId = Number(first.id);
+      this.departmentName = first.departmentName ?? first.name ?? '';
+      const opt = this.departmentOptions.find(o => Number(o.value) === this.departmentId);
+      if (opt) this.departmentId = opt.value;
+    }
+  }
+
+  private parseLines(raw: any): PRLine[] {
+    const parsed: any[] = typeof raw === 'string'
+      ? JSON.parse(raw || '[]')
+      : (Array.isArray(raw) ? raw : []);
+    return parsed.map((l: any) => ({
+      itemId: l.itemId ?? null,
+      itemCode: l.itemCode ?? '',
+      itemSearch: l.itemSearch ?? l.itemName ?? '',
+      qty: l.qty ?? l.quantity ?? null,
+      uomId: l.uomId ?? null,
+      uom: l.uom ?? l.uomSearch ?? '',
+      uomSearch: l.uomSearch ?? l.uom ?? '',
+      locationId: l.locationId ?? null,
+      location: l.location ?? l.locationSearch ?? '',
+      locationSearch: l.locationSearch ?? l.location ?? '',
+      budgetLineId: l.budgetLineId ?? null,
+      budget: l.budget ?? '',
+      remarks: l.remarks ?? ''
+    }));
+  }
+
+  private resolveDeptName(): void {
+    if (!this.departmentId) return;
+    const opt = this.departmentOptions.find(o => Number(o.value) === Number(this.departmentId));
+    if (opt) { this.departmentName = opt.label; return; }
+    this.svc.getDepartments().subscribe(r => {
+      const all = this.svc.unwrap(r);
+      const found = all.find((d: any) => Number(d.id) === Number(this.departmentId));
+      this.departmentName = found?.departmentName ?? found?.name ?? '';
     });
   }
 
@@ -131,156 +182,261 @@ export class PurchaseRequestFormComponent implements OnInit {
         const d = this.svc.unwrapOne(res);
         this.requester = d.requester ?? d.Requester ?? '';
         this.departmentId = d.departmentID ?? d.departmentId ?? null;
-        this.deliveryDate = d.deliveryDate ?? d.DeliveryDate
-          ? (d.deliveryDate ?? d.DeliveryDate).substring(0, 10)
-          : '';
+        this.deliveryDate = (d.deliveryDate ?? d.DeliveryDate ?? '').substring(0, 10);
         this.description = d.description ?? d.Description ?? '';
-        this.status = d.status === 1 ? 'Pending' : d.status === 2 ? 'Approved' : 'Pending';
-
-        // PRLines is stored as a JSON string in the DB
-        const rawLines = d.pRLines ?? d.prLines ?? d.PRLines ?? '[]';
-        const parsed: any[] = typeof rawLines === 'string'
-          ? JSON.parse(rawLines || '[]')
-          : (Array.isArray(rawLines) ? rawLines : []);
-
-        this.lines = parsed.map((l: any) => ({
-          itemId: l.itemId ?? null,
-          itemCode: l.itemCode ?? '',
-          itemName: l.itemSearch ?? l.itemName ?? '',
-          quantity: l.qty ?? l.quantity ?? null,
-          uomId: l.uomId ?? null,
-          uomName: l.uom ?? l.uomSearch ?? '',
-          locationId: l.locationId ?? null,
-          locationName: l.location ?? l.locationSearch ?? '',
-          budgetLineId: l.budgetLineId ?? null,
-          budgetLineName: l.budget ?? '',
-          remarks: l.remarks ?? ''
-        }));
-
-        if (!this.lines.length) this.addLine();
+        this.numericStatus = d.status ?? d.approvalStatus ?? 1;
+        this.status = this.numericStatus === 2 ? 'Approved' : this.numericStatus === 3 ? 'Rejected' : this.numericStatus === 0 ? 'Draft' : 'Pending';
+        this.prLines = this.parseLines(d.pRLines ?? d.prLines ?? d.PRLines ?? '[]');
+        this.resolveDeptName();
         this.loading = false;
       },
       error: () => { this.loading = false; }
     });
   }
 
-  addLine(): void {
-    this.lines.push({
-      itemId: null, itemCode: '', itemName: '',
-      quantity: null,
-      uomId: null, uomName: '',
-      locationId: null, locationName: '',
-      budgetLineId: null, budgetLineName: '',
-      remarks: ''
+  approveReject(newStatus: 2 | 3): void {
+    const action = newStatus === 2 ? 'Approve' : 'Reject';
+    Swal.fire({ title: `${action} PR?`, text: `${action} this purchase request?`, icon: 'question', showCancelButton: true, confirmButtonText: action, confirmButtonColor: newStatus === 2 ? '#22c55e' : '#ef4444' })
+      .then(r => { if (!r.isConfirmed) return;
+        this.approving = true;
+        const amount = 0;
+        const req$ = newStatus === 2 ? this.svc.approvePurchaseRequest(this.id!, amount) : this.svc.rejectPurchaseRequest(this.id!, amount);
+        req$.subscribe({
+          next: () => {
+            this.approving = false;
+            this.numericStatus = newStatus;
+            this.status = newStatus === 2 ? 'Approved' : 'Rejected';
+            Swal.fire('Success', `Purchase request ${action.toLowerCase()}d.`, 'success');
+          },
+          error: err => { this.approving = false; Swal.fire('Error', err?.error?.message || `Unable to ${action.toLowerCase()}.`, 'error'); }
+        });
+      });
+  }
+
+  convertToPO(): void {
+    this.router.navigate(['/app/purchase/orders/new'], { queryParams: { fromPR: this.id } });
+  }
+
+  loadFromDraft(): void {
+    this.loading = true;
+    this.svc.getPurchaseRequestDraftById(this.draftId!).subscribe({
+      next: res => {
+        const d = this.svc.unwrapOne(res);
+        this.requester = d.requester ?? d.Requester ?? this.requester;
+        this.departmentId = d.departmentID ?? d.departmentId ?? null;
+        this.deliveryDate = (d.deliveryDate ?? d.DeliveryDate ?? '').substring(0, 10);
+        this.description = d.description ?? d.Description ?? '';
+        this.prLines = this.parseLines(d.pRLines ?? d.prLines ?? d.PRLines ?? '[]');
+        this.resolveDeptName();
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
     });
   }
 
-  removeLine(i: number): void { this.lines.splice(i, 1); }
+  // Modal
+  openAddLine(): void {
+    this.editingIndex = null;
+    this.modalLine = this.emptyLine();
+    this.showModal = true;
+  }
 
-  onItemSelect(line: PRLine): void {
-    const found = this.itemOptions.find(o => o.value === line.itemId);
-    if (found) {
-      line.itemCode = found.raw?.itemCode ?? '';
-      line.itemName = found.raw?.itemName ?? found.label;
-      if (found.raw?.uomId) {
-        line.uomId = found.raw.uomId;
-        const uomOpt = this.uomOptions.find(u => u.value === found.raw.uomId);
-        line.uomName = uomOpt?.label ?? found.raw?.uomName ?? '';
-      }
-      if (found.raw?.budgetLineId) {
-        line.budgetLineId = found.raw.budgetLineId;
-        const ledgerOpt = this.ledgerOptions.find(l => l.value === found.raw.budgetLineId);
-        line.budgetLineName = ledgerOpt?.label ?? found.raw?.budgetLineName ?? '';
+  editLine(i: number): void {
+    this.editingIndex = i;
+    this.modalLine = { ...this.prLines[i] };
+    this.showModal = true;
+  }
+
+  closeModal(): void { this.showModal = false; this.editingIndex = null; }
+
+  onModalItemChange(): void {
+    const opt = this.itemOptions.find(o => o.value === this.modalLine.itemId);
+    if (opt) {
+      this.modalLine.itemSearch = opt.label;
+      this.modalLine.itemCode = opt.raw?.itemCode ?? '';
+      if (opt.raw?.uomId) {
+        this.modalLine.uomId = opt.raw.uomId;
+        const uomOpt = this.uomOptions.find(u => u.value === opt.raw.uomId);
+        this.modalLine.uom = uomOpt?.label ?? '';
+        this.modalLine.uomSearch = this.modalLine.uom;
       }
     }
   }
 
-  onUomSelect(line: PRLine): void {
-    const found = this.uomOptions.find(o => o.value === line.uomId);
-    if (found) line.uomName = found.label;
+  onModalUomChange(): void {
+    const opt = this.uomOptions.find(o => o.value === this.modalLine.uomId);
+    if (opt) { this.modalLine.uom = opt.label; this.modalLine.uomSearch = opt.label; }
   }
 
-  onLocationSelect(line: PRLine): void {
-    const found = this.locationOptions.find(o => o.value === line.locationId);
-    if (found) line.locationName = found.label;
+  onModalLocationChange(): void {
+    const opt = this.locationOptions.find(o => o.value === this.modalLine.locationId);
+    if (opt) { this.modalLine.location = opt.label; this.modalLine.locationSearch = opt.label; }
   }
 
-  onLedgerSelect(line: PRLine): void {
-    const found = this.ledgerOptions.find(o => o.value === line.budgetLineId);
-    if (found) line.budgetLineName = found.label;
-  }
+  saveModal(): void {
+    this.error = '';
+    if (!this.modalLine.itemId) { this.error = 'Select an Item.'; return; }
+    if (!this.modalLine.qty || (this.modalLine.qty ?? 0) <= 0) { this.error = 'Enter a valid Qty.'; return; }
+    if (!this.modalLine.locationId) { this.error = 'Select an Outlet.'; return; }
 
-  next(): void {
-    if (this.step === 1) {
-      if (!this.departmentId) { this.error = 'Please select a Department.'; return; }
-      if (!this.deliveryDate) { this.error = 'Please set a Delivery Date.'; return; }
-      this.error = '';
-      if (!this.lines.length) this.addLine();
-      this.step = 2;
-    } else if (this.step === 2) {
-      const invalid = this.lines.some(l => !l.itemId || !l.quantity || (l.quantity ?? 0) <= 0);
-      if (invalid) { this.error = 'Each line needs an Item and Quantity > 0.'; return; }
-      this.error = '';
-      this.step = 3;
+    if (this.editingIndex !== null) {
+      this.prLines[this.editingIndex] = { ...this.modalLine };
+    } else {
+      this.prLines.push({ ...this.modalLine });
     }
+    this.closeModal();
   }
 
-  prev(): void { this.step = Math.max(1, this.step - 1); this.error = ''; }
+  addAndContinue(): void {
+    this.error = '';
+    if (!this.modalLine.itemId) { this.error = 'Select an Item.'; return; }
+    if (!this.modalLine.qty || (this.modalLine.qty ?? 0) <= 0) { this.error = 'Enter a valid Qty.'; return; }
+    if (!this.modalLine.locationId) { this.error = 'Select an Outlet.'; return; }
+    this.prLines.push({ ...this.modalLine });
+    this.modalLine = this.emptyLine();
+  }
+
+  removeLine(i: number): void { this.prLines.splice(i, 1); }
+
+  onDeptChange(): void {
+    const opt = this.departmentOptions.find(o => o.value === this.departmentId);
+    this.departmentName = opt?.label ?? '';
+  }
+
+  prGo(step: number): void {
+    this.error = '';
+    const next = this.prStep + step;
+    if (step > 0) {
+      if (this.prStep === 0) {
+        if (!this.departmentId) { this.error = 'Select a Department.'; return; }
+        if (!this.deliveryDate) { this.error = 'Set a Delivery Date.'; return; }
+      } else if (this.prStep === 1) {
+        if (!this.prLines.length) { this.error = 'Add at least one line.'; return; }
+      }
+    }
+    this.prStep = Math.max(0, Math.min(next, this.prSteps.length - 1));
+  }
+
+  private buildPayload(): any {
+    const strippedLines = this.prLines.map(l => ({
+      itemId: l.itemId,
+      itemCode: l.itemCode,
+      itemSearch: l.itemSearch,
+      qty: l.qty,
+      uomId: l.uomId,
+      uomSearch: l.uomSearch,
+      uom: l.uom,
+      locationId: l.locationId,
+      locationSearch: l.locationSearch,
+      location: l.location,
+      budgetLineId: l.budgetLineId,
+      budget: l.budget,
+      remarks: l.remarks
+    }));
+    return {
+      Requester: this.requester,
+      DepartmentID: this.departmentId,
+      DepartmentName: this.departmentName,
+      DeliveryDate: this.deliveryDate,
+      Description: this.description,
+      PRLines: JSON.stringify(strippedLines),
+      PurchaseRequestNo: 'PENDING',
+      IsActive: true,
+      Status: 1,
+      IsReorder: false,
+      CreatedBy: this.loginUserId,
+      UpdatedBy: this.loginUserId
+    };
+  }
+
+  saveDraft(): void {
+    this.saving = true;
+    this.error = '';
+    const payload = this.buildPayload();
+
+    const obs$ = this.draftId
+      ? this.svc.updatePurchaseRequestDraft(this.draftId, payload)
+      : this.svc.createPurchaseRequestDraft(payload);
+
+    obs$.subscribe({
+      next: () => { this.saving = false; this.back(); },
+      error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Draft save failed.'; }
+    });
+  }
 
   submit(): void {
     this.saving = true;
     this.error = '';
+    const dateToCheck = this.deliveryDate || new Date().toISOString().substring(0, 10);
+    this.svc.checkPeriodLock(dateToCheck).subscribe({
+      next: (res: any) => {
+        const d = res?.data ?? res ?? {};
+        if (d.isClosed || d.IsClosed || d.status === 'Closed' || d.Status === 'Closed') {
+          this.saving = false;
+          this.error = `The accounting period for ${dateToCheck} is closed. Please contact Finance to reopen it.`;
+          return;
+        }
+        this.doSubmit();
+      },
+      error: () => this.doSubmit()
+    });
+  }
 
-    // Build PRLines JSON string in the format the backend expects
-    const prLinesData = this.lines.map(l => ({
-      itemId: l.itemId,
-      itemCode: l.itemCode,
-      itemSearch: l.itemName,
-      qty: l.quantity,
-      uomId: l.uomId,
-      uomSearch: l.uomName,
-      uom: l.uomName,
-      locationId: l.locationId,
-      locationSearch: l.locationName,
-      location: l.locationName,
-      budgetLineId: l.budgetLineId,
-      budget: l.budgetLineName,
-      remarks: l.remarks
-    }));
-
-    const payload = {
-      Requester: this.requester,
-      DepartmentID: this.departmentId,
-      DeliveryDate: this.deliveryDate,
-      Description: this.description,
-      PRLines: JSON.stringify(prLinesData),
-      PurchaseRequestNo: 'PENDING',   // backend overwrites with auto-generated PR-XXXX
-      IsActive: true,
-      Status: 1,
-      IsReorder: false,
-      CreatedBy: this.loginUserId ?? 0,
-      UpdatedBy: this.loginUserId ?? 0
-    };
+  private doSubmit(): void {
+    const payload = this.buildPayload();
 
     const obs$ = this.isEdit
       ? this.svc.updatePurchaseRequest(this.id!, payload)
       : this.svc.createPurchaseRequest(payload);
 
     obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
-      error: err => {
+      next: (res: any) => {
+        if (!this.isEdit) {
+          // After creating a new PR, push it through the approval workflow.
+          // This generates a "New PR" alert visible in the PO list.
+          const newId = res?.data?.id ?? res?.data?.[0]?.id ?? res?.id ?? res?.result?.[0]?.id;
+          if (newId) {
+            this.svc.submitDocument({ documentType: 'PR', documentId: Number(newId) })
+              .subscribe({ error: () => {} });
+          }
+        }
         this.saving = false;
-        this.error = err?.error?.message ?? 'Save failed. Please try again.';
-      }
+        if (this.draftId) {
+          this.svc.deletePurchaseRequestDraft(this.draftId, this.loginUserId).subscribe({ error: () => {} });
+        }
+        this.back();
+      },
+      error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
     });
+  }
+
+  viewLineDetail(line: PRLine): void {
+    this.showDetailSwal(line.itemSearch || line.itemCode || 'Line Detail', [
+      ['Item Code', line.itemCode],
+      ['Item', line.itemSearch],
+      ['Qty', line.qty],
+      ['UOM', line.uomSearch || line.uom],
+      ['Location', line.locationSearch || line.location],
+      ['Budget Line', line.budget],
+      ['Remarks', line.remarks],
+    ]);
+  }
+
+  private showDetailSwal(title: string, rows: [string, any][]): void {
+    const html = rows.filter(([, v]) => v != null && v !== '')
+      .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
+    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
   }
 
   back(): void { this.router.navigate(['/app/purchase/requests']); }
 
-  getLabel(opts: any[], val: any): string {
-    return opts.find(o => o.value === val)?.label ?? '—';
-  }
+  getLabel(opts: any[], val: any): string { return opts.find(o => o.value === val)?.label ?? '—'; }
 
-  get title(): string { return this.isEdit ? `Edit PR` : 'New Purchase Request'; }
+  get totalQty(): number { return this.prLines.reduce((s, l) => s + Number(l.qty || 0), 0); }
   get today(): string { return new Date().toISOString().substring(0, 10); }
+  get title(): string {
+    if (this.isEdit) return 'Edit Purchase Request';
+    if (this.draftId) return 'Edit PR Draft';
+    return 'New Purchase Request';
+  }
 }

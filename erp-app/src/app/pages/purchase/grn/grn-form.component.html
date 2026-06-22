@@ -1,103 +1,372 @@
 <div class="grn-page">
-  <div class="page-header">
-    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
-    <h2>{{ title }}</h2>
-    <div class="header-actions" *ngIf="isEdit">
-      <button class="btn btn-outline btn-sm" *ngIf="!isClosed" (click)="closeGrn()">&#x2713; Close GRN</button>
-      <button class="btn btn-outline btn-sm" *ngIf="isClosed" (click)="reopenGrn()">&#8635; Reopen GRN</button>
-      <span class="status-badge" [class.closed]="isClosed">{{ isClosed ? 'Closed' : 'Open' }}</span>
+
+  <!-- Banner -->
+  <div class="grn-banner">
+    <div class="grn-banner-left">
+      <div class="grn-banner-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/>
+          <path d="M10 12h4M12 10v4"/>
+        </svg>
+      </div>
+      <div class="grn-banner-text">
+        <h2>{{ title }}</h2>
+        <p>{{ isEdit ? 'View and manage this good receipt note' : 'Receive goods against an approved purchase order' }}</p>
+      </div>
+    </div>
+    <div class="grn-banner-right">
+      <ng-container *ngIf="isEdit">
+        <span class="grn-status-badge" [class.closed]="isClosed">
+          {{ isClosed ? '&#x25A0; Closed' : '&#x25CF; Open' }}
+        </span>
+        <button class="grn-outline-btn" *ngIf="viewMode && !isClosed" (click)="viewMode = false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="grn-outline-btn" *ngIf="!viewMode" (click)="viewMode = true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Summary
+        </button>
+        <button class="grn-outline-btn" *ngIf="!isClosed" (click)="closeGrn()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          Close GRN
+        </button>
+        <button class="grn-outline-btn success" *ngIf="isClosed" (click)="reopenGrn()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+          Reopen
+        </button>
+      </ng-container>
+      <button class="grn-back-btn" (click)="back()">&#8592; Back</button>
     </div>
   </div>
 
-  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <!-- Error -->
   <div class="alert-error" *ngIf="error">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
     {{ error }}
   </div>
 
+  <div class="loading-row" *ngIf="loading">
+    <div class="spinner-sm"></div> Loading GRN…
+  </div>
+
   <ng-container *ngIf="!loading">
-    <!-- Header -->
+
+    <!-- ═══ SUMMARY VIEW (existing GRN) ════════════════════ -->
+    <ng-container *ngIf="isEdit && viewMode">
+
+      <!-- Info chips -->
+      <div class="grn-chips-row">
+        <div class="grn-chip"><span class="chip-key">GRN</span><span class="chip-val">{{ grnNo || '—' }}</span></div>
+        <div class="grn-chip"><span class="chip-key">PO</span><span class="chip-val">{{ poId }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Supplier</span><span class="chip-val">{{ supplierName || '—' }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Date</span><span class="chip-val">{{ receiptDate }}</span></div>
+        <div class="grn-chip accent"><span class="chip-key">Total Lines</span><span class="chip-val">{{ lines.length }}</span></div>
+      </div>
+
+      <!-- Lines summary card -->
+      <div class="card section-card lines-card">
+        <div class="section-label-row">
+          <div class="section-label">&#128229; Lines</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="summary-badge pending">Pending: {{ pendingLines.length }}</span>
+            <span class="summary-badge posted">Posted: {{ postedLines.length }}</span>
+          </div>
+        </div>
+
+        <div class="lines-table-wrap">
+          <table class="lines-table summary-table">
+            <thead>
+              <tr>
+                <th class="col-item">Item</th>
+                <th class="col-supplier">Supplier</th>
+                <th class="col-batch">Batch / Serial</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-qc">Quality</th>
+                <th class="col-storage">Storage</th>
+                <th class="col-expiry">Expiry</th>
+                <th style="min-width:80px">Status</th>
+                <th style="min-width:140px">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!lines.length">
+                <td colspan="9" class="empty-lines">No lines found.</td>
+              </tr>
+              <tr *ngFor="let line of lines; let i = index" [class.posted-row]="line.isPosted">
+                <td class="col-item">
+                  <span class="item-code">{{ line.itemCode }}</span>
+                  <span class="item-name">{{ line.itemName || '—' }}</span>
+                </td>
+                <td class="col-supplier">{{ line.supplierName || '—' }}</td>
+                <td class="col-batch">{{ line.batchNo || '—' }}</td>
+                <td class="col-qty num-cell">{{ line.qtyReceived ?? '—' }}</td>
+                <td class="col-qc">{{ line.qualityCheck || '—' }}</td>
+                <td class="col-storage">{{ line.storageType || '—' }}</td>
+                <td class="col-expiry">{{ line.expiryDate || '—' }}</td>
+                <td>
+                  <span class="line-status-badge" [class.posted]="line.isPosted">
+                    {{ line.isPosted ? 'Posted' : 'Pending' }}
+                  </span>
+                </td>
+                <td class="act-cell">
+                  <button class="summary-view-btn" (click)="viewLineDetail(line)" title="View details">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+                  </button>
+                  <button class="summary-flag-btn" (click)="flagLine(line)" title="Set Flag Issue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                    Flag
+                  </button>
+                  <button class="summary-post-btn" *ngIf="!line.isPosted" (click)="postToInventory(line, i)" title="Post to Inventory">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Post
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </ng-container>
+    <!-- ═══ END SUMMARY VIEW ═══════════════════════════════ -->
+
+    <!-- ═══ EDIT FORM (new GRN or edit mode) ═══════════════ -->
+    <ng-container *ngIf="!isEdit || !viewMode">
+
+    <!-- Receipt Header -->
     <div class="card section-card">
-      <div class="section-label">Receipt Header</div>
+      <div class="section-label">&#128230; Receipt Header</div>
       <div class="form-row cols-3">
-        <erp-dropdown label="Purchase Order" [required]="true" [options]="poOptions"
-          [(ngModel)]="poId" (ngModelChange)="onPoChange()" placeholder="Select PO"></erp-dropdown>
+        <erp-dropdown label="Purchase Order *" [options]="poOptions"
+          [(ngModel)]="poId" (ngModelChange)="onPoChange()" placeholder="Select approved PO"></erp-dropdown>
         <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
         <erp-input label="Receipt Date" type="date" [(ngModel)]="receiptDate"></erp-input>
       </div>
       <div class="form-row cols-2 block-gap">
-        <erp-input label="Invoice Number" [(ngModel)]="invoiceNo" placeholder="Supplier invoice no"></erp-input>
         <erp-input label="Over-Receipt Tolerance %" type="number" [(ngModel)]="overReceiptTolerance" placeholder="e.g. 5"></erp-input>
       </div>
     </div>
 
-    <!-- Lines -->
-    <div class="card section-card">
+    <!-- Receipt Lines -->
+    <div class="card section-card lines-card">
       <div class="section-label-row">
-        <div class="section-label">Receipt Lines</div>
+        <div class="section-label">&#128229; Receipt Lines</div>
         <button class="btn btn-outline btn-xs" (click)="addLine()" [disabled]="isClosed">+ Add Line</button>
       </div>
 
-      <div class="lines-wrap">
-        <div class="grn-line-card" *ngFor="let line of lines; let i = index" [class.posted]="line.isPosted">
-          <div class="line-header">
-            <span class="line-num">#{{ i + 1 }}</span>
-            <span class="item-title">{{ line.itemName || 'Item ' + (i + 1) }}</span>
-            <span class="posted-badge" *ngIf="line.isPosted">&#10003; Posted</span>
-            <button class="btn btn-outline btn-xs" *ngIf="isEdit && !line.isPosted"
-              (click)="postToInventory(line, i)">&#128229; Post</button>
-            <button class="btn-icon danger" *ngIf="!isClosed && !line.isPosted" (click)="removeLine(i)">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
-            </button>
-          </div>
-
-          <div class="line-grid">
-            <div class="form-row cols-3">
-              <erp-dropdown label="Warehouse" [options]="warehouseOptions" [(ngModel)]="line.warehouseId"
-                (ngModelChange)="onWarehouseChange(line)" placeholder="Select warehouse" [disabled]="line.isPosted"></erp-dropdown>
-              <erp-dropdown label="Bin / Location" [options]="getBinOptions(line.warehouseId)"
-                [(ngModel)]="line.binId" placeholder="Select bin" [disabled]="line.isPosted"></erp-dropdown>
-              <erp-dropdown label="Quality Check" [options]="qualityCheckOptions"
-                [(ngModel)]="line.qualityCheck" [disabled]="line.isPosted"></erp-dropdown>
-            </div>
-            <div class="form-row cols-4 block-gap">
-              <erp-input label="Qty Ordered" type="number" [(ngModel)]="line.qtyOrdered" [disabled]="true"></erp-input>
-              <erp-input label="Qty Received *" type="number" [(ngModel)]="line.qtyReceived" placeholder="0" [disabled]="line.isPosted"></erp-input>
-              <erp-input label="Unit Price" type="number" [(ngModel)]="line.unitPrice" placeholder="0.00" [disabled]="line.isPosted"></erp-input>
-              <erp-dropdown label="Flag Issue" [options]="flagIssueOptions" [(ngModel)]="line.flagIssueId" placeholder="None"></erp-dropdown>
-            </div>
-            <div class="form-row cols-3 block-gap">
-              <erp-input label="Batch No" [(ngModel)]="line.batchNo" placeholder="Batch number"></erp-input>
-              <erp-input label="Serial No" [(ngModel)]="line.serialNo" placeholder="Serial number"></erp-input>
-              <erp-input label="Expiry Date" type="date" [(ngModel)]="line.expiryDate"></erp-input>
-            </div>
-            <div class="form-row cols-2 block-gap">
-              <erp-input label="Remarks" [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
-              <div class="toggle-field">
-                <label class="field-label">Partial Receipt</label>
-                <label class="toggle-chk">
-                  <span class="toggle-box" [class.on]="line.isPartial" (click)="!line.isPosted && (line.isPartial = !line.isPartial)">
-                    <svg *ngIf="line.isPartial" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
-                  </span>
-                  <span>{{ line.isPartial ? 'Yes (partial)' : 'No' }}</span>
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              <th class="col-item">Item</th>
+              <th class="col-supplier">Supplier</th>
+              <th class="col-wh">Warehouse</th>
+              <th class="col-bin">Bin</th>
+              <th class="col-batch">Batch / Serial</th>
+              <!-- <th class="col-qty">Qty Ordered</th> -->
+              <th class="col-qty">Qty Received</th>
+              <th class="col-partial">Partial</th>
+              <th class="col-qc">Quality Check</th>
+              <th class="col-storage">Storage Type</th>
+              <th class="col-temp">Temp °C</th>
+              <th class="col-expiry">Expiry Date</th>
+              <th class="col-yesno">Pest/Sign</th>
+              <th class="col-yesno">Dry/Spillage</th>
+              <th class="col-yesno">Odor</th>
+              <th class="col-plate">Vehicle #</th>
+              <th class="col-yesno">Defect Labels</th>
+              <th class="col-yesno">Dmg Package</th>
+              <th class="col-time">Time</th>
+              <th class="col-initial">Initial</th>
+              <th class="col-price">Unit Price</th>
+              <th class="col-total">Line Total</th>
+              <th class="col-flag">Flag Issue</th>
+              <th class="col-remarks">Remarks</th>
+              <th class="col-acts"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!lines.length">
+              <td colspan="25" class="empty-lines">
+                Select a Purchase Order above — lines auto-populate, or click "+ Add Line"
+              </td>
+            </tr>
+            <tr *ngFor="let line of lines; let i = index" [class.posted-row]="line.isPosted">
+              <!-- # -->
+              <td class="col-num">
+                <span class="row-badge">{{ i + 1 }}</span>
+                <span class="posted-dot" *ngIf="line.isPosted" title="Posted to Inventory">&#10003;</span>
+              </td>
+              <!-- Item -->
+              <td class="col-item">
+                <span class="item-code">{{ line.itemCode }}</span>
+                <span class="item-name">{{ line.itemName || '—' }}</span>
+              </td>
+              <!-- Supplier -->
+              <td class="col-supplier">{{ line.supplierName || '—' }}</td>
+              <!-- Warehouse -->
+              <td class="col-wh">
+                <erp-dropdown [options]="warehouseOptions" [(ngModel)]="line.warehouseId"
+                  (ngModelChange)="onWarehouseChange(line)"
+                  placeholder="Select" [disabled]="line.isPosted"></erp-dropdown>
+              </td>
+              <!-- Bin -->
+              <td class="col-bin">
+                <erp-dropdown [options]="getBinOptions(line.warehouseId)" [(ngModel)]="line.binId"
+                  placeholder="Select bin" [disabled]="line.isPosted"></erp-dropdown>
+              </td>
+              <!-- Batch / Serial -->
+              <td class="col-batch">
+                <erp-input [(ngModel)]="line.batchNo" placeholder="Batch/Serial" [disabled]="line.isPosted"></erp-input>
+              </td>
+              <!-- Qty Ordered -->
+              <!-- <td class="col-qty num-cell">{{ line.qtyOrdered ?? '—' }}</td> -->
+              <!-- Qty Received -->
+              <td class="col-qty" [class.cell-error]="line.qtyError">
+                <erp-input type="number" [(ngModel)]="line.qtyReceived"
+                  (ngModelChange)="onQtyChange(line, $event)" placeholder="0" [disabled]="line.isPosted"></erp-input>
+                <span class="qty-err-msg" *ngIf="line.qtyError">{{ line.qtyError }}</span>
+              </td>
+              <!-- Partial -->
+              <td class="col-partial center-cell">
+                <label class="partial-chk">
+                  <input type="checkbox" [(ngModel)]="line.isPartial"
+                    [disabled]="line.isPosted || !((line.qtyReceived ?? 0) > 0 && (line.qtyReceived ?? 0) < (line.qtyOrdered ?? 0))" />
                 </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="empty-lines" *ngIf="!lines.length">
-          Select a Purchase Order or click "+ Add Line" to start.
-        </div>
+              </td>
+              <!-- Quality Check -->
+              <td class="col-qc">
+                <select class="tbl-native-select" [(ngModel)]="line.qualityCheck" [disabled]="line.isPosted">
+                  <option value="Pass">Pass</option>
+                  <option value="Fail">Fail</option>
+                  <option value="NotVerify">Not Verified</option>
+                </select>
+              </td>
+              <!-- Storage Type -->
+              <td class="col-storage">
+                <select class="tbl-native-select" [(ngModel)]="line.storageType" [disabled]="line.isPosted">
+                  <option value="">—</option>
+                  <option value="Frozen">Frozen</option>
+                  <option value="Chilled">Chilled</option>
+                  <option value="Dry">Dry</option>
+                </select>
+              </td>
+              <!-- Surface Temp -->
+              <td class="col-temp">
+                <erp-input type="number" [(ngModel)]="line.surfaceTemp" placeholder="°C" [disabled]="line.isPosted"></erp-input>
+              </td>
+              <!-- Expiry Date -->
+              <td class="col-expiry">
+                <erp-input type="date" [(ngModel)]="line.expiryDate" [disabled]="line.isPosted"></erp-input>
+              </td>
+              <!-- Pest/Sign -->
+              <td class="col-yesno">
+                <select class="tbl-native-select" [(ngModel)]="line.pestSign" [disabled]="line.isPosted">
+                  <option value="">—</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <!-- Dry/Spillage -->
+              <td class="col-yesno">
+                <select class="tbl-native-select" [(ngModel)]="line.drySpillage" [disabled]="line.isPosted">
+                  <option value="">—</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <!-- Odor -->
+              <td class="col-yesno">
+                <select class="tbl-native-select" [(ngModel)]="line.odor" [disabled]="line.isPosted">
+                  <option value="">—</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <!-- Vehicle # -->
+              <td class="col-plate">
+                <erp-input [(ngModel)]="line.plateNumber" placeholder="Plate #" [disabled]="line.isPosted"></erp-input>
+              </td>
+              <!-- Defect Labels -->
+              <td class="col-yesno">
+                <select class="tbl-native-select" [(ngModel)]="line.defectLabels" [disabled]="line.isPosted">
+                  <option value="">—</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <!-- Damaged Package -->
+              <td class="col-yesno">
+                <select class="tbl-native-select" [(ngModel)]="line.damagedPackage" [disabled]="line.isPosted">
+                  <option value="">—</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <!-- Time -->
+              <td class="col-time">
+                <input class="tbl-native-input" type="time" [(ngModel)]="line.time" [disabled]="line.isPosted" />
+              </td>
+              <!-- Initial (readonly) -->
+              <td class="col-initial">
+                <span class="initial-text">{{ currentUsername }}</span>
+              </td>
+              <!-- Unit Price -->
+              <td class="col-price">
+                <erp-input type="number" [(ngModel)]="line.unitPrice" placeholder="0.00" [disabled]="line.isPosted"></erp-input>
+              </td>
+              <!-- Line Total -->
+              <td class="col-total num-cell">{{ lineTotal(line) | number:'1.2-2' }}</td>
+              <!-- Flag Issue -->
+              <td class="col-flag">
+                <erp-dropdown [options]="flagIssueOptions" [(ngModel)]="line.flagIssueId" placeholder="None"></erp-dropdown>
+              </td>
+              <!-- Remarks -->
+              <td class="col-remarks">
+                <erp-input [(ngModel)]="line.remarks" placeholder="Remarks" [disabled]="line.isPosted"></erp-input>
+              </td>
+              <!-- Actions -->
+              <td class="col-acts act-cell">
+                <button class="tbl-view-btn" (click)="viewLineDetail(line)" title="View details">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="tbl-post-btn" *ngIf="isEdit && !line.isPosted"
+                  (click)="postToInventory(line, i)" title="Post to Inventory">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M20 21H4"/></svg>
+                </button>
+                <button class="tbl-del-btn" *ngIf="!isClosed && !line.isPosted"
+                  (click)="removeLine(i)" title="Remove line">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="lines.length">
+            <tr class="totals-row">
+              <td colspan="6" class="totals-label">TOTALS</td>
+              <td class="num-cell">{{ totalQtyReceived | number:'1.0-4' }}</td>
+              <td colspan="14"></td>
+              <td class="num-cell total-value">{{ totalValue | number:'1.2-2' }}</td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
 
-    <div class="wizard-footer">
+    <!-- Footer -->
+    <div class="grn-footer">
       <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
       <button class="btn btn-primary btn-sm" [disabled]="saving || isClosed" (click)="submit()">
         <span class="btn-spinner" *ngIf="saving"></span>
         {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update GRN' : '&#10003; Save GRN') }}
       </button>
     </div>
+
+    </ng-container>
+    <!-- ═══ END EDIT FORM ═══════════════════════════════════ -->
+
   </ng-container>
 </div>

@@ -1,0 +1,340 @@
+/* ── Accounts Payable — 5-tab component ── */
+$teal:      #2E5F73;
+$teal-lt:   #3a7a96;
+$teal-pale: #e8f4f8;
+$border:    #e7e9ee;
+$row-hover: #ebf4f7;
+$muted:     #6c757d;
+
+:host { display: block; }
+
+.ap-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px 40px;
+}
+
+/* ── Page Header ── */
+.ap-page-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid $border;
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: $teal; }
+  p  { margin: 4px 0 0; font-size: 12.5px; color: $muted; }
+}
+
+/* ── Alerts ── */
+.ap-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
+.ap-success { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
+.ap-danger  { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+
+/* ── Tabs ── */
+.ap-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid $border;
+  flex-shrink: 0;
+}
+
+.ap-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+
+  &:hover { color: $teal; }
+  &.active {
+    color: $teal;
+    border-bottom-color: $teal;
+    font-weight: 700;
+  }
+}
+
+/* ── Summary Cards ── */
+.sum-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.sum-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left-width: 4px;
+}
+
+.sum-label { font-size: 11.5px; color: $muted; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+.sum-val   { font-size: 1.3rem; font-weight: 700; }
+
+.sum-c1 { border-left-color: $teal;    .sum-val { color: $teal; } }
+.sum-c2 { border-left-color: #27ae60;  .sum-val { color: #1e8449; } }
+.sum-c3 { border-left-color: #e74c3c;  .sum-val { color: #c0392b; } }
+.sum-c4 { border-left-color: #f39c12;  .sum-val { color: #d68910; } }
+.sum-c5 { border-left-color: #2563eb;  .sum-val { color: #1e4fbd; } }
+
+/* ── AP Card ── */
+.ap-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ap-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid $border;
+  background: $teal-pale;
+}
+
+.ap-card-title { font-size: 13.5px; font-weight: 700; color: $teal; }
+
+/* ── Buttons ── */
+.ap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+.ap-btn-primary { background: $teal; color: #fff; border-color: $teal; &:hover:not(:disabled) { background: $teal-lt; border-color: $teal-lt; } }
+.ap-btn-outline { background: transparent; color: $teal; border-color: $teal; &:hover { background: $teal-pale; } }
+
+/* ── Search ── */
+.ap-search {
+  height: 34px;
+  border: 1px solid $border;
+  border-radius: 7px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  width: 280px;
+  &:focus { border-color: $teal; }
+}
+
+/* ── Loading & Empty ── */
+.ap-loading { padding: 28px; text-align: center; color: $muted; font-size: 13px; }
+.ap-empty   { padding: 28px; text-align: center; color: $muted; font-size: 13px; }
+
+/* ── Table ── */
+.ap-table-wrap { overflow-x: auto; }
+
+.ap-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+
+  thead tr {
+    background: $teal;
+    th {
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      &.right  { text-align: right; }
+      &.center { text-align: center; }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #eef0f2;
+      &:hover { background: $row-hover; }
+      &:last-child { border-bottom: none; }
+    }
+    td {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1a2e38;
+      vertical-align: middle;
+      &.right  { text-align: right; }
+      &.center { text-align: center; }
+    }
+  }
+}
+
+.teal-hdr   { color: #fff !important; }
+.teal-bold  { color: $teal; font-weight: 700; }
+.success-text { color: #27ae60; }
+.danger-text  { color: #e74c3c; }
+.muted        { color: $muted; }
+.small        { font-size: 12px; }
+.mono         { font-family: 'Courier New', monospace; font-size: 12.5px; }
+
+/* ── Supplier Groups ── */
+.supplier-row {
+  cursor: pointer;
+  background: #fafcfd;
+  font-weight: 600;
+  &:hover { background: $teal-pale; }
+}
+.supplier-name { color: $teal; }
+
+.invoice-row {
+  background: #fff;
+  .invoice-no { padding-left: 32px; color: $muted; font-size: 12.5px; }
+}
+
+.expand-cell { padding: 8px 10px !important; }
+.expand-btn {
+  width: 22px; height: 22px;
+  border-radius: 5px;
+  border: 1.5px solid $teal;
+  background: $teal-pale;
+  color: $teal;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+/* ── Status Badges ── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.badge-success { background: #e6f9f0; color: #1e8449; }
+.badge-danger  { background: #fdecea; color: #c0392b; }
+.badge-warning { background: #fef9e7; color: #d68910; }
+.badge-default { background: #f5f6f8; color: $muted; }
+
+/* ── Pay Button ── */
+.pay-btn {
+  margin-left: 8px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 5px;
+  border: 1px solid $teal;
+  background: transparent;
+  color: $teal;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover { background: $teal; color: #fff; }
+}
+
+/* ── Filter Bar (Aging) ── */
+.ap-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.filter-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  input { height: 34px; border: 1px solid $border; border-radius: 6px; padding: 0 10px; font: inherit; font-size: 13px; font-weight: 400; text-transform: none; &:focus { outline: none; border-color: $teal; } }
+}
+
+/* ── Advance Pills ── */
+.adv-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.adv-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 8px;
+  padding: 10px 20px;
+  span { font-size: 11.5px; color: $muted; font-weight: 500; }
+  strong { font-size: 1.2rem; font-weight: 700; color: #1a2e38; }
+}
+.adv-pill-green strong { color: #1e8449; }
+.adv-pill-teal  strong { color: $teal; }
+
+/* ── Advance Form ── */
+.adv-form-card { flex-shrink: 0; }
+.adv-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 16px 18px;
+}
+.adv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  input, textarea, select {
+    border: 1px solid $border;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    text-transform: none;
+    color: #1a2e38;
+    letter-spacing: 0;
+    &:focus { outline: none; border-color: $teal; }
+  }
+  input, select { height: 36px; }
+}
+.adv-field-wide { grid-column: 1 / -1; }
+.adv-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid $border;
+}
+.req { color: #e74c3c; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .sum-grid { grid-template-columns: repeat(2, 1fr); }
+  .ap-tabs { overflow-x: auto; }
+  .ap-table { min-width: 600px; }
+}
+@media (max-width: 600px) {
+  .sum-grid { grid-template-columns: 1fr; }
+}
