@@ -1,9 +1,6 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { NavigationEnd, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
-import { SidebarService } from '../core/services/sidebar.service';
 
 interface MenuItem {
   label: string;
@@ -19,15 +16,15 @@ interface MenuItem {
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss']
 })
-export class LayoutComponent implements OnInit, OnDestroy {
-  private routerSub!: Subscription;
-  get sidebarOpen(): boolean { return this.sidebar.sidebarOpen; }
-  set sidebarOpen(val: boolean) { this.sidebar.setSidebar(val); }
-  get openMenus(): Set<string> { return this.sidebar.openMenus; }
-
+export class LayoutComponent {
+  sidebarOpen = true;
   userMenuOpen = false;
-  get userName(): string { return localStorage.getItem('username') || 'User'; }
-  get userInitial(): string { return (this.userName[0] || 'U').toUpperCase(); }
+  openMenus = new Set<string>(['Business Partners', 'Purchase', 'Financial', 'Inventory']);
+
+  get userName(): string { return localStorage.getItem('username') ?? localStorage.getItem('email') ?? 'User'; }
+  get userInitial(): string { return (this.userName.charAt(0) || 'U').toUpperCase(); }
+
+  hasChildren(menu: MenuItem): boolean { return !!(menu.children?.length); }
 
   menus: MenuItem[] = [
     { label: 'Dashboard', icon: 'home', route: '/app/dashboard' },
@@ -54,22 +51,39 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Scorecard',        icon: 'scorecard',route: '/app/purchase/scorecard' },
       ]
     },
+    {
+      label: 'Financial',
+      icon: 'finance',
+      children: [
+        { label: 'Dashboard',           icon: 'circle',  route: '/app/finance' },
+        { label: 'General Ledger',      icon: 'ledger',  route: '/app/finance/general-ledger' },
+        { label: 'Chart of Account',    icon: 'ledger',  route: '/app/finance/chart-of-accounts' },
+        { label: 'Journal',             icon: 'journal', route: '/app/finance/journal' },
+        { label: 'Accounts Receivable', icon: 'ar',      route: '/app/finance/ar' },
+        { label: 'Accounts Payable',    icon: 'ap',      route: '/app/finance/accounts-payable' },
+        { label: 'Tax & Gst',           icon: 'tax',     route: '/app/finance/tax-gst' },
+        { label: 'Period-close',        icon: 'close',   route: '/app/finance/period-close' },
+        { label: 'Year End Close',      icon: 'close',   route: '/app/finance/year-end-close' },
+        { label: 'Trial Balance',       icon: 'report',  route: '/app/finance/trial-balance' },
+        { label: 'Reports',             icon: 'report',  route: '/app/finance/reports' },
+      ]
+    },
     { label: 'Sales Order', icon: 'sales', route: '/app/sales-order' },
     {
       label: 'Inventory',
       icon: 'inventory',
       children: [
-        { label: 'Item Master',            icon: 'circle', route: '/app/inventory/List-itemmaster' },
-        { label: 'Stock Take',             icon: 'circle', route: '/app/inventory/list-stocktake' },
-        { label: 'Stock Reorder Planning', icon: 'circle', route: '/app/inventory/list-stockreorderplanning' },
-        { label: 'Stock COGS',             icon: 'circle', route: '/app/inventory/stockcogs' },
-        { label: 'Stock History',          icon: 'circle', route: '/app/inventory/list-stock-history' },
+        { label: 'Item Master',          icon: 'inv-item',    route: '/app/inventory/List-itemmaster' },
+        { label: 'Stock Take',           icon: 'inv-take',    route: '/app/inventory/list-stocktake' },
+        { label: 'Stock Reorder Planning', icon: 'inv-reorder', route: '/app/inventory/list-stockreorderplanning' },
+        { label: 'Stock COGS',           icon: 'inv-cogs',    route: '/app/inventory/stockcogs' },
+        { label: 'Stock History',        icon: 'inv-history', route: '/app/inventory/list-stock-history' },
         {
           label: 'Internal',
-          icon: 'internal',
+          icon: 'inv-internal',
           children: [
-            { label: 'Material Request',       icon: 'circle', route: '/app/inventory/list-material-requisition' },
-            { label: 'Stock Transfer Request', icon: 'circle', route: '/app/inventory/list-stock-transfer-receipt' },
+            { label: 'Material Request',       icon: 'inv-mr',      route: '/app/inventory/list-material-requisition' },
+            { label: 'Stock Transfer Request', icon: 'inv-transfer', route: '/app/inventory/list-stocktransfer' },
           ]
         },
       ]
@@ -94,14 +108,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue' },
         { label: 'Incoterms',       icon: 'm-incoterms', route: '/app/master/incoterms' },
         { label: 'Item Type',       icon: 'm-itemtype',  route: '/app/master/itemType' },
-        { label: 'Package List',    icon: 'm-itemset',   route: '/app/master/itemSet' },
-        { label: 'Outlet',          icon: 'm-location',  route: '/app/master/location' },
+        { label: 'Item Set',        icon: 'm-itemset',   route: '/app/master/itemSet' },
+        { label: 'Location',        icon: 'm-location',  route: '/app/master/location' },
         { label: 'Payment Terms',   icon: 'm-payment',   route: '/app/master/paymentTerms' },
         { label: 'Recurring',       icon: 'm-recurring', route: '/app/master/recurring' },
         { label: 'Service',         icon: 'm-service',   route: '/app/master/service' },
         { label: 'States',          icon: 'm-states',    route: '/app/master/states' },
         { label: 'Stock Issue',     icon: 'm-stock',     route: '/app/master/stockIssue' },
-        { label: 'Frequency',       icon: 'm-strategy',  route: '/app/master/strategy' },
+        { label: 'Strategy',        icon: 'm-strategy',  route: '/app/master/strategy' },
         { label: 'Supplier Groups', icon: 'm-suppgrp',   route: '/app/master/suppliergroups' },
         { label: 'Tax Code',        icon: 'm-tax',       route: '/app/master/taxcode' },
         { label: 'UOM',             icon: 'm-uom',       route: '/app/master/uom' },
@@ -115,55 +129,23 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private auth: AuthService,
-    private router: Router,
-    public sidebar: SidebarService
+    private router: Router
   ) {}
-
-  ngOnInit(): void {
-    this.syncMenuToRoute(this.router.url);
-    this.routerSub = this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd)
-    ).subscribe((e: any) => this.syncMenuToRoute(e.urlAfterRedirects));
-  }
-
-  ngOnDestroy(): void {
-    this.routerSub?.unsubscribe();
-  }
-
-  private syncMenuToRoute(url: string): void {
-    const activeParent = this.menus.find(m => this.hasChildren(m) && this.isMenuActiveByUrl(m, url));
-    for (const m of this.menus) {
-      if (!this.hasChildren(m)) continue;
-      activeParent && m.label === activeParent.label
-        ? this.sidebar.openMenu(m.label)
-        : this.sidebar.closeMenu(m.label);
-    }
-  }
-
-  private isMenuActiveByUrl(menu: MenuItem, url: string): boolean {
-    return !!menu.children?.some(child => {
-      if (child.route && url.startsWith(child.route)) return true;
-      return !!child.children?.some(gc => gc.route && url.startsWith(gc.route));
-    });
-  }
 
   logout(): void { this.auth.logout(); }
 
-  hasChildren(menu: MenuItem): boolean {
-    return Array.isArray(menu.children) && menu.children.length > 0;
-  }
-
   toggleMenu(menu: MenuItem): void {
-    if (!this.hasChildren(menu)) return;
-    this.sidebar.toggleMenu(menu.label);
+    if (!menu.children?.length) return;
+    this.openMenus.has(menu.label) ? this.openMenus.delete(menu.label) : this.openMenus.add(menu.label);
   }
 
   isOpen(menu: MenuItem): boolean {
-    return this.sidebar.isMenuOpen(menu.label);
+    return this.openMenus.has(menu.label);
   }
 
   isMenuActive(menu: MenuItem): boolean {
-    return this.isMenuActiveByUrl(menu, this.router.url);
+    if (menu.route && this.router.url.startsWith(menu.route)) return true;
+    return !!menu.children?.some(child => child.route && this.router.url.startsWith(child.route));
   }
 
   isChildActive(menu: MenuItem): boolean {

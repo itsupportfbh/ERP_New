@@ -4,18 +4,33 @@
     <span>Loading...</span>
   </div>
 
-  <!-- Scrollable container: header sticky, body scrolls vertically -->
+  <!-- Top controls: show entries + search -->
+  <div class="dt-controls" *ngIf="showControls">
+    <div class="dt-show-wrap">
+      <label class="dt-show-lbl">Show</label>
+      <select class="dt-show-sel" [value]="pageSizeInternal" (change)="onPageSizeChange($event)">
+        <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+      </select>
+      <label class="dt-show-lbl">entries</label>
+    </div>
+    <div class="dt-search-wrap">
+      <svg class="dt-search-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4"/><path d="m11 11 2.5 2.5"/></svg>
+      <input class="dt-search-input" type="text" placeholder="Search…" [value]="searchQuery" (input)="onSearch($event)" />
+    </div>
+  </div>
+
   <div class="table-scroll">
     <table class="erp-table" [style.fontSize]="fontSize">
       <colgroup>
+        <col *ngIf="eyeFirst" style="width:44px" />
         <col *ngIf="selectable" style="width:32px" />
-        <!-- Equal width for every column — 100% / N, no fixed px so it auto-fills viewport -->
         <col *ngFor="let col of columns" />
         <col *ngIf="rowActions.length" [style.width]="actionColWidth" />
       </colgroup>
 
       <thead>
         <tr>
+          <th *ngIf="eyeFirst" [style.padding]="cellPad" style="width:44px;text-align:center;"></th>
           <th *ngIf="selectable" class="th-check" [style.padding]="cellPad">
             <input type="checkbox"
                    [checked]="allSelected"
@@ -41,58 +56,83 @@
       </thead>
 
       <tbody>
-        <tr *ngFor="let row of data"
+        <tr *ngFor="let row of pagedData"
             [class.selected]="isSelected(row)"
             (click)="onRowClick(row)">
+
+          <!-- Eye-first column -->
+          <td *ngIf="eyeFirst" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="text-align:center;vertical-align:middle;">
+            <button class="btn-icon eye-first-btn" title="View Details" (click)="onAction('view', row, $event)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6"></path>
+              </svg>
+            </button>
+          </td>
+
           <td *ngIf="selectable" class="td-check" [style.padding]="cellPad"
               (click)="$event.stopPropagation()">
             <input type="checkbox" [checked]="isSelected(row)"
                    (change)="toggleRow(row)" (click)="$event.stopPropagation()" />
           </td>
+
           <td *ngFor="let col of columns"
               [style.textAlign]="col.align || 'left'"
               [style.padding]="cellPad">
-
             <!-- Badge -->
             <span *ngIf="col.type === 'badge'"
                   class="badge badge-{{ getBadgeClass(col, getCellValue(row, col)) }}">
               {{ getCellValue(row, col) }}
             </span>
-
             <!-- Boolean -->
             <ng-container *ngIf="col.type === 'boolean'">
               <span class="bool-dot" [class.on]="getCellValue(row, col)"></span>
               {{ getCellValue(row, col) ? 'Yes' : 'No' }}
             </ng-container>
-
-            <!-- Default: text / number / date — NO ellipsis, full value always shown -->
+            <!-- Default: text / number / date -->
             <ng-container *ngIf="!col.type || col.type === 'text' || col.type === 'number' || col.type === 'date'">
-              {{ getCellValue(row, col) }}
+              {{ displayValue(row, col) }}
             </ng-container>
           </td>
-          <td *ngIf="rowActions.length" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="white-space:nowrap">
-            <div style="display:flex;gap:4px;align-items:center">
+
+          <td *ngIf="rowActions.length" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="white-space:nowrap;text-align:center;">
+            <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
               <ng-container *ngFor="let act of rowActions">
-                <button class="dt-icon-btn"
-                  [class.view]="act.key==='view'"
-                  [class.edit]="act.key==='edit'"
-                  [class.del]="act.key==='delete'"
+                <button *ngIf="!rowActionFilter || rowActionFilter(act.key, row)"
+                  class="btn-icon {{ act.btnClass ?? '' }}"
                   [title]="act.label"
                   (click)="onAction(act.key, row, $event)">
-                  <svg *ngIf="act.key==='view'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg>
-                  <svg *ngIf="act.key==='edit'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3l3 3-9.5 9.5H4v-3.5L14 3z"/></svg>
-                  <svg *ngIf="act.key==='delete'" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
-                  <span *ngIf="act.key!=='view' && act.key!=='edit' && act.key!=='delete'" style="font-size:11px;font-weight:600">{{ act.label }}</span>
+                  <svg *ngIf="act.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path [attr.d]="iconPath(act.icon)"></path>
+                  </svg>
+                  <span *ngIf="!act.icon" style="font-size:11px;font-weight:600;">{{ act.label }}</span>
                 </button>
               </ng-container>
             </div>
           </td>
         </tr>
 
-        <tr *ngIf="!loading && data.length === 0">
+        <tr *ngIf="!loading && filteredData.length === 0">
           <td [colSpan]="totalCols" class="empty-row">No records found</td>
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Footer: showing info + pagination -->
+  <div class="dt-footer" *ngIf="showControls">
+    <span class="dt-info">
+      Showing {{ showingFrom }} to {{ showingTo }} of {{ filteredData.length }} entries
+      <span *ngIf="filteredData.length !== data.length"> (filtered from {{ data.length }} total)</span>
+    </span>
+    <div class="dt-pager">
+      <button class="dt-pg-btn" [disabled]="currentPage === 1" (click)="onPageChange(1)">«</button>
+      <button class="dt-pg-btn" [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+      <button class="dt-pg-btn"
+              *ngFor="let p of pageNumbers"
+              [class.active]="p === currentPage"
+              (click)="onPageChange(p)">{{ p }}</button>
+      <button class="dt-pg-btn" [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      <button class="dt-pg-btn" [disabled]="currentPage === totalPages" (click)="onPageChange(totalPages)">»</button>
+    </div>
   </div>
 </div>

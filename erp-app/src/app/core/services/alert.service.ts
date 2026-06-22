@@ -1,49 +1,31 @@
 import { Injectable } from '@angular/core';
-import Swal, { SweetAlertResult } from 'sweetalert2';
+
+export interface AlertResult {
+  isConfirmed: boolean;
+  isDismissed?: boolean;
+  value?: unknown;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AlertService {
-
-  success(title: string, message?: string): Promise<SweetAlertResult> {
-    return Swal.fire({
-      icon: 'success',
-      title,
-      text: message,
-      confirmButtonColor: '#1a5c6e',
-      confirmButtonText: 'OK',
-      timer: message ? undefined : 2000,
-      showConfirmButton: !!message,
-    });
+  success(title: string, message?: string): Promise<AlertResult> {
+    window.alert(this.text(title, message));
+    return Promise.resolve({ isConfirmed: true });
   }
 
-  error(title: string, message?: string): Promise<SweetAlertResult> {
-    return Swal.fire({
-      icon: 'error',
-      title,
-      text: message,
-      confirmButtonColor: '#1a5c6e',
-      confirmButtonText: 'OK',
-    });
+  error(title: string, message?: string): Promise<AlertResult> {
+    window.alert(this.text(title, message));
+    return Promise.resolve({ isConfirmed: true });
   }
 
-  warning(title: string, message?: string): Promise<SweetAlertResult> {
-    return Swal.fire({
-      icon: 'warning',
-      title,
-      text: message,
-      confirmButtonColor: '#1a5c6e',
-      confirmButtonText: 'OK',
-    });
+  warning(title: string, message?: string): Promise<AlertResult> {
+    window.alert(this.text(title, message));
+    return Promise.resolve({ isConfirmed: true });
   }
 
-  info(title: string, message?: string): Promise<SweetAlertResult> {
-    return Swal.fire({
-      icon: 'info',
-      title,
-      text: message,
-      confirmButtonColor: '#1a5c6e',
-      confirmButtonText: 'OK',
-    });
+  info(title: string, message?: string): Promise<AlertResult> {
+    window.alert(this.text(title, message));
+    return Promise.resolve({ isConfirmed: true });
   }
 
   confirm(
@@ -51,30 +33,17 @@ export class AlertService {
     text: string = 'This action cannot be undone.',
     confirmText = 'Yes, proceed',
     cancelText = 'Cancel'
-  ): Promise<SweetAlertResult> {
-    return Swal.fire({
-      icon: 'warning',
-      title,
-      text,
-      showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#2d8a9e',
-      confirmButtonText: confirmText,
-      cancelButtonText: cancelText,
-    });
+  ): Promise<AlertResult> {
+    const ok = window.confirm(`${title}\n\n${text}\n\n${confirmText} / ${cancelText}`);
+    return Promise.resolve({ isConfirmed: ok, isDismissed: !ok });
   }
 
-  toast(
-    message: string,
-    icon: 'success' | 'error' | 'warning' | 'info' = 'success',
-    timer = 3000
-  ): Promise<SweetAlertResult> {
-    return Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer,
-      timerProgressBar: true,
-    }).fire({ icon, title: message });
+  toast(message: string): Promise<AlertResult> {
+    window.alert(message);
+    return Promise.resolve({ isConfirmed: true });
+  }
+
+  private text(title: string, message?: string): string {
+    return message ? `${title}\n\n${message}` : title;
   }
 }

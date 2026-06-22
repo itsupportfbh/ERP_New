@@ -1,0 +1,131 @@
+<div class="ledger-page">
+
+  <!-- Header -->
+  <div class="gl-head">
+    <div class="gl-head-left">
+      <div class="gl-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h2>General Ledger</h2>
+        <p>Account balances and movements</p>
+      </div>
+    </div>
+    <button class="gl-filter-btn" type="button" (click)="showFilter = !showFilter" title="Date Filter">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Filter Popup -->
+  <div class="filter-popup" *ngIf="showFilter">
+    <div class="filter-row">
+      <label class="filter-field">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="fromDate">
+      </label>
+      <label class="filter-field">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="toDate">
+      </label>
+      <button class="gl-btn-primary" type="button" (click)="load()">Apply</button>
+      <button class="gl-btn-outline" type="button" (click)="showFilter = false">Cancel</button>
+    </div>
+  </div>
+
+  <div class="gl-alert gl-danger" *ngIf="error">{{ error }}</div>
+
+  <!-- Controls: Show entries (left) + Search (right) -->
+  <div class="gl-controls">
+    <div class="gl-show-row">
+      <span>Show</span>
+      <div class="gl-select-wrap">
+        <select [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="9999">All</option>
+        </select>
+        <span class="select-arrow">&#9660;</span>
+      </div>
+      <span>entries</span>
+    </div>
+    <div class="gl-search-wrap">
+      <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input class="gl-search" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="currentPage = 1">
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="gl-table-card">
+    <div class="gl-loading" *ngIf="loading">Loading...</div>
+    <div class="gl-table-wrap" *ngIf="!loading">
+      <table class="gl-table">
+        <thead>
+          <tr>
+            <th class="th-code">HEAD CODE</th>
+            <th>HEAD NAME</th>
+            <th class="right">OPENING BAL</th>
+            <th class="right">DEBIT (SGD)</th>
+            <th class="right">CREDIT (SGD)</th>
+            <th class="right">BALANCE (SGD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let row of pagedRows">
+            <tr [ngClass]="levelClass(row)">
+              <td class="td-code mono">{{ row.headCode }}</td>
+              <td class="td-name">
+                <div class="name-wrap" [style.paddingLeft]="indentPx(row)">
+                  <button class="toggle-btn"
+                          [class.toggle-expanded]="isExpanded(row)"
+                          type="button"
+                          (click)="row._hasChildren ? toggle(row) : null">
+                    {{ row._hasChildren && isExpanded(row) ? '−' : '+' }}
+                  </button>
+                  <span [class.fw-bold]="row._level === 0">{{ row.headName }}</span>
+                </div>
+              </td>
+              <td class="right muted">{{ (row.openingBalance || 0) | number:'1.2-2' }}</td>
+              <td class="right debit-val">{{ (row.debit || 0) | number:'1.2-2' }}</td>
+              <td class="right credit-val">{{ (row.credit || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (row.balance || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="visibleRows.length === 0 && !loading">
+            <td colspan="6" class="gl-empty">No ledger data found.</td>
+          </tr>
+        </tbody>
+        <tfoot *ngIf="pagedRows.length > 0">
+          <tr class="foot-row">
+            <td colspan="2"><strong>Total</strong></td>
+            <td class="right muted"></td>
+            <td class="right debit-val fw-bold">{{ totalDebit | number:'1.2-2' }}</td>
+            <td class="right credit-val fw-bold">{{ totalCredit | number:'1.2-2' }}</td>
+            <td class="right teal-bold fw-bold">{{ totalBalance | number:'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="gl-pager" *ngIf="visibleRows.length > 0 && !loading">
+      <span class="pager-info">Showing {{ pageFrom }}-{{ pageTo }} of {{ visibleRows.length }} entries</span>
+      <div class="pager-btns">
+        <button class="pager-btn" type="button" (click)="setPage(currentPage - 1)" [disabled]="currentPage === 1">&#8249;</button>
+        <button class="pager-btn"
+                *ngFor="let p of pageNumbers"
+                type="button"
+                [class.active]="p === currentPage"
+                (click)="setPage(p)">{{ p }}</button>
+        <button class="pager-btn" type="button" (click)="setPage(currentPage + 1)" [disabled]="currentPage === totalPages">&#8250;</button>
+      </div>
+    </div>
+  </div>
+
+</div>

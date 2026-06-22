@@ -61,7 +61,18 @@ import { UomComponent } from './pages/master/uom/uom.component';
 import { UomConversionComponent } from './pages/master/uom-conversion/uom-conversion.component';
 import { VehicleComponent } from './pages/master/vehicle/vehicle.component';
 import { WarehouseComponent } from './pages/master/warehouse/warehouse.component';     
-
+import { FinanceDashboardComponent } from './pages/finance/finance-dashboard.component';
+import { FinanceWorkspaceComponent } from './pages/finance/finance-workspace.component';
+import { FinanceJournalFormComponent } from './pages/finance/finance-journal-form.component';
+import { FinanceApComponent } from './pages/finance/finance-ap.component';
+import { FinanceArComponent } from './pages/finance/finance-ar.component';
+import { FinanceGstComponent } from './pages/finance/finance-gst.component';
+import { FinanceCoaComponent } from './pages/finance/finance-coa.component';
+import { FinanceLedgerComponent } from './pages/finance/finance-ledger.component';
+import { FinanceTrialBalanceComponent } from './pages/finance/finance-trial-balance.component';
+import { FinancePlComponent } from './pages/finance/finance-pl.component';
+import { FinanceBsComponent } from './pages/finance/finance-bs.component';
+import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login',            component: LoginComponent },
@@ -114,7 +125,59 @@ const routes: Routes = [
 
       { path: 'purchase/scorecard',            component: SupplierScorecardComponent },
       { path: 'purchase/three-way-match',      component: ThreeWayMatchComponent },
-
+{ path: 'financial', redirectTo: '/app/financial/dashboard', pathMatch: 'full' },
+  { path: 'financial/:page', redirectTo: '/app/financial/:page' },
+  { path: 'financial/:page/:id', redirectTo: '/app/financial/:page/:id' },
+ { path: 'finance',                        component: FinanceDashboardComponent },
+      // ── Dedicated finance components (must be before catch-all finance/:section) ──
+      { path: 'finance/chart-of-accounts',    component: FinanceCoaComponent },
+      { path: 'finance/general-ledger',       component: FinanceLedgerComponent },
+      { path: 'finance/trial-balance',        component: FinanceTrialBalanceComponent },
+      { path: 'finance/profit-loss',          component: FinancePlComponent },
+      { path: 'finance/balance-sheet',        component: FinanceBsComponent },
+      { path: 'finance/accounts-payable',     component: FinanceApComponent },
+      { path: 'finance/ap-aging',             component: FinanceApComponent },
+      { path: 'finance/ap-advance',           component: FinanceApComponent },
+      { path: 'finance/ar',                   component: FinanceArComponent },
+      { path: 'finance/ar-invoices',          component: FinanceArComponent },
+      { path: 'finance/receipts',             component: FinanceArComponent },
+      { path: 'finance/ar-advance',           component: FinanceArComponent },
+      { path: 'finance/ar-aging',             component: FinanceArComponent },
+      { path: 'finance/tax-gst',              component: FinanceGstComponent },
+      { path: 'finance/gst-return',           component: FinanceGstComponent },
+      { path: 'finance/gst-report',           component: FinanceGstComponent },
+      { path: 'finance/create-journal',       component: FinanceJournalFormComponent },
+      { path: 'finance/:section',             component: FinanceWorkspaceComponent },
+      { path: 'financial/dashboard',           component: FinanceDashboardComponent },
+      { path: 'financial/ChartOfAccount',      component: FinanceCoaComponent },
+      { path: 'financial/journal',             component: FinanceWorkspaceComponent, data: { section: 'journal' } },
+      { path: 'financial/create-journal',      component: FinanceJournalFormComponent },
+      { path: 'financial/tax-gst',             component: FinanceGstComponent },
+      { path: 'financial/Gst-report',          component: FinanceGstComponent },
+      { path: 'financial/AccountPayable',      component: FinanceApComponent },
+      { path: 'financial/ap-aging',            component: FinanceApComponent },
+      { path: 'financial/ap-advance',          component: FinanceApComponent },
+      { path: 'financial/AR',                  component: FinanceArComponent },
+      { path: 'financial/AR-invoice',          component: FinanceArComponent },
+      { path: 'financial/AR-invoice-create',   component: FinanceArComponent },
+      { path: 'financial/AR-receipt',          component: FinanceArComponent },
+      { path: 'financial/AR-receipt-create',   component: FinanceArComponent },
+      { path: 'financial/AR-receipt-edit/:id', component: FinanceArComponent },
+      { path: 'financial/ar-advance',          component: FinanceArComponent },
+      { path: 'financial/aging',               component: FinanceArComponent },
+      { path: 'financial/ledger',              component: FinanceLedgerComponent },
+      { path: 'financial/Period-close',        component: FinanceWorkspaceComponent, data: { section: 'period-close' } },
+      { path: 'financial/Invoice-email',       component: FinanceWorkspaceComponent, data: { section: 'invoice-email' } },
+      { path: 'financial/report',              component: FinanceTrialBalanceComponent },
+      { path: 'financial/profitloss',          component: FinancePlComponent },
+      { path: 'financial/balance-sheet',       component: FinanceBsComponent },
+      { path: 'financial/finance-report',      component: FinanceWorkspaceComponent, data: { section: 'reports' } },
+      { path: 'financial/daybook',             component: FinanceWorkspaceComponent, data: { section: 'daybook' } },
+      { path: 'financial/forecast',            component: FinanceWorkspaceComponent, data: { section: 'collection-forecast' } },
+      { path: 'financial/opening-balance',     component: FinanceWorkspaceComponent, data: { section: 'opening-balance' } },
+      { path: 'financial/year-close',          component: FinanceWorkspaceComponent, data: { section: 'year-end-close' } },
+      { path: 'financial/bank-reconciliation', component: FinanceWorkspaceComponent, data: { section: 'bank-reconciliation' } },
+  { path: 'purchase/mobile-receiving',     component: MobileReceivingComponent },
        // Master routes
       { path: 'master/approval-level',  component: ApprovalLevelComponent  },
       { path: 'master/bank-list',       component: BankComponent            },

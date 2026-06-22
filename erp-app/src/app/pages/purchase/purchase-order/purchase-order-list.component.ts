@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected' };
 
@@ -17,30 +19,81 @@ export class PurchaseOrderListComponent implements OnInit {
   filtered: any[] = [];
   search = '';
 
-  alerts: any[] = [];
+  // Pending-PR alerts (same logic as Unity ERP)
+  pendingPrList: any[] = [];
+  pendingPrCount = 0;
   showAlerts = false;
   alertsLoading = false;
 
+  // Approvals panel
+  showApprovals = false;
+
+  drafts: any[] = [];
+  showDrafts = false;
+  draftsLoading = false;
+
+  // Lines detail modal
+  showLinesModal = false;
+  modalLines: any[] = [];
+  modalPoNo = '';
+  modalSupplier = '';
+  modalStatus = '';
+  modalNetTotal: number | null = null;
+
   columns: TableColumn[] = [
-    { key: 'purchaseOrderNo', header: 'PO No',         sortable: true },
-    { key: 'supplierName',    header: 'Supplier',       sortable: true },
-    { key: 'poDate',          header: 'PO Date',        sortable: true, type: 'date' },
-    { key: 'deliveryDate',    header: 'Delivery Date',  sortable: true, type: 'date' },
-    { key: 'currencyName',    header: 'Currency' },
-    { key: 'netTotal',        header: 'Net Total',      type: 'number', align: 'right' },
-    { key: 'statusLabel',     header: 'Status',         type: 'badge',
-      badgeMap: { Pending: 'warning', Approved: 'success', Rejected: 'danger', Draft: 'default' } },
+    { key: 'purchaseOrderNo', header: 'PO No', sortable: true },
+    { key: 'supplierName', header: 'Supplier', sortable: true },
+    { key: 'poDate', header: 'PO Date', sortable: true, type: 'date' },
+    { key: 'deliveryDate', header: 'Delivery Date', sortable: true, type: 'date' },
+    { key: 'currencyName', header: 'Currency' },
+    { key: 'netTotal', header: 'Net Total', type: 'number', align: 'right' },
+    {
+      key: 'statusLabel',
+      header: 'Status',
+      type: 'badge',
+      badgeMap: { Pending: 'warning', Approved: 'success', Rejected: 'danger', Draft: 'default' }
+    },
   ];
 
   rowActions: RowAction[] = [
-    { key: 'delete', label: '✕', btnClass: 'danger' }
+    { key: 'approve', label: 'Approve',        btnClass: 'success', icon: 'approve' },
+    { key: 'reject',  label: 'Reject',         btnClass: 'warning', icon: 'reject'  },
+    { key: 'email',   label: 'Email Supplier', btnClass: 'default', icon: 'email'   },
+    { key: 'print',   label: 'Print',          btnClass: 'default', icon: 'print'   },
+    { key: 'edit',    label: 'Edit',           btnClass: 'default', icon: 'edit'    },
+    { key: 'delete',  label: 'Delete',         btnClass: 'danger',  icon: 'delete'  },
   ];
+
+  poActionFilter = (action: string, row: any): boolean => {
+    const s = this.poStatusNum(row);
+    switch (action) {
+      case 'view':
+      case 'email':
+      case 'print':   return true;
+      case 'approve':
+      case 'reject':  return s === 1;
+      case 'edit':
+      case 'delete':  return s !== 2 && s !== 3;
+      default:        return true;
+    }
+  };
+
+  private poStatusNum(row: any): number {
+    const v = row.approvalStatus ?? row.status;
+    if (typeof v === 'number') return v;
+    const label = (row.statusLabel ?? String(v ?? '')).toLowerCase();
+    if (label === 'approved') return 2;
+    if (label === 'rejected') return 3;
+    if (label === 'draft')    return 0;
+    return 1;
+  }
 
   constructor(private svc: PurchaseService, private router: Router) {}
 
   ngOnInit(): void {
     this.load();
-    this.loadAlerts();
+    this.loadPendingPrCount();
+    this.loadDrafts();
   }
 
   load(): void {
@@ -50,8 +103,8 @@ export class PurchaseOrderListComponent implements OnInit {
         this.rows = this.svc.unwrap(res).map((r: any) => ({
           ...r,
           id: r.id ?? r.iD,
-          purchaseOrderNo: r.purchaseOrderNo ?? r.pO_No ?? r.purchaseOrderNo,
-          statusLabel: STATUS_MAP[r.approvalStatus] ?? 'Pending',
+          purchaseOrderNo: r.purchaseOrderNo ?? r.pO_No,
+          statusLabel: STATUS_MAP[r.approvalStatus ?? r.status] ?? r.status ?? 'Pending',
         }));
         this.applyFilter();
         this.loading = false;
@@ -60,25 +113,82 @@ export class PurchaseOrderListComponent implements OnInit {
     });
   }
 
-  loadAlerts(): void {
+  // Unity ERP approach: compute pending PRs that have no PO yet
+  loadPendingPrCount(): void {
     this.alertsLoading = true;
-    this.svc.getPurchaseAlerts().subscribe({
-      next: res => { this.alerts = this.svc.unwrap(res); this.alertsLoading = false; },
+    forkJoin({
+      prs: this.svc.getPurchaseRequests(),
+      pos: this.svc.getPurchaseOrders()
+    }).subscribe({
+      next: (res: any) => {
+        const prs: any[] = this.svc.unwrap(res.prs);
+        const pos: any[] = this.svc.unwrap(res.pos);
+
+        // collect all PR numbers already referenced in any PO's lines
+        const usedPrNos = new Set<string>();
+        pos.forEach((po: any) => {
+          let lines: any[] = [];
+          try { lines = Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); } catch {}
+          lines.forEach((ln: any) => {
+            const prNo = (ln?.prNo ?? ln?.PRNo ?? '').toString().trim();
+            if (prNo) usedPrNos.add(prNo);
+          });
+        });
+
+        // pending (status=1) PRs not yet converted to a PO
+        this.pendingPrList = prs.filter((pr: any) => {
+          const status = Number(pr.status ?? pr.approvalStatus ?? 0);
+          const prNo = (pr.purchaseRequestNo ?? '').toString().trim();
+          return status === 1 && !usedPrNos.has(prNo);
+        });
+
+        this.pendingPrCount = this.pendingPrList.length;
+        this.alertsLoading = false;
+      },
       error: () => { this.alertsLoading = false; }
     });
   }
 
-  markAlertRead(id: number, e: Event): void {
-    e.stopPropagation();
-    this.svc.markAlertRead(id).subscribe({
-      next: () => { this.alerts = this.alerts.filter(a => a.id !== id); }
+  createPoFromPr(pr: any): void {
+    this.showAlerts = false;
+    this.router.navigate(['/app/purchase/orders/new'], { queryParams: { fromPR: pr.id ?? pr.iD } });
+  }
+
+  loadDrafts(): void {
+    this.draftsLoading = true;
+    this.svc.getPurchaseOrderDrafts().subscribe({
+      next: res => { this.drafts = this.svc.unwrap(res); this.draftsLoading = false; },
+      error: () => { this.drafts = []; this.draftsLoading = false; }
     });
   }
 
-  markAllAlertsRead(): void {
-    this.svc.markAllAlertsRead().subscribe({
-      next: () => { this.alerts = []; this.showAlerts = false; }
-    });
+  openDraft(draft: any): void {
+    const id = draft.id ?? draft.iD;
+    this.router.navigate(['/app/purchase/orders/new'], { queryParams: { draftId: id } });
+  }
+
+  promoteDraft(draft: any, e: Event): void {
+    e.stopPropagation();
+    const id = draft.id ?? draft.iD;
+    Swal.fire({ title: 'Promote Draft?', text: 'Convert this draft into a purchase order?', icon: 'question', showCancelButton: true, confirmButtonText: 'Promote', confirmButtonColor: '#0e7490' })
+      .then(r => { if (!r.isConfirmed) return;
+        this.svc.promotePurchaseOrderDraft(id, this.currentUserId()).subscribe({
+          next: () => { Swal.fire('Success', 'Draft promoted to purchase order.', 'success'); this.load(); this.loadDrafts(); },
+          error: err => Swal.fire('Error', err?.error?.message || 'Unable to promote purchase order draft.', 'error')
+        });
+      });
+  }
+
+  deleteDraft(draft: any, e: Event): void {
+    e.stopPropagation();
+    const id = draft.id ?? draft.iD;
+    Swal.fire({ title: 'Delete Draft?', text: 'Delete this purchase order draft? This cannot be undone.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
+      .then(r => { if (!r.isConfirmed) return;
+        this.svc.deletePurchaseOrderDraft(id).subscribe({
+          next: () => { Swal.fire('Deleted', 'Draft deleted.', 'success'); this.loadDrafts(); },
+          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete purchase order draft.', 'error')
+        });
+      });
   }
 
   applyFilter(): void {
@@ -97,12 +207,270 @@ export class PurchaseOrderListComponent implements OnInit {
     this.router.navigate(['/app/purchase/orders', row.id]);
   }
 
+  openLinesModal(row: any): void {
+    const raw = row?.poLines ?? row?.PoLines ?? row?.POLines ?? '[]';
+    const lines: any[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw || '[]'); } catch { return []; } })();
+    this.modalLines = lines;
+    this.modalPoNo = row.purchaseOrderNo ?? '';
+    this.modalSupplier = row.supplierName ?? '';
+    this.modalStatus = row.statusLabel ?? '';
+    this.modalNetTotal = row.netTotal ?? null;
+    if (!lines.length) {
+      this.svc.getPurchaseOrderById(row.id).subscribe({
+        next: res => {
+          const d = this.svc.unwrapOne(res);
+          const r2 = d.poLines ?? d.PoLines ?? '[]';
+          this.modalLines = Array.isArray(r2) ? r2 : (() => { try { return JSON.parse(r2 || '[]'); } catch { return []; } })();
+        }
+      });
+    }
+    this.showLinesModal = true;
+  }
+
+  closeLinesModal(): void { this.showLinesModal = false; }
+
   onAction(e: { action: string; row: any }): void {
-    if (e.action === 'delete') this.delete(e.row);
+    if (e.action === 'view')    this.openLinesModal(e.row);
+    if (e.action === 'edit')    this.onRowClick(e.row);
+    if (e.action === 'approve') this.approveReject(e.row, 2);
+    if (e.action === 'reject')  this.approveReject(e.row, 3);
+    if (e.action === 'email')   this.emailSupplier(e.row);
+    if (e.action === 'print')   this.printPo(e.row);
+    if (e.action === 'delete')  this.delete(e.row);
+  }
+
+  printPo(row: any): void {
+    this.svc.getPurchaseOrderById(row.id).subscribe({
+      next: res => {
+        const po = this.svc.unwrapOne(res);
+        let lines: any[] = [];
+        try { lines = Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); } catch { lines = []; }
+        const html = this.buildPoPrintHtml(po, lines, row);
+        const w = window.open('', '_blank', 'width=1050,height=800');
+        if (!w) { Swal.fire('Blocked', 'Please allow popups in your browser to print.', 'warning'); return; }
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 700);
+      },
+      error: () => Swal.fire('Error', 'Unable to load PO details.', 'error')
+    });
+  }
+
+  private buildPoPrintHtml(po: any, lines: any[], row?: any): string {
+    const fmt = (d: any) => {
+      if (!d) return '—';
+      try { const dt = new Date(d); return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`; }
+      catch { return '—'; }
+    };
+    const esc = (s: any) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const n2 = (v: any) => Number(v || 0).toFixed(2);
+
+    const poNo      = esc(po.purchaseOrderNo ?? po.pO_No ?? row?.purchaseOrderNo ?? '');
+    const supplier  = esc(po.supplierName ?? row?.supplierName ?? '—');
+    const poDate    = fmt(po.poDate);
+    const delDate   = fmt(po.deliveryDate);
+    const currency  = esc(po.currencyName ?? row?.currencyName ?? 'INR');
+    const location  = esc(po.location ?? po.Location ?? '');
+    const contact   = esc(po.contactNumber ?? '');
+    const remarks   = esc(po.remarks ?? '');
+    const netTotal  = Number(po.netTotal ?? po.NetTotal ?? 0);
+    const subTotal  = Number(po.subTotal ?? po.SubTotal ?? 0);
+    const tax       = Number(po.tax ?? po.Tax ?? 0);
+    const shipping  = Number(po.shipping ?? po.Shipping ?? 0);
+    const discount  = Number(po.discount ?? po.Discount ?? 0);
+    const printDate = new Date().toLocaleDateString('en-GB');
+
+    let lineNo = 0;
+    const lineRows = lines.map((l: any) => {
+      lineNo++;
+      const item    = esc(l.itemSearch ?? l.itemName ?? l.itemCode ?? l.description ?? '—');
+      const qty     = Number(l.qty ?? l.quantity ?? 0);
+      const price   = Number(l.unitPrice ?? l.price ?? 0);
+      const disc    = Number(l.discountPct ?? 0);
+      const amount  = qty * price * (1 - disc / 100);
+      const rmk     = esc(l.remarks ?? '');
+      const prNo    = esc(l.prNo ?? l.prNumber ?? '');
+      const bg      = lineNo % 2 === 0 ? '#f8fafc' : '#ffffff';
+      return `<tr style="background:${bg};">
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280;">${lineNo}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;">${item}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${qty}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${n2(price)}</td>
+        ${disc ? `<td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${disc}%</td>` : '<td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">—</td>'}
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;">${n2(amount)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#2563eb;font-size:11px;">${prNo}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:11px;">${rmk}</td>
+      </tr>`;
+    }).join('');
+
+    const thStyle = `padding:9px 10px;color:#fff;font-size:11px;font-weight:600;border-right:1px solid rgba(255,255,255,0.2);`;
+    const totRow  = (lbl: string, val: string, bold = false) =>
+      `<tr><td style="padding:6px 12px;color:#6b7280;font-size:12px;border-bottom:1px solid #f1f5f9;">${lbl}</td>
+           <td style="padding:6px 12px;text-align:right;font-size:12px;font-weight:${bold?'700':'600'};border-bottom:1px solid #f1f5f9;">${val}</td></tr>`;
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>PO - ${poNo}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1f2937;background:#fff;padding:24px 28px;}
+@page{size:A4;margin:12mm 14mm;}
+@media print{
+  body{padding:0;}
+  -webkit-print-color-adjust:exact !important;
+  print-color-adjust:exact !important;
+  color-adjust:exact !important;
+}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:14px;border-bottom:3px solid #0e4a60;margin-bottom:18px;}
+.co-name{font-size:20px;font-weight:800;color:#0e4a60;letter-spacing:.5px;}
+.co-sub{font-size:11px;color:#6b7280;margin-top:3px;}
+.doc-title{text-align:right;}
+.doc-title h1{font-size:26px;font-weight:800;color:#0e4a60;letter-spacing:2px;}
+.doc-title .doc-no{font-size:13px;color:#374151;margin-top:4px;}
+.doc-title .doc-no span{font-weight:700;color:#0e4a60;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:18px;}
+.info-cell{padding:10px 14px;border-bottom:1px solid #e5e7eb;}
+.info-cell:nth-child(odd){background:#f8fafc;border-right:1px solid #e5e7eb;}
+.info-key{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.info-val{font-size:13px;font-weight:700;color:#111827;}
+table.lines{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
+table.lines thead tr{background:#0e4a60 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+table.lines thead th{${thStyle}}
+table.lines thead th:last-child{border-right:none;}
+.tot-wrap{display:flex;justify-content:flex-end;margin-top:14px;}
+.tot-table{width:280px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
+.grand-row td{background:#0e4a60 !important;color:#fff !important;font-weight:700;font-size:14px;padding:8px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.remark-box{margin-top:16px;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;background:#fffbeb;}
+.remark-lbl{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.sig-row{display:flex;justify-content:space-between;margin-top:50px;gap:16px;}
+.sig-box{flex:1;text-align:center;border-top:1.5px solid #374151;padding-top:6px;font-size:11px;color:#6b7280;}
+.footer{margin-top:24px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #f1f5f9;padding-top:8px;}
+</style></head><body>
+
+<div class="hdr">
+  <div>
+    <div class="co-name">Purchase Order</div>
+    <div class="co-sub">Official Purchase Document</div>
+  </div>
+  <div class="doc-title">
+    <h1>PURCHASE ORDER</h1>
+    <div class="doc-no">PO No: <span>${poNo}</span></div>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="info-cell"><div class="info-key">Supplier</div><div class="info-val">${supplier}</div></div>
+  <div class="info-cell"><div class="info-key">PO Date</div><div class="info-val">${poDate}</div></div>
+  <div class="info-cell"><div class="info-key">Delivery Date</div><div class="info-val">${delDate}</div></div>
+  <div class="info-cell"><div class="info-key">Currency</div><div class="info-val">${currency}</div></div>
+  ${location ? `<div class="info-cell"><div class="info-key">Location / Outlet</div><div class="info-val">${location}</div></div>` : ''}
+  ${contact  ? `<div class="info-cell"><div class="info-key">Contact</div><div class="info-val">${contact}</div></div>` : ''}
+</div>
+
+<table class="lines">
+  <thead><tr>
+    <th style="${thStyle}width:36px;text-align:center;">#</th>
+    <th style="${thStyle}">Item / Description</th>
+    <th style="${thStyle}width:60px;text-align:right;">Qty</th>
+    <th style="${thStyle}width:95px;text-align:right;">Unit Price</th>
+    <th style="${thStyle}width:65px;text-align:right;">Disc%</th>
+    <th style="${thStyle}width:105px;text-align:right;">Amount (${currency})</th>
+    <th style="${thStyle}width:80px;">PR No</th>
+    <th style="${thStyle}width:110px;border-right:none;">Remarks</th>
+  </tr></thead>
+  <tbody>
+    ${lineRows || `<tr><td colspan="8" style="padding:20px;text-align:center;color:#9ca3af;font-style:italic;">No line items found</td></tr>`}
+  </tbody>
+</table>
+
+<div class="tot-wrap"><table class="tot-table">
+  ${subTotal  ? totRow('Sub Total', n2(subTotal)) : ''}
+  ${discount  ? totRow(`Discount`, `-${n2(discount)}`) : ''}
+  ${tax       ? totRow('Tax', n2(tax)) : ''}
+  ${shipping  ? totRow('Shipping', n2(shipping)) : ''}
+  <tr class="grand-row">
+    <td>Net Total (${currency})</td>
+    <td style="text-align:right;">${n2(netTotal)}</td>
+  </tr>
+</table></div>
+
+${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${remarks}</div>` : ''}
+
+<div class="sig-row">
+  <div class="sig-box">Prepared By</div>
+  <div class="sig-box">Checked By</div>
+  <div class="sig-box">Approved By</div>
+  <div class="sig-box">Received By</div>
+</div>
+
+<div class="footer">This is a computer-generated document &nbsp;|&nbsp; Printed on ${printDate}</div>
+</body></html>`;
+  }
+
+  approveReject(row: any, status: 2 | 3): void {
+    if (this.isFinal(row)) {
+      Swal.fire('Not Allowed', 'This purchase order is already final.', 'warning');
+      return;
+    }
+    const action = status === 2 ? 'approve' : 'reject';
+    Swal.fire({ title: 'Are you sure?', text: `${action.charAt(0).toUpperCase() + action.slice(1)} PO ${row.purchaseOrderNo}?`, icon: 'question', showCancelButton: true, confirmButtonText: status === 2 ? 'Approve' : 'Reject', confirmButtonColor: status === 2 ? '#22c55e' : '#ef4444' })
+      .then(r => { if (!r.isConfirmed) return;
+        const amount = Number(row.netTotal ?? row.totalAmount ?? row.amount ?? 0);
+        const request$ = status === 2
+          ? this.svc.approvePurchaseOrder(row.id, amount)
+          : this.svc.rejectPurchaseOrder(row.id, amount);
+        request$.subscribe({
+          next: () => { Swal.fire('Success', `Purchase order ${action}d.`, 'success'); this.load(); },
+          error: () => {
+            this.svc.updatePurchaseOrderApprovalStatus(row.id, status).subscribe({
+              next: () => { Swal.fire('Success', `Purchase order ${action}d.`, 'success'); this.load(); },
+              error: err => Swal.fire('Error', err?.error?.message || `Unable to ${action} purchase order.`, 'error')
+            });
+          }
+        });
+      });
+  }
+
+  emailSupplier(row: any): void {
+    Swal.fire({ title: 'Email Supplier?', text: `Email PO ${row.purchaseOrderNo} to supplier ${row.supplierName || ''}?`, icon: 'question', showCancelButton: true, confirmButtonText: 'Send Email', confirmButtonColor: '#0e7490' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.svc.emailSupplierPo(row.id).subscribe({
+          next: () => Swal.fire('Sent!', `Purchase order ${row.purchaseOrderNo} has been emailed to the supplier.`, 'success'),
+          error: err => Swal.fire('Error', err?.error?.message || err?.message || 'Unable to send email. Please check SMTP settings on the server.', 'error')
+        });
+      });
   }
 
   delete(row: any): void {
-    if (!confirm(`Delete PO ${row.purchaseOrderNo}?`)) return;
-    this.svc.deletePurchaseOrder(row.id).subscribe({ next: () => this.load() });
+    if (this.isFinal(row)) {
+      Swal.fire('Not Allowed', 'Approved/rejected purchase orders cannot be deleted.', 'warning');
+      return;
+    }
+    Swal.fire({ title: 'Delete PO?', text: `Delete PO ${row.purchaseOrderNo}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
+      .then(r => { if (!r.isConfirmed) return;
+        this.svc.deletePurchaseOrder(row.id).subscribe({
+          next: () => { Swal.fire('Deleted', 'Purchase order deleted.', 'success'); this.load(); },
+          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete purchase order.', 'error')
+        });
+      });
+  }
+
+  get draftCount(): number { return this.drafts.length; }
+  get alertCount(): number { return this.pendingPrCount; }
+  get pendingCount(): number { return this.rows.filter(r => r.statusLabel === 'Pending').length; }
+  get approvedCount(): number { return this.rows.filter(r => r.statusLabel === 'Approved').length; }
+  get pendingApprovalPOs(): any[] { return this.rows.filter(r => r.statusLabel === 'Pending'); }
+  get approvalCount(): number { return this.pendingApprovalPOs.length; }
+
+  isFinal(row: any): boolean {
+    const value = row.approvalStatus ?? row.status ?? row.statusLabel;
+    if (typeof value === 'number') return value === 2 || value === 3;
+    const label = String(value ?? '').toLowerCase();
+    return label === 'approved' || label === 'rejected';
+  }
+
+  currentUserId(): string {
+    return localStorage.getItem('userId') || localStorage.getItem('userid') || '0';
   }
 }

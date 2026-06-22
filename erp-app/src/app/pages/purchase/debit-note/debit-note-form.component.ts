@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import Swal from 'sweetalert2';
 
 interface DNLine {
   itemId: number | null;
@@ -28,6 +29,7 @@ export class DebitNoteFormComponent implements OnInit {
   error = '';
 
   // Header
+  debitNoteNo = '';
   pinId: number | null = null;
   supplierId: number | null = null;
   supplierName = '';
@@ -39,7 +41,7 @@ export class DebitNoteFormComponent implements OnInit {
   isOverseas = false;
   incoterms = '';
   status = 'Draft';
-  isPosted = false;
+  get isPosted(): boolean { return this.status === 'Posted'; }
 
   // Lines
   lines: DNLine[] = [];
@@ -48,15 +50,14 @@ export class DebitNoteFormComponent implements OnInit {
   pinOptions: any[] = [];
 
   reasonOptions = [
-    { label: 'Short Supply', value: 'Short Supply' },
-    { label: 'Quality Issue', value: 'Quality Issue' },
-    { label: 'Price Adjustment', value: 'Price Adjustment' },
-    { label: 'Damage', value: 'Damage' },
-    { label: 'Other', value: 'Other' }
+    { label: 'Short Supply',      value: 'Short Supply' },
+    { label: 'Quality Issue',     value: 'Quality Issue' },
+    { label: 'Price Adjustment',  value: 'Price Adjustment' },
+    { label: 'Damage',            value: 'Damage' },
+    { label: 'Other',             value: 'Other' }
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
-  companyId = Number(localStorage.getItem('companyId')) || null;
 
   constructor(
     private svc: PurchaseService,
@@ -74,7 +75,7 @@ export class DebitNoteFormComponent implements OnInit {
   loadPinOptions(): void {
     this.svc.getSupplierInvoices().subscribe(r => {
       this.pinOptions = this.svc.unwrap(r).map((p: any) => ({
-        label: `${p.invoiceNo} - ${p.supplierName ?? ''}`,
+        label: `${p.invoiceNo ?? 'INV'} (${p.status ?? ''})`,
         value: p.id,
         raw: p
       }));
@@ -86,19 +87,23 @@ export class DebitNoteFormComponent implements OnInit {
     this.svc.getDebitNoteById(this.id!).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
+        this.debitNoteNo = d.debitNoteNo ?? d.DebitNoteNo ?? '';
         this.pinId = d.pinId ?? null;
         this.supplierId = d.supplierId ?? null;
-        this.supplierName = d.supplierName ?? '';
+        this.supplierName = d.name ?? d.supplierName ?? '';
         this.referenceNo = d.referenceNo ?? '';
         this.reason = d.reason ?? '';
         this.noteDate = d.noteDate ? d.noteDate.substring(0, 10) : this.noteDate;
         this.fxRate = d.fxRate ?? 1;
-        this.currencyName = d.currencyName ?? '';
-        this.isOverseas = d.isOverseas ?? false;
-        this.incoterms = d.incoterms ?? '';
         this.status = d.status ?? 'Draft';
-        this.isPosted = d.isPosted ?? false;
-        this.lines = (d.lines ?? d.items ?? []).map((l: any) => this.mapLine(l));
+
+        // LinesJson is stored as a JSON string in the DB
+        const rawLines = d.linesJson ?? d.LinesJson ?? d.lines ?? '[]';
+        const parsedLines: any[] = typeof rawLines === 'string'
+          ? JSON.parse(rawLines || '[]')
+          : (Array.isArray(rawLines) ? rawLines : []);
+        this.lines = parsedLines.map((l: any) => this.mapLine(l));
+        if (!this.lines.length) this.addLine();
         this.loading = false;
       },
       error: () => { this.loading = false; }
@@ -118,7 +123,7 @@ export class DebitNoteFormComponent implements OnInit {
       remarks: l.remarks ?? '',
       lineAmount,
       taxAmt: l.taxAmt ?? 0,
-      lineTotal: lineAmount + (l.taxAmt ?? 0)
+      lineTotal: l.lineTotal ?? (lineAmount + (l.taxAmt ?? 0))
     };
   }
 
@@ -127,19 +132,27 @@ export class DebitNoteFormComponent implements OnInit {
     this.svc.getDebitNoteSourceByPin(this.pinId).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
-        this.supplierName = d.supplierName ?? '';
+        this.supplierName = d.name ?? d.supplierName ?? '';
         this.supplierId = d.supplierId ?? null;
         this.fxRate = d.fxRate ?? 1;
         this.currencyName = d.currencyName ?? '';
-        this.isOverseas = d.isOverseas ?? false;
-        this.incoterms = d.incoterms ?? '';
-        this.lines = (d.lines ?? []).map((l: any) => this.mapLine({ ...l, varianceQty: 0 }));
+
+        // Source lines come from the PIN's LinesJson
+        const rawLines = d.linesJson ?? d.LinesJson ?? d.lines ?? '[]';
+        const parsedLines: any[] = typeof rawLines === 'string'
+          ? JSON.parse(rawLines || '[]')
+          : (Array.isArray(rawLines) ? rawLines : []);
+        this.lines = parsedLines.map((l: any) => this.mapLine({ ...l, varianceQty: 0 }));
+        if (!this.lines.length) this.addLine();
       }
     });
   }
 
   addLine(): void {
-    this.lines.push({ itemId: null, itemName: '', totalQty: null, varianceQty: null, unitPrice: null, remarks: '', lineAmount: 0, taxAmt: 0, lineTotal: 0 });
+    this.lines.push({
+      itemId: null, itemName: '', totalQty: null, varianceQty: null,
+      unitPrice: null, remarks: '', lineAmount: 0, taxAmt: 0, lineTotal: 0
+    });
   }
 
   removeLine(i: number): void { this.lines.splice(i, 1); }
@@ -156,18 +169,32 @@ export class DebitNoteFormComponent implements OnInit {
   submit(): void {
     this.saving = true;
     this.error = '';
+
+    const linesData = this.lines.map(l => ({
+      itemId: l.itemId,
+      itemName: l.itemName,
+      totalQty: l.totalQty,
+      varianceQty: l.varianceQty,
+      unitPrice: l.unitPrice,
+      remarks: l.remarks,
+      lineAmount: l.lineAmount,
+      taxAmt: l.taxAmt,
+      lineTotal: l.lineTotal
+    }));
+
     const payload = {
-      pinId: this.pinId,
-      supplierId: this.supplierId,
-      referenceNo: this.referenceNo,
-      reason: this.reason,
-      noteDate: this.noteDate,
-      fxRate: this.fxRate,
-      amount: this.totalAmount,
-      companyId: this.companyId,
-      createdBy: this.loginUserId,
-      updatedBy: this.loginUserId,
-      lines: this.lines
+      DebitNoteNo: this.debitNoteNo || 'DN-PENDING',
+      PinId: this.pinId,
+      SupplierId: this.supplierId,
+      GrnId: null,
+      ReferenceNo: this.referenceNo,
+      Reason: this.reason,
+      NoteDate: this.noteDate,
+      Amount: this.totalAmount,
+      LinesJson: JSON.stringify(linesData),
+      Status: this.status,
+      CreatedBy: this.loginUserId ?? 0,
+      UpdatedBy: this.loginUserId ?? 0
     };
 
     const obs$ = this.isEdit
@@ -180,6 +207,29 @@ export class DebitNoteFormComponent implements OnInit {
     });
   }
 
+  viewLineDetail(line: DNLine): void {
+    this.showDetailSwal(line.itemName || 'Line Detail', [
+      ['Item Name', line.itemName],
+      ['Total Qty', line.totalQty],
+      ['Variance Qty', line.varianceQty],
+      ['Unit Price', line.unitPrice != null ? Number(line.unitPrice).toFixed(2) : null],
+      ['Line Amount', line.lineAmount != null ? Number(line.lineAmount).toFixed(2) : null],
+      ['Tax Amount', line.taxAmt != null ? Number(line.taxAmt).toFixed(2) : null],
+      ['Line Total', line.lineTotal != null ? Number(line.lineTotal).toFixed(2) : null],
+      ['Remarks', line.remarks],
+    ]);
+  }
+
+  private showDetailSwal(title: string, rows: [string, any][]): void {
+    const html = rows.filter(([, v]) => v != null && v !== '')
+      .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
+    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
+  }
+
   back(): void { this.router.navigate(['/app/purchase/debit-note']); }
-  get title(): string { return this.isEdit ? 'Edit Debit Note' : 'New Debit Note'; }
+  get title(): string {
+    return this.isEdit
+      ? `Edit Debit Note${this.debitNoteNo ? ' – ' + this.debitNoteNo : ''}`
+      : 'New Debit Note';
+  }
 }

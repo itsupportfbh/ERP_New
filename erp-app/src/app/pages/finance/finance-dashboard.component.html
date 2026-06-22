@@ -1,0 +1,62 @@
+<div class="fin-dash">
+
+  <!-- Page Head -->
+  <div class="page-head">
+    <div class="page-head-left">
+      <h2>Finance</h2>
+      <p>General Ledger &middot; Accounts Payable &middot; Accounts Receivable &middot; GST &middot; Reports &amp; Close</p>
+    </div>
+  </div>
+
+  <!-- Alert -->
+  <div class="fin-alert" *ngIf="error">
+    <span class="alert-icon">&#9432;</span> {{ error }}
+  </div>
+
+  <!-- KPI Grid -->
+  <div class="kpi-grid">
+    <article class="kpi-card kpi-c1" *ngIf="kpis[0]">
+      <div class="kpi-body">
+        <span class="kpi-label">{{ kpis[0].label }}</span>
+        <strong class="kpi-val">{{ value(kpis[0].key) | number:'1.2-2' }}</strong>
+      </div>
+      <div class="kpi-icon kpi-icon-cash">&#9654;</div>
+    </article>
+    <article class="kpi-card kpi-c2" *ngIf="kpis[1]">
+      <div class="kpi-body">
+        <span class="kpi-label">{{ kpis[1].label }}</span>
+        <strong class="kpi-val">{{ value(kpis[1].key) | number:'1.2-2' }}</strong>
+      </div>
+      <div class="kpi-icon kpi-icon-ap">&#9660;</div>
+    </article>
+    <article class="kpi-card kpi-c3" *ngIf="kpis[2]">
+      <div class="kpi-body">
+        <span class="kpi-label">{{ kpis[2].label }}</span>
+        <strong class="kpi-val">{{ value(kpis[2].key) | number:'1.2-2' }}</strong>
+      </div>
+      <div class="kpi-icon kpi-icon-ar">&#9650;</div>
+    </article>
+    <article class="kpi-card kpi-c4" *ngIf="kpis[3]">
+      <div class="kpi-body">
+        <span class="kpi-label">{{ kpis[3].label }}</span>
+        <strong class="kpi-val">{{ value(kpis[3].key) | number:'1.2-2' }}</strong>
+      </div>
+      <div class="kpi-icon kpi-icon-pl">&#9670;</div>
+    </article>
+  </div>
+
+  <!-- Module Navigation -->
+  <div class="mod-section">
+    <div class="mod-head">
+      <h3>Finance Modules</h3>
+      <span class="mod-count">{{ pages.length }} modules</span>
+    </div>
+    <div class="module-grid">
+      <button class="module-tile" type="button" *ngFor="let p of pages" (click)="open(p.key)">
+        <strong class="tile-title">{{ p.title }}</strong>
+        <span class="tile-sub">{{ p.subtitle }}</span>
+      </button>
+    </div>
+  </div>
+
+</div>

@@ -13,7 +13,9 @@ export interface RowAction {
   key: string;
   label: string;
   btnClass?: string;
+  icon?: string;
 }
+
 
 export interface SortState { key: string; dir: 'asc' | 'desc'; }
 
@@ -36,15 +38,58 @@ export class DataTableComponent implements OnChanges {
   @Output() rowClick = new EventEmitter<any>();
   @Output() selectionChange = new EventEmitter<any[]>();
   @Output() actionClick = new EventEmitter<{ action: string; row: any }>();
+  @Input() rowActionFilter: ((action: string, row: any) => boolean) | null = null;
+  @Input() eyeFirst = false;
+  @Input() pageSize = 10;
+  @Input() showControls = true;
 
   sort: SortState = { key: '', dir: 'asc' };
   selectedRows = new Set<any>();
+  currentPage = 1;
+  pageSizeInternal = 10;
+  searchQuery = '';
+  pageSizeOptions = [5, 10, 25, 50, 100];
 
-  ngOnChanges(): void { this.selectedRows.clear(); }
+  ngOnChanges(): void {
+    this.selectedRows.clear();
+    this.currentPage = 1;
+    this.pageSizeInternal = this.pageSize;
+  }
+
+  get filteredData(): any[] {
+    if (!this.searchQuery.trim()) return this.data;
+    const q = this.searchQuery.toLowerCase();
+    return this.data.filter(row =>
+      this.columns.some(col => {
+        const val = this.getCellValue(row, col);
+        return val != null && String(val).toLowerCase().includes(q);
+      })
+    );
+  }
+
+  get totalPages(): number { return Math.ceil(this.filteredData.length / this.pageSizeInternal) || 1; }
+
+  get pagedData(): any[] {
+    const start = (this.currentPage - 1) * this.pageSizeInternal;
+    return this.filteredData.slice(start, start + this.pageSizeInternal);
+  }
+
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    for (let i = Math.max(1, this.currentPage - 2); i <= Math.min(this.totalPages, this.currentPage + 2); i++) pages.push(i);
+    return pages;
+  }
+
+  get showingFrom(): number { return this.filteredData.length ? (this.currentPage - 1) * this.pageSizeInternal + 1 : 0; }
+  get showingTo(): number { return Math.min(this.currentPage * this.pageSizeInternal, this.filteredData.length); }
+
+  onPageChange(p: number): void { if (p >= 1 && p <= this.totalPages) this.currentPage = p; }
+  onPageSizeChange(e: Event): void { this.pageSizeInternal = Number((e.target as HTMLSelectElement).value); this.currentPage = 1; }
+  onSearch(e: Event): void { this.searchQuery = (e.target as HTMLInputElement).value; this.currentPage = 1; }
 
   /** Total visible columns including optional checkbox and action columns */
-  get totalCols(): number {
-    return this.columns.length + (this.selectable ? 1 : 0) + (this.rowActions.length ? 1 : 0);
+ get totalCols(): number {
+    return this.columns.length + (this.selectable ? 1 : 0) + (this.rowActions.length ? 1 : 0) + (this.eyeFirst ? 1 : 0);
   }
 
   onAction(key: string, row: any, e: Event): void {
@@ -131,5 +176,37 @@ export class DataTableComponent implements OnChanges {
   sortIcon(col: TableColumn): string {
     if (this.sort.key !== col.key) return '⇅';
     return this.sort.dir === 'asc' ? '↑' : '↓';
+  }
+   displayValue(row: any, col: TableColumn): any {
+    const v = this.getCellValue(row, col);
+    if (col.type === 'date' && v) {
+      try {
+        const d = new Date(v);
+        if (!isNaN(d.getTime())) {
+          const day = String(d.getDate()).padStart(2, '0');
+          const mo  = String(d.getMonth() + 1).padStart(2, '0');
+          return `${day}-${mo}-${d.getFullYear()}`;
+        }
+      } catch {}
+    }
+    return v;
+  }
+
+  iconPath(icon: string): string {
+    const p: Record<string, string> = {
+      view:    'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      edit:    'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+      delete:  'M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6',
+      email:   'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6',
+      print:   'M6 9V2h12v7 M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2 M6 14h12v8H6z',
+      qr:      'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M17 17h4v4h-4z',
+      approve:  'M20 6L9 17l-5-5',
+      reject:   'M18 6L6 18 M6 6l12 12',
+      send:     'M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z',
+      convert:  'M5 12h14 M12 5l7 7-7 7',
+      match:    'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+      post:     'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12',
+    };
+    return p[icon] ?? '';
   }
 }

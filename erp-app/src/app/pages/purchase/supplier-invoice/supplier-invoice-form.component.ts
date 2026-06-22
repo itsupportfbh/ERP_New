@@ -1,17 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import Swal from 'sweetalert2';
 
 type TaxMode = 'Exclusive' | 'Inclusive' | 'Zero';
+
+interface GrnHeader {
+  id: number;
+  grnNo: string;
+  poId: number;
+  poNo: string;
+  supplierId: number;
+  supplierName: string;
+  currencyId: number | null;
+  currencyName: string;
+  fxRate: number;
+  grnJson: any;
+  poLines: any;
+}
 
 interface PinLine {
   itemId: number | null;
   itemName: string;
   locationId: number | null;
-  grnQty: number | null;
-  qty: number | null;
-  unitPrice: number | null;
-  discountPct: number | null;
+  poQty: number;
+  grnQty: number;
+  qty: number;
+  unitPrice: number;
+  discountPct: number;
   taxMode: TaxMode;
   lineTotal: number;
   taxAmt: number;
@@ -19,6 +35,7 @@ interface PinLine {
   budgetLineId: number | null;
   dcNoteNo: string;
   remarks: string;
+  matchStatus: 'OK' | 'Mismatch' | '';
 }
 
 @Component({
@@ -34,8 +51,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
   saving = false;
   posting = false;
   error = '';
-  threeWayMatch: any[] = [];
-  showThreeWay = false;
 
   // Header
   invoiceNo = '';
@@ -43,34 +58,35 @@ export class SupplierInvoiceFormComponent implements OnInit {
   supplierId: number | null = null;
   supplierName = '';
   currencyId: number | null = null;
-  fxRate: number = 1;
-  taxPct: number | null = null;
-  isOverseas = false;
-  incotermsId: number | null = null;
+  currencyName = '';
+  fxRate = 1;
+  taxRate = 0;
   isPartial = false;
   isGlPosted = false;
   status = 'Draft';
+
+  // GRN combobox state
+  grnList: GrnHeader[] = [];
+  grnFiltered: GrnHeader[] = [];
+  grnOpen = false;
+  grnSearch = '';
   selectedGrnIds: number[] = [];
-  combineMode = false;
+  selectedGrnNos: string[] = [];
 
   // Lines
   lines: PinLine[] = [];
 
   // Dropdowns
-  grnOptions: any[] = [];
-  currencyOptions: any[] = [];
-  incotermOptions: any[] = [];
-  locationOptions: any[] = [];
   ledgerOptions: any[] = [];
+  locationOptions: any[] = [];
 
   taxModeOptions = [
     { label: 'Exclusive', value: 'Exclusive' },
     { label: 'Inclusive', value: 'Inclusive' },
-    { label: 'Zero', value: 'Zero' }
+    { label: 'Zero',      value: 'Zero' }
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
-  companyId = Number(localStorage.getItem('companyId')) || null;
 
   constructor(
     private svc: PurchaseService,
@@ -82,26 +98,246 @@ export class SupplierInvoiceFormComponent implements OnInit {
     const paramId = this.route.snapshot.paramMap.get('id');
     this.isEdit = !!paramId && paramId !== 'new';
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
-    else { this.loadGrnOptions(); }
+    else { this.loadGrnList(); }
     this.loadLookups();
   }
 
-  loadLookups(): void {
-    this.svc.getCurrencies().subscribe(r =>
-      this.currencyOptions = this.svc.unwrap(r).map((c: any) => ({ label: `${c.currencyCode} - ${c.currencyName ?? c.name}`, value: c.id })));
-    this.svc.getIncoterms().subscribe(r =>
-      this.incotermOptions = this.svc.unwrap(r).map((i: any) => ({ label: i.incotermsName ?? i.name, value: i.id })));
-    this.svc.getLocations().subscribe(r =>
-      this.locationOptions = this.svc.unwrap(r).map((l: any) => ({ label: l.locationName ?? l.name, value: l.id })));
-    this.svc.getChartOfAccounts().subscribe(r =>
-      this.ledgerOptions = this.svc.unwrap(r).map((c: any) => ({ label: `${c.accountCode ?? ''} ${c.accountName ?? c.name}`, value: c.id })));
+  @HostListener('document:click', ['$event'])
+  onDocClick(ev: MouseEvent): void {
+    if (!(ev.target as HTMLElement).closest('.grn-combobox')) {
+      this.grnOpen = false;
+    }
   }
 
-  loadGrnOptions(): void {
-    this.svc.getAvailableGRNsForPin().subscribe(r => {
-      this.grnOptions = this.svc.unwrap(r).map((g: any) => ({ label: `${g.grnNumber} - ${g.supplierName ?? ''}`, value: g.id, raw: g }));
+  loadLookups(): void {
+    this.svc.getLocations().subscribe(r =>
+      this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
+        label: l.locationName ?? l.name, value: l.id
+      })));
+    this.svc.getChartOfAccounts().subscribe(r =>
+      this.ledgerOptions = this.svc.unwrap(r).map((c: any) => ({
+        label: `${c.headCode ?? ''} ${c.headName ?? ''}`.trim(), value: c.id
+      })));
+  }
+
+  loadGrnList(): void {
+    this.svc.getAvailableGRNsForPin().subscribe({
+      next: r => {
+        this.grnList = this.svc.unwrap(r).map((g: any) => this.mapGrn(g));
+        this.grnFiltered = [...this.grnList];
+      },
+      error: () => {}
     });
   }
+
+  loadGrnListForEdit(): void {
+    this.svc.getAvailableGRNsForPinEdit(this.id!).subscribe({
+      next: r => {
+        this.grnList = this.svc.unwrap(r).map((g: any) => this.mapGrn(g));
+        this.grnFiltered = [...this.grnList];
+      },
+      error: () => {}
+    });
+  }
+
+  private mapGrn(g: any): GrnHeader {
+    return {
+      id: Number(g.id ?? g.ID ?? 0),
+      grnNo: g.grnNo ?? g.GrnNo ?? g.GRNNo ?? '',
+      poId: Number(g.poid ?? g.poId ?? g.POID ?? g.PoId ?? 0),
+      poNo: String(g.poNo ?? g.PoNo ?? g.PONo ?? g.poid ?? g.POID ?? ''),
+      supplierId: Number(g.supplierId ?? g.SupplierId ?? 0),
+      supplierName: g.supplierName ?? g.SupplierName ?? '',
+      currencyId: g.currencyId ?? g.CurrencyId ?? null,
+      currencyName: g.currencyName ?? g.CurrencyName ?? '',
+      fxRate: Number(g.fxRate ?? g.FxRate ?? 1),
+      grnJson: g.gRNJson ?? g.GRNJson ?? g.grnJson ?? g.GrnJson,
+      poLines: g.poLines ?? g.PoLines ?? g.poLinesJson ?? g.PoLinesJson
+    };
+  }
+
+  onGrnFocus(): void {
+    if (this.isGlPosted) return;
+    this.grnFiltered = [...this.grnList];
+    this.grnOpen = true;
+  }
+
+  onGrnSearch(e: any): void {
+    if (this.isGlPosted) return;
+    const q = (e?.target?.value ?? '').toLowerCase();
+    this.grnSearch = q;
+    this.grnFiltered = this.grnList.filter(g =>
+      g.grnNo.toLowerCase().includes(q) ||
+      g.poNo.toString().toLowerCase().includes(q) ||
+      g.supplierName.toLowerCase().includes(q)
+    );
+    this.grnOpen = true;
+  }
+
+  isGrnSelected(id: number): boolean {
+    return this.selectedGrnIds.includes(Number(id));
+  }
+
+  toggleGrn(g: GrnHeader): void {
+    if (this.isGlPosted) return;
+    const prev = [...this.selectedGrnIds];
+    const gid = Number(g.id);
+    const alreadySelected = prev.includes(gid);
+
+    let newIds: number[];
+    if (alreadySelected) {
+      newIds = prev.filter(x => x !== gid);
+    } else {
+      // Validate same supplier
+      const currentSelected = this.grnList.filter(x => prev.includes(Number(x.id)));
+      if (currentSelected.length > 0) {
+        const existingSupplier = currentSelected[0].supplierId;
+        if (existingSupplier && g.supplierId && existingSupplier !== g.supplierId) {
+          Swal.fire('Invalid', 'Multiple supplier GRNs cannot be combined into one invoice.', 'warning');
+          return;
+        }
+        // Validate same PO (3-way match requires single PO)
+        const existingPoId = currentSelected[0].poId;
+        if (existingPoId && g.poId && existingPoId !== g.poId) {
+          Swal.fire('Invalid', 'GRNs from different POs cannot be combined into one invoice (3-way match).', 'warning');
+          return;
+        }
+      }
+      newIds = [...prev, gid];
+    }
+
+    this.selectedGrnIds = newIds;
+    const selectedGrns = this.grnList.filter(x => newIds.includes(Number(x.id)));
+    this.selectedGrnNos = selectedGrns.map(x => x.grnNo);
+
+    if (selectedGrns.length > 0) {
+      this.supplierName = selectedGrns[0].supplierName;
+      this.supplierId = selectedGrns[0].supplierId;
+      this.currencyId = selectedGrns[0].currencyId;
+      this.currencyName = selectedGrns[0].currencyName;
+      this.fxRate = selectedGrns[0].fxRate;
+    } else {
+      this.supplierName = '';
+      this.supplierId = null;
+      this.currencyId = null;
+      this.currencyName = '';
+      this.fxRate = 1;
+    }
+
+    this.grnSearch = selectedGrns.map(x => x.grnNo).join(', ');
+    this.loadLinesFromGrns(selectedGrns);
+  }
+
+  removeGrnByNo(grnNo: string): void {
+    if (this.isGlPosted) return;
+    const toRemove = this.grnList.find(x => x.grnNo === grnNo);
+    if (!toRemove) return;
+    const newIds = this.selectedGrnIds.filter(x => x !== Number(toRemove.id));
+    this.selectedGrnIds = newIds;
+    const selectedGrns = this.grnList.filter(x => newIds.includes(Number(x.id)));
+    this.selectedGrnNos = selectedGrns.map(x => x.grnNo);
+    this.grnSearch = selectedGrns.map(x => x.grnNo).join(', ');
+    if (selectedGrns.length > 0) {
+      this.supplierName = selectedGrns[0].supplierName;
+      this.supplierId = selectedGrns[0].supplierId;
+    } else {
+      this.supplierName = '';
+      this.supplierId = null;
+    }
+    this.loadLinesFromGrns(selectedGrns);
+  }
+
+  private loadLinesFromGrns(grns: GrnHeader[]): void {
+    if (!grns.length) { this.lines = []; return; }
+
+    const merged: PinLine[] = [];
+
+    grns.forEach(g => {
+      const grnItems = this.safeJsonArray(g.grnJson);
+      const poItems = this.safeJsonArray(g.poLines);
+
+      grnItems.forEach((x: any) => {
+        const itemId = x.itemId ?? null;
+        const itemName = x.itemName ?? x.itemSearch ?? x.item ?? '';
+        const grnQty = Number(x.qtyReceived ?? x.qty ?? 0);
+        const unitPrice = Number(x.unitPrice ?? x.price ?? 0);
+
+        // Find matching PO line for PO qty
+        const poLine = poItems.find((p: any) =>
+          (itemId && (p.itemId === itemId)) ||
+          (x.itemCode && p.itemCode === x.itemCode)
+        );
+        const poQty = poLine ? Number(poLine.qty ?? poLine.quantity ?? 0) : 0;
+
+        // Group same item
+        const existing = merged.find(pl =>
+          pl.itemId === itemId && pl.unitPrice === unitPrice
+        );
+        if (existing) {
+          existing.grnQty += grnQty;
+          existing.qty += grnQty;
+          existing.poQty += poQty;
+          this.recalcLine(existing);
+          existing.matchStatus = this.calcMatchStatus(existing.poQty, existing.grnQty, existing.qty);
+          return;
+        }
+
+        const line: PinLine = {
+          itemId,
+          itemName,
+          locationId: null,
+          poQty,
+          grnQty,
+          qty: grnQty,
+          unitPrice,
+          discountPct: 0,
+          taxMode: 'Exclusive',
+          lineTotal: 0,
+          taxAmt: 0,
+          lineGrandTotal: 0,
+          budgetLineId: null,
+          dcNoteNo: '',
+          remarks: '',
+          matchStatus: ''
+        };
+        this.recalcLine(line);
+        line.matchStatus = this.calcMatchStatus(poQty, grnQty, grnQty);
+        merged.push(line);
+      });
+    });
+
+    this.lines = merged;
+  }
+
+  private calcMatchStatus(poQty: number, grnQty: number, invQty: number): 'OK' | 'Mismatch' | '' {
+    if (!poQty && !grnQty) return '';
+    if (poQty === grnQty && grnQty === invQty) return 'OK';
+    return 'Mismatch';
+  }
+
+  recalcLine(line: PinLine): void {
+    const base = (line.qty ?? 0) * (line.unitPrice ?? 0) * (1 - (line.discountPct ?? 0) / 100);
+    line.lineTotal = +base.toFixed(2);
+    if (line.taxMode === 'Exclusive') {
+      line.taxAmt = +(base * (this.taxRate / 100)).toFixed(2);
+      line.lineGrandTotal = +(base + line.taxAmt).toFixed(2);
+    } else if (line.taxMode === 'Inclusive') {
+      line.taxAmt = +(base - base / (1 + this.taxRate / 100)).toFixed(2);
+      line.lineGrandTotal = +base.toFixed(2);
+    } else {
+      line.taxAmt = 0;
+      line.lineGrandTotal = +base.toFixed(2);
+    }
+    line.matchStatus = this.calcMatchStatus(line.poQty, line.grnQty, line.qty);
+  }
+
+  recalcLines(): void { this.lines.forEach(l => this.recalcLine(l)); }
+
+  get subTotal(): number { return +this.lines.reduce((s, l) => s + l.lineTotal, 0).toFixed(2); }
+  get totalTax(): number { return +this.lines.reduce((s, l) => s + l.taxAmt, 0).toFixed(2); }
+  get grandTotal(): number { return +this.lines.reduce((s, l) => s + l.lineGrandTotal, 0).toFixed(2); }
+  get allMatchOk(): boolean { return this.lines.length > 0 && this.lines.every(l => l.matchStatus === 'OK' || l.matchStatus === ''); }
+  get mismatchCount(): number { return this.lines.filter(l => l.matchStatus === 'Mismatch').length; }
 
   loadForEdit(): void {
     this.loading = true;
@@ -114,133 +350,142 @@ export class SupplierInvoiceFormComponent implements OnInit {
         this.supplierName = d.supplierName ?? '';
         this.currencyId = d.currencyId ?? null;
         this.fxRate = d.fxRate ?? 1;
-        this.taxPct = d.taxPct ?? null;
-        this.isOverseas = d.isOverseas ?? false;
-        this.incotermsId = d.incotermsId ?? null;
+        this.taxRate = d.taxRate ?? d.taxPct ?? 0;
         this.isPartial = d.isPartial ?? false;
-        this.isGlPosted = d.isGlPosted ?? false;
+        this.isGlPosted = d.isGlPosted ?? d.glPosted ?? false;
         this.status = d.status ?? 'Draft';
-        this.selectedGrnIds = d.grnIds ?? [];
-        this.lines = (d.lines ?? d.items ?? []).map((l: any) => this.mapLine(l));
+        this.selectedGrnIds = d.grnId ? [d.grnId] : (d.grnIds ?? []);
+        this.selectedGrnNos = (d.grnNos ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
+        this.grnSearch = this.selectedGrnNos.join(', ');
+
+        const rawLines = d.linesJson ?? d.LinesJson ?? d.lines ?? '[]';
+        const parsed: any[] = typeof rawLines === 'string' ? JSON.parse(rawLines || '[]') : (Array.isArray(rawLines) ? rawLines : []);
+        this.lines = parsed.map((l: any) => this.mapEditLine(l));
         this.loading = false;
-        // Load available GRNs for edit
-        this.svc.getAvailableGRNsForPinEdit(this.id!).subscribe(r => {
-          this.grnOptions = this.svc.unwrap(r).map((g: any) => ({ label: `${g.grnNumber} - ${g.supplierName ?? ''}`, value: g.id, raw: g }));
-        });
+        this.loadGrnListForEdit();
       },
       error: () => { this.loading = false; }
     });
   }
 
-  private mapLine(l: any): PinLine {
-    const qty = l.qty ?? l.quantity ?? 0;
-    const price = l.unitPrice ?? 0;
-    const disc = l.discountPct ?? 0;
-    const baseAmt = qty * price * (1 - disc / 100);
-    const taxAmt = l.taxMode === 'Exclusive' ? baseAmt * ((this.taxPct ?? 0) / 100)
-                 : l.taxMode === 'Inclusive' ? baseAmt - baseAmt / (1 + (this.taxPct ?? 0) / 100) : 0;
+  private mapEditLine(l: any): PinLine {
+    const qty = Number(l.qty ?? l.quantity ?? 0);
+    const price = Number(l.unitPrice ?? 0);
+    const disc = Number(l.discountPct ?? 0);
+    const base = qty * price * (1 - disc / 100);
+    const taxAmt = Number(l.taxAmt ?? 0);
+    const poQty = Number(l.poQty ?? 0);
+    const grnQty = Number(l.grnQty ?? qty);
     return {
       itemId: l.itemId ?? null,
-      itemName: l.itemName ?? '',
+      itemName: l.itemName ?? l.item ?? '',
       locationId: l.locationId ?? null,
-      grnQty: l.grnQty ?? null,
+      poQty,
+      grnQty,
       qty,
       unitPrice: price,
       discountPct: disc,
-      taxMode: l.taxMode ?? 'Exclusive',
-      lineTotal: baseAmt,
+      taxMode: (l.taxMode ?? 'Exclusive') as TaxMode,
+      lineTotal: Number(l.lineTotal ?? base),
       taxAmt,
-      lineGrandTotal: l.taxMode === 'Exclusive' ? baseAmt + taxAmt : baseAmt,
+      lineGrandTotal: Number(l.lineGrandTotal ?? (base + taxAmt)),
       budgetLineId: l.budgetLineId ?? null,
       dcNoteNo: l.dcNoteNo ?? '',
-      remarks: l.remarks ?? ''
+      remarks: l.remarks ?? '',
+      matchStatus: this.calcMatchStatus(poQty, grnQty, qty)
     };
   }
 
-  onGrnSelect(): void {
-    if (!this.selectedGrnIds.length) return;
-    const selected = this.grnOptions.filter(o => this.selectedGrnIds.includes(o.value));
-    if (!selected.length) return;
-    const firstGrn = selected[0].raw;
-    this.supplierName = firstGrn.supplierName ?? '';
-    this.supplierId = firstGrn.supplierId ?? null;
-    this.currencyId = firstGrn.currencyId ?? null;
-    this.fxRate = firstGrn.fxRate ?? 1;
-    this.isOverseas = firstGrn.isOverseas ?? false;
-    // Build lines from GRN lines
-    this.lines = [];
-    selected.forEach(grn => {
-      (grn.raw.lines ?? grn.raw.items ?? []).forEach((l: any) => {
-        const existing = this.lines.find(pl => pl.itemId === l.itemId && pl.unitPrice === (l.unitPrice ?? 0));
-        if (existing && this.combineMode) {
-          existing.qty = (existing.qty ?? 0) + (l.qtyReceived ?? 0);
-          existing.grnQty = (existing.grnQty ?? 0) + (l.qtyReceived ?? 0);
-        } else {
-          this.lines.push(this.mapLine({ ...l, qty: l.qtyReceived, grnQty: l.qtyReceived, taxMode: 'Exclusive' }));
+  postToAP(): void {
+    if (!this.id) return;
+    const matchWarning = this.mismatchCount > 0
+      ? `<br><br><span style="color:#b91c1c;font-weight:600;">Warning: ${this.mismatchCount} line(s) have qty mismatch (PO/GRN/Invoice).</span>`
+      : '';
+    Swal.fire({
+      title: 'Post to A/P?',
+      html: `Post Supplier Invoice <b>${this.invoiceNo || ''}</b> to Accounts Payable?${matchWarning}`,
+      icon: this.mismatchCount > 0 ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Post to A/P',
+      confirmButtonColor: '#0e7490'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.posting = true;
+      this.svc.postPinToAP(this.id!).subscribe({
+        next: () => {
+          this.posting = false;
+          this.isGlPosted = true;
+          this.status = 'Posted';
+          Swal.fire('Posted!', 'Supplier invoice posted to Accounts Payable.', 'success');
+        },
+        error: err => {
+          this.posting = false;
+          Swal.fire('Error', err?.error?.message ?? 'GL posting failed.', 'error');
         }
       });
-    });
-    this.recalcLines();
-  }
-
-  recalcLine(line: PinLine): void {
-    const base = (line.qty ?? 0) * (line.unitPrice ?? 0) * (1 - (line.discountPct ?? 0) / 100);
-    line.lineTotal = base;
-    if (line.taxMode === 'Exclusive') {
-      line.taxAmt = base * ((this.taxPct ?? 0) / 100);
-      line.lineGrandTotal = base + line.taxAmt;
-    } else if (line.taxMode === 'Inclusive') {
-      line.taxAmt = base - base / (1 + (this.taxPct ?? 0) / 100);
-      line.lineGrandTotal = base;
-    } else {
-      line.taxAmt = 0;
-      line.lineGrandTotal = base;
-    }
-  }
-
-  recalcLines(): void { this.lines.forEach(l => this.recalcLine(l)); }
-
-  get subTotal(): number { return this.lines.reduce((s, l) => s + l.lineTotal, 0); }
-  get totalTax(): number { return this.lines.reduce((s, l) => s + l.taxAmt, 0); }
-  get grandTotal(): number { return this.lines.reduce((s, l) => s + l.lineGrandTotal, 0); }
-
-  loadThreeWayMatch(): void {
-    if (!this.id) return;
-    this.svc.getThreeWayMatch(this.id).subscribe({
-      next: res => { this.threeWayMatch = this.svc.unwrap(res); this.showThreeWay = true; },
-      error: () => {}
-    });
-  }
-
-  postToAP(): void {
-    if (!this.id || !confirm('Post this invoice to A/P?')) return;
-    this.posting = true;
-    this.svc.postPinToAP(this.id).subscribe({
-      next: () => { this.posting = false; this.isGlPosted = true; this.status = 'Posted'; },
-      error: err => { this.posting = false; this.error = err?.error?.message ?? 'GL posting failed.'; }
     });
   }
 
   submit(draft = false): void {
+    if (!this.invoiceNo.trim()) {
+      Swal.fire('Required', 'Please enter Invoice No.', 'warning'); return;
+    }
+    if (!this.selectedGrnIds.length) {
+      Swal.fire('Required', 'Please select at least one GRN.', 'warning'); return;
+    }
     this.saving = true;
     this.error = '';
+    this.svc.checkPeriodLock(this.invoiceDate).subscribe({
+      next: (res: any) => {
+        const d = res?.data ?? res ?? {};
+        if (!draft && (d.isClosed || d.IsClosed || d.status === 'Closed')) {
+          this.saving = false;
+          this.error = `Accounting period for ${this.invoiceDate} is closed. Please contact Finance.`;
+          return;
+        }
+        this.doSubmit(draft);
+      },
+      error: () => this.doSubmit(draft)
+    });
+  }
+
+  private doSubmit(draft: boolean): void {
+    const linesData = this.lines.map(l => ({
+      itemId: l.itemId,
+      itemName: l.itemName,
+      locationId: l.locationId,
+      poQty: l.poQty,
+      grnQty: l.grnQty,
+      qty: l.qty,
+      unitPrice: l.unitPrice,
+      discountPct: l.discountPct,
+      taxMode: l.taxMode,
+      lineTotal: l.lineTotal,
+      taxAmt: l.taxAmt,
+      lineGrandTotal: l.lineGrandTotal,
+      budgetLineId: l.budgetLineId,
+      dcNoteNo: l.dcNoteNo,
+      remarks: l.remarks,
+      matchStatus: l.matchStatus
+    }));
+
     const payload = {
-      invoiceNo: this.invoiceNo,
-      invoiceDate: this.invoiceDate,
-      supplierId: this.supplierId,
-      currencyId: this.currencyId,
-      fxRate: this.fxRate,
-      taxPct: this.taxPct,
-      isOverseas: this.isOverseas,
-      incotermsId: this.incotermsId,
-      isPartial: this.isPartial,
-      status: draft ? 'Draft' : 'Posted',
-      grandTotal: this.grandTotal,
-      grnIds: this.selectedGrnIds,
-      companyId: this.companyId,
-      createdBy: this.loginUserId,
-      updatedBy: this.loginUserId,
-      lines: this.lines
+      InvoiceNo: this.invoiceNo,
+      InvoiceDate: this.invoiceDate,
+      SupplierId: this.supplierId,
+      CurrencyId: this.currencyId ?? 0,
+      FxRate: this.fxRate ?? 1,
+      TaxRate: this.taxRate,
+      Tax: this.totalTax,
+      Amount: this.grandTotal,
+      GrnNos: this.selectedGrnNos.join(','),
+      Status: draft ? 'Draft' : 'Pending',
+      LinesJson: JSON.stringify(linesData),
+      GrnId: this.selectedGrnIds[0] ?? null,
+      GrnIds: this.selectedGrnIds,
+      IsPartial: this.isPartial,
+      CreatedBy: this.loginUserId ?? 0,
+      UpdatedBy: this.loginUserId ?? 0
     };
 
     const obs$ = this.isEdit
@@ -248,12 +493,27 @@ export class SupplierInvoiceFormComponent implements OnInit {
       : this.svc.createSupplierInvoice(payload);
 
     obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
+      next: () => {
+        this.saving = false;
+        Swal.fire('Saved', draft ? 'Invoice saved as draft.' : 'Invoice saved successfully.', 'success')
+          .then(() => this.back());
+      },
       error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
     });
   }
 
   back(): void { this.router.navigate(['/app/purchase/supplier-invoice']); }
+
   get title(): string { return this.isEdit ? 'Edit Supplier Invoice' : 'New Supplier Invoice'; }
-  getLabel(opts: any[], val: any): string { return opts.find(o => o.value === val)?.label ?? '—'; }
+
+  private safeJsonArray(raw: any): any[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      const s = raw.trim();
+      if (!s) return [];
+      try { const p = JSON.parse(s); return Array.isArray(p) ? p : []; } catch { return []; }
+    }
+    return [];
+  }
 }

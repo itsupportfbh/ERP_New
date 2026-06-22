@@ -1,12 +1,317 @@
-<div class="list-page">
-  <div class="page-header">
-    <h2>Supplier Invoices (PIN)</h2>
-    <div class="header-actions">
-      <erp-input placeholder="Search invoice…" [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
-      <button class="btn btn-primary btn-sm" (click)="create()">+ New Invoice</button>
+<div class="si-page">
+
+  <!-- ── KPI Cards ────────────────────────────────── -->
+  <div class="si-kpi-row">
+    <div class="si-kpi-card">
+      <div class="si-kpi-lbl">Total Pending</div>
+      <div class="si-kpi-val warn">{{ totalPending }}</div>
+    </div>
+    <div class="si-kpi-card">
+      <div class="si-kpi-lbl">Auto-Matched</div>
+      <div class="si-kpi-val success">{{ autoMatched }}</div>
+    </div>
+    <div class="si-kpi-card">
+      <div class="si-kpi-lbl">Mismatched</div>
+      <div class="si-kpi-val danger">{{ mismatchCount }}</div>
+    </div>
+    <div class="si-kpi-card">
+      <div class="si-kpi-lbl">Awaiting Approval</div>
+      <div class="si-kpi-val primary">{{ awaitingApproval }}</div>
     </div>
   </div>
-  <div class="card table-card">
-    <erp-table [columns]="columns" [data]="filtered" [loading]="loading" (rowClick)="onRowClick($event)"></erp-table>
+
+  <!-- ── Card ─────────────────────────────────────── -->
+  <div class="si-card">
+
+    <!-- Header -->
+    <div class="si-card-head">
+      <div class="si-card-title-block">
+        <div class="si-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div>
+          <h2 class="si-card-title">Supplier Invoice List</h2>
+          <p class="si-card-sub">Manage and match supplier invoices</p>
+        </div>
+      </div>
+      <button class="si-add-btn" (click)="create()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add
+      </button>
+    </div>
+
+    <!-- Controls -->
+    <div class="si-controls">
+      <label class="si-show-lbl">
+        Show
+        <select class="si-show-sel" [(ngModel)]="pageSize" (ngModelChange)="currentPage=1">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+        entries
+      </label>
+      <div class="si-search-wrap">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;color:#9ca3af;flex-shrink:0;"><circle cx="7" cy="7" r="4"/><path d="m11 11 2.5 2.5"/></svg>
+        <input type="text" class="si-search-input" placeholder="Invoice No / Supplier / GRN..."
+          [(ngModel)]="search" (ngModelChange)="applyFilter()" />
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="si-table-wrap">
+      <div class="si-loading" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+      <table class="si-table" *ngIf="!loading">
+        <thead>
+          <tr>
+            <th style="width:40px;"></th>
+            <th>Inv No (Auto)</th>
+            <th>Sup. Inv. No</th>
+            <th>GRN</th>
+            <th>Inv Date</th>
+            <th class="r">Amount</th>
+            <th class="r">Base Amount</th>
+            <th>Type</th>
+            <th style="min-width:130px;">Status</th>
+            <th style="width:110px;">3-Way Match</th>
+            <th style="width:80px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of pagedRows">
+            <!-- Eye icon -->
+            <td>
+              <button class="si-eye-btn" (click)="openLinesModal(row)" title="View Lines">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+              </button>
+            </td>
+            <td><strong class="si-inv-no">{{ row.invoiceNo || '—' }}</strong></td>
+            <td>{{ row.supplierInvoiceNo || '—' }}</td>
+            <td class="si-grn-cell" [title]="row.grnNos">{{ row.grnNos || '—' }}</td>
+            <td>{{ row.invoiceDate | date:'dd-MM-yyyy' }}</td>
+            <td class="r">{{ row.amount | number:'1.2-2' }}</td>
+            <td class="r">{{ row.baseAmount | number:'1.2-2' }}</td>
+            <td>
+              <span class="si-type-badge" [class.overseas]="row.isOverseas">
+                {{ row.isOverseas ? 'Overseas' : 'Local' }}
+              </span>
+            </td>
+            <td>
+              <span class="si-status-pill"
+                [class.posted]="isPosted(row)"
+                [class.pending]="!isPosted(row) && row.numStatus === 1"
+                [class.approved]="!isPosted(row) && row.numStatus === 2"
+                [class.rejected]="row.numStatus === 3"
+                [class.draft]="!isPosted(row) && row.numStatus === 0">
+                {{ row.statusLabel }}
+              </span>
+            </td>
+            <td>
+              <button class="si-match-btn"
+                [class.posted]="isPosted(row)"
+                (click)="openMatchModal(row)"
+                [title]="isPosted(row) ? 'Already Posted to A/P — view only' : 'View 3-Way Match'">
+                {{ isPosted(row) ? '&#10003; Posted' : '3-Way Match' }}
+              </button>
+            </td>
+            <td>
+              <div class="si-actions">
+                <button class="si-act-btn edit" *ngIf="!isPosted(row)" (click)="edit(row)" title="Edit">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg>
+                </button>
+                <button class="si-act-btn delete" *ngIf="!isPosted(row)" (click)="delete(row)" title="Delete">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3,4 13,4"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="10" rx="1"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!rows.length && !loading">
+            <td colspan="11" class="si-empty">No supplier invoices found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="si-pager" *ngIf="totalPages > 1">
+      <span class="si-pager-info">
+        Showing {{ (currentPage-1)*pageSize+1 }}–{{ currentPage*pageSize < rows.length ? currentPage*pageSize : rows.length }} of {{ rows.length }} entries
+      </span>
+      <div class="si-pager-btns">
+        <button class="si-pg-btn" [disabled]="currentPage===1" (click)="onPageChange(currentPage-1)">&#8249;</button>
+        <button *ngFor="let p of pageNumbers" class="si-pg-btn" [class.active]="p===currentPage" (click)="onPageChange(p)">{{ p }}</button>
+        <button class="si-pg-btn" [disabled]="currentPage===totalPages" (click)="onPageChange(currentPage+1)">&#8250;</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ LINES MODAL ══════════════ -->
+<div *ngIf="showLinesModal" (click)="closeLinesModal()"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+    style="width:820px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--primary,#0e4a60);border-bottom:1px solid #eef2f7;">
+      <div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Invoice Lines</h3>
+        <p style="margin:2px 0 0;font-size:11px;color:rgba(255,255,255,.75);">{{ modalInvoiceNo }} · {{ modalSupplier }}</p>
+      </div>
+      <button (click)="closeLinesModal()" style="border:0;background:rgba(255,255,255,.15);color:#fff;width:28px;height:28px;border-radius:50%;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
+    </div>
+    <div style="padding:14px 20px;">
+      <div style="max-height:55vh;overflow:auto;border:1px solid #eef2f7;border-radius:10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;color:#111827;">
+          <thead>
+            <tr style="background:var(--primary,#0e4a60);color:#fff;position:sticky;top:0;">
+              <th style="padding:8px 10px;text-align:left;">#</th>
+              <th style="padding:8px 10px;text-align:left;">Item</th>
+              <th style="padding:8px 10px;text-align:right;">Qty</th>
+              <th style="padding:8px 10px;text-align:right;">Unit Price</th>
+              <th style="padding:8px 10px;text-align:right;">Disc%</th>
+              <th style="padding:8px 10px;text-align:right;">Tax Amt</th>
+              <th style="padding:8px 10px;text-align:right;">Line Total</th>
+              <th style="padding:8px 10px;text-align:center;">Match</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of modalLines; let i = index"
+              [style.background]="i%2===0?'#fcfdff':'#fff'" style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:8px 10px;color:#9ca3af;">{{ i+1 }}</td>
+              <td style="padding:8px 10px;font-weight:600;">{{ l.item }}</td>
+              <td style="padding:8px 10px;text-align:right;">{{ l.qty }}</td>
+              <td style="padding:8px 10px;text-align:right;">{{ l.unitPrice | number:'1.2-2' }}</td>
+              <td style="padding:8px 10px;text-align:right;">{{ l.discountPct || '—' }}</td>
+              <td style="padding:8px 10px;text-align:right;">{{ l.taxAmt | number:'1.2-2' }}</td>
+              <td style="padding:8px 10px;text-align:right;font-weight:700;">{{ l.lineGrandTotal | number:'1.2-2' }}</td>
+              <td style="padding:8px 10px;text-align:center;">
+                <span *ngIf="l.matchStatus==='OK'" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(72,199,142,0.12);color:#1a7a4a;">&#10003; OK</span>
+                <span *ngIf="l.matchStatus==='Mismatch'" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,0.1);color:#b91c1c;">&#9651; Mismatch</span>
+              </td>
+            </tr>
+            <tr *ngIf="!modalLines.length">
+              <td colspan="8" style="padding:20px;text-align:center;color:#9ca3af;font-style:italic;">No lines found</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="modalLines.length">
+            <tr style="background:#f8fafc;font-weight:700;font-size:12px;">
+              <td colspan="2" style="padding:7px 10px;">Total</td>
+              <td style="padding:7px 10px;text-align:right;">{{ modalTotalQty }}</td>
+              <td colspan="3"></td>
+              <td style="padding:7px 10px;text-align:right;color:var(--primary,#0e4a60);">{{ modalTotalAmt | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding:10px 20px;border-top:1px solid #eef2f7;">
+      <button (click)="closeLinesModal()" style="background:#6b7280;color:#fff;border:0;border-radius:8px;padding:7px 18px;font-weight:600;cursor:pointer;font-size:12px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 3-WAY MATCH MODAL ══════════════ -->
+<div *ngIf="showMatchModal" (click)="closeMatchModal()"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()" class="match-modal-wrap">
+
+    <!-- Header -->
+    <div class="match-modal-head">
+      <div>
+        <h3 class="match-modal-title">3-Way Match</h3>
+        <p class="match-modal-sub" *ngIf="currentRow">{{ currentRow.invoiceNo }} · {{ currentRow.supplierName }}</p>
+      </div>
+      <button (click)="closeMatchModal()" class="match-close-btn">×</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="match-modal-body" *ngIf="matchLoading" style="text-align:center;padding:30px;color:#6b7280;">
+      <div class="spinner-sm" style="margin:0 auto 8px;"></div> Loading 3-way match data...
+    </div>
+
+    <!-- 3-way cards -->
+    <div class="match-modal-body" *ngIf="!matchLoading && threeWay">
+      <div class="match-cards">
+        <!-- PO Card -->
+        <div class="match-card po-card">
+          <div class="match-card-title">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 8h6M5 5h6M5 11h4"/></svg>
+            Purchase Order (PO)
+          </div>
+          <div class="match-row"><span class="mk">PO No</span><span class="mv">{{ threeWay.poNo || threeWay.pO_No || '—' }}</span></div>
+          <div class="match-row"><span class="mk">PO Qty</span><span class="mv">{{ threeWay.poQty ?? '—' }}</span></div>
+          <div class="match-row"><span class="mk">Unit Price</span><span class="mv">{{ (threeWay.poPrice || 0) | number:'1.2-2' }}</span></div>
+          <div class="match-row"><span class="mk">PO Total</span><span class="mv bold">{{ (threeWay.poTotal || 0) | number:'1.2-2' }}</span></div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="match-arrow">&#8594;</div>
+
+        <!-- GRN Card -->
+        <div class="match-card grn-card">
+          <div class="match-card-title">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12"/><path d="M6 3V1M10 3V1"/></svg>
+            Goods Receipt (GRN)
+          </div>
+          <div class="match-row"><span class="mk">GRN No</span><span class="mv">{{ threeWay.grnNo || '—' }}</span></div>
+          <div class="match-row"><span class="mk">Received Qty</span><span class="mv">{{ threeWay.grnReceivedQty ?? '—' }}</span></div>
+          <div class="match-row"><span class="mk">Pending</span><span class="mv">{{ (threeWay.poQty || 0) - (threeWay.grnReceivedQty || 0) }}</span></div>
+          <div class="match-row">
+            <span class="mk">Receipt</span>
+            <span class="mv" [style.color]="(threeWay.grnReceivedQty || 0) >= (threeWay.poQty || 0) ? '#1a7a4a' : '#d97706'">
+              {{ (threeWay.grnReceivedQty || 0) >= (threeWay.poQty || 0) ? 'Fully Received' : 'Partial' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="match-arrow">&#8594;</div>
+
+        <!-- PIN Card -->
+        <div class="match-card pin-card">
+          <div class="match-card-title">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8l2-12z"/></svg>
+            Supplier Invoice (PIN)
+          </div>
+          <div class="match-row"><span class="mk">Invoice Qty</span><span class="mv">{{ threeWay.pinQty ?? '—' }}</span></div>
+          <div class="match-row"><span class="mk">Total Invoiced</span><span class="mv">{{ threeWay.totalInvoicedQty ?? '—' }}</span></div>
+          <div class="match-row"><span class="mk">Invoice Total</span><span class="mv bold">{{ (threeWay.pinTotal || 0) | number:'1.2-2' }}</span></div>
+          <div class="match-row">
+            <span class="mk">Match</span>
+            <span class="mv" [style.color]="threeWay.pinMatch ? '#1a7a4a' : '#b91c1c'" style="font-weight:700;">
+              {{ threeWay.pinMatch ? '✓ Matched' : '⚠ Mismatch' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall status -->
+      <div class="match-status-bar" [class.ok]="threeWay.pinMatch" [class.mm]="!threeWay.pinMatch">
+        <span *ngIf="threeWay.pinMatch">&#10003; 3-Way Match OK — PO, GRN and Invoice quantities match</span>
+        <span *ngIf="!threeWay.pinMatch">&#9651; Mismatch — Invoice qty does not match GRN/PO. Review before posting.</span>
+      </div>
+    </div>
+
+    <div class="match-modal-body" *ngIf="!matchLoading && !threeWay" style="text-align:center;padding:24px;color:#9ca3af;">
+      No 3-way match data available.
+    </div>
+
+    <!-- Footer -->
+    <div class="match-modal-foot">
+      <button class="btn btn-outline btn-sm" (click)="closeMatchModal()">Close</button>
+      <span *ngIf="isPosted(currentRow)" class="posted-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="1.5,8 5.5,12 14.5,3"/></svg>
+        Already Posted to A/P
+      </span>
+      <button class="btn btn-primary btn-sm" *ngIf="!isPosted(currentRow)"
+        [disabled]="isPosting || !threeWay"
+        (click)="approveAndPostToAp()">
+        <span class="btn-spinner" *ngIf="isPosting"></span>
+        {{ isPosting ? 'Posting…' : '&#128229; Approve & Post to A/P' }}
+      </button>
+    </div>
+
   </div>
 </div>

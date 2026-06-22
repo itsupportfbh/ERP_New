@@ -21,9 +21,10 @@
               <span *ngSwitchCase="'partners'">&#128101;</span>
               <span *ngSwitchCase="'purchase'">&#128230;</span>
               <span *ngSwitchCase="'sales'">&#128722;</span>
-              <span *ngSwitchCase="'inventory'">&#128230;</span>
+              <span *ngSwitchCase="'inventory'">&#128091;</span>
               <span *ngSwitchCase="'components'">&#129513;</span>
               <span *ngSwitchCase="'master'">&#9881;</span>
+               <span *ngSwitchCase="'finance'">$</span>
               <span *ngSwitchDefault>&#9679;</span>
             </span>
             <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
@@ -136,6 +137,15 @@
                     <!-- Warehouse: warehouse building -->
                     <svg *ngSwitchCase="'m-warehouse'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8L8 2l7 6v6H1z"/><rect x="5" y="9" width="3" height="5"/><rect x="9" y="9" width="2" height="3"/></svg>
                     <span *ngSwitchDefault>&#9679;</span>
+                     <span *ngSwitchCase="'circle'">&#9675;</span>
+              <span *ngSwitchCase="'ledger'">&#9675;</span>
+              <span *ngSwitchCase="'journal'">&#9675;</span>
+              <span *ngSwitchCase="'ap'">&#9675;</span>
+              <span *ngSwitchCase="'ar'">&#9675;</span>
+              <span *ngSwitchCase="'tax'">&#9675;</span>
+              <span *ngSwitchCase="'close'">&#9675;</span>
+              <span *ngSwitchCase="'report'">&#9675;</span>
+
                   </span>
                   <span>{{ child.label }}</span>
                 </a>
@@ -155,6 +165,7 @@
               <span *ngSwitchCase="'inventory'">&#128230;</span>
               <span *ngSwitchCase="'components'">&#129513;</span>
               <span *ngSwitchCase="'master'">&#9881;</span>
+                <span *ngSwitchCase="'finance'">$</span>
               <span *ngSwitchDefault>&#9679;</span>
             </span>
             <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
@@ -169,7 +180,7 @@
   <div class="main-area">
     <!-- Topbar -->
     <header class="topbar">
-      <button class="toggle-btn" (click)="sidebar.toggleSidebar()" title="Toggle sidebar">
+      <button class="toggle-btn" (click)="sidebarOpen = !sidebarOpen" title="Toggle sidebar">
         <span>&#9776;</span>
       </button>
       <span class="topbar-title">Unity ERP</span>

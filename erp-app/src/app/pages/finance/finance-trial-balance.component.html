@@ -1,0 +1,101 @@
+<div class="tb-page">
+
+  <!-- Header -->
+  <div class="rpt-head">
+    <div class="rpt-head-left">
+      <div class="rpt-icon">&#9776;</div>
+      <div>
+        <h2>Trial Balance</h2>
+        <p>Account debit, credit and closing balance</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="sum-grid">
+    <div class="sum-card sum-c1">
+      <span class="sum-label">Opening Debit</span>
+      <strong class="sum-val">{{ summary.openDebit | number:'1.2-2' }}</strong>
+    </div>
+    <div class="sum-card sum-c2">
+      <span class="sum-label">Opening Credit</span>
+      <strong class="sum-val">{{ summary.openCredit | number:'1.2-2' }}</strong>
+    </div>
+    <div class="sum-card sum-c3">
+      <span class="sum-label">Closing Debit</span>
+      <strong class="sum-val">{{ summary.closeDebit | number:'1.2-2' }}</strong>
+    </div>
+    <div class="sum-card sum-c4">
+      <span class="sum-label">Closing Credit</span>
+      <strong class="sum-val">{{ summary.closeCredit | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="rpt-filter-bar">
+    <label class="filter-lbl">
+      <span>From Date</span>
+      <input type="date" [(ngModel)]="fromDate">
+    </label>
+    <label class="filter-lbl">
+      <span>To Date</span>
+      <input type="date" [(ngModel)]="toDate">
+    </label>
+    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()">Run TB</button>
+    <div class="spacer"></div>
+    <input class="rpt-search" type="text" placeholder="Search account..." [(ngModel)]="search">
+  </div>
+
+  <div class="rpt-alert rpt-danger" *ngIf="error">{{ error }}</div>
+
+  <!-- Table -->
+  <div class="rpt-card">
+    <div class="rpt-loading" *ngIf="loading">Loading...</div>
+    <div class="rpt-table-wrap" *ngIf="!loading">
+      <table class="rpt-table">
+        <thead>
+          <tr>
+            <th style="width:36px"></th>
+            <th>Code</th>
+            <th>Account</th>
+            <th class="right">Opening Debit</th>
+            <th class="right">Opening Credit</th>
+            <th class="right teal-hdr">Closing Debit</th>
+            <th class="right teal-hdr">Closing Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let row of filteredRows">
+            <tr class="tb-row" [class.tb-parent]="row._hasChildren" (click)="row._hasChildren && toggle(row)">
+              <td class="expand-cell">
+                <button *ngIf="row._hasChildren" class="expand-btn" type="button" (click)="$event.stopPropagation(); toggle(row)">
+                  {{ expanded.has(row._id) ? '−' : '+' }}
+                </button>
+                <span *ngIf="!row._hasChildren" class="leaf-dot">·</span>
+              </td>
+              <td class="mono" [style.paddingLeft]="indentPx(row)">{{ row.accountCode || '—' }}</td>
+              <td [class.fw-bold]="row._hasChildren">{{ row.accountName }}</td>
+              <td class="right debit-val">{{ (row.openingBalance ?? row.debit ?? 0) | number:'1.2-2' }}</td>
+              <td class="right credit-val">{{ (row.credit ?? 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ Math.max(row.closingBalance ?? 0, 0) | number:'1.2-2' }}</td>
+              <td class="right muted">{{ Math.abs(Math.min(row.closingBalance ?? 0, 0)) | number:'1.2-2' }}</td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="filteredRows.length === 0 && !loading">
+            <td colspan="7" class="rpt-empty">No trial balance data. Run with date range.</td>
+          </tr>
+        </tbody>
+        <tfoot *ngIf="filteredRows.length > 0">
+          <tr class="foot-row">
+            <td colspan="3"><strong>Total</strong></td>
+            <td class="right debit-val fw-bold">{{ totalOpenDebit | number:'1.2-2' }}</td>
+            <td class="right credit-val fw-bold">{{ totalOpenCredit | number:'1.2-2' }}</td>
+            <td class="right teal-bold fw-bold">{{ totalCloseDebit | number:'1.2-2' }}</td>
+            <td class="right muted fw-bold">{{ totalCloseCredit | number:'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>

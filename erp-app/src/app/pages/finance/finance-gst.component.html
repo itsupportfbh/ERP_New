@@ -1,0 +1,259 @@
+<div class="gst-page">
+
+  <!-- Page Header -->
+  <div class="gst-page-head">
+    <div>
+      <h2>GST Management</h2>
+      <p>Tax Codes &middot; GST F5 Returns &middot; GST Details</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="gst-alert gst-success" *ngIf="message">{{ message }}</div>
+  <div class="gst-alert gst-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Tabs -->
+  <div class="gst-tabs">
+    <button class="gst-tab" [class.active]="activeTab === 'taxcodes'" type="button" (click)="setTab('taxcodes')">Tax Codes</button>
+    <button class="gst-tab" [class.active]="activeTab === 'returns'"  type="button" (click)="setTab('returns')">GST F5 Returns</button>
+    <button class="gst-tab" [class.active]="activeTab === 'details'"  type="button" (click)="setTab('details')">GST Details</button>
+  </div>
+
+  <!-- ══ TAB 1: TAX CODES ══ -->
+  <ng-container *ngIf="activeTab === 'taxcodes'">
+
+    <!-- Tax Code Form -->
+    <div class="gst-card form-card" *ngIf="showTaxForm">
+      <div class="gst-card-head">
+        <strong class="gst-card-title">{{ editingTax ? 'Edit Tax Code' : 'New Tax Code' }}</strong>
+        <button class="gst-btn gst-btn-outline" type="button" (click)="cancelTaxForm()">&#215; Close</button>
+      </div>
+      <div class="form-grid">
+        <label class="form-field">
+          <span>Code <span class="req">*</span></span>
+          <input type="text" [(ngModel)]="taxForm.code" placeholder="e.g. GST9">
+        </label>
+        <label class="form-field">
+          <span>Rate (%) <span class="req">*</span></span>
+          <input type="number" min="0" max="100" step="0.1" [(ngModel)]="taxForm.rate" placeholder="9">
+        </label>
+        <label class="form-field">
+          <span>Type</span>
+          <select [(ngModel)]="taxForm.type">
+            <option value="GST">GST</option>
+            <option value="VAT">VAT</option>
+            <option value="EXEMPT">Exempt</option>
+            <option value="ZERO">Zero-Rated</option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Status</span>
+          <select [(ngModel)]="taxForm.isActive">
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Description</span>
+          <input type="text" [(ngModel)]="taxForm.description" placeholder="Tax code description">
+        </label>
+      </div>
+      <div class="form-footer">
+        <button class="gst-btn gst-btn-outline" type="button" (click)="cancelTaxForm()">Cancel</button>
+        <button class="gst-btn gst-btn-primary" type="button" (click)="saveTax()" [disabled]="savingTax">
+          {{ savingTax ? 'Saving...' : (editingTax ? 'Update' : 'Save') }}
+        </button>
+      </div>
+    </div>
+
+    <div class="gst-card">
+      <div class="gst-card-head">
+        <input class="gst-search" type="text" placeholder="Search code, description..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+        <button class="gst-btn gst-btn-primary" type="button" (click)="showTaxForm = true; editingTax = null; message = ''; error = ''">+ New Tax Code</button>
+      </div>
+      <div class="gst-loading" *ngIf="loading">Loading...</div>
+      <div class="gst-table-wrap" *ngIf="!loading">
+        <table class="gst-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th class="right">Rate (%)</th>
+              <th class="center">Status</th>
+              <th class="center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tc of filteredTaxCodes">
+              <td class="mono teal-bold">{{ tc.code }}</td>
+              <td>{{ tc.description || '—' }}</td>
+              <td>{{ tc.type || 'GST' }}</td>
+              <td class="right">{{ (tc.rate || 0) | number:'1.1-2' }}%</td>
+              <td class="center">
+                <span class="status-badge" [ngClass]="tc.isActive !== false ? 'badge-success' : 'badge-default'">
+                  {{ tc.isActive !== false ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="center">
+                <button class="edit-btn" type="button" (click)="editTax(tc)">Edit</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredTaxCodes.length === 0 && !loading">
+              <td colspan="6" class="gst-empty">No tax codes found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 2: GST F5 RETURNS ══ -->
+  <ng-container *ngIf="activeTab === 'returns'">
+
+    <!-- Summary Cards -->
+    <div class="sum-grid">
+      <div class="sum-card sum-c1">
+        <span class="sum-label">Total Output Tax</span>
+        <strong class="sum-val">{{ returnSummary.totalOutput | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-label">Total Input Tax</span>
+        <strong class="sum-val">{{ returnSummary.totalInput | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-label">Net GST Payable</span>
+        <strong class="sum-val">{{ returnSummary.netPayable | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- Year Filter -->
+    <div class="gst-filter-bar">
+      <label class="filter-lbl">
+        <span>Period / Year</span>
+        <select [(ngModel)]="selectedYear" (ngModelChange)="loadReturnForYear()">
+          <option value="">— Select Year —</option>
+          <option *ngFor="let y of returnYears" [value]="y">{{ y }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="gst-card">
+      <div class="gst-card-head">
+        <strong class="gst-card-title">GST F5 Return — {{ selectedYear || 'All Periods' }}</strong>
+      </div>
+      <div class="gst-loading" *ngIf="loading">Loading...</div>
+      <div class="gst-table-wrap" *ngIf="!loading">
+        <table class="gst-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Box 1 – Total Sales</th>
+              <th>Box 5 – Taxable Purchases</th>
+              <th class="right teal-hdr">Box 6 – Output Tax</th>
+              <th class="right">Box 7 – Input Tax</th>
+              <th class="right teal-hdr">Net GST Payable</th>
+              <th class="center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of gstReturns">
+              <td class="mono">{{ r.period || r.quarter || r.year || '—' }}</td>
+              <td class="right">{{ (r.totalSales || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (r.taxablePurchases || r.totalPurchases || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (r.outputTax || r.gstCollected || 0) | number:'1.2-2' }}</td>
+              <td class="right success-text">{{ (r.inputTax || r.gstPaid || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ ((r.outputTax || r.gstCollected || 0) - (r.inputTax || r.gstPaid || 0)) | number:'1.2-2' }}</td>
+              <td class="center">
+                <span class="status-badge" [ngClass]="r.status === 'Filed' ? 'badge-success' : r.status === 'Overdue' ? 'badge-danger' : 'badge-warning'">
+                  {{ r.status || 'Draft' }}
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="gstReturns.length === 0 && !loading">
+              <td colspan="7" class="gst-empty">No GST return data. Select a year.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══ TAB 3: GST DETAILS ══ -->
+  <ng-container *ngIf="activeTab === 'details'">
+
+    <!-- Report Summary Cards -->
+    <div class="sum-grid">
+      <div class="sum-card sum-c1">
+        <span class="sum-label">Total Sales</span>
+        <strong class="sum-val">{{ reportSummary.totalSales | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-label">Output GST</span>
+        <strong class="sum-val">{{ reportSummary.outputTax | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-label">Input GST</span>
+        <strong class="sum-val">{{ reportSummary.inputTax | number:'1.2-2' }}</strong>
+      </div>
+      <div class="sum-card sum-c4">
+        <span class="sum-label">Net GST</span>
+        <strong class="sum-val">{{ reportSummary.netGST | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="gst-filter-bar">
+      <label class="filter-lbl">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="reportFromDate">
+      </label>
+      <label class="filter-lbl">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="reportToDate">
+      </label>
+      <button class="gst-btn gst-btn-primary" type="button" (click)="runReport()">Run Report</button>
+    </div>
+
+    <div class="gst-card">
+      <div class="gst-card-head">
+        <strong class="gst-card-title">GST Transaction Detail</strong>
+      </div>
+      <div class="gst-loading" *ngIf="loading">Loading...</div>
+      <div class="gst-table-wrap" *ngIf="!loading">
+        <table class="gst-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Document No</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th>Tax Code</th>
+              <th class="right">Taxable Amt</th>
+              <th class="right teal-hdr">GST Amt</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of gstReport">
+              <td>{{ row.date | date:'dd-MMM-yyyy' }}</td>
+              <td class="mono">{{ row.documentNo || row.invoiceNo || '—' }}</td>
+              <td>{{ row.description || '—' }}</td>
+              <td>
+                <span class="type-badge" [ngClass]="row.type === 'OUTPUT' ? 'type-output' : 'type-input'">
+                  {{ row.type || '—' }}
+                </span>
+              </td>
+              <td class="mono">{{ row.taxCode || '—' }}</td>
+              <td class="right">{{ (row.taxableAmount || row.amount || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (row.gstAmount || row.taxAmount || 0) | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="gstReport.length === 0 && !loading">
+              <td colspan="7" class="gst-empty">No GST detail data. Run with date filters.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+</div>
