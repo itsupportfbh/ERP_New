@@ -1,0 +1,114 @@
+<div class="wizard-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <span class="status-badge status-{{ statusClass }}">{{ statusLabel }}</span>
+    <div class="header-actions" *ngIf="isEdit && status === 0">
+      <button class="btn btn-success btn-sm" (click)="setStatus(1)" [disabled]="saving">&#10003; Mark Pending</button>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+  <div class="alert-success" *ngIf="success">&#10003; {{ success }}</div>
+
+  <!-- Header card -->
+  <div class="card section-card">
+    <div class="section-label">Sales Order &amp; Warehouse</div>
+    <div class="form-row cols-2">
+      <erp-dropdown label="Sales Order" [required]="true" [options]="salesOrderOptions"
+        [disabled]="isEdit" [(ngModel)]="salesOrderId" (ngModelChange)="onSelectionChange()"
+        placeholder="Select sales order"></erp-dropdown>
+      <erp-dropdown label="Production Warehouse" [required]="true" [options]="warehouseOptions"
+        [disabled]="isEdit" [(ngModel)]="warehouseId" (ngModelChange)="onSelectionChange()"
+        placeholder="Select warehouse"></erp-dropdown>
+    </div>
+  </div>
+
+  <!-- Hint when nothing selected -->
+  <div class="card section-card hint-card" *ngIf="!loading && (!salesOrderId || !warehouseId)">
+    Select a Sales Order and a Production Warehouse to preview the plan.
+  </div>
+
+  <!-- Plan Rows -->
+  <div class="card section-card" *ngIf="!loading && salesOrderId && warehouseId">
+    <div class="section-label">Plan Rows ({{ planRows.length }})</div>
+    <div class="lines-table-wrap">
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Recipe</th>
+            <th>Finished Item</th>
+            <th>Planned Qty</th>
+            <th>Expected Output</th>
+            <th>Batch Qty</th>
+            <th>Yield %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of planRows; let i = index">
+            <td class="row-num">{{ i + 1 }}</td>
+            <td>{{ r.recipeName ?? r.finishedItemName ?? '' }}</td>
+            <td>{{ r.finishedItemName ?? r.recipeName ?? '' }}</td>
+            <td>{{ r.plannedQty | number:'1.0-3' }}</td>
+            <td>{{ r.expectedOutput | number:'1.0-3' }}</td>
+            <td>{{ r.batchQty | number:'1.0-3' }}</td>
+            <td>{{ r.headerYieldPct | number:'1.0-2' }}%</td>
+          </tr>
+          <tr *ngIf="!planRows.length">
+            <td colspan="7" class="empty-lines">No plan rows found for this sales order.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Ingredients -->
+  <div class="card section-card" *ngIf="!loading && salesOrderId && warehouseId">
+    <div class="section-label">Ingredients ({{ ingredients.length }})</div>
+    <div class="lines-table-wrap">
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>UOM</th>
+            <th>Required Qty</th>
+            <th>Available Qty</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let g of ingredients; let i = index">
+            <td class="row-num">{{ i + 1 }}</td>
+            <td>{{ g.itemName }}</td>
+            <td>{{ g.uom }}</td>
+            <td>{{ g.requiredQty | number:'1.0-3' }}</td>
+            <td>{{ g.availableQty | number:'1.0-3' }}</td>
+            <td>
+              <span class="status-badge" [class.status-approved]="g.status === 'OK'" [class.status-rejected]="g.status !== 'OK'">
+                {{ g.status === 'OK' ? 'OK' : 'Shortage' }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="!ingredients.length">
+            <td colspan="6" class="empty-lines">No ingredients found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+    <button class="btn btn-primary btn-sm" *ngIf="!isEdit"
+      [disabled]="saving || !salesOrderId || !warehouseId" (click)="save()">
+      <span class="btn-spinner" *ngIf="saving"></span>
+      {{ saving ? 'Saving…' : 'Save Plan' }}
+    </button>
+  </div>
+</div>

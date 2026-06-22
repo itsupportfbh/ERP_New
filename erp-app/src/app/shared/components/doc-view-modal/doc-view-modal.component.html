@@ -1,0 +1,50 @@
+<div class="dv-overlay" *ngIf="open" (click)="close.emit()">
+  <div class="dv-modal" (click)="$event.stopPropagation()">
+    <div class="dv-head">
+      <div>
+        <h3>{{ title }}</h3>
+        <div class="dv-sub" *ngIf="subtitle">{{ subtitle }}</div>
+      </div>
+      <button class="dv-close" (click)="close.emit()" aria-label="Close">×</button>
+    </div>
+
+    <div class="dv-body">
+      <div class="dv-info" *ngIf="info?.length">
+        <div class="dv-info-item" *ngFor="let f of info">
+          <span class="dv-k">{{ f.label }}</span>
+          <span class="dv-v">{{ f.value == null || f.value === '' ? '—' : f.value }}</span>
+        </div>
+      </div>
+
+      <div class="dv-table-wrap">
+        <table class="dv-table">
+          <thead>
+            <tr>
+              <th class="ta-center">#</th>
+              <th *ngFor="let c of columns" [ngClass]="alignCls(c.align)">{{ c.header }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of lines; let i = index">
+              <td class="ta-center">{{ i + 1 }}</td>
+              <td *ngFor="let c of columns" [ngClass]="alignCls(c.align)">{{ cellValue(c, row) }}</td>
+            </tr>
+            <tr *ngIf="loading"><td class="dv-empty" [attr.colspan]="columns.length + 1">Loading…</td></tr>
+            <tr *ngIf="!loading && !lines?.length"><td class="dv-empty" [attr.colspan]="columns.length + 1">No lines</td></tr>
+          </tbody>
+          <tfoot *ngIf="totals?.length">
+            <tr *ngFor="let t of totals">
+              <td class="ta-right dv-tot-label" [attr.colspan]="columns.length">{{ t.label }}</td>
+              <td class="ta-right dv-tot-val">{{ t.value }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="dv-foot">
+      <button class="dv-btn print" *ngIf="showPrint" (click)="print.emit()">Print</button>
+      <button class="dv-btn close" (click)="close.emit()">Close</button>
+    </div>
+  </div>
+</div>

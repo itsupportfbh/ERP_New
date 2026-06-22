@@ -39,67 +39,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   menus: MenuItem[] = [
     { label: 'Dashboard', icon: 'home', route: '/app/dashboard', permId: 'home' },
-    {
-      label: 'Business Partners',
-      icon: 'partners',
-      children: [
-        { label: 'Customer', icon: 'customer', route: '/app/business-partners', queryParams: { tab: 'customers' }, permId: 'bp-customer' },
-        { label: 'Supplier', icon: 'supplier', route: '/app/business-partners', queryParams: { tab: 'suppliers' }, permId: 'bp-supplier' },
-        { label: 'Users',    icon: 'users',    route: '/app/business-partners', queryParams: { tab: 'users' },     permId: 'users' },
-      ]
-    },
-    {
-      label: 'Purchase',
-      icon: 'purchase',
-      children: [
-        { label: 'Purchase Request', icon: 'pr',        route: '/app/purchase/requests',         permId: 'pr-list' },
-        { label: 'Purchase Order',   icon: 'po',        route: '/app/purchase/orders',           permId: 'po-list' },
-        { label: 'RFQ',              icon: 'rfq',       route: '/app/purchase/rfq',              permId: 'rfq' },
-        { label: 'Good Receipt',     icon: 'grn',       route: '/app/purchase/grn',              permId: 'grn-list' },
-        { label: 'Mobile Receiving', icon: 'grn',       route: '/app/purchase/mobile-receiving', permId: 'mobilereceiving' },
-        { label: 'Supplier Invoice', icon: 'invoice',   route: '/app/purchase/supplier-invoice', permId: 'pin-list' },
-        { label: 'Debit Note',       icon: 'debit',     route: '/app/purchase/debit-note',       permId: 'dn-list' },
-        { label: 'Scorecard',        icon: 'scorecard', route: '/app/purchase/scorecard',        permId: 'supplier-scorecard' },
-      ]
-    },
-    {
-      label: 'Financial',
-      icon: 'finance',
-      children: [
-        { label: 'Dashboard',           icon: 'circle',  route: '/app/finance',                   permId: 'finance-dashboard' },
-        { label: 'General Ledger',      icon: 'ledger',  route: '/app/finance/general-ledger',    permId: 'ledger' },
-        { label: 'Chart of Account',    icon: 'ledger',  route: '/app/finance/chart-of-accounts', permId: 'coa' },
-        { label: 'Journal',             icon: 'journal', route: '/app/finance/journal',           permId: 'journal' },
-        { label: 'Accounts Receivable', icon: 'ar',      route: '/app/finance/ar',                permId: 'ar' },
-        { label: 'Accounts Payable',    icon: 'ap',      route: '/app/finance/accounts-payable',  permId: 'ap' },
-        { label: 'Tax & Gst',           icon: 'tax',     route: '/app/finance/tax-gst',           permId: 'tax' },
-        { label: 'Period-close',        icon: 'close',   route: '/app/finance/period-close',      permId: 'period' },
-        { label: 'Year End Close',      icon: 'close',   route: '/app/finance/year-end-close',    permId: 'year-end' },
-        { label: 'Trial Balance',       icon: 'report',  route: '/app/finance/trial-balance',     permId: 'tb' },
-        { label: 'Reports',             icon: 'report',  route: '/app/finance/reports',           permId: 'reports' },
-      ]
-    },
-    { label: 'Sales Order', icon: 'sales', route: '/app/sales-order', permId: 'so-list' },
-    {
-      label: 'Inventory',
-      icon: 'inventory',
-      children: [
-        { label: 'Item Master',            icon: 'inv-item',    route: '/app/inventory/List-itemmaster',           permId: 'im-list' },
-        { label: 'Stock Take',             icon: 'inv-take',    route: '/app/inventory/list-stocktake',            permId: 'stocktake-list' },
-        { label: 'Stock Reorder Planning', icon: 'inv-reorder', route: '/app/inventory/list-stockreorderplanning', permId: 'reorder-list' },
-        { label: 'Stock COGS',             icon: 'inv-cogs',    route: '/app/inventory/stockcogs',                 permId: 'stockcogs' },
-        { label: 'Stock History',          icon: 'inv-history', route: '/app/inventory/list-stock-history',        permId: 'list-stock-history' },
-        {
-          label: 'Internal',
-          icon: 'inv-internal',
-          children: [
-            { label: 'Material Request',       icon: 'inv-mr',       route: '/app/inventory/list-material-requisition', permId: 'mr-list' },
-            { label: 'Stock Transfer Request', icon: 'inv-transfer', route: '/app/inventory/list-stocktransfer',        permId: 'list-stock-transfer-receipt' },
-          ]
-        },
-      ]
-    },
-    {
+     {
       label: 'Master',
       icon: 'master',
       children: [
@@ -134,6 +74,87 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'UOM Conversion',  icon: 'm-uomconv',   route: '/app/master/uomconversion',    permId: 'uomconversion' },
         { label: 'Vehicle',         icon: 'm-vehicle',   route: '/app/master/vehicle',          permId: 'vehicle' },
         { label: 'Warehouse',       icon: 'm-warehouse', route: '/app/master/warehouse',        permId: 'warehouse' },
+      ]
+    },
+    {
+      label: 'Business Partners',
+      icon: 'partners',
+      children: [
+        { label: 'Customer', icon: 'customer', route: '/app/business-partners', queryParams: { tab: 'customers' }, permId: 'bp-customer' },
+        { label: 'Supplier', icon: 'supplier', route: '/app/business-partners', queryParams: { tab: 'suppliers' }, permId: 'bp-supplier' },
+        { label: 'Users',    icon: 'users',    route: '/app/business-partners', queryParams: { tab: 'users' },     permId: 'users' },
+      ]
+    },
+     {
+      label: 'Sales',
+      icon: 'sales',
+      children: [
+        { label: 'Quotation',          icon: 'quote',    route: '/app/sales/quotations' },
+        { label: 'Sales Order',        icon: 'so',       route: '/app/sales/orders' },
+        { label: 'Picking & Packing',  icon: 'pick',     route: '/app/sales/picking' },
+        { label: 'Delivery Order',     icon: 'delivery', route: '/app/sales/delivery-orders' },
+        { label: 'Sales Invoice',      icon: 'invoice',  route: '/app/sales/invoices' },
+        { label: 'Return / Credit',    icon: 'credit',   route: '/app/sales/credit-notes' },
+        { label: 'Report',             icon: 'report',   route: '/app/sales/reports' },
+      ]
+    },
+    {
+      label: 'Purchase',
+      icon: 'purchase',
+      children: [
+        { label: 'Purchase Request', icon: 'pr',        route: '/app/purchase/requests',         permId: 'pr-list' },
+        { label: 'Purchase Order',   icon: 'po',        route: '/app/purchase/orders',           permId: 'po-list' },
+        { label: 'RFQ',              icon: 'rfq',       route: '/app/purchase/rfq',              permId: 'rfq' },
+        { label: 'Good Receipt',     icon: 'grn',       route: '/app/purchase/grn',              permId: 'grn-list' },
+        { label: 'Mobile Receiving', icon: 'grn',       route: '/app/purchase/mobile-receiving', permId: 'mobilereceiving' },
+        { label: 'Supplier Invoice', icon: 'invoice',   route: '/app/purchase/supplier-invoice', permId: 'pin-list' },
+        { label: 'Debit Note',       icon: 'debit',     route: '/app/purchase/debit-note',       permId: 'dn-list' },
+        { label: 'Scorecard',        icon: 'scorecard', route: '/app/purchase/scorecard',        permId: 'supplier-scorecard' },
+      ]
+    },
+        {
+      label: 'Inventory',
+      icon: 'inventory',
+      children: [
+        { label: 'Item Master',            icon: 'inv-item',    route: '/app/inventory/List-itemmaster',           permId: 'im-list' },
+        { label: 'Stock Take',             icon: 'inv-take',    route: '/app/inventory/list-stocktake',            permId: 'stocktake-list' },
+        { label: 'Stock Reorder Planning', icon: 'inv-reorder', route: '/app/inventory/list-stockreorderplanning', permId: 'reorder-list' },
+        { label: 'Stock COGS',             icon: 'inv-cogs',    route: '/app/inventory/stockcogs',                 permId: 'stockcogs' },
+        { label: 'Stock History',          icon: 'inv-history', route: '/app/inventory/list-stock-history',        permId: 'list-stock-history' },
+        {
+          label: 'Internal',
+          icon: 'inv-internal',
+          children: [
+            { label: 'Material Request',       icon: 'inv-mr',       route: '/app/inventory/list-material-requisition', permId: 'mr-list' },
+            { label: 'Stock Transfer Request', icon: 'inv-transfer', route: '/app/inventory/list-stocktransfer',        permId: 'list-stock-transfer-receipt' },
+          ]
+        },
+      ]
+    },
+    {
+      label: 'Financial',
+      icon: 'finance',
+      children: [
+        { label: 'Dashboard',           icon: 'circle',  route: '/app/finance',                   permId: 'finance-dashboard' },
+        { label: 'General Ledger',      icon: 'ledger',  route: '/app/finance/general-ledger',    permId: 'ledger' },
+        { label: 'Chart of Account',    icon: 'ledger',  route: '/app/finance/chart-of-accounts', permId: 'coa' },
+        { label: 'Journal',             icon: 'journal', route: '/app/finance/journal',           permId: 'journal' },
+        { label: 'Accounts Receivable', icon: 'ar',      route: '/app/finance/ar',                permId: 'ar' },
+        { label: 'Accounts Payable',    icon: 'ap',      route: '/app/finance/accounts-payable',  permId: 'ap' },
+        { label: 'Tax & Gst',           icon: 'tax',     route: '/app/finance/tax-gst',           permId: 'tax' },
+        { label: 'Period-close',        icon: 'close',   route: '/app/finance/period-close',      permId: 'period' },
+        { label: 'Year End Close',      icon: 'close',   route: '/app/finance/year-end-close',    permId: 'year-end' },
+        { label: 'Trial Balance',       icon: 'report',  route: '/app/finance/trial-balance',     permId: 'tb' },
+        { label: 'Reports',             icon: 'report',  route: '/app/finance/reports',           permId: 'reports' },
+      ]
+    },
+      {
+      label: 'Recipe',
+      icon: 'recipe',
+      children: [
+        { label: 'Recipe Master',       icon: 'recipe',  route: '/app/recipe/recipes' },
+        { label: 'Production Planning',  icon: 'plan',    route: '/app/recipe/production-planning' },
+        { label: 'Batch Production',     icon: 'batch',   route: '/app/recipe/batch-production' },
       ]
     },
     { label: 'Components', icon: 'components', route: '/app/demo' },

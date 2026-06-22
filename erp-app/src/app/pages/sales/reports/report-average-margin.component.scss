@@ -1,0 +1,57 @@
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+
+/* keep everything visible — no horizontal scroll, let cells wrap (matches quotation-list) */
+.dt-table-wrap { overflow-x: hidden; }
+.dt-table { width: 100%; table-layout: auto; }
+.dt-table th, .dt-table td { white-space: normal; word-break: break-word; }
+
+/* numeric columns right-aligned */
+.am-num { text-align: right; white-space: nowrap; }
+
+/* override the global word-break (specificity bump) so numeric + label cells
+   never split mid-word: QTY, MARGIN %, BRANCH, SALESPERSON, and their values */
+.dt-table th.am-num, .dt-table td.am-num,
+.dt-table th.am-nowrap, .dt-table td.am-nowrap { white-space: nowrap; }
+
+/* reserve width for the long invoice number so auto-layout can't collapse it
+   to a single character (it then wraps at the hyphens instead of vertically) */
+.dt-table th.am-invno, .dt-table td.am-invno { min-width: 110px; }
+
+.am-muted { color: var(--text-muted); font-size: 11px; }
+
+/* margin colouring (ported from old getMarginClass) */
+.margin-pos  { color: #15803d; font-weight: 600; }
+.margin-neg  { color: #b91c1c; font-weight: 600; }
+.margin-zero { color: var(--text-muted); font-weight: 600; }
+
+/* controls */
+.am-sort { width: 160px; }
+
+.am-dir-btn {
+  height: 32px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 0 12px;
+  cursor: pointer;
+  &:hover { background: #f8fafc; }
+}
+
+/* footer pager */
+.dt-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+.am-pager { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.am-pager-info { font-size: 12px; color: var(--text-muted); }
+.am-pager-btns { display: flex; gap: 4px; }
+
+.am-pager-btn {
+  min-width: 30px; height: 30px;
+  border: 1px solid var(--border);
+  background: #fff; color: var(--text);
+  border-radius: 6px; font-size: 13px; cursor: pointer;
+  &:hover:not(:disabled) { background: #f8fafc; }
+  &.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  &:disabled { opacity: .5; cursor: default; }
+}

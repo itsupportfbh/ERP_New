@@ -1,0 +1,27 @@
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+
+/* keep everything visible — no horizontal scroll, let cells wrap */
+.dt-table-wrap { overflow-x: hidden; }
+.dt-table { width: 100%; table-layout: auto; }
+.dt-table th { white-space: nowrap; }
+.dt-table td { white-space: normal; word-break: break-word; }
+.dt-table .dt-actions-cell { flex-wrap: nowrap; white-space: nowrap; }
+
+.qt-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  &.st-0 { background: #f1f5f9; color: #475569; }   /* Draft */
+  &.st-1 { background: #fef3c7; color: #b45309; }   /* Picked (Pending amber) */
+  &.st-2 { background: #dcfce7; color: #15803d; }   /* Packed (Completed green) */
+  &.st-3 { background: #dbeafe; color: #1d4ed8; }   /* Closed (Posted blue) */
+}
+
+/* extra action-icon colors (edit/del come from global dt-icon-btn) */
+.dt-icon-btn.view  { svg { stroke: #0ea5e9; } &:hover { background: #e0f2fe; } }
+.dt-icon-btn.print { svg { stroke: #2E5F73; } &:hover { background: #eef6f8; } }

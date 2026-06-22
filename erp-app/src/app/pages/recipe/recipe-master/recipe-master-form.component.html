@@ -1,0 +1,177 @@
+<div class="wizard-page">
+  <div class="page-header">
+    <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <span class="status-badge status-{{ status === 'Active' ? 'approved' : status === 'Inactive' ? 'rejected' : 'pending' }}">
+      {{ statusLabel }}
+    </span>
+  </div>
+
+  <!-- Step bar -->
+  <div class="step-bar">
+    <div class="step-item" [class.active]="step >= 1" [class.done]="step > 1">
+      <div class="step-circle">
+        <svg *ngIf="step > 1" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+        <span *ngIf="step <= 1">1</span>
+      </div>
+      <span class="step-label">Header</span>
+    </div>
+    <div class="step-line" [class.done]="step > 1"></div>
+    <div class="step-item" [class.active]="step >= 2" [class.done]="step > 2">
+      <div class="step-circle">
+        <svg *ngIf="step > 2" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
+        <span *ngIf="step <= 2">2</span>
+      </div>
+      <span class="step-label">Ingredients</span>
+    </div>
+    <div class="step-line" [class.done]="step > 2"></div>
+    <div class="step-item" [class.active]="step >= 3">
+      <div class="step-circle"><span>3</span></div>
+      <span class="step-label">Review &amp; Submit</span>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading…</div>
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+  <div class="alert-success" *ngIf="success">&#10003; {{ success }}</div>
+
+  <!-- STEP 1: Header -->
+  <ng-container *ngIf="step === 1 && !loading">
+    <div class="card section-card">
+      <div class="section-label">Recipe Details</div>
+      <div class="form-row cols-3">
+        <erp-input label="Code" [(ngModel)]="code" placeholder="Auto / enter code"></erp-input>
+        <erp-dropdown label="Finished Item" [required]="true" [options]="itemOptions"
+          [(ngModel)]="finishedItemId" placeholder="Select finished item"></erp-dropdown>
+        <erp-input label="Cuisine" [(ngModel)]="cuisine" placeholder="e.g. Italian"></erp-input>
+      </div>
+      <div class="form-row cols-2 block-gap">
+        <erp-dropdown label="Status" [options]="statusOptions"
+          [(ngModel)]="status" placeholder="Select status"></erp-dropdown>
+        <erp-input label="Notes" [(ngModel)]="notes" placeholder="Additional notes"></erp-input>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+    </div>
+  </ng-container>
+
+  <!-- STEP 2: Ingredients -->
+  <ng-container *ngIf="step === 2 && !loading">
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Ingredients</div>
+        <button class="btn btn-outline btn-xs" (click)="addLine()">+ Add Line</button>
+      </div>
+
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Ingredient *</th>
+              <th>Qty *</th>
+              <th>UOM</th>
+              <th>Yield %</th>
+              <th>Unit Cost</th>
+              <th>Row Cost</th>
+              <th>Remarks</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of lines; let i = index">
+              <td class="row-num">{{ i + 1 }}</td>
+              <td class="item-col">
+                <erp-dropdown [options]="itemOptions" [(ngModel)]="line.ingredientItemId"
+                  placeholder="Select ingredient" (ngModelChange)="onItemSelect(line)"></erp-dropdown>
+              </td>
+              <td class="qty-col">
+                <erp-input type="number" [(ngModel)]="line.qty" placeholder="0"></erp-input>
+              </td>
+              <td class="uom-col">
+                <erp-dropdown [options]="uomOptions" [(ngModel)]="line.uomId"
+                  placeholder="UOM" (ngModelChange)="onUomSelect(line)"></erp-dropdown>
+              </td>
+              <td class="disc-col">
+                <erp-input type="number" [(ngModel)]="line.yieldPct" placeholder="100"></erp-input>
+              </td>
+              <td class="price-col">
+                <erp-input type="number" [(ngModel)]="line.unitCost" placeholder="0.00"></erp-input>
+              </td>
+              <td class="price-col">{{ rowCost(line) | number:'1.2-2' }}</td>
+              <td class="remarks-col">
+                <erp-input [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
+              </td>
+              <td class="del-col">
+                <button class="btn-icon danger" (click)="removeLine(i)" title="Remove">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!lines.length">
+              <td colspan="9" class="empty-lines">Click "+ Add Line" to add ingredients</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals-row">
+        <div class="total-sep"></div>
+        <div class="total-item grand"><span>Total Cost</span><strong>{{ totalCost | number:'1.2-2' }}</strong></div>
+      </div>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
+      <button class="btn btn-primary btn-sm" (click)="next()">Next &#8594;</button>
+    </div>
+  </ng-container>
+
+  <!-- STEP 3: Review -->
+  <ng-container *ngIf="step === 3 && !loading">
+    <div class="card section-card">
+      <div class="section-label">Recipe Summary</div>
+      <div class="review-grid">
+        <div class="review-row"><span class="review-key">Code</span><span class="review-val">{{ code }}</span></div>
+        <div class="review-row"><span class="review-key">Finished Item</span><span class="review-val">{{ getLabel(itemOptions, finishedItemId) }}</span></div>
+        <div class="review-row"><span class="review-key">Cuisine</span><span class="review-val">{{ cuisine }}</span></div>
+        <div class="review-row"><span class="review-key">Status</span><span class="review-val">{{ statusLabel }}</span></div>
+        <div class="review-row"><span class="review-key">Notes</span><span class="review-val">{{ notes }}</span></div>
+        <div class="review-row"><span class="review-key">Total Cost</span><span class="review-val">{{ totalCost | number:'1.2-2' }}</span></div>
+      </div>
+    </div>
+
+    <div class="card section-card">
+      <div class="section-label">Ingredients ({{ lines.length }})</div>
+      <table class="review-lines">
+        <thead><tr><th>#</th><th>Ingredient</th><th>Qty</th><th>UOM</th><th>Yield %</th><th>Unit Cost</th><th>Row Cost</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let l of lines; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ getLabel(itemOptions, l.ingredientItemId) }}</td>
+            <td>{{ l.qty }}</td>
+            <td>{{ l.uom || getLabel(uomOptions, l.uomId) }}</td>
+            <td>{{ l.yieldPct ?? 100 }}%</td>
+            <td>{{ l.unitCost | number:'1.2-2' }}</td>
+            <td>{{ rowCost(l) | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="wizard-footer">
+      <button class="btn btn-outline btn-sm" (click)="prev()">&#8592; Back</button>
+      <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : (isEdit ? '✓ Update Recipe' : '✓ Submit Recipe') }}
+      </button>
+    </div>
+  </ng-container>
+</div>

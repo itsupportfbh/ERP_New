@@ -74,6 +74,29 @@ import { FinancePlComponent } from './pages/finance/finance-pl.component';
 import { FinanceBsComponent } from './pages/finance/finance-bs.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
+// Sales
+import { QuotationListComponent } from './pages/sales/quotation/quotation-list.component';
+import { QuotationFormComponent } from './pages/sales/quotation/quotation-form.component';
+import { ReportComponent } from './pages/sales/reports/report.component';
+import { ReportDeliveryNoteComponent } from './pages/sales/reports/report-delivery-note.component';
+import { SalesOrderListComponent } from './pages/sales/sales-order/sales-order-list.component';
+import { SalesOrderFormComponent } from './pages/sales/sales-order/sales-order-form.component';
+import { PickingListComponent } from './pages/sales/picking/picking-list.component';
+import { PickingFormComponent } from './pages/sales/picking/picking-form.component';
+import { DeliveryOrderListComponent } from './pages/sales/delivery-order/delivery-order-list.component';
+import { DeliveryOrderFormComponent } from './pages/sales/delivery-order/delivery-order-form.component';
+import { SalesInvoiceListComponent } from './pages/sales/sales-invoice/sales-invoice-list.component';
+import { SalesInvoiceFormComponent } from './pages/sales/sales-invoice/sales-invoice-form.component';
+import { CreditNoteListComponent } from './pages/sales/credit-note/credit-note-list.component';
+import { CreditNoteFormComponent } from './pages/sales/credit-note/credit-note-form.component';
+
+// Recipe
+import { RecipeMasterListComponent } from './pages/recipe/recipe-master/recipe-master-list.component';
+import { RecipeMasterFormComponent } from './pages/recipe/recipe-master/recipe-master-form.component';
+import { ProductionPlanningListComponent } from './pages/recipe/production-planning/production-planning-list.component';
+import { ProductionPlanningFormComponent } from './pages/recipe/production-planning/production-planning-form.component';
+import { BatchProductionListComponent } from './pages/recipe/batch-production/batch-production-list.component';
+import { BatchProductionFormComponent } from './pages/recipe/batch-production/batch-production-form.component';
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login',            component: LoginComponent },
@@ -231,6 +254,49 @@ const routes: Routes = [
       { path: 'master/uomconversion',   component: UomConversionComponent   },
       { path: 'master/vehicle',         component: VehicleComponent         },
       { path: 'master/warehouse',       component: WarehouseComponent       },
+
+            // ── Sales ───────────────────────────────────────────
+      { path: 'sales/quotations',              component: QuotationListComponent },
+      { path: 'sales/quotations/new',          component: QuotationFormComponent },
+      { path: 'sales/quotations/:id',          component: QuotationFormComponent },
+
+      { path: 'sales/orders',                  component: SalesOrderListComponent },
+      { path: 'sales/orders/new',              component: SalesOrderFormComponent },
+      { path: 'sales/orders/:id',              component: SalesOrderFormComponent },
+
+      { path: 'sales/picking',                 component: PickingListComponent },
+      { path: 'sales/picking/new',             component: PickingFormComponent },
+      { path: 'sales/picking/:id',             component: PickingFormComponent },
+
+      { path: 'sales/delivery-orders',         component: DeliveryOrderListComponent },
+      { path: 'sales/delivery-orders/new',     component: DeliveryOrderFormComponent },
+      { path: 'sales/delivery-orders/:id',     component: DeliveryOrderFormComponent },
+
+      { path: 'sales/invoices',                component: SalesInvoiceListComponent },
+      { path: 'sales/invoices/new',            component: SalesInvoiceFormComponent },
+      { path: 'sales/invoices/:id',            component: SalesInvoiceFormComponent },
+
+      { path: 'sales/credit-notes',            component: CreditNoteListComponent },
+      { path: 'sales/credit-notes/new',        component: CreditNoteFormComponent },
+      { path: 'sales/credit-notes/:id',        component: CreditNoteFormComponent },
+
+      { path: 'sales/reports',                 component: ReportComponent },
+      { path: 'sales/reports/delivery-note',   component: ReportDeliveryNoteComponent },
+
+      // ── Recipe / Production ─────────────────────────────
+      { path: 'recipe/recipes',                    component: RecipeMasterListComponent },
+      { path: 'recipe/recipes/new',                component: RecipeMasterFormComponent },
+      { path: 'recipe/recipes/:id',                component: RecipeMasterFormComponent },
+
+      { path: 'recipe/production-planning',        component: ProductionPlanningListComponent },
+      { path: 'recipe/production-planning/new',    component: ProductionPlanningFormComponent },
+      { path: 'recipe/production-planning/:id',    component: ProductionPlanningFormComponent },
+
+      { path: 'recipe/batch-production',           component: BatchProductionListComponent },
+      { path: 'recipe/batch-production/new',        component: BatchProductionFormComponent },
+      { path: 'recipe/batch-production/:id',        component: BatchProductionFormComponent },
+
+      
     ]
   },
   { path: '**', redirectTo: '/login' }

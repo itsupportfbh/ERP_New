@@ -76,6 +76,33 @@ import { FinanceDashboardComponent } from './pages/finance/finance-dashboard.com
 import { FinanceWorkspaceComponent } from './pages/finance/finance-workspace.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 
+// ── Sales module ──────────────────────────────────────
+import { QuotationListComponent } from './pages/sales/quotation/quotation-list.component';
+import { QuotationFormComponent } from './pages/sales/quotation/quotation-form.component';
+import { ReportComponent } from './pages/sales/reports/report.component';
+import { ReportFiltersComponent } from './pages/sales/reports/report-filters.component';
+import { ReportSalesByItemComponent } from './pages/sales/reports/report-sales-by-item.component';
+import { ReportAverageMarginComponent } from './pages/sales/reports/report-average-margin.component';
+import { ReportDeliveriesComponent } from './pages/sales/reports/report-deliveries.component';
+import { ReportDeliveryNoteComponent } from './pages/sales/reports/report-delivery-note.component';
+import { SalesOrderListComponent } from './pages/sales/sales-order/sales-order-list.component';
+import { SalesOrderFormComponent } from './pages/sales/sales-order/sales-order-form.component';
+import { PickingListComponent } from './pages/sales/picking/picking-list.component';
+import { PickingFormComponent } from './pages/sales/picking/picking-form.component';
+import { DeliveryOrderListComponent } from './pages/sales/delivery-order/delivery-order-list.component';
+import { DeliveryOrderFormComponent } from './pages/sales/delivery-order/delivery-order-form.component';
+import { SalesInvoiceListComponent } from './pages/sales/sales-invoice/sales-invoice-list.component';
+import { SalesInvoiceFormComponent } from './pages/sales/sales-invoice/sales-invoice-form.component';
+import { CreditNoteListComponent } from './pages/sales/credit-note/credit-note-list.component';
+import { CreditNoteFormComponent } from './pages/sales/credit-note/credit-note-form.component';
+
+// ── Recipe module ─────────────────────────────────────
+import { RecipeMasterListComponent } from './pages/recipe/recipe-master/recipe-master-list.component';
+import { RecipeMasterFormComponent } from './pages/recipe/recipe-master/recipe-master-form.component';
+import { ProductionPlanningListComponent } from './pages/recipe/production-planning/production-planning-list.component';
+import { ProductionPlanningFormComponent } from './pages/recipe/production-planning/production-planning-form.component';
+import { BatchProductionListComponent } from './pages/recipe/batch-production/batch-production-list.component';
+import { BatchProductionFormComponent } from './pages/recipe/batch-production/batch-production-form.component';
 @NgModule({
   declarations: [
     App,
@@ -141,6 +168,32 @@ import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobi
      FinanceDashboardComponent,
     FinanceWorkspaceComponent,
 MobileReceivingComponent,
+    // Sales
+    QuotationListComponent,
+    QuotationFormComponent,
+    ReportComponent,
+    ReportFiltersComponent,
+    ReportSalesByItemComponent,
+    ReportAverageMarginComponent,
+    ReportDeliveriesComponent,
+    ReportDeliveryNoteComponent,
+    SalesOrderListComponent,
+    SalesOrderFormComponent,
+    PickingListComponent,
+    PickingFormComponent,
+    DeliveryOrderListComponent,
+    DeliveryOrderFormComponent,
+    SalesInvoiceListComponent,
+    SalesInvoiceFormComponent,
+    CreditNoteListComponent,
+    CreditNoteFormComponent,
+    // Recipe
+    RecipeMasterListComponent,
+    RecipeMasterFormComponent,
+    ProductionPlanningListComponent,
+    ProductionPlanningFormComponent,
+    BatchProductionListComponent,
+    BatchProductionFormComponent,
 
   ],
   imports: [

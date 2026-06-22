@@ -1,0 +1,121 @@
+<div class="pk-page">
+
+  <!-- Page header -->
+  <div class="pk-head">
+    <button class="btn btn-outline btn-sm" type="button" (click)="back()">&#8592; Back</button>
+    <h2>{{ title }}</h2>
+    <span class="pk-status">{{ statusLabel }}</span>
+    <div class="pk-head-actions">
+      <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
+      <button class="btn btn-primary btn-sm" type="button" [disabled]="!rows.length" (click)="downloadPickList()">Download Pick List</button>
+    </div>
+  </div>
+
+  <div class="loading-row" *ngIf="loading">Loading…</div>
+  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
+  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
+
+  <!-- Sales Order + codes -->
+  <div class="card pk-card">
+    <div class="pk-grid3">
+      <div class="mf-group">
+        <label class="mf-label">Sales Order <span class="req">*</span></label>
+        <select class="mf-select" [(ngModel)]="soId" name="soId" (change)="onSoChange()" [disabled]="isEdit">
+          <option [ngValue]="null">Select sales order…</option>
+          <option *ngFor="let so of soOptions" [ngValue]="so.id">{{ so.label }}</option>
+        </select>
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">SO Date</label>
+        <input type="date" class="mf-input" [value]="soDate" disabled />
+      </div>
+      <div class="mf-group">
+        <label class="mf-label">Delivery Date</label>
+        <input type="date" class="mf-input" [value]="deliveryDate" disabled />
+      </div>
+    </div>
+
+    <!-- Codes -->
+    <div class="pk-codes" *ngIf="barCodeSrc || qrCodeSrc || codesLoading">
+      <div class="pk-codebox">
+        <div class="pk-codelabel">Bar Code</div>
+        <div class="pk-codeloading" *ngIf="codesLoading">Generating…</div>
+        <ng-container *ngIf="!codesLoading">
+          <img class="pk-barimg" *ngIf="barCodeSrc" [src]="barCodeSrc" alt="barcode" />
+          <div class="pk-codetext">{{ barCode }}</div>
+          <div class="pk-codeactions" *ngIf="barCode">
+            <a class="pk-link" (click)="copy(barCode)">Copy</a>
+            <span class="pk-dot">·</span>
+            <a class="pk-link" (click)="downloadImage(barCodeSrc, barCode || 'barcode')">Download</a>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="pk-codebox">
+        <div class="pk-codelabel">QR Code</div>
+        <div class="pk-codeloading" *ngIf="codesLoading">Generating…</div>
+        <ng-container *ngIf="!codesLoading">
+          <img class="pk-qrimg" *ngIf="qrCodeSrc" [src]="qrCodeSrc" alt="qr" />
+          <div class="pk-codetext">{{ barCode }}</div>
+          <div class="pk-codeactions" *ngIf="barCode">
+            <a class="pk-link" (click)="copy(qrText || barCode)">Copy</a>
+            <span class="pk-dot">·</span>
+            <a class="pk-link" (click)="downloadImage(qrCodeSrc, (barCode || 'qrcode') + '-qr')">Download</a>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lines -->
+  <div class="card pk-card">
+    <table class="pk-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Warehouse</th>
+          <th>Bin</th>
+          <th class="ta-right">Qty</th>
+          <th>Pack to Carton</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rows; let i = index">
+          <td>
+            <div class="pk-item">{{ r.itemName }}</div>
+            <div class="pk-itemsub" *ngIf="r.uom">· {{ r.uom }}</div>
+          </td>
+          <td>{{ r.warehouseName || '—' }}</td>
+          <td>{{ r.binName || '—' }}</td>
+          <td class="ta-right">
+            <input type="number" class="mf-input pk-qty" [(ngModel)]="r.qty" name="qty{{i}}" min="0" />
+          </td>
+          <td>
+            <select class="mf-select pk-carton" [(ngModel)]="r.cartonId" name="carton{{i}}">
+              <option [ngValue]="null">Select carton…</option>
+              <option *ngFor="let c of cartonOptions" [ngValue]="c.id">{{ c.name }}</option>
+            </select>
+          </td>
+        </tr>
+        <tr *ngIf="!rows.length">
+          <td colspan="5" class="pk-empty">Select a Sales Order to load its lines.</td>
+        </tr>
+      </tbody>
+      <tfoot *ngIf="rows.length">
+        <tr>
+          <td colspan="3" class="pk-totlabel">Total Qty</td>
+          <td class="ta-right pk-totval">{{ totalQty }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="pk-foot">
+    <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
+    <button class="btn btn-primary" type="button" [disabled]="saving || !rows.length" (click)="submit()">
+      {{ saving ? 'Saving…' : (isEdit ? 'Update Picking' : 'Save Picking') }}
+    </button>
+  </div>
+</div>

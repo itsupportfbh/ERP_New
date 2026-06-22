@@ -1,0 +1,34 @@
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.rp-page { display: flex; flex-direction: column; flex: 1; gap: 18px; padding: 20px; overflow-y: auto; }
+
+.rp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+.rp-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transition: box-shadow .15s, border-color .15s;
+  &:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
+  &.active { border-color: var(--primary); box-shadow: 0 4px 18px rgba(46, 95, 115, 0.15); }
+}
+.rp-left { display: flex; align-items: center; gap: 14px; }
+.rp-icon {
+  width: 46px; height: 46px; border-radius: 12px; background: #eaf2f5;
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  svg { width: 22px; height: 22px; color: var(--primary); }
+}
+.rp-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.rp-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.rp-open {
+  border: 1px solid var(--primary); background: #fff; color: var(--primary);
+  border-radius: 999px; padding: 8px 22px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s;
+  &:hover { background: var(--primary); color: #fff; }
+}
+
+.rp-detail { margin-top: 4px; }

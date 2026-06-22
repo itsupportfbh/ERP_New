@@ -1,0 +1,68 @@
+<div class="rp-page">
+  <div class="rp-grid">
+
+    <!-- SALES BY ITEM -->
+    <div class="rp-card" [class.active]="activeReport==='sales'">
+      <div class="rp-left">
+        <div class="rp-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+        </div>
+        <div class="rp-text">
+          <div class="rp-title">Sales By Item</div>
+          <div class="rp-sub">Reports &gt; Sales</div>
+        </div>
+      </div>
+      <button class="rp-open" (click)="openReport('sales')">{{ activeReport==='sales' ? 'Close' : 'Open' }}</button>
+    </div>
+
+    <!-- AVERAGE MARGIN -->
+    <div class="rp-card" [class.active]="activeReport==='margin'">
+      <div class="rp-left">
+        <div class="rp-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <div class="rp-text">
+          <div class="rp-title">Average Margin</div>
+          <div class="rp-sub">Reports &gt; Profitability</div>
+        </div>
+      </div>
+      <button class="rp-open" (click)="openReport('margin')">{{ activeReport==='margin' ? 'Close' : 'Open' }}</button>
+    </div>
+
+    <!-- DELIVERIES -->
+    <div class="rp-card" [class.active]="activeReport==='delivery'">
+      <div class="rp-left">
+        <div class="rp-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="rp-text">
+          <div class="rp-title">Deliveries</div>
+          <div class="rp-sub">Reports &gt; Logistics</div>
+        </div>
+      </div>
+      <button class="rp-open" (click)="openReport('delivery')">{{ activeReport==='delivery' ? 'Close' : 'Open' }}</button>
+    </div>
+
+    <!-- DELIVERY NOTE -->
+    <div class="rp-card">
+      <div class="rp-left">
+        <div class="rp-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        </div>
+        <div class="rp-text">
+          <div class="rp-title">Delivery Note</div>
+          <div class="rp-sub">Reports &gt; Summary</div>
+        </div>
+      </div>
+      <button class="rp-open" (click)="goToDeliveryNote()">Open</button>
+    </div>
+
+  </div>
+
+  <!-- Inline sub-reports -->
+  <div class="rp-detail" *ngIf="activeReport">
+    <erp-report-sales-by-item *ngIf="activeReport === 'sales'"></erp-report-sales-by-item>
+    <erp-report-average-margin *ngIf="activeReport === 'margin'"></erp-report-average-margin>
+    <erp-report-deliveries *ngIf="activeReport === 'delivery'"></erp-report-deliveries>
+  </div>
+</div>

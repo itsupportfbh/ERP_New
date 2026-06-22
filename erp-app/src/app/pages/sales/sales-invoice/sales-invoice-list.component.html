@@ -1,0 +1,65 @@
+<div class="dt-pg">
+  <div class="dt-card">
+    <div class="dt-card-head"><h2>Sales Invoices</h2></div>
+    <div class="dt-controls">
+      <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
+      <div class="dt-right">
+        <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Invoice no / customer / status"/></div>
+        <button class="mbtn-add" (click)="create()">Add</button>
+      </div>
+    </div>
+    <div class="dt-table-wrap">
+      <table class="dt-table">
+        <thead><tr>
+          <th (click)="sortBy('invoiceNo')">INVOICE NO <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('customerName')">CUSTOMER <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('invoiceDate')">INVOICE DATE <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('total')">TOTAL <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('sourceRef')">SOURCE REF <span class="sort-arr">⇅</span></th>
+          <th>ACTION</th>
+        </tr></thead>
+        <tbody>
+          <tr *ngFor="let item of pagedItems">
+            <td><strong>{{ item.invoiceNo }}</strong></td>
+            <td>{{ item.customerName || '—' }}</td>
+            <td>{{ item.invoiceDate ? (item.invoiceDate | date:'dd-MM-yyyy') : '—' }}</td>
+            <td>{{ item.total | number:'1.2-2' }}</td>
+            <td>{{ item.sourceRef || '—' }}</td>
+            <td><div class="dt-actions-cell">
+              <button class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
+              <button class="dt-icon-btn print" (click)="print(item)" title="Print"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/></svg></button>
+              <button class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+              <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
+            </div></td>
+          </tr>
+          <tr *ngIf="!loading && filtered.length===0"><td colspan="6" class="dt-empty">No sales invoices found.</td></tr>
+          <tr *ngIf="loading"><td colspan="6" class="dt-empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dt-footer">{{ filtered.length }} total</div>
+  </div>
+
+  <!-- View details modal -->
+  <erp-doc-view-modal
+    [open]="showView"
+    [loading]="viewLoading"
+    [title]="viewTitle"
+    [subtitle]="viewSubtitle"
+    [info]="viewInfo"
+    [columns]="lineColumns"
+    [lines]="viewLines"
+    [totals]="viewTotals"
+    [showPrint]="false"
+    (close)="showView=false">
+  </erp-doc-view-modal>
+
+  <!-- Delete confirm -->
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+    <div class="mconfirm-modal" (click)="$event.stopPropagation()">
+      <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
+      <p class="mconfirm-msg">Are you sure you want to delete invoice {{ itemToDelete?.invoiceNo }}?</p>
+      <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
+    </div>
+  </div>
+</div>
