@@ -98,6 +98,11 @@ export class QuotationFormComponent implements OnInit {
     validityDate: null as string | null,
     deliveryTo: '',
 
+    // Cash-sales contact details
+    personName: '',
+    contactNumber: '',
+    email: '',
+
     taxPct: 0,
     countryId: null as number | null,
 
@@ -481,6 +486,9 @@ export class QuotationFormComponent implements OnInit {
           validityDate: this.toDateInputValue(dto.validityDate ?? dto.ValidityDate),
           orderTime: dto.orderTime ?? dto.OrderTime ?? null,
           deliveryTo: String(dto.deliveryTo ?? dto.DeliveryTo ?? ''),
+          personName: String(dto.personName ?? dto.PersonName ?? ''),
+          contactNumber: String(dto.contactNumber ?? dto.ContactNumber ?? ''),
+          email: String(dto.email ?? dto.Email ?? ''),
           remarks: String(dto.remarks ?? dto.Remarks ?? ''),
           rounding: Number(dto.rounding ?? dto.Rounding ?? 0),
           taxPct: Number(dto.taxPct ?? dto.gstPct ?? dto.GstPct ?? 0) || 0,
@@ -705,6 +713,10 @@ export class QuotationFormComponent implements OnInit {
   openCustomerDropdown(): void {
     this.customerDdOpen = true;
     this.filteredCustomers = (this.customers || []).slice(0, 50);
+  }
+  toggleCustomerDropdown(): void {
+    this.customerDdOpen = !this.customerDdOpen;
+    if (this.customerDdOpen) this.filterCustomers();
   }
   filterCustomers(): void {
     const q = (this.customerSearch || '').trim().toLowerCase();
@@ -1125,6 +1137,9 @@ export class QuotationFormComponent implements OnInit {
       orderTime: this.header.orderTime,
       validityDate: this.header.validityDate ?? this.header.deliveryDate,
       deliveryTo: (this.header.deliveryTo || '').trim(),
+      personName: (this.header.personName || '').trim(),
+      contactNumber: (this.header.contactNumber || '').trim(),
+      email: (this.header.email || '').trim(),
       costCentre: (this.header.costCentre || '').trim(),
       customerPoNo: (this.header.customerPoNo || '').trim(),
       lineSourceId: this.header.lineSourceId,
