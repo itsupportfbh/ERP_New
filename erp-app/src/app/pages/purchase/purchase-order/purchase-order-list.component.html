@@ -19,7 +19,7 @@
           &#10003; Approvals
           <span class="badge-pill warn" *ngIf="approvalCount > 0">{{ approvalCount }}</span>
         </button>
-        <button class="panel-toggle-btn" (click)="showAlerts = !showAlerts; loadPendingPrCount()">
+        <button class="panel-toggle-btn" (click)="showAlerts = true; loadPendingPrCount()">
           &#128276; Alerts
           <span class="badge-pill danger" *ngIf="pendingPrCount > 0">{{ pendingPrCount }}</span>
         </button>
@@ -51,24 +51,6 @@
           <button class="sp-btn primary" (click)="approveReject(po, 2)">Approve</button>
           <button class="sp-btn danger" (click)="approveReject(po, 3)">Reject</button>
         </div>
-      </div>
-    </div>
-
-    <!-- Alerts panel -->
-    <div class="side-panel" *ngIf="showAlerts">
-      <div class="sp-head">
-        <strong>&#128276; Pending PRs – Need PO</strong>
-        <button class="sp-btn" (click)="loadPendingPrCount()" [disabled]="alertsLoading">Refresh</button>
-      </div>
-      <div class="sp-empty" *ngIf="alertsLoading">Loading...</div>
-      <div class="sp-empty" *ngIf="!alertsLoading && !pendingPrList.length">No pending purchase requests</div>
-      <div class="sp-row" *ngFor="let pr of pendingPrList">
-        <div class="sp-row-info">
-          <strong>{{ pr.purchaseRequestNo }}</strong>
-          <span>{{ pr.requester }}<span *ngIf="pr.departmentName"> · {{ pr.departmentName }}</span></span>
-          <span *ngIf="pr.deliveryDate">Delivery: {{ pr.deliveryDate | date:'dd-MM-yyyy' }}</span>
-        </div>
-        <button class="sp-btn primary" (click)="createPoFromPr(pr)">&#43; Create PO</button>
       </div>
     </div>
 
@@ -105,6 +87,67 @@
 
   </div>
 
+</div>
+
+<!-- PO ALERTS MODAL -->
+<div *ngIf="showAlerts"
+     (click)="showAlerts = false"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:640px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);display:flex;flex-direction:column;max-height:80vh;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--primary,#0e4a60);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;flex-shrink:0;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div>
+          <h3 style="margin:0;font-size:17px;font-weight:700;color:#fff;">Pending PRs — Need PO</h3>
+          <p style="margin:2px 0 0;font-size:12px;color:rgba(255,255,255,.75);">
+            {{ alertsLoading ? 'Loading…' : (pendingPrList.length + ' PR' + (pendingPrList.length !== 1 ? 's' : '') + ' awaiting purchase order') }}
+          </p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button (click)="loadPendingPrCount()" [disabled]="alertsLoading"
+          style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;line-height:1;">&#8635;</button>
+        <button (click)="showAlerts = false"
+          style="border:0;background:rgba(255,255,255,.15);color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&#215;</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:14px 16px;">
+      <div *ngIf="alertsLoading"
+           style="text-align:center;padding:40px 20px;color:#6b7280;font-size:14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0e4a60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin-bottom:10px;animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <div>Loading pending purchase requests…</div>
+      </div>
+      <div *ngIf="!alertsLoading && !pendingPrList.length"
+           style="text-align:center;padding:40px 20px;color:#6b7280;font-size:14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;margin-bottom:10px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div>No pending purchase requests — all good!</div>
+      </div>
+      <div *ngFor="let pr of pendingPrList"
+           style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;">
+        <div style="flex-shrink:0;width:36px;height:36px;background:var(--primary,#0e4a60);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:#0c4a6e;margin-bottom:2px;">{{ pr.purchaseRequestNo ?? 'PR' }}</div>
+          <div style="font-size:12px;color:#075985;">
+            {{ pr.requester ?? '' }}<span *ngIf="pr.departmentName"> &middot; {{ pr.departmentName }}</span>
+          </div>
+          <div *ngIf="pr.deliveryDate" style="font-size:11px;color:#0369a1;margin-top:2px;">
+            Delivery: {{ pr.deliveryDate | date:'dd-MM-yyyy' }}
+          </div>
+        </div>
+        <button (click)="createPoFromPr(pr)"
+          style="flex-shrink:0;background:var(--primary,#0e4a60);border:0;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
+          &#43; Create PO
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding:12px 16px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+      <button (click)="showAlerts = false"
+        style="background:var(--primary,#0e4a60);color:#fff;border:0;border-radius:8px;padding:8px 20px;font-weight:600;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- PO LINES MODAL -->

@@ -30,6 +30,28 @@ export class FinanceWorkspaceComponent implements OnInit {
   selectedPeriod = '';
   lockPeriod = false;
   fxRevalDate = new Date().toISOString().slice(0, 10);
+  lastFxResult: any = null;
+
+  // Year End Close
+  fyStartYear = this.currentFiscalYear();
+  closeDate = `${this.currentFiscalYear() + 1}-03-31`;
+  yearEndPreviewRows: any[] = [];
+
+  get sortedPeriods(): any[] {
+    return [...this.rows].sort((a, b) => {
+      const da = new Date(b.startDate ?? b.StartDate ?? b.fromDate ?? 0).getTime();
+      const db = new Date(a.startDate ?? a.StartDate ?? a.fromDate ?? 0).getTime();
+      return da - db;
+    });
+  }
+
+  getPeriodLabel(p: any): string {
+    const raw = p.label || p.periodName || p.period || p.name || p.periodLabel || p.description || '';
+    if (raw && !/^\d{6}$/.test(raw.trim())) return raw;
+    const d = new Date(p.startDate ?? p.StartDate ?? p.fromDate);
+    if (!isNaN(d.getTime())) return d.toLocaleString('en-SG', { month: 'long', year: 'numeric' });
+    return 'Period ' + (p.id ?? p.periodId ?? p.periodNo ?? '');
+  }
 
   badgeMap = {
     Draft: 'default',
@@ -69,6 +91,7 @@ export class FinanceWorkspaceComponent implements OnInit {
     this.route.paramMap.subscribe(params => {
       const key = this.route.snapshot.data['section'] || params.get('section') || 'chart-of-accounts';
       this.config = FINANCE_PAGES.find(p => p.key === key) || FINANCE_PAGES[0];
+      this.setDefaultDates();
       this.resetForm();
       this.load();
       if (this.route.snapshot.data['autoCreate']) {
@@ -131,17 +154,25 @@ export class FinanceWorkspaceComponent implements OnInit {
     this.loading = true;
     this.error = '';
     this.message = '';
-    this.finance.list(this.config.endpoint, { fromDate: this.fromDate, toDate: this.toDate }).subscribe({
+    this.finance.list(this.config.endpoint, this.listParams()).subscribe({
       next: res => {
         const list = this.finance.unwrap(res);
         const rows = list.length ? list : [this.finance.unwrapOne(res)].filter(row => row && Object.keys(row).length);
         this.rows = rows.map((r: any) => this.normalizeRow(r));
         this.applyFilter();
         this.loading = false;
-        if (this.config.key === 'period-close' && !this.selectedPeriod && this.rows.length) {
-          const first = this.rows[0];
-          this.selectedPeriod = String(first.id ?? first.periodId ?? first.periodNo ?? '');
-          this.lockPeriod = (first.status === 'Locked' || first.isLocked === true);
+        if (this.config.key === 'period-close' && this.rows.length) {
+          if (!this.selectedPeriod) {
+            const first = this.sortedPeriods[0];
+            this.selectedPeriod = String(first.id ?? first.periodId ?? first.periodNo ?? '');
+          }
+          // Always sync toggle state from DB after load
+          const current = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod));
+          if (current) {
+            this.lockPeriod = !!(current.isLocked || current.IsLocked || current.status === 'Locked');
+            const endDate = current.endDate ?? current.EndDate;
+            if (endDate && !this.fxRevalDate) this.fxRevalDate = new Date(endDate).toISOString().slice(0, 10);
+          }
         }
       },
       error: err => {
@@ -221,32 +252,110 @@ export class FinanceWorkspaceComponent implements OnInit {
   }
 
   runFxReval(): void {
-    if (!this.selectedPeriod) { this.error = 'Please select a period first.'; return; }
+    const periodId = Number(this.selectedPeriod);
+    if (!periodId) { this.error = 'Please select a period first.'; return; }
+    if (!this.fxRevalDate) { this.error = 'Please enter FX Revaluation date.'; return; }
     this.error = '';
-    const row = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod)) ?? {};
-    const payload = { ...row, id: this.selectedPeriod, periodId: this.selectedPeriod, fxDate: this.fxRevalDate };
+    const payload = { periodId, fxDate: this.fxRevalDate };
     this.saving = true;
     this.finance.run(this.config.endpoint, 'fx', payload).subscribe({
-      next: () => { this.saving = false; this.message = 'FX Revaluation completed successfully.'; this.load(); },
-      error: err => { this.saving = false; this.error = err?.error?.message || 'FX Revaluation failed.'; }
+      next: (res: any) => {
+        this.saving = false;
+        this.lastFxResult = this.finance.unwrapOne(res);
+        this.message = 'FX Revaluation completed successfully.';
+        this.load();
+      },
+      error: (err: any) => { this.saving = false; this.error = err?.error?.message || 'FX Revaluation failed.'; }
     });
   }
 
-  onLockToggle(): void {
-    if (!this.selectedPeriod) { this.error = 'Please select a period first.'; this.lockPeriod = false; return; }
+  onPeriodChange(): void {
+    const row = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod));
+    if (row) {
+      this.lockPeriod = !!(row.isLocked || row.IsLocked || row.status === 'Locked');
+      const endDate = row.endDate ?? row.EndDate;
+      if (endDate) this.fxRevalDate = new Date(endDate).toISOString().slice(0, 10);
+    }
     this.error = '';
-    const action: FinanceActionKey = this.lockPeriod ? 'lock' : 'unlock';
-    const row = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod)) ?? {};
-    const payload = { ...row, id: this.selectedPeriod, periodId: this.selectedPeriod, lock: this.lockPeriod };
+    this.message = '';
+  }
+
+  onLockToggle(): void {
+    const periodId = Number(this.selectedPeriod);
+    if (!periodId) {
+      this.error = 'Please select a period first.';
+      this.lockPeriod = false;
+      return;
+    }
+    const action = this.lockPeriod ? 'Lock' : 'Unlock';
+    const confirmed = confirm(`${action} this accounting period? ${this.lockPeriod ? 'No transactions can be posted to a locked period.' : ''}`);
+    if (!confirmed) {
+      this.lockPeriod = !this.lockPeriod;
+      return;
+    }
+    this.error = '';
     this.saving = true;
-    this.finance.run(this.config.endpoint, action, payload).subscribe({
-      next: () => { this.saving = false; this.message = `Period ${this.lockPeriod ? 'locked' : 'unlocked'} successfully.`; this.load(); },
-      error: err => { this.saving = false; this.error = err?.error?.message || `${this.lockPeriod ? 'Lock' : 'Unlock'} failed.`; this.lockPeriod = !this.lockPeriod; }
+    const payload = { periodId, lock: this.lockPeriod };
+    this.finance.run(this.config.endpoint, this.lockPeriod ? 'lock' : 'unlock', payload).subscribe({
+      next: () => {
+        this.saving = false;
+        this.message = `Period ${this.lockPeriod ? 'locked' : 'unlocked'} successfully.`;
+        this.load();
+      },
+      error: (err: any) => {
+        this.saving = false;
+        this.error = err?.error?.message || `${action} failed.`;
+        this.lockPeriod = !this.lockPeriod;
+      }
     });
   }
 
   openTrialBalance(): void {
     this.router.navigate(['/app/finance/trial-balance']);
+  }
+
+  previewYearEnd(): void {
+    this.error = '';
+    this.message = '';
+    this.saving = true;
+    const payload = { fyStartYear: this.fyStartYear, closeDate: this.closeDate };
+    this.finance.run(this.config.endpoint, 'preview', payload).subscribe({
+      next: res => {
+        this.saving = false;
+        const list = this.finance.unwrap(res);
+        const one = this.finance.unwrapOne(res);
+        this.yearEndPreviewRows = (list.length ? list : (Array.isArray(one) ? one : [one]))
+          .filter(row => row && Object.keys(row).length)
+          .map(row => this.normalizeRow(row));
+        this.rows = this.yearEndPreviewRows;
+        this.applyFilter();
+        this.message = 'Year end preview loaded.';
+      },
+      error: err => {
+        this.saving = false;
+        this.yearEndPreviewRows = [];
+        this.error = err?.error?.message || 'Year end preview failed.';
+      }
+    });
+  }
+
+  runYearEndClose(): void {
+    if (!confirm(`Run year end close for FY ${this.fyStartYear}?`)) return;
+    this.error = '';
+    this.message = '';
+    this.saving = true;
+    const payload = { fyStartYear: this.fyStartYear, fyEndYear: this.fyStartYear + 1, closeDate: this.closeDate };
+    this.finance.run(this.config.endpoint, 'run', payload).subscribe({
+      next: () => {
+        this.saving = false;
+        this.message = 'Year end close completed.';
+        this.load();
+      },
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message || 'Year end close failed.';
+      }
+    });
   }
 
   onRowClick(row: any): void {
@@ -283,10 +392,16 @@ export class FinanceWorkspaceComponent implements OnInit {
         if (action === 'export') {
           this.downloadBlob(res, `${this.config.key}-${this.toDateString(new Date())}.xlsx`);
           this.message = 'Export downloaded.';
+        } else if (action === 'preview') {
+          const list = this.finance.unwrap(res);
+          const one = this.finance.unwrapOne(res);
+          this.rows = (list.length ? list : (Array.isArray(one) ? one : [one])).filter((item: any) => item && Object.keys(item).length).map((item: any) => this.normalizeRow(item));
+          this.applyFilter();
+          this.message = 'Preview loaded.';
         } else {
           this.message = `${this.label(action)} completed.`;
+          this.load();
         }
-        this.load();
       },
       error: err => { this.error = err?.error?.message || `${this.label(action)} failed.`; }
     });
@@ -305,7 +420,56 @@ export class FinanceWorkspaceComponent implements OnInit {
 
   private normalizeRow(row: any): any {
     const copy = { ...row };
-    copy.id = copy.id ?? copy.iD ?? copy.ID ?? copy.accountId ?? copy.journalId ?? copy.invoiceId ?? copy.receiptId ?? copy.periodId;
+    copy.id = copy.id ?? copy.iD ?? copy.ID ?? copy.accountId ?? copy.AccountId ?? copy.journalId ?? copy.JournalId ?? copy.invoiceId ?? copy.InvoiceId ?? copy.receiptId ?? copy.ReceiptId ?? copy.periodId ?? copy.PeriodId ?? copy.returnId ?? copy.ReturnId ?? copy.gstReturnId ?? copy.GstReturnId ?? copy.statementLineId ?? copy.StatementLineId;
+    copy.accountCode = copy.accountCode ?? copy.AccountCode ?? copy.headCode ?? copy.HeadCode;
+    copy.accountName = copy.accountName ?? copy.AccountName ?? copy.headName ?? copy.HeadName;
+    copy.accountType = copy.accountType ?? copy.AccountType ?? copy.rootHeadType ?? copy.RootHeadType;
+    copy.parentAccountName = copy.parentAccountName ?? copy.ParentAccountName ?? copy.parentName ?? copy.ParentName;
+    copy.isActive = copy.isActive ?? copy.IsActive;
+    copy.journalNo = copy.journalNo ?? copy.JournalNo;
+    copy.journalDate = copy.journalDate ?? copy.JournalDate;
+    copy.description = copy.description ?? copy.Description ?? copy.narration ?? copy.Narration;
+    copy.totalDebit = copy.totalDebit ?? copy.TotalDebit;
+    copy.totalCredit = copy.totalCredit ?? copy.TotalCredit;
+    copy.status = copy.status ?? copy.Status;
+    copy.periodName = copy.periodName ?? copy.PeriodName;
+    copy.fromDate = copy.fromDate ?? copy.FromDate ?? copy.startDate ?? copy.StartDate;
+    copy.toDate = copy.toDate ?? copy.ToDate ?? copy.endDate ?? copy.EndDate;
+    copy.closedByName = copy.closedByName ?? copy.ClosedByName;
+    copy.fiscalYear = copy.fiscalYear ?? copy.FiscalYear ?? copy.fyStartYear ?? copy.FyStartYear;
+    copy.startDate = copy.startDate ?? copy.StartDate ?? copy.fromDate;
+    copy.endDate = copy.endDate ?? copy.EndDate ?? copy.toDate;
+    copy.closedDate = copy.closedDate ?? copy.ClosedDate;
+    copy.balanceDate = copy.balanceDate ?? copy.BalanceDate;
+    copy.debit = copy.debit ?? copy.Debit ?? copy.debitAmount ?? copy.DebitAmount;
+    copy.credit = copy.credit ?? copy.Credit ?? copy.creditAmount ?? copy.CreditAmount;
+    copy.openingBalance = copy.openingBalance ?? copy.OpeningBalance;
+    copy.closingBalance = copy.closingBalance ?? copy.ClosingBalance ?? copy.balance ?? copy.Balance;
+    copy.bankName = copy.bankName ?? copy.BankName;
+    copy.statementDate = copy.statementDate ?? copy.StatementDate;
+    copy.referenceNo = copy.referenceNo ?? copy.ReferenceNo;
+    copy.ledgerAmount = copy.ledgerAmount ?? copy.LedgerAmount;
+    copy.bankAmount = copy.bankAmount ?? copy.BankAmount;
+    copy.returnNo = copy.returnNo ?? copy.ReturnNo;
+    copy.outputTax = copy.outputTax ?? copy.OutputTax;
+    copy.inputTax = copy.inputTax ?? copy.InputTax;
+    copy.netTax = copy.netTax ?? copy.NetTax;
+    copy.taxCode = copy.taxCode ?? copy.TaxCode;
+    copy.taxName = copy.taxName ?? copy.TaxName;
+    copy.taxRate = copy.taxRate ?? copy.TaxRate;
+    copy.taxType = copy.taxType ?? copy.TaxType;
+    copy.taxableAmount = copy.taxableAmount ?? copy.TaxableAmount;
+    copy.taxAmount = copy.taxAmount ?? copy.TaxAmount;
+    copy.customerName = copy.customerName ?? copy.CustomerName;
+    copy.invoiceNo = copy.invoiceNo ?? copy.InvoiceNo;
+    copy.dueDate = copy.dueDate ?? copy.DueDate;
+    copy.expectedDate = copy.expectedDate ?? copy.ExpectedDate;
+    copy.amount = copy.amount ?? copy.Amount ?? copy.totalAmount ?? copy.TotalAmount;
+    copy.probability = copy.probability ?? copy.Probability;
+    copy.emailTo = copy.emailTo ?? copy.EmailTo;
+    copy.sentDate = copy.sentDate ?? copy.SentDate;
+    copy.voucherNo = copy.voucherNo ?? copy.VoucherNo;
+    copy.postingDate = copy.postingDate ?? copy.PostingDate;
     this.config.columns.forEach(col => {
       const value = this.value(copy, col.key);
       if (col.type === 'badge') copy[col.key] = this.toBadgeValue(value);
@@ -347,12 +511,12 @@ export class FinanceWorkspaceComponent implements OnInit {
     if (action === 'unlock') return { ...row, id, periodId: id, lock: false };
     if (action === 'fx') return { ...row, id, periodId: id, fxDate: this.toDateString(new Date()) };
     if (action === 'run') {
-      const year = new Date().getFullYear();
-      return { ...row, id, fyStartYear: row?.fyStartYear ?? year, fyEndYear: row?.fyEndYear ?? year + 1, closeDate: this.toDateString(new Date()) };
+      const year = row?.fyStartYear ?? row?.fiscalYear ?? this.currentFiscalYear();
+      return { ...row, id, fyStartYear: year, fyEndYear: row?.fyEndYear ?? year + 1, closeDate: row?.closeDate ?? this.toDateString(new Date()) };
     }
     if (action === 'preview') {
-      const year = new Date().getFullYear();
-      return { ...row, id, fyStartYear: row?.fyStartYear ?? year, closeDate: this.toDateString(new Date()) };
+      const year = row?.fyStartYear ?? row?.fiscalYear ?? this.currentFiscalYear();
+      return { ...row, id, fyStartYear: year, closeDate: row?.closeDate ?? this.toDateString(new Date()) };
     }
     if (action === 'file') return { ...row, id, filingNo: row?.filingNo ?? `FILE-${id ?? Date.now()}` };
     if (action === 'pay') return { ...row, id, invoiceId: id, amount: row?.balance ?? row?.amount ?? 0, paymentDate: this.toDateString(new Date()) };
@@ -364,6 +528,31 @@ export class FinanceWorkspaceComponent implements OnInit {
 
   private toDateString(date: Date): string {
     return date.toISOString().slice(0, 10);
+  }
+
+  private listParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    if (this.fromDate) params['fromDate'] = this.fromDate;
+    if (this.toDate) params['toDate'] = this.toDate;
+    if (this.config.key === 'year-end-close') params['fyStartYear'] = this.currentFiscalYear();
+    return params;
+  }
+
+  private setDefaultDates(): void {
+    const today = new Date();
+    if (!this.toDate) this.toDate = this.toDateString(today);
+    if (!this.fromDate) {
+      const from = new Date(today);
+      from.setDate(today.getDate() - 30);
+      this.fromDate = this.toDateString(from);
+    }
+    this.fyStartYear = this.currentFiscalYear();
+    this.closeDate = `${this.fyStartYear + 1}-03-31`;
+  }
+
+  private currentFiscalYear(): number {
+    const today = new Date();
+    return today.getMonth() + 1 >= 4 ? today.getFullYear() : today.getFullYear() - 1;
   }
 
   private downloadBlob(blob: Blob, fileName: string): void {

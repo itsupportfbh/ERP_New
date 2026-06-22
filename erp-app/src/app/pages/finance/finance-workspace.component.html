@@ -1,7 +1,7 @@
 <div class="fin-workspace" *ngIf="config">
 
   <!-- ── Standard Page Header ── -->
-  <div class="fw-page-head" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close'">
+  <div class="fw-page-head" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close' && config.key !== 'reports' && config.key !== 'year-end-close'">
     <div class="fw-head-left">
       <h2>{{ config.title }}</h2>
       <p>{{ config.subtitle }}</p>
@@ -87,7 +87,7 @@
   </div>
 
   <!-- ── Date Filter Bar (report pages) ── -->
-  <div class="fw-filter-bar" *ngIf="config.reportFilters && config.key !== 'general-ledger'">
+  <div class="fw-filter-bar" *ngIf="config.reportFilters && config.key !== 'general-ledger' && config.key !== 'year-end-close'">
     <label class="filter-field">
       <span>From Date</span>
       <input type="date" [(ngModel)]="fromDate">
@@ -140,10 +140,10 @@
     <div class="pc-controls">
       <label class="pc-field">
         <span>Period</span>
-        <select [(ngModel)]="selectedPeriod">
-          <option value="">— Select Period —</option>
-          <option *ngFor="let p of rows" [value]="p.id ?? p.periodId ?? p.periodNo">
-            {{ p.periodName || p.period || p.name || p.periodLabel || p.description || ('Period ' + (p.id ?? p.periodId)) }}
+        <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
+          <option value="">-- Select Period --</option>
+          <option *ngFor="let p of sortedPeriods" [value]="p.id ?? p.periodId ?? p.periodNo">
+            {{ getPeriodLabel(p) }}
           </option>
         </select>
       </label>
@@ -167,6 +167,16 @@
         </svg>
         {{ saving ? 'Running...' : 'Run FX Revaluation' }}
       </button>
+    </div>
+
+    <div class="pc-run-result" *ngIf="lastFxResult">
+      <strong>{{ lastFxResult.runNo || lastFxResult.referenceNo || 'FX Revaluation' }}</strong>
+      <span>Gain: {{ (lastFxResult.totalGain || 0) | number:'1.2-2' }} SGD</span>
+      <span>Loss: {{ (lastFxResult.totalLoss || 0) | number:'1.2-2' }} SGD</span>
+      <span class="pc-net" [class.loss]="(lastFxResult.net || 0) < 0">
+        Net: {{ (lastFxResult.net || 0) | number:'1.2-2' }} SGD
+      </span>
+      <span>{{ lastFxResult.fxDate || fxRevalDate }}</span>
     </div>
 
     <div class="pc-info-row">
@@ -210,8 +220,63 @@
     </div>
   </div>
 
+  <!-- Reports Hub -->
+  <div class="reports-hub" *ngIf="config.key === 'reports'">
+    <div class="reports-head">
+      <div>
+        <h2>Finance Reports</h2>
+        <p>Trial balance, GST, aging, daybook, forecast and close reports</p>
+      </div>
+      <erp-input placeholder="Search reports..." [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
+    </div>
+    <div class="reports-grid">
+      <button class="report-tile" type="button" *ngFor="let row of filtered" (click)="onRowClick(row)">
+        <span class="report-module">{{ row.module }}</span>
+        <strong>{{ row.reportName }}</strong>
+        <small>{{ row.description }}</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- Year End Close -->
+  <div class="year-card" *ngIf="config.key === 'year-end-close'">
+    <div class="year-head">
+      <div>
+        <h2>Year End Close</h2>
+        <p>Preview retained earnings transfer and close the fiscal year</p>
+      </div>
+      <button class="fw-btn fw-btn-outline" type="button" (click)="load()">Refresh</button>
+    </div>
+    <div class="year-controls">
+      <label class="filter-field">
+        <span>FY Start Year</span>
+        <input type="number" [(ngModel)]="fyStartYear">
+      </label>
+      <label class="filter-field">
+        <span>Close Date</span>
+        <input type="date" [(ngModel)]="closeDate">
+      </label>
+      <button class="fw-btn fw-btn-outline" type="button" (click)="previewYearEnd()" [disabled]="saving">Preview</button>
+      <button class="fw-btn fw-btn-primary" type="button" (click)="runYearEndClose()" [disabled]="saving">Run Close</button>
+    </div>
+    <div class="year-status-row" *ngIf="rows.length">
+      <div class="year-status" *ngFor="let row of rows | slice:0:4">
+        <span>{{ row.fiscalYear || row.accountName || row.description || 'Status' }}</span>
+        <strong>{{ row.status || row.amount || row.closingBalance || '-' }}</strong>
+      </div>
+    </div>
+    <div class="fw-table-card year-table">
+      <erp-table
+        [columns]="columns"
+        [data]="filtered"
+        [loading]="loading || saving"
+        [rowActions]="[]">
+      </erp-table>
+    </div>
+  </div>
+
   <!-- ── Data Table ── -->
-  <div class="fw-table-card" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close'">
+  <div class="fw-table-card" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close' && config.key !== 'reports' && config.key !== 'year-end-close'">
     <erp-table
       [columns]="columns"
       [data]="filtered"

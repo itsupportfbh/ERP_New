@@ -633,6 +633,17 @@ $muted:     #6c757d;
   padding: 7px 12px;
   font-size: 11px;
 }
+.aging-row {
+  cursor: pointer;
+}
+.aging-expand {
+  display: inline-grid;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.aging-detail-table {
+  min-width: 780px;
+}
 @media (max-width: 900px) {
   .ap-invoice-summary { grid-template-columns: repeat(2, 1fr); }
 }

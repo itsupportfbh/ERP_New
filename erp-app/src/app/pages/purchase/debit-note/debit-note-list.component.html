@@ -79,9 +79,9 @@
                 style="border-bottom:1px solid #f1f5f9;">
               <td style="padding:10px 12px;color:#9ca3af;">{{ i+1 }}</td>
               <td style="padding:10px 12px;font-weight:600;">{{ l.itemName || l.itemSearch || l.itemCode || '—' }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ l.quantity ?? l.qty ?? 0 }}</td>
+              <td style="padding:10px 12px;text-align:right;">{{ l.quantity ?? l.qty ?? l.totalQty ?? l.varianceQty ?? 0 }}</td>
               <td style="padding:10px 12px;text-align:right;">{{ (l.unitPrice | number:'1.2-2') || '—' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? 0) * (l.unitPrice ?? 0)) | number:'1.2-2' }}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? l.totalQty ?? l.varianceQty ?? 0) * (l.unitPrice ?? 0)) | number:'1.2-2' }}</td>
               <td style="padding:10px 12px;color:#6b7280;">{{ l.reason || l.remarks || '—' }}</td>
             </tr>
             <tr *ngIf="!modalLines?.length">

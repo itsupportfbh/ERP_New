@@ -368,9 +368,9 @@
     <!-- Footer -->
     <div class="ocr-modal-foot">
       <button class="btn btn-outline btn-sm" (click)="closeOcrModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" *ngIf="ocrResult" (click)="createFromOcr()">
+      <button class="btn btn-primary btn-sm" *ngIf="ocrResult" (click)="createFromOcr()" [disabled]="ocrLoading">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14"/></svg>
-        Create Invoice from Scan
+        {{ ocrLoading ? 'Creating...' : 'Create Invoice from Scan' }}
       </button>
     </div>
 

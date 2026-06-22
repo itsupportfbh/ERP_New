@@ -1,5 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
 
@@ -79,6 +81,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
   // Dropdowns
   ledgerOptions: any[] = [];
   locationOptions: any[] = [];
+  private itemLedgerMap = new Map<number, number>();     // itemId → budgetLineId
+  private itemCategoryMap = new Map<number, number>();   // itemId → categoryId
+  private categoryLedgerMap = new Map<number, number>(); // categoryId → purchaseParentHeadCode
 
   taxModeOptions = [
     { label: 'Exclusive', value: 'Exclusive' },
@@ -129,7 +134,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
           this.currencyName = selectedGrns[0].currencyName;
           this.fxRate = selectedGrns[0].fxRate;
         }
-        this.loadLinesFromGrns(selectedGrns);
+        this.loadLinesWithPoFetch(selectedGrns);
       }
     } catch { /* ignore bad draft */ }
   }
@@ -146,10 +151,35 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id
       })));
-    this.svc.getChartOfAccounts().subscribe(r =>
-      this.ledgerOptions = this.svc.unwrap(r).map((c: any) => ({
+    // Load COA first, then derive category → coaId mapping using headCode→id lookup
+    this.svc.getChartOfAccounts().subscribe(r => {
+      const list = this.svc.unwrap(r);
+      this.ledgerOptions = list.map((c: any) => ({
         label: `${c.headCode ?? ''} ${c.headName ?? ''}`.trim(), value: c.id
-      })));
+      }));
+      // headCode (e.g. 5001) → id (DB primary key) — needed to resolve category.purchaseParentHeadCode
+      const headCodeToId = new Map<number, number>();
+      list.forEach((c: any) => {
+        if (c.headCode != null && c.id != null) headCodeToId.set(Number(c.headCode), Number(c.id));
+      });
+      this.svc.getCategories().subscribe(r2 =>
+        (r2?.data || r2 || []).forEach((cat: any) => {
+          const catId = cat.id ?? cat.iD;
+          const headCode = cat.purchaseParentHeadCode ?? cat.PurchaseParentHeadCode;
+          if (catId && headCode) {
+            const coaId = headCodeToId.get(Number(headCode));
+            if (coaId) this.categoryLedgerMap.set(Number(catId), coaId);
+          }
+        }));
+    });
+    this.svc.getItems().subscribe(r =>
+      this.svc.unwrap(r).forEach((i: any) => {
+        const id = i.id ?? i.iD;
+        const ledger = i.budgetLineId ?? i.BudgetLineId;
+        const catId = i.categoryId ?? i.CategoryId;
+        if (id && ledger) this.itemLedgerMap.set(Number(id), Number(ledger));
+        if (id && catId) this.itemCategoryMap.set(Number(id), Number(catId));
+      }));
   }
 
   loadGrnList(applyOcr = false): void {
@@ -258,7 +288,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
     }
 
     this.grnSearch = selectedGrns.map(x => x.grnNo).join(', ');
-    this.loadLinesFromGrns(selectedGrns);
+    this.loadLinesWithPoFetch(selectedGrns);
   }
 
   removeGrnByNo(grnNo: string): void {
@@ -277,7 +307,29 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.supplierName = '';
       this.supplierId = null;
     }
-    this.loadLinesFromGrns(selectedGrns);
+    this.loadLinesWithPoFetch(selectedGrns);
+  }
+
+  private loadLinesWithPoFetch(grns: GrnHeader[]): void {
+    if (!grns.length) { this.lines = []; return; }
+    // GRNs that have a PO link but no poLines loaded yet
+    const needFetch = grns.filter(g => g.poId > 0 && !this.safeJsonArray(g.poLines).length);
+    if (!needFetch.length) { this.loadLinesFromGrns(grns); return; }
+
+    const uniquePoIds = [...new Set(needFetch.map(g => g.poId))];
+    const fetches = uniquePoIds.map(poId =>
+      this.svc.getPurchaseOrderById(poId).pipe(catchError(() => of(null)))
+    );
+    forkJoin(fetches).subscribe(results => {
+      results.forEach((res: any, idx: number) => {
+        if (!res) return;
+        const po = this.svc.unwrapOne(res);
+        const poId = uniquePoIds[idx];
+        const rawLines = po?.poLines ?? po?.PoLines ?? null;
+        if (rawLines) grns.filter(g => g.poId === poId).forEach(g => g.poLines = rawLines);
+      });
+      this.loadLinesFromGrns(grns);
+    });
   }
 
   private loadLinesFromGrns(grns: GrnHeader[]): void {
@@ -295,12 +347,18 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const grnQty = Number(x.qtyReceived ?? x.qty ?? 0);
         const unitPrice = Number(x.unitPrice ?? x.price ?? 0);
 
-        // Find matching PO line for PO qty
+        // Find matching PO line for PO qty (try by itemId, itemCode, or itemName)
         const poLine = poItems.find((p: any) =>
-          (itemId && (p.itemId === itemId)) ||
-          (x.itemCode && p.itemCode === x.itemCode)
+          (itemId && Number(p.itemId) === Number(itemId)) ||
+          (x.itemCode && p.itemCode === x.itemCode) ||
+          (itemName && (p.itemName === itemName || p.itemSearch === itemName || p.item === itemName))
         );
         const poQty = poLine ? Number(poLine.qty ?? poLine.quantity ?? 0) : 0;
+        const itemLedger = itemId ? (this.itemLedgerMap.get(Number(itemId)) || null) : null;
+        const catId = itemId ? (this.itemCategoryMap.get(Number(itemId)) || null) : null;
+        const catLedger = catId ? (this.categoryLedgerMap.get(catId) || null) : null;
+        const itemDefault = itemLedger || catLedger || null;
+        const ledgerId = x.budgetLineId ?? x.BudgetLineId ?? poLine?.budgetLineId ?? poLine?.BudgetLineId ?? itemDefault;
 
         // Group same item
         const existing = merged.find(pl =>
@@ -328,7 +386,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
           lineTotal: 0,
           taxAmt: 0,
           lineGrandTotal: 0,
-          budgetLineId: null,
+          budgetLineId: ledgerId,
           dcNoteNo: '',
           remarks: '',
           matchStatus: ''
@@ -344,6 +402,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   private calcMatchStatus(poQty: number, grnQty: number, invQty: number): 'OK' | 'Mismatch' | '' {
     if (!poQty && !grnQty) return '';
+    // No PO linked — 2-way match: GRN qty vs invoice qty
+    if (!poQty) return grnQty === invQty ? 'OK' : 'Mismatch';
+    // Full 3-way match: PO qty = GRN qty = invoice qty
     if (poQty === grnQty && grnQty === invQty) return 'OK';
     return 'Mismatch';
   }
@@ -512,7 +573,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       Tax: this.totalTax,
       Amount: this.grandTotal,
       GrnNos: this.selectedGrnNos.join(','),
-      Status: draft ? 'Draft' : 'Pending',
+      Status: draft ? 0 : 1,
       LinesJson: JSON.stringify(linesData),
       GrnId: this.selectedGrnIds[0] ?? null,
       GrnIds: this.selectedGrnIds,
