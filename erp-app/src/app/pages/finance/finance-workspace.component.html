@@ -1,7 +1,7 @@
 <div class="fin-workspace" *ngIf="config">
 
   <!-- ── Standard Page Header ── -->
-  <div class="fw-page-head" *ngIf="config.key !== 'general-ledger'">
+  <div class="fw-page-head" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close'">
     <div class="fw-head-left">
       <h2>{{ config.title }}</h2>
       <p>{{ config.subtitle }}</p>
@@ -133,8 +133,85 @@
     </div>
   </div>
 
+  <!-- ── Period Close Dashboard ── -->
+  <div class="pc-card" *ngIf="config.key === 'period-close'">
+    <div class="pc-title">Period Close &amp; Run Quarterly GST Computation</div>
+
+    <div class="pc-controls">
+      <label class="pc-field">
+        <span>Period</span>
+        <select [(ngModel)]="selectedPeriod">
+          <option value="">— Select Period —</option>
+          <option *ngFor="let p of rows" [value]="p.id ?? p.periodId ?? p.periodNo">
+            {{ p.periodName || p.period || p.name || p.periodLabel || p.description || ('Period ' + (p.id ?? p.periodId)) }}
+          </option>
+        </select>
+      </label>
+
+      <div class="pc-toggle-wrap">
+        <label class="pc-toggle">
+          <input type="checkbox" [(ngModel)]="lockPeriod" (change)="onLockToggle()">
+          <span class="pc-slider"></span>
+        </label>
+        <span class="pc-toggle-label">Lock Period</span>
+      </div>
+
+      <label class="pc-field">
+        <span>FX Reval Date</span>
+        <input type="date" [(ngModel)]="fxRevalDate">
+      </label>
+
+      <button class="pc-btn-fx" type="button" (click)="runFxReval()" [disabled]="saving">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4v5h5M16 16v-5h-5"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 11a9 9 0 0 0 14.85 3.36L23 10"/>
+        </svg>
+        {{ saving ? 'Running...' : 'Run FX Revaluation' }}
+      </button>
+    </div>
+
+    <div class="pc-info-row">
+      <div class="pc-info-card">
+        <div class="pc-info-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="pc-info-body">
+          <strong>Checklist</strong>
+          <p>GRNs posted, AP/AR updated, bank reconciled, GST prepared.</p>
+        </div>
+      </div>
+
+      <div class="pc-info-card">
+        <div class="pc-info-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>
+          </svg>
+        </div>
+        <div class="pc-info-body">
+          <strong>Trial Balance</strong>
+          <p>Quick link to Trial Balance as of the selected period.</p>
+        </div>
+        <button class="pc-btn-tb" type="button" (click)="openTrialBalance()">Open TB</button>
+      </div>
+
+      <div class="pc-info-card">
+        <div class="pc-info-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div class="pc-info-body">
+          <strong>Lock Control</strong>
+          <p>Only users with post permission can lock or unlock closed periods.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Data Table ── -->
-  <div class="fw-table-card" *ngIf="config.key !== 'general-ledger'">
+  <div class="fw-table-card" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close'">
     <erp-table
       [columns]="columns"
       [data]="filtered"

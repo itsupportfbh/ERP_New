@@ -34,10 +34,16 @@
           <p class="si-card-sub">Manage and match supplier invoices</p>
         </div>
       </div>
-      <button class="si-add-btn" (click)="create()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        Add
-      </button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="si-ocr-btn" (click)="openOcrModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 7h3v3h-3zM7 14h3v3H7zM14 14h3v3h-3z"/></svg>
+          Scan Invoice
+        </button>
+        <button class="si-add-btn" (click)="create()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add
+        </button>
+      </div>
     </div>
 
     <!-- Controls -->
@@ -209,6 +215,165 @@
     <div style="display:flex;justify-content:flex-end;padding:10px 20px;border-top:1px solid #eef2f7;">
       <button (click)="closeLinesModal()" style="background:#6b7280;color:#fff;border:0;border-radius:8px;padding:7px 18px;font-weight:600;cursor:pointer;font-size:12px;">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════ OCR MODAL ══════════════ -->
+<div *ngIf="showOcrModal" (click)="closeOcrModal()"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()" class="ocr-modal-wrap">
+
+    <!-- Header -->
+    <div class="ocr-modal-head">
+      <div>
+        <h3 class="ocr-modal-title">Scan Invoice (OCR)</h3>
+        <p class="ocr-modal-sub">Upload a PDF or image — AI will extract the invoice data</p>
+      </div>
+      <button (click)="closeOcrModal()" class="match-close-btn">×</button>
+    </div>
+
+    <!-- Body -->
+    <div class="ocr-modal-body">
+
+      <!-- GRN Selector -->
+      <div class="ocr-grn-section">
+        <div class="ocr-grn-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Select GRN(s) for this invoice
+          <span class="ocr-grn-optional">(optional)</span>
+        </div>
+
+        <!-- Selected GRN chips -->
+        <div class="ocr-grn-chips" *ngIf="ocrSelectedGrns.length">
+          <span class="ocr-grn-chip" *ngFor="let g of ocrSelectedGrns">
+            {{ g.grnNo }}
+            <button (click)="removeOcrGrn(g)">×</button>
+          </span>
+        </div>
+
+        <!-- Dropdown toggle -->
+        <div class="ocr-grn-drop-wrap">
+          <div class="ocr-grn-input" (click)="ocrGrnDropOpen = !ocrGrnDropOpen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:#9ca3af;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" class="ocr-grn-search" placeholder="Search GRN No / Supplier / PO…"
+              [(ngModel)]="ocrGrnSearch" (click)="$event.stopPropagation(); ocrGrnDropOpen=true" />
+          </div>
+          <div class="ocr-grn-dropdown" *ngIf="ocrGrnDropOpen">
+            <div class="ocr-grn-opt" *ngIf="!ocrGrnFiltered.length" style="color:#9ca3af;font-style:italic;">No GRNs found</div>
+            <div class="ocr-grn-opt" *ngFor="let g of ocrGrnFiltered"
+              [class.selected]="isOcrGrnSelected(g)"
+              (click)="toggleOcrGrn(g)">
+              <span class="ocr-grn-check" *ngIf="isOcrGrnSelected(g)">✓</span>
+              <span class="ocr-grn-check ghost" *ngIf="!isOcrGrnSelected(g)"></span>
+              <div>
+                <strong>{{ g.grnNo }}</strong>
+                <span style="color:#6b7280;font-size:11px;margin-left:6px;">{{ g.supplierName }}</span>
+                <span *ngIf="g.poNo" style="color:#9ca3af;font-size:11px;margin-left:4px;">· {{ g.poNo }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="ocr-divider">
+        <span>then scan the invoice document</span>
+      </div>
+
+      <!-- Upload zone (show when no result yet) -->
+      <div *ngIf="!ocrResult && !ocrLoading"
+        class="ocr-drop-zone" [class.drag-over]="ocrDragOver"
+        (dragover)="onOcrDragOver($event)" (dragleave)="onOcrDragLeave()" (drop)="onOcrDrop($event)"
+        (click)="ocrFileInput.click()">
+        <input #ocrFileInput type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp"
+          style="display:none" (change)="onOcrFileSelect($event)" />
+        <div class="ocr-drop-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <p class="ocr-drop-title">Drag & drop invoice here</p>
+        <p class="ocr-drop-sub">or click to browse — PDF, PNG, JPG, TIFF (max 20 MB)</p>
+        <div class="ocr-error" *ngIf="ocrError">{{ ocrError }}</div>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="ocrLoading" class="ocr-loading">
+        <div class="ocr-spinner"></div>
+        <p>Reading invoice with AI OCR…</p>
+        <p class="ocr-loading-sub">This may take a few seconds</p>
+      </div>
+
+      <!-- Result -->
+      <div *ngIf="ocrResult && !ocrLoading" class="ocr-result">
+        <div class="ocr-result-head">
+          <svg viewBox="0 0 20 20" fill="none" stroke="#15803d" stroke-width="1.8" stroke-linecap="round" style="width:18px;height:18px;"><circle cx="10" cy="10" r="9"/><polyline points="6,10 9,13 14,7"/></svg>
+          Invoice extracted successfully
+          <button class="ocr-rescan-btn" (click)="ocrResult=null;ocrError=''">Scan again</button>
+        </div>
+
+        <div class="ocr-fields">
+          <div class="ocr-field" *ngIf="ocrResult.invoiceNo">
+            <span class="ocr-field-lbl">Invoice No</span>
+            <span class="ocr-field-val">{{ ocrResult.invoiceNo }}</span>
+          </div>
+          <div class="ocr-field" *ngIf="ocrResult.invoiceDate">
+            <span class="ocr-field-lbl">Invoice Date</span>
+            <span class="ocr-field-val">{{ ocrResult.invoiceDate }}</span>
+          </div>
+          <div class="ocr-field" *ngIf="ocrResult.supplierName">
+            <span class="ocr-field-lbl">Supplier</span>
+            <span class="ocr-field-val">{{ ocrResult.supplierName }}</span>
+          </div>
+          <div class="ocr-field" *ngIf="ocrResult.subTotal != null">
+            <span class="ocr-field-lbl">Subtotal</span>
+            <span class="ocr-field-val">{{ ocrResult.subTotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="ocr-field" *ngIf="ocrResult.taxAmount != null">
+            <span class="ocr-field-lbl">Tax</span>
+            <span class="ocr-field-val">{{ ocrResult.taxAmount | number:'1.2-2' }}</span>
+          </div>
+          <div class="ocr-field" *ngIf="ocrResult.total != null">
+            <span class="ocr-field-lbl">Total</span>
+            <span class="ocr-field-val" style="font-size:15px;font-weight:700;color:var(--primary);">{{ ocrResult.total | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Lines -->
+        <div *ngIf="ocrResult.lines?.length" class="ocr-lines-wrap">
+          <div class="ocr-lines-title">Line Items ({{ ocrResult.lines.length }})</div>
+          <table class="ocr-lines-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Item</th><th style="text-align:right">Qty</th>
+                <th style="text-align:right">Unit Price</th><th style="text-align:right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let l of ocrResult.lines; let i = index">
+                <td>{{ i+1 }}</td>
+                <td>{{ l.item || '—' }}</td>
+                <td style="text-align:right">{{ l.qty | number:'1.0-4' }}</td>
+                <td style="text-align:right">{{ l.unitPrice | number:'1.2-2' }}</td>
+                <td style="text-align:right;font-weight:600;">{{ (l.qty * l.unitPrice) | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="ocr-modal-foot">
+      <button class="btn btn-outline btn-sm" (click)="closeOcrModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" *ngIf="ocrResult" (click)="createFromOcr()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14"/></svg>
+        Create Invoice from Scan
+      </button>
+    </div>
+
   </div>
 </div>
 

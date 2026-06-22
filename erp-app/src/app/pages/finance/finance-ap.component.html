@@ -23,6 +23,99 @@
 
   <!-- ══ TAB 1: SUPPLIER INVOICES ══ -->
   <ng-container *ngIf="activeTab === 'invoices'">
+    <div class="sum-grid ap-invoice-summary">
+      <div class="sum-card sum-c1">
+        <span class="sum-icon">▣</span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.totalInvoice | number:'1.2-2' }}</strong></span>
+      </div>
+      <div class="sum-card sum-c2">
+        <span class="sum-icon">▰</span>
+        <span class="sum-text"><span class="sum-label">Total Paid</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+      </div>
+      <div class="sum-card sum-c3">
+        <span class="sum-icon">▤</span>
+        <span class="sum-text"><span class="sum-label">Total Debit Notes</span><strong class="sum-val slate">{{ invoiceSummary.debitNote | number:'1.2-2' }}</strong></span>
+      </div>
+      <div class="sum-card sum-c5">
+        <span class="sum-icon">⚖</span>
+        <span class="sum-text"><span class="sum-label">Net Outstanding</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
+      </div>
+    </div>
+
+    <div class="ap-search-row">
+      <label>Search:</label>
+      <input class="ap-search" type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+
+    <div class="ap-card invoice-card">
+      <div class="ap-loading" *ngIf="loading">Loading...</div>
+      <div class="ap-table-wrap" *ngIf="!loading">
+        <table class="ap-table supplier-table">
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th class="right">Invoice Count</th>
+              <th class="right">Amount</th>
+              <th class="right">Paid</th>
+              <th class="right">Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let grp of supplierGroups">
+              <tr class="supplier-row" (click)="toggleSupplier(grp.supplier)">
+                <td class="supplier-name">
+                  <button class="expand-btn" type="button">{{ isExpanded(grp.supplier) ? '⊘' : '+' }}</button>
+                  <span>{{ grp.supplier }}</span>
+                </td>
+                <td class="right muted">{{ grp.invoices.length }}</td>
+                <td class="right">{{ grp.total | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.paid | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.outstanding | number:'1.2-2' }}</td>
+              </tr>
+              <tr class="invoice-detail-row" *ngIf="isExpanded(grp.supplier)">
+                <td colspan="5">
+                  <table class="invoice-detail-table">
+                    <thead>
+                      <tr>
+                        <th>Invoice No</th>
+                        <th>Type</th>
+                        <th>Invoice Date</th>
+                        <th>Due Date</th>
+                        <th class="right">Amount</th>
+                        <th class="right">Paid</th>
+                        <th class="right">Debit Note</th>
+                        <th class="right">Advance</th>
+                        <th class="right">Outstanding</th>
+                        <th class="center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let inv of grp.invoices">
+                        <td class="invoice-no">{{ inv.invoiceNo || '-' }}</td>
+                        <td><span class="type-pill">{{ inv.invoiceType || 'Local' }}</span></td>
+                        <td>{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                        <td>{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
+                        <td class="right">{{ inv.amount | number:'1.2-2' }} <span class="currency">INR</span></td>
+                        <td class="right">{{ inv.paid | number:'1.2-2' }} <span class="currency">INR</span></td>
+                        <td class="right">{{ inv.debitNote | number:'1.2-2' }} <span class="currency">INR</span></td>
+                        <td class="right">{{ inv.advance | number:'1.2-2' }} <span class="currency">INR</span></td>
+                        <td class="right strong">{{ inv.balance | number:'1.2-2' }} <span class="currency">INR</span></td>
+                        <td class="center"><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </ng-container>
+            <tr *ngIf="supplierGroups.length === 0 && !loading">
+              <td colspan="5" class="ap-empty">No AP invoices found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <ng-container *ngIf="false">
 
     <!-- Summary Cards -->
     <div class="sum-grid">
@@ -111,6 +204,7 @@
         </table>
       </div>
     </div>
+    </ng-container>
   </ng-container>
 
   <!-- ══ TAB 2: PAYMENTS ══ -->
@@ -213,22 +307,22 @@
   <ng-container *ngIf="activeTab === 'aging'">
 
     <!-- Aging Summary Cards -->
-    <div class="sum-grid">
+    <div class="sum-grid ap-invoice-summary">
       <div class="sum-card sum-c1">
-        <span class="sum-label">Total Outstanding</span>
-        <strong class="sum-val">{{ agingSummary.total | number:'1.2-2' }}</strong>
+        <span class="sum-icon">⚖</span>
+        <span class="sum-text"><span class="sum-label">Total Outstanding</span><strong class="sum-val blue">{{ agingSummary.total | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
-        <span class="sum-label">0 – 30 Days</span>
-        <strong class="sum-val">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong>
+        <span class="sum-icon">✓</span>
+        <span class="sum-text"><span class="sum-label">0 – 30 Days</span><strong class="sum-val green">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
-        <span class="sum-label">31 – 60 Days</span>
-        <strong class="sum-val">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong>
+        <span class="sum-icon">!</span>
+        <span class="sum-text"><span class="sum-label">31 – 60 Days</span><strong class="sum-val slate">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c4">
-        <span class="sum-label">61+ Days</span>
-        <strong class="sum-val">{{ agingSummary.days61plus | number:'1.2-2' }}</strong>
+        <span class="sum-icon">!!</span>
+        <span class="sum-text"><span class="sum-label">61+ Days</span><strong class="sum-val orange">{{ agingSummary.days61plus | number:'1.2-2' }}</strong></span>
       </div>
     </div>
 

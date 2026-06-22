@@ -1,156 +1,183 @@
-<div class="mr-page">
+<div class="list-page">
+  <div class="list-card">
 
-  <!-- Header -->
-  <div class="page-header">
-    <div>
-      <h2>Mobile Receiving</h2>
-      <p class="mr-sub" *ngIf="poLines?.length">
-        Ordered {{ totalOrderedQty | number:'1.0-4' }} &nbsp;&middot;&nbsp;
-        Received {{ totalReceivedQty | number:'1.0-4' }} &nbsp;&middot;&nbsp;
-        Queued {{ queueTotalQty | number:'1.0-4' }} &nbsp;&middot;&nbsp;
-        Remaining {{ totalRemainingAfterQueue | number:'1.0-4' }}
-      </p>
-    </div>
-  </div>
-
-  <!-- Error banner -->
-  <div class="alert-error" *ngIf="error">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-      <circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/>
-      <line x1="10" y1="13.5" x2="10.01" y2="13.5"/>
-    </svg>
-    {{ error }}
-  </div>
-
-  <!-- Progress bar -->
-  <div class="mr-progress-wrap" *ngIf="poLines?.length">
-    <div class="mr-progress-bar" [style.width.%]="receiveProgressPct"></div>
-    <span class="mr-progress-label">{{ receiveProgressPct | number:'1.0-0' }}%</span>
-  </div>
-
-  <!-- Scan card -->
-  <div class="card section-card">
-    <div class="section-label">Scan / Receive</div>
-
-    <div class="mr-scan-row">
-      <div class="mr-field">
-        <label class="field-label">PO Number</label>
-        <input class="erp-native-input" [(ngModel)]="mrPo" (keydown.enter)="loadPo()" placeholder="PO-000123" />
-        <button class="btn btn-outline btn-sm mr-load-btn" (click)="loadPo()">Load PO</button>
+    <!-- Card header -->
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            <path d="M9 7l3 3 3-3"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Mobile Receiving</h3>
+          <p class="list-card-sub" *ngIf="!poLines?.length">Scan barcodes and receive items against a Purchase Order</p>
+          <p class="list-card-sub" *ngIf="poLines?.length">
+            Ordered {{ totalOrderedQty | number:'1.0-4' }} &nbsp;·&nbsp;
+            Received {{ totalReceivedQty | number:'1.0-4' }} &nbsp;·&nbsp;
+            Queued {{ queueTotalQty | number:'1.0-4' }} &nbsp;·&nbsp;
+            Remaining {{ totalRemainingAfterQueue | number:'1.0-4' }}
+          </p>
+        </div>
       </div>
-
-      <div class="mr-field">
-        <label class="field-label">Barcode</label>
-        <input #barcodeInput class="erp-native-input" [(ngModel)]="mrBarcode"
-          (keydown.enter)="addScan()" placeholder="Scan or type barcode…" autofocus />
-      </div>
-
-      <div class="mr-field mr-field-sm">
-        <label class="field-label">Qty</label>
-        <input class="erp-native-input" type="number" min="0.0001" step="0.0001"
-          [(ngModel)]="mrQty" (keydown.enter)="addScan()" placeholder="1" />
-      </div>
-
-      <div class="mr-btns">
-        <button class="btn btn-primary btn-sm" (click)="addScan()">Add</button>
-        <button class="btn btn-outline btn-sm" (click)="syncMobile()" [disabled]="isSyncing || !mrRows.length">
+      <div class="list-card-actions">
+        <button class="panel-toggle-btn" (click)="syncMobile()" [disabled]="isSyncing || !mrRows.length">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
           <span class="btn-spinner" *ngIf="isSyncing"></span>
           {{ isSyncing ? 'Syncing…' : 'Sync' }}
+          <span class="badge-pill warn" *ngIf="mrRows.length">{{ mrRows.length }}</span>
         </button>
-        <button class="btn btn-danger-outline btn-sm" (click)="clearQueue()" [disabled]="!mrRows.length">Clear</button>
-        <label class="toggle-chk">
-          <span class="toggle-box" [class.on]="mrOffline" (click)="toggleOffline()">
-            <svg *ngIf="mrOffline" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="1.5,5 3.8,7.5 8.5,2"/>
-            </svg>
-          </span>
-          <span>Offline</span>
-        </label>
+        <button class="panel-toggle-btn danger-toggle" (click)="clearQueue()" [disabled]="!mrRows.length">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Clear
+        </button>
       </div>
     </div>
 
-    <div class="mr-message" *ngIf="mrScanMessage">{{ mrScanMessage }}</div>
-  </div>
-
-  <!-- Scan queue table -->
-  <div class="card section-card">
-    <div class="section-label-row">
-      <div class="section-label">Scan Queue ({{ mrRows.length }})</div>
+    <!-- Progress bar (inside card, under header) -->
+    <div class="mr-progress-wrap" *ngIf="poLines?.length">
+      <div class="mr-progress-bar" [style.width.%]="receiveProgressPct"></div>
+      <span class="mr-progress-label">{{ receiveProgressPct | number:'1.0-0' }}%</span>
     </div>
-    <div class="lines-table-wrap">
-      <table class="lines-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Item / Barcode</th>
-            <th style="text-align:right">Qty</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngIf="!mrRows.length">
-            <td colspan="4" class="empty-lines">No scans yet — scan a barcode above to begin.</td>
-          </tr>
-          <tr *ngFor="let r of mrRows; let i = index; trackBy: trackBy">
-            <td class="row-ts">{{ r.ts | date:'HH:mm:ss' }}</td>
-            <td>
-              <div class="row-name">{{ r.itemName || r.itemCode || r.barcode }}</div>
-              <div class="row-code">{{ r.barcode }}</div>
-            </td>
-            <td class="num-cell">{{ r.qty | number:'1.0-4' }}</td>
-            <td class="del-col">
-              <button class="btn-icon danger" (click)="removeScan(i)" title="Remove">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                  <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
-                </svg>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- PO Lines table -->
-  <div class="card section-card" *ngIf="poLines?.length">
-    <div class="section-label">PO Lines</div>
-    <div class="lines-table-wrap">
-      <table class="lines-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th style="text-align:right">Ordered</th>
-            <th style="text-align:right">Received</th>
-            <th style="text-align:right">Balance</th>
-            <th style="text-align:right">Queued</th>
-            <th style="text-align:right">After Queue</th>
-            <th style="text-align:center">Add Received</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let l of poLines" [class.mr-complete]="lineRemainingAfterQueue(l) <= 0">
-            <td>{{ l.item ?? l.itemCode ?? '—' }}</td>
-            <td class="num-cell">{{ l.qty | number:'1.0-4' }}</td>
-            <td class="num-cell">{{ (l.receivedQty ?? 0) | number:'1.0-4' }}</td>
-            <td class="num-cell">{{ (l.balanceQty ?? l.qtyRemaining ?? 0) | number:'1.0-4' }}</td>
-            <td class="num-cell mr-queued">{{ lineQueuedQty(l) | number:'1.0-4' }}</td>
-            <td class="num-cell" [class.mr-done]="lineRemainingAfterQueue(l) <= 0">
-              {{ lineRemainingAfterQueue(l) | number:'1.0-4' }}
-            </td>
-            <td style="text-align:center">
-              <div class="mr-add-inline" *ngIf="lineRemainingAfterQueue(l) > 0">
-                <input type="number" class="erp-native-input erp-native-input-sm"
-                  [(ngModel)]="lineInputQty[l.item ?? l.itemCode]"
-                  [placeholder]="lineRemainingAfterQueue(l)"
-                  min="0.0001" step="0.0001" />
-                <button class="btn btn-outline btn-xs" (click)="addLineDirectly(l)">Add</button>
-              </div>
-              <span class="done-badge" *ngIf="lineRemainingAfterQueue(l) <= 0">Done</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Error banner -->
+    <div class="alert-error" *ngIf="error">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/>
+        <line x1="10" y1="13.5" x2="10.01" y2="13.5"/>
+      </svg>
+      {{ error }}
     </div>
-  </div>
 
+    <!-- Scan / Receive section -->
+    <div class="mr-section">
+      <div class="mr-section-label">Scan / Receive</div>
+
+      <div class="mr-scan-row">
+        <div class="mr-field">
+          <label class="mr-field-label">PO Number</label>
+          <div class="mr-po-row">
+            <input class="mr-input" [(ngModel)]="mrPo" (keydown.enter)="loadPo()" placeholder="PO-000123" />
+            <button class="panel-toggle-btn" (click)="loadPo()">Load PO</button>
+          </div>
+        </div>
+
+        <div class="mr-field mr-field-grow">
+          <label class="mr-field-label">Barcode</label>
+          <input #barcodeInput class="mr-input" [(ngModel)]="mrBarcode"
+            (keydown.enter)="addScan()" placeholder="Scan or type barcode…" autofocus />
+        </div>
+
+        <div class="mr-field mr-field-sm">
+          <label class="mr-field-label">Qty</label>
+          <input class="mr-input" type="number" min="0.0001" step="0.0001"
+            [(ngModel)]="mrQty" (keydown.enter)="addScan()" placeholder="1" />
+        </div>
+
+        <div class="mr-action-btns">
+          <button class="list-add-btn" (click)="addScan()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add
+          </button>
+          <label class="toggle-chk">
+            <span class="toggle-box" [class.on]="mrOffline" (click)="toggleOffline()">
+              <svg *ngIf="mrOffline" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1.5,5 3.8,7.5 8.5,2"/>
+              </svg>
+            </span>
+            <span>Offline</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mr-message" *ngIf="mrScanMessage">{{ mrScanMessage }}</div>
+    </div>
+
+    <!-- Scan queue table -->
+    <div class="mr-section">
+      <div class="mr-section-label">Scan Queue ({{ mrRows.length }})</div>
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Item / Barcode</th>
+              <th style="text-align:right">Qty</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!mrRows.length">
+              <td colspan="4" class="empty-lines">No scans yet — scan a barcode above to begin.</td>
+            </tr>
+            <tr *ngFor="let r of mrRows; let i = index; trackBy: trackBy">
+              <td class="row-ts">{{ r.ts | date:'HH:mm:ss' }}</td>
+              <td>
+                <div class="row-name">{{ r.itemName || r.itemCode || r.barcode }}</div>
+                <div class="row-code">{{ r.barcode }}</div>
+              </td>
+              <td class="num-cell">{{ r.qty | number:'1.0-4' }}</td>
+              <td class="del-col">
+                <button class="btn-del" (click)="removeScan(i)" title="Remove">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PO Lines table -->
+    <div class="mr-section" *ngIf="poLines?.length">
+      <div class="mr-section-label">PO Lines</div>
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th style="text-align:right">Ordered</th>
+              <th style="text-align:right">Received</th>
+              <th style="text-align:right">Balance</th>
+              <th style="text-align:right">Queued</th>
+              <th style="text-align:right">After Queue</th>
+              <th style="text-align:center">Add Received</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of poLines" [class.mr-complete]="lineRemainingAfterQueue(l) <= 0">
+              <td>{{ l.item ?? l.itemCode ?? '—' }}</td>
+              <td class="num-cell">{{ l.qty | number:'1.0-4' }}</td>
+              <td class="num-cell">{{ (l.receivedQty ?? 0) | number:'1.0-4' }}</td>
+              <td class="num-cell">{{ (l.balanceQty ?? l.qtyRemaining ?? 0) | number:'1.0-4' }}</td>
+              <td class="num-cell mr-queued">{{ lineQueuedQty(l) | number:'1.0-4' }}</td>
+              <td class="num-cell" [class.mr-done]="lineRemainingAfterQueue(l) <= 0">
+                {{ lineRemainingAfterQueue(l) | number:'1.0-4' }}
+              </td>
+              <td style="text-align:center">
+                <div class="mr-add-inline" *ngIf="lineRemainingAfterQueue(l) > 0">
+                  <input type="number" class="mr-input mr-input-sm"
+                    [(ngModel)]="lineInputQty[l.item ?? l.itemCode]"
+                    [placeholder]="lineRemainingAfterQueue(l)"
+                    min="0.0001" step="0.0001" />
+                  <button class="panel-toggle-btn" (click)="addLineDirectly(l)">Add</button>
+                </div>
+                <span class="done-badge" *ngIf="lineRemainingAfterQueue(l) <= 0">Done</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
 </div>

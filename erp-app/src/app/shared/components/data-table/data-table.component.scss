@@ -187,16 +187,16 @@
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-/* Eye-first column button */
-.eye-first-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #0e7490;
-  border-color: #0e7490;
-  color: #fff;
-  svg { width: 15px; height: 15px; }
-  &:hover { background: #0e4a60; border-color: #0e4a60; color: #fff; }
+/* Eye button inside action column */
+.btn-icon.eye-first-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #0e7490;
+  svg { width: 15px; height: 15px; stroke-width: 2; }
+  &:hover { background: #eaf2f5; color: #0a5f73; }
 }
 
 /* Icon action buttons */

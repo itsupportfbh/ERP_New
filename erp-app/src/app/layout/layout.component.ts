@@ -45,9 +45,9 @@ export class LayoutComponent {
         { label: 'Purchase Order',   icon: 'po',       route: '/app/purchase/orders' },
         { label: 'RFQ',              icon: 'rfq',      route: '/app/purchase/rfq' },
         { label: 'Good Receipt',     icon: 'grn',      route: '/app/purchase/grn' },
+        { label: 'Mobile Receiving', icon: 'grn',      route: '/app/purchase/mobile-receiving' },
         { label: 'Supplier Invoice', icon: 'invoice',  route: '/app/purchase/supplier-invoice' },
         { label: 'Debit Note',       icon: 'debit',    route: '/app/purchase/debit-note' },
-        { label: '3-Way Match',      icon: 'match',    route: '/app/purchase/three-way-match' },
         { label: 'Scorecard',        icon: 'scorecard',route: '/app/purchase/scorecard' },
       ]
     },

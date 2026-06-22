@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
 import Swal from 'sweetalert2';
+import { ActivatedRoute } from '@angular/router';
 
 type GstTab = 'taxcodes' | 'returns' | 'details';
 
@@ -26,8 +27,10 @@ export class FinanceGstComponent implements OnInit {
 
   // GST F5 Returns
   gstReturns: any[] = [];
-  returnYears: string[] = [];
-  selectedYear = '';
+  returnYears: any[] = [];
+  returnPeriods: any[] = [];
+  selectedYear: any = '';
+  selectedPeriodId: any = '';
   returnSummary = { totalOutput: 0, totalInput: 0, netPayable: 0 };
 
   // GST Details / Report
@@ -45,10 +48,15 @@ export class FinanceGstComponent implements OnInit {
   private returnConfig = FINANCE_PAGES.find(p => p.key === 'gst-return')!;
   private reportConfig = FINANCE_PAGES.find(p => p.key === 'gst-report')!;
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
-    this.loadTaxCodes();
+    const path = this.route.snapshot.routeConfig?.path || '';
+    if (path.includes('gst-return')) this.activeTab = 'returns';
+    else if (path.includes('gst-report')) this.activeTab = 'details';
+    if (this.activeTab === 'returns') this.loadReturns();
+    else if (this.activeTab === 'details') this.loadReport();
+    else this.loadTaxCodes();
   }
 
   setTab(tab: GstTab): void {
@@ -74,25 +82,40 @@ export class FinanceGstComponent implements OnInit {
 
   private loadReturns(): void {
     this.loading = true;
-    this.finance.list(this.returnConfig.endpoint).subscribe({
+    this.finance.gstYears().subscribe({
       next: res => {
-        const data = this.finance.unwrap(res);
-        this.returnYears = Array.isArray(data) && typeof data[0] === 'string' ? data : [];
+        this.returnYears = this.finance.unwrap(res);
         if (this.returnYears.length && !this.selectedYear) {
-          this.selectedYear = this.returnYears[0];
+          this.selectedYear = this.yearValue(this.returnYears[0]);
         }
-        this.loadReturnForYear();
+        this.loadPeriodsForYear();
       },
       error: () => { this.returnYears = []; this.gstReturns = []; this.loading = false; this.error = 'GST returns unavailable.'; }
     });
   }
 
-  loadReturnForYear(): void {
+  loadPeriodsForYear(): void {
     if (!this.selectedYear) { this.loading = false; return; }
     this.loading = true;
-    this.finance.list(this.returnConfig.endpoint, { year: this.selectedYear }).subscribe({
+    this.finance.gstPeriods(this.selectedYear).subscribe({
       next: res => {
-        this.gstReturns = this.finance.unwrap(res);
+        this.returnPeriods = this.finance.unwrap(res);
+        if (this.returnPeriods.length && !this.selectedPeriodId) {
+          this.selectedPeriodId = this.periodValue(this.returnPeriods[0]);
+        }
+        this.loadReturnForYear();
+      },
+      error: () => { this.returnPeriods = []; this.gstReturns = []; this.loading = false; this.error = 'GST periods unavailable.'; }
+    });
+  }
+
+  loadReturnForYear(): void {
+    if (!this.selectedPeriodId) { this.loading = false; return; }
+    this.loading = true;
+    this.finance.gstReturnForPeriod(this.selectedPeriodId).subscribe({
+      next: res => {
+        const list = this.finance.unwrap(res);
+        this.gstReturns = list.length ? list : [this.finance.unwrapOne(res)].filter(x => x && Object.keys(x).length);
         this.calcReturnSummary();
         this.loading = false;
       },
@@ -102,7 +125,7 @@ export class FinanceGstComponent implements OnInit {
 
   private loadReport(): void {
     this.loading = true;
-    this.finance.list(this.reportConfig.endpoint, { fromDate: this.reportFromDate, toDate: this.reportToDate }).subscribe({
+    this.finance.gstDetails({ startDate: this.reportFromDate, endDate: this.reportToDate }).subscribe({
       next: res => {
         this.gstReport = this.finance.unwrap(res);
         this.calcReportSummary();
@@ -144,7 +167,13 @@ export class FinanceGstComponent implements OnInit {
 
   editTax(row: any): void {
     this.editingTax = row;
-    this.taxForm = { code: row.code, description: row.description, rate: row.rate, type: row.type || 'GST', isActive: row.isActive !== false };
+    this.taxForm = {
+      code: row.code ?? row.taxCode,
+      description: row.description ?? row.taxName,
+      rate: row.rate ?? row.taxRate,
+      type: row.type ?? row.taxType ?? 'GST',
+      isActive: row.isActive !== false
+    };
     this.showTaxForm = true;
     this.message = '';
     this.error = '';
@@ -170,5 +199,21 @@ export class FinanceGstComponent implements OnInit {
     this.reportSummary.outputTax      = this.gstReport.reduce((s, r) => s + (r.outputTax || r.gstCollected || 0), 0);
     this.reportSummary.inputTax       = this.gstReport.reduce((s, r) => s + (r.inputTax || r.gstPaid || 0), 0);
     this.reportSummary.netGST         = this.reportSummary.outputTax - this.reportSummary.inputTax;
+  }
+
+  yearValue(year: any): any {
+    return year?.fyStartYear ?? year?.year ?? year?.value ?? year;
+  }
+
+  yearLabel(year: any): string {
+    return String(year?.label ?? year?.financialYear ?? year?.yearName ?? this.yearValue(year));
+  }
+
+  periodValue(period: any): any {
+    return period?.periodId ?? period?.id ?? period?.value ?? period;
+  }
+
+  periodLabel(period: any): string {
+    return String(period?.periodName ?? period?.name ?? period?.label ?? this.periodValue(period));
   }
 }

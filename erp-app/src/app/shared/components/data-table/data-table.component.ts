@@ -88,8 +88,8 @@ export class DataTableComponent implements OnChanges {
   onSearch(e: Event): void { this.searchQuery = (e.target as HTMLInputElement).value; this.currentPage = 1; }
 
   /** Total visible columns including optional checkbox and action columns */
- get totalCols(): number {
-    return this.columns.length + (this.selectable ? 1 : 0) + (this.rowActions.length ? 1 : 0) + (this.eyeFirst ? 1 : 0);
+  get totalCols(): number {
+    return this.columns.length + (this.selectable ? 1 : 0) + (this.rowActions.length || this.eyeFirst ? 1 : 0);
   }
 
   onAction(key: string, row: any, e: Event): void {
@@ -134,7 +134,8 @@ export class DataTableComponent implements OnChanges {
   }
 
   get actionColWidth(): string {
-    const iconWidth = Math.max(this.rowActions.length * 36, 88);
+    const count = this.rowActions.length + (this.eyeFirst ? 1 : 0);
+    const iconWidth = Math.max(count * 36, 88);
     return `${iconWidth}px`;
   }
 

@@ -24,32 +24,34 @@
   <ng-container *ngIf="activeTab === 'invoices'">
 
     <!-- Summary Cards -->
-    <div class="sum-grid">
+    <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
-        <span class="sum-label">Total Invoice Amount</span>
-        <strong class="sum-val">{{ invoiceSummary.total | number:'1.2-2' }}</strong>
+        <span class="sum-icon">▣</span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
-        <span class="sum-label">Total Paid</span>
-        <strong class="sum-val">{{ invoiceSummary.paid | number:'1.2-2' }}</strong>
+        <span class="sum-icon">▰</span>
+        <span class="sum-text"><span class="sum-label">Total Paid</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
-        <span class="sum-label">Credit Notes</span>
-        <strong class="sum-val">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong>
+        <span class="sum-icon">▤</span>
+        <span class="sum-text"><span class="sum-label">Credit Notes</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
       </div>
-      <div class="sum-card sum-c4">
-        <span class="sum-label">Net Outstanding</span>
-        <strong class="sum-val">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong>
+      <div class="sum-card sum-c5">
+        <span class="sum-icon">⚖</span>
+        <span class="sum-text"><span class="sum-label">Net Outstanding</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
       </div>
     </div>
 
-    <div class="ar-card">
-      <div class="ar-card-head">
-        <input class="ar-search" type="text" placeholder="Search customer, invoice..." [(ngModel)]="search" (ngModelChange)="applyInvoiceFilter()">
-      </div>
+    <div class="ar-search-row">
+      <label>Search:</label>
+      <input class="ar-search" type="text" [(ngModel)]="search" (ngModelChange)="applyInvoiceFilter()">
+    </div>
+
+    <div class="ar-card invoice-card">
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">
-        <table class="ar-table">
+        <table class="ar-table customer-table">
           <thead>
             <tr>
               <th style="width:32px"></th>
@@ -277,22 +279,22 @@
   <!-- ══ TAB 4: AR AGING ══ -->
   <ng-container *ngIf="activeTab === 'aging'">
 
-    <div class="sum-grid">
+    <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
-        <span class="sum-label">Total Outstanding</span>
-        <strong class="sum-val">{{ agingSummary.total | number:'1.2-2' }}</strong>
+        <span class="sum-icon">⚖</span>
+        <span class="sum-text"><span class="sum-label">Total Outstanding</span><strong class="sum-val blue">{{ agingSummary.total | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
-        <span class="sum-label">0 – 30 Days</span>
-        <strong class="sum-val">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong>
+        <span class="sum-icon">✓</span>
+        <span class="sum-text"><span class="sum-label">0 – 30 Days</span><strong class="sum-val green">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
-        <span class="sum-label">31 – 60 Days</span>
-        <strong class="sum-val">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong>
+        <span class="sum-icon">!</span>
+        <span class="sum-text"><span class="sum-label">31 – 60 Days</span><strong class="sum-val slate">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c4">
-        <span class="sum-label">61+ Days</span>
-        <strong class="sum-val">{{ agingSummary.days61plus | number:'1.2-2' }}</strong>
+        <span class="sum-icon">!!</span>
+        <span class="sum-text"><span class="sum-label">61+ Days</span><strong class="sum-val orange">{{ agingSummary.days61plus | number:'1.2-2' }}</strong></span>
       </div>
     </div>
 

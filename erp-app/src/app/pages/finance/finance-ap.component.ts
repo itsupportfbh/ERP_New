@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
 import Swal from 'sweetalert2';
+import { ActivatedRoute } from '@angular/router';
 
 type ApTab = 'invoices' | 'payments' | 'aging' | 'advances' | 'match';
 
@@ -55,10 +56,13 @@ export class FinanceApComponent implements OnInit {
   private agingConfig = FINANCE_PAGES.find(p => p.key === 'ap-aging')!;
   private advanceConfig = FINANCE_PAGES.find(p => p.key === 'ap-advance')!;
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
-    this.loadInvoices();
+    const path = this.route.snapshot.routeConfig?.path || '';
+    if (path.includes('ap-aging')) this.setTab('aging');
+    else if (path.includes('ap-advance')) this.setTab('advances');
+    else this.loadInvoices();
   }
 
   setTab(tab: ApTab): void {
@@ -76,7 +80,7 @@ export class FinanceApComponent implements OnInit {
     this.loading = true;
     this.finance.list(this.apConfig.endpoint).subscribe({
       next: res => {
-        this.invoices = this.finance.unwrap(res);
+        this.invoices = this.finance.unwrap(res).map(row => this.normalizeInvoice(row));
         this.applyFilter();
         this.calculateInvoiceSummary();
         this.loading = false;
@@ -167,7 +171,7 @@ export class FinanceApComponent implements OnInit {
       : [...this.invoices];
   }
 
-  get supplierGroups(): { supplier: string; invoices: any[]; total: number; paid: number; outstanding: number }[] {
+  get supplierGroups(): { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number }[] {
     const map = new Map<string, any[]>();
     this.filteredInvoices.forEach(inv => {
       const key = inv.supplierName || 'Unknown Supplier';
@@ -179,6 +183,8 @@ export class FinanceApComponent implements OnInit {
       invoices: invs,
       total: invs.reduce((s, i) => s + (i.amount || 0), 0),
       paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
+      debitNote: invs.reduce((s, i) => s + (i.debitNote || 0), 0),
+      advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
       outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0)
     }));
   }
@@ -243,10 +249,9 @@ export class FinanceApComponent implements OnInit {
 
   statusClass(status: string): string {
     const s = String(status || '').toLowerCase();
-    if (['paid', 'posted', 'approved'].includes(s)) return 'badge-success';
-    if (['overdue', 'rejected'].includes(s)) return 'badge-danger';
-    if (['pending', 'submitted', 'draft'].includes(s)) return 'badge-warning';
-    return 'badge-default';
+    if (s === 'paid')    return 'badge-success';
+    if (s === 'partial') return 'badge-warning';
+    return 'badge-danger';
   }
 
   private calculateInvoiceSummary(): void {
@@ -255,6 +260,35 @@ export class FinanceApComponent implements OnInit {
     this.invoiceSummary.debitNote = this.invoices.reduce((s, r) => s + (r.debitNote || 0), 0);
     this.invoiceSummary.advance = this.invoices.reduce((s, r) => s + (r.advance || 0), 0);
     this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance || 0), 0);
+  }
+
+  private normalizeInvoice(row: any): any {
+    const amount = this.money(row, ['amount', 'invoiceAmount', 'totalAmount', 'grandTotal', 'netAmount', 'amountBase']);
+    const paid = this.money(row, ['paid', 'paidAmount', 'totalPaid', 'paymentAmount', 'paidBase']);
+    const debitNote = this.money(row, ['debitNote', 'debitNoteAmount', 'debitAmount', 'totalDebitNote']);
+    const advance = this.money(row, ['advance', 'advanceApplied', 'advanceAmount', 'supplierAdvance', 'advanceAdjusted']);
+    const balance = this.money(row, ['balance', 'outstanding', 'netPayable', 'dueAmount', 'balanceAmount'], amount - paid - debitNote - advance);
+    return {
+      ...row,
+      id: row.id ?? row.invoiceId ?? row.pinId ?? row.supplierInvoiceId,
+      supplierName: row.supplierName ?? row.supplier ?? row.vendorName ?? row.partyName ?? 'Unknown Supplier',
+      invoiceNo: row.invoiceNo ?? row.pinNo ?? row.supplierInvoiceNo ?? row.referenceNo ?? row.docNo,
+      invoiceDate: row.invoiceDate ?? row.pinDate ?? row.docDate ?? row.createdDate,
+      dueDate: row.dueDate ?? row.paymentDueDate,
+      invoiceType: row.invoiceType ?? row.type ?? (row.isLocal ? 'Local' : 'Local'),
+      amount,
+      paid,
+      debitNote,
+      advance,
+      balance: Math.max(balance, 0),
+      currencyName: row.currencyName ?? row.currencyCode ?? 'INR',
+      status: balance <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid'
+    };
+  }
+
+  private money(row: any, keys: string[], fallback = 0): number {
+    const value = keys.map(key => row?.[key]).find(v => v !== undefined && v !== null && v !== '');
+    return Number(value ?? fallback) || 0;
   }
 
   private calculateAgingSummary(): void {

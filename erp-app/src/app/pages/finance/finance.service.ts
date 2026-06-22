@@ -127,6 +127,22 @@ export class FinanceService {
     return this.http.get(this.url('/Dashboard'));
   }
 
+  gstYears(): Observable<any> {
+    return this.http.get(this.url('/GstReturns/years'));
+  }
+
+  gstPeriods(fyStartYear: string | number): Observable<any> {
+    return this.http.get(this.url(`/GstReturns/periods/${fyStartYear}`));
+  }
+
+  gstReturnForPeriod(periodId: string | number): Observable<any> {
+    return this.http.get(this.url(`/GstReturns/return/${periodId}`));
+  }
+
+  gstDetails(params?: Record<string, string | number | null | undefined>): Observable<any> {
+    return this.http.get(this.url('/GstReturns/details'), { params: this.params(params) });
+  }
+
   private url(endpoint: string, id?: number | string): string {
     const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     if (id !== undefined && id !== null && (clean.includes(':id') || clean.includes('{id}'))) {
