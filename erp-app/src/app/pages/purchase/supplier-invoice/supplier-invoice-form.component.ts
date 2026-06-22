@@ -98,8 +98,40 @@ export class SupplierInvoiceFormComponent implements OnInit {
     const paramId = this.route.snapshot.paramMap.get('id');
     this.isEdit = !!paramId && paramId !== 'new';
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
-    else { this.loadGrnList(); }
+    else { this.loadGrnList(true); }
     this.loadLookups();
+  }
+
+  private applyOcrDraft(): void {
+    const raw = sessionStorage.getItem('ocrPinDraft');
+    if (!raw) return;
+    sessionStorage.removeItem('ocrPinDraft');
+    try {
+      const draft = JSON.parse(raw);
+      if (draft.invoiceNo) this.invoiceNo = draft.invoiceNo;
+      if (draft.invoiceDate) this.invoiceDate = draft.invoiceDate.substring(0, 10);
+      // Auto-select GRNs from draft
+      const draftGrnIds: number[] = draft.grnIds ?? [];
+      if (draftGrnIds.length) {
+        const toSelect = this.grnList.filter(g => draftGrnIds.includes(Number(g.id)));
+        toSelect.forEach(g => {
+          if (!this.selectedGrnIds.includes(Number(g.id))) {
+            this.selectedGrnIds.push(Number(g.id));
+            this.selectedGrnNos.push(g.grnNo);
+          }
+        });
+        const selectedGrns = this.grnList.filter(g => this.selectedGrnIds.includes(Number(g.id)));
+        this.grnSearch = selectedGrns.map(x => x.grnNo).join(', ');
+        if (selectedGrns.length > 0) {
+          this.supplierName = selectedGrns[0].supplierName;
+          this.supplierId = selectedGrns[0].supplierId;
+          this.currencyId = selectedGrns[0].currencyId;
+          this.currencyName = selectedGrns[0].currencyName;
+          this.fxRate = selectedGrns[0].fxRate;
+        }
+        this.loadLinesFromGrns(selectedGrns);
+      }
+    } catch { /* ignore bad draft */ }
   }
 
   @HostListener('document:click', ['$event'])
@@ -120,11 +152,12 @@ export class SupplierInvoiceFormComponent implements OnInit {
       })));
   }
 
-  loadGrnList(): void {
+  loadGrnList(applyOcr = false): void {
     this.svc.getAvailableGRNsForPin().subscribe({
       next: r => {
         this.grnList = this.svc.unwrap(r).map((g: any) => this.mapGrn(g));
         this.grnFiltered = [...this.grnList];
+        if (applyOcr) this.applyOcrDraft();
       },
       error: () => {}
     });

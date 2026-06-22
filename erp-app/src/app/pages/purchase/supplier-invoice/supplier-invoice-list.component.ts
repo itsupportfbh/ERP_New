@@ -53,6 +53,17 @@ export class SupplierInvoiceListComponent implements OnInit {
   currentRow: any = null;
   isPosting = false;
 
+  // OCR
+  showOcrModal = false;
+  ocrLoading = false;
+  ocrResult: any = null;
+  ocrError = '';
+  ocrDragOver = false;
+  ocrGrnOptions: any[] = [];
+  ocrGrnSearch = '';
+  ocrSelectedGrns: any[] = [];
+  ocrGrnDropOpen = false;
+
   constructor(private svc: PurchaseService, private router: Router) {}
 
   ngOnInit(): void { this.load(); }
@@ -118,6 +129,79 @@ export class SupplierInvoiceListComponent implements OnInit {
 
   create(): void { this.router.navigate(['/app/purchase/supplier-invoice/new']); }
   edit(row: any): void { this.router.navigate(['/app/purchase/supplier-invoice', row.id]); }
+
+  // ── OCR ──────────────────────────────────────────────
+  openOcrModal(): void {
+    this.showOcrModal = true;
+    this.ocrResult = null; this.ocrError = ''; this.ocrLoading = false;
+    this.ocrDragOver = false; this.ocrSelectedGrns = []; this.ocrGrnSearch = '';
+    this.svc.getAvailableGRNsForPin().subscribe({
+      next: res => {
+        this.ocrGrnOptions = this.svc.unwrap(res).map((g: any) => ({
+          id: g.id ?? g.iD,
+          grnNo: g.grnNo ?? g.grnNumber ?? g.number ?? '',
+          supplierName: g.supplierName ?? '',
+          poNo: g.poNo ?? ''
+        }));
+      }
+    });
+  }
+  closeOcrModal(): void { this.showOcrModal = false; this.ocrGrnDropOpen = false; }
+
+  get ocrGrnFiltered(): any[] {
+    const q = this.ocrGrnSearch.toLowerCase();
+    return q ? this.ocrGrnOptions.filter(g =>
+      (g.grnNo ?? '').toLowerCase().includes(q) ||
+      (g.supplierName ?? '').toLowerCase().includes(q) ||
+      (g.poNo ?? '').toLowerCase().includes(q)
+    ) : this.ocrGrnOptions;
+  }
+
+  toggleOcrGrn(grn: any): void {
+    const idx = this.ocrSelectedGrns.findIndex(g => g.id === grn.id);
+    if (idx >= 0) this.ocrSelectedGrns.splice(idx, 1);
+    else this.ocrSelectedGrns.push(grn);
+  }
+  isOcrGrnSelected(grn: any): boolean { return this.ocrSelectedGrns.some(g => g.id === grn.id); }
+  removeOcrGrn(grn: any): void { this.ocrSelectedGrns = this.ocrSelectedGrns.filter(g => g.id !== grn.id); }
+
+  onOcrFileSelect(e: Event): void {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) this.runOcr(file);
+  }
+
+  onOcrDragOver(e: DragEvent): void { e.preventDefault(); this.ocrDragOver = true; }
+  onOcrDragLeave(): void { this.ocrDragOver = false; }
+  onOcrDrop(e: DragEvent): void {
+    e.preventDefault(); this.ocrDragOver = false;
+    const file = e.dataTransfer?.files?.[0];
+    if (file) this.runOcr(file);
+  }
+
+  runOcr(file: File): void {
+    this.ocrLoading = true; this.ocrError = ''; this.ocrResult = null;
+    this.svc.extractOcr(file).subscribe({
+      next: (res: any) => {
+        const arr = Array.isArray(res) ? res : [res];
+        this.ocrResult = arr[0]?.parsed ?? arr[0] ?? null;
+        this.ocrLoading = false;
+      },
+      error: (err: any) => {
+        this.ocrError = err?.error?.message ?? err?.message ?? `OCR failed (${err?.status ?? 'unknown error'}). Please try again.`;
+        this.ocrLoading = false;
+      }
+    });
+  }
+
+  createFromOcr(): void {
+    sessionStorage.setItem('ocrPinDraft', JSON.stringify({
+      ...this.ocrResult,
+      grnIds: this.ocrSelectedGrns.map(g => g.id),
+      grnNos: this.ocrSelectedGrns.map(g => g.grnNo)
+    }));
+    this.closeOcrModal();
+    this.router.navigate(['/app/purchase/supplier-invoice/new']);
+  }
 
   // ── Lines Modal ──────────────────────────────────────
   openLinesModal(row: any): void {

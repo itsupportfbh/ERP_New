@@ -22,15 +22,13 @@
   <div class="table-scroll">
     <table class="erp-table" [style.fontSize]="fontSize">
       <colgroup>
-        <col *ngIf="eyeFirst" style="width:44px" />
         <col *ngIf="selectable" style="width:32px" />
         <col *ngFor="let col of columns" />
-        <col *ngIf="rowActions.length" [style.width]="actionColWidth" />
+        <col *ngIf="rowActions.length || eyeFirst" [style.width]="actionColWidth" />
       </colgroup>
 
       <thead>
         <tr>
-          <th *ngIf="eyeFirst" [style.padding]="cellPad" style="width:44px;text-align:center;"></th>
           <th *ngIf="selectable" class="th-check" [style.padding]="cellPad">
             <input type="checkbox"
                    [checked]="allSelected"
@@ -46,7 +44,7 @@
               (click)="onSort(col)">
             {{ col.header }}<span class="sort-icon" *ngIf="col.sortable">{{ sortIcon(col) }}</span>
           </th>
-          <th *ngIf="rowActions.length"
+          <th *ngIf="rowActions.length || eyeFirst"
               class="th-actions"
               [style.padding]="cellPad"
               [style.fontSize]="headerFontSize">
@@ -59,15 +57,6 @@
         <tr *ngFor="let row of pagedData"
             [class.selected]="isSelected(row)"
             (click)="onRowClick(row)">
-
-          <!-- Eye-first column -->
-          <td *ngIf="eyeFirst" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="text-align:center;vertical-align:middle;">
-            <button class="btn-icon eye-first-btn" title="View Details" (click)="onAction('view', row, $event)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6"></path>
-              </svg>
-            </button>
-          </td>
 
           <td *ngIf="selectable" class="td-check" [style.padding]="cellPad"
               (click)="$event.stopPropagation()">
@@ -94,8 +83,19 @@
             </ng-container>
           </td>
 
-          <td *ngIf="rowActions.length" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="white-space:nowrap;text-align:center;">
+          <!-- Action column: eye first, then row actions -->
+          <td *ngIf="rowActions.length || eyeFirst" [style.padding]="cellPad" (click)="$event.stopPropagation()" style="white-space:nowrap;text-align:center;">
             <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+
+              <!-- Eye button (view) -->
+              <button *ngIf="eyeFirst" class="btn-icon eye-first-btn" title="View Details" (click)="onAction('view', row, $event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+
+              <!-- Other actions -->
               <ng-container *ngFor="let act of rowActions">
                 <button *ngIf="!rowActionFilter || rowActionFilter(act.key, row)"
                   class="btn-icon {{ act.btnClass ?? '' }}"
@@ -107,6 +107,7 @@
                   <span *ngIf="!act.icon" style="font-size:11px;font-weight:600;">{{ act.label }}</span>
                 </button>
               </ng-container>
+
             </div>
           </td>
         </tr>

@@ -72,7 +72,12 @@ export class FinanceArComponent implements OnInit {
     this.loading = true;
     this.finance.list(this.invoiceConfig.endpoint).subscribe({
       next: res => {
-        this.invoices = this.finance.unwrap(res);
+        this.invoices = this.finance.unwrap(res).map((r: any) => {
+          const amount = Number(r.amount ?? r.totalAmount ?? 0) || 0;
+          const paid   = Number(r.paid ?? r.paidAmount ?? 0) || 0;
+          const balance = Math.max(amount - paid, 0);
+          return { ...r, amount, paid, balance, status: balance <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid' };
+        });
         this.applyInvoiceFilter();
         this.calcInvoiceSummary();
         this.loading = false;
@@ -161,10 +166,9 @@ export class FinanceArComponent implements OnInit {
 
   statusClass(status: string): string {
     const s = String(status || '').toLowerCase();
-    if (['paid', 'posted', 'approved'].includes(s)) return 'badge-success';
-    if (['overdue', 'rejected'].includes(s)) return 'badge-danger';
-    if (['pending', 'submitted', 'draft'].includes(s)) return 'badge-warning';
-    return 'badge-default';
+    if (s === 'paid')    return 'badge-success';
+    if (s === 'partial') return 'badge-warning';
+    return 'badge-danger';
   }
 
   private calcInvoiceSummary(): void {

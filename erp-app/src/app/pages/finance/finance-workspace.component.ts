@@ -26,6 +26,11 @@ export class FinanceWorkspaceComponent implements OnInit {
   showLedgerFilters = false;
   ledgerPageSize = 10;
 
+  // Period Close
+  selectedPeriod = '';
+  lockPeriod = false;
+  fxRevalDate = new Date().toISOString().slice(0, 10);
+
   badgeMap = {
     Draft: 'default',
     Pending: 'warning',
@@ -133,6 +138,11 @@ export class FinanceWorkspaceComponent implements OnInit {
         this.rows = rows.map((r: any) => this.normalizeRow(r));
         this.applyFilter();
         this.loading = false;
+        if (this.config.key === 'period-close' && !this.selectedPeriod && this.rows.length) {
+          const first = this.rows[0];
+          this.selectedPeriod = String(first.id ?? first.periodId ?? first.periodNo ?? '');
+          this.lockPeriod = (first.status === 'Locked' || first.isLocked === true);
+        }
       },
       error: err => {
         this.rows = [];
@@ -208,6 +218,35 @@ export class FinanceWorkspaceComponent implements OnInit {
         this.error = err?.error?.message || `Unable to save ${this.config.title}.`;
       }
     });
+  }
+
+  runFxReval(): void {
+    if (!this.selectedPeriod) { this.error = 'Please select a period first.'; return; }
+    this.error = '';
+    const row = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod)) ?? {};
+    const payload = { ...row, id: this.selectedPeriod, periodId: this.selectedPeriod, fxDate: this.fxRevalDate };
+    this.saving = true;
+    this.finance.run(this.config.endpoint, 'fx', payload).subscribe({
+      next: () => { this.saving = false; this.message = 'FX Revaluation completed successfully.'; this.load(); },
+      error: err => { this.saving = false; this.error = err?.error?.message || 'FX Revaluation failed.'; }
+    });
+  }
+
+  onLockToggle(): void {
+    if (!this.selectedPeriod) { this.error = 'Please select a period first.'; this.lockPeriod = false; return; }
+    this.error = '';
+    const action: FinanceActionKey = this.lockPeriod ? 'lock' : 'unlock';
+    const row = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod)) ?? {};
+    const payload = { ...row, id: this.selectedPeriod, periodId: this.selectedPeriod, lock: this.lockPeriod };
+    this.saving = true;
+    this.finance.run(this.config.endpoint, action, payload).subscribe({
+      next: () => { this.saving = false; this.message = `Period ${this.lockPeriod ? 'locked' : 'unlocked'} successfully.`; this.load(); },
+      error: err => { this.saving = false; this.error = err?.error?.message || `${this.lockPeriod ? 'Lock' : 'Unlock'} failed.`; this.lockPeriod = !this.lockPeriod; }
+    });
+  }
+
+  openTrialBalance(): void {
+    this.router.navigate(['/app/finance/trial-balance']);
   }
 
   onRowClick(row: any): void {

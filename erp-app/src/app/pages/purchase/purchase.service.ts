@@ -140,22 +140,22 @@ export class PurchaseService {
 
   // ── RFQ / Quotation ──────────────────────────────────
   getRfqs(): Observable<any> {
-    return this.http.get(`${this.api}/Quotation/GetAll`);
+    return this.http.get(`${this.api}/Rfq/GetAll`);
   }
   getRfqById(id: number | string): Observable<any> {
-    return this.http.get(`${this.api}/Quotation/GetById/${id}`);
+    return this.http.get(`${this.api}/Rfq/GetById/${id}`);
   }
   createRfq(data: any): Observable<any> {
-    return this.http.post(`${this.api}/Quotation/Create`, data);
+    return this.http.post(`${this.api}/Rfq/Create`, data);
   }
   updateRfq(id: number | string, data: any): Observable<any> {
-    return this.http.put(`${this.api}/Quotation/Update/${id}`, data);
+    return this.http.put(`${this.api}/Rfq/Update/${id}`, data);
   }
   deleteRfq(id: number | string): Observable<any> {
-    return this.http.delete(`${this.api}/Quotation/Delete/${id}`);
+    return this.http.delete(`${this.api}/Rfq/Delete/${id}`);
   }
   sendRfq(data: any): Observable<any> {
-    return this.http.post(`${this.api}/Quotation/Create`, data);
+    return this.http.post(`${this.api}/Rfq/Send`, data);
   }
 
   // ── GRN ─────────────────────────────────────────────
@@ -236,7 +236,13 @@ export class PurchaseService {
     return this.http.get(`${this.api}/SupplierDebitNote/GetById/${id}`);
   }
   getDebitNoteSourceByPin(pinId: number | string): Observable<any> {
-    return this.http.get(`${this.api}/SupplierDebitNote/GetDebitNoteSource/${pinId}`);
+    return this.http.get(`${this.api}/SupplierDebitNote/GetSourceByPin/${pinId}`);
+  }
+  getDebitNoteSource(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/SupplierDebitNote/GetDebitNoteSource/${id}`);
+  }
+  markDebitNote(pinId: number | string): Observable<any> {
+    return this.http.post(`${this.api}/SupplierInvoicePin/MarkDebitNote/${pinId}`, {});
   }
   createDebitNote(data: any): Observable<any> {
     return this.http.post(`${this.api}/SupplierDebitNote/Create`, data);
@@ -351,5 +357,13 @@ export class PurchaseService {
     let params = new HttpParams();
     if (documentType) params = params.set('documentType', documentType);
     return this.http.get(`${this.api}/ApprovalWorkflow/pending`, { params });
+  }
+
+  // ── OCR ──────────────────────────────────────────────
+  extractOcr(file: File): Observable<any> {
+    const fd = new FormData();
+    fd.append('File', file);
+    fd.append('Module', 'PIN');
+    return this.http.post(`${this.api}/Ocr/extract-groq-multi`, fd);
   }
 }

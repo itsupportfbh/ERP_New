@@ -131,9 +131,16 @@
     <div class="gst-filter-bar">
       <label class="filter-lbl">
         <span>Period / Year</span>
-        <select [(ngModel)]="selectedYear" (ngModelChange)="loadReturnForYear()">
+        <select [(ngModel)]="selectedYear" (ngModelChange)="selectedPeriodId = ''; loadPeriodsForYear()">
           <option value="">— Select Year —</option>
-          <option *ngFor="let y of returnYears" [value]="y">{{ y }}</option>
+          <option *ngFor="let y of returnYears" [ngValue]="yearValue(y)">{{ yearLabel(y) }}</option>
+        </select>
+      </label>
+      <label class="filter-lbl">
+        <span>GST Period</span>
+        <select [(ngModel)]="selectedPeriodId" (ngModelChange)="loadReturnForYear()">
+          <option value="">Select Period</option>
+          <option *ngFor="let p of returnPeriods" [ngValue]="periodValue(p)">{{ periodLabel(p) }}</option>
         </select>
       </label>
     </div>
