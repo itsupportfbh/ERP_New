@@ -218,8 +218,11 @@
       </div>
       <div class="adv-form-grid">
         <label class="adv-field">
-          <span>Supplier ID <span class="req">*</span></span>
-          <input type="number" [(ngModel)]="paymentForm.supplierId" placeholder="Supplier ID">
+          <span>Supplier <span class="req">*</span></span>
+          <select [(ngModel)]="paymentForm.supplierId">
+            <option value="">— Select Supplier —</option>
+            <option *ngFor="let s of suppliers" [ngValue]="s.id">{{ s.name }}</option>
+          </select>
         </label>
         <label class="adv-field">
           <span>Invoice ID</span>
@@ -337,6 +340,7 @@
         <input type="date" [(ngModel)]="agingToDate">
       </label>
       <button class="ap-btn ap-btn-primary" type="button" (click)="runAging()">Run Aging</button>
+      <button class="ap-btn ap-btn-outline" type="button" (click)="exportAging()" [disabled]="!agingRows.length">Export</button>
     </div>
 
     <div class="ap-card">
@@ -354,14 +358,48 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of agingRows" class="aging-row">
-              <td>{{ row.supplierName || row.customerName }}</td>
+            <ng-container *ngFor="let row of agingRows">
+            <tr class="aging-row" (click)="toggleAgingSupplier(row.supplierName || row.customerName)">
+              <td>
+                <button class="expand-btn aging-expand" type="button">{{ isAgingExpanded(row.supplierName || row.customerName) ? '-' : '+' }}</button>
+                {{ row.supplierName || row.customerName }}
+              </td>
               <td class="right teal-bold">{{ (row.total || 0) | number:'1.2-2' }}</td>
               <td class="right">{{ (row.current || row.days30 || 0) | number:'1.2-2' }}</td>
               <td class="right">{{ (row.days60 || 0) | number:'1.2-2' }}</td>
               <td class="right">{{ (row.days90 || 0) | number:'1.2-2' }}</td>
               <td class="right danger-text">{{ (row.days90plus || 0) | number:'1.2-2' }}</td>
             </tr>
+            <tr class="invoice-detail-row" *ngIf="isAgingExpanded(row.supplierName || row.customerName)">
+              <td colspan="6">
+                <table class="invoice-detail-table aging-detail-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice No</th>
+                      <th>Invoice Date</th>
+                      <th>Due Date</th>
+                      <th class="right">Original</th>
+                      <th class="right">Paid</th>
+                      <th class="right">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let detail of agingDetailRows">
+                      <td class="mono">{{ detail.invoiceNo || '-' }}</td>
+                      <td>{{ detail.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                      <td>{{ detail.dueDate | date:'dd-MMM-yyyy' }}</td>
+                      <td class="right">{{ detail.originalAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.paidAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right teal-bold">{{ detail.balance | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
+                    </tr>
+                    <tr *ngIf="agingDetailRows.length === 0">
+                      <td colspan="6" class="ap-empty">No invoice detail found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+            </ng-container>
             <tr *ngIf="agingRows.length === 0 && !loading">
               <td colspan="6" class="ap-empty">No aging data found. Run aging with date filters.</td>
             </tr>
@@ -398,8 +436,11 @@
       </div>
       <div class="adv-form-grid">
         <label class="adv-field">
-          <span>Supplier ID <span class="req">*</span></span>
-          <input type="number" [(ngModel)]="advanceForm.supplierId" placeholder="Supplier ID">
+          <span>Supplier <span class="req">*</span></span>
+          <select [(ngModel)]="advanceForm.supplierId" (change)="onSupplierSelect()">
+            <option value="">— Select Supplier —</option>
+            <option *ngFor="let s of suppliers" [ngValue]="s.id">{{ s.name }}</option>
+          </select>
         </label>
         <label class="adv-field">
           <span>Advance Date <span class="req">*</span></span>

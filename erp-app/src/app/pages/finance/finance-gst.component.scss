@@ -220,6 +220,92 @@ $muted:     #6c757d;
   &:hover { background: $teal; color: #fff; }
 }
 
+.action-cell {
+  min-width: 230px;
+  white-space: nowrap;
+}
+
+.action-cell .edit-btn {
+  margin: 2px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 10.5px;
+}
+
+/* Compact GST view */
+.gst-page {
+  gap: 10px;
+  padding: 12px 16px 24px;
+}
+
+.gst-page-head {
+  padding-bottom: 6px;
+  border-bottom: 0;
+  h2 { font-size: 18px; line-height: 1.2; }
+  p { display: none; }
+}
+
+.gst-tabs {
+  gap: 3px;
+  padding: 4px 6px;
+  border-bottom: 0;
+  border-radius: 50px;
+  background: #dde8f0;
+  box-shadow: inset 0 1px 3px rgba(30,64,84,0.12);
+  width: fit-content;
+}
+
+.gst-tab {
+  border: 0;
+  border-radius: 50px;
+  margin: 0;
+  padding: 6px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  &.active {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(30,64,84,0.18);
+  }
+}
+
+.sum-grid {
+  gap: 8px;
+}
+
+.sum-card {
+  padding: 9px 12px;
+  border-radius: 8px;
+}
+
+.sum-label { font-size: 10px; }
+.sum-val { font-size: 14px; }
+
+.gst-card-head {
+  padding: 8px 12px;
+}
+
+.gst-search {
+  height: 28px;
+  width: 220px;
+  font-size: 11px;
+}
+
+.gst-table thead tr th {
+  padding: 8px 12px;
+  font-size: 10.5px;
+}
+
+.gst-table tbody td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.gst-filter-bar {
+  padding: 10px 12px;
+  gap: 10px;
+}
+
 /* ── Filter Bar ── */
 .gst-filter-bar {
   display: flex;

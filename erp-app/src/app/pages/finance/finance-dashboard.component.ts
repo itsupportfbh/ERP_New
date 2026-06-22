@@ -38,11 +38,9 @@ export class FinanceDashboardComponent implements OnInit {
   }
 
   open(key: string): void {
-    // Map keys that need special routing
     const routeMap: Record<string, string> = {
-      'ar-invoices': 'ar', 'ar-advance': 'ar', 'ar-aging': 'ar',
-      'ap-aging': 'ap-aging', 'ap-advance': 'ap-advance',
-      'gst-return': 'gst-return', 'gst-report': 'gst-report'
+      'accounts-payable': 'accounts-payable',
+      'ar': 'ar'
     };
     const section = routeMap[key] ?? key;
     this.router.navigate(['/app/finance', section]);

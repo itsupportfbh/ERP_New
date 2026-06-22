@@ -39,6 +39,7 @@ export class DebitNoteListComponent implements OnInit {
 
   rowActions: RowAction[] = [
     { key: 'edit',   label: 'Edit',   btnClass: 'default', icon: 'edit'   },
+    { key: 'post',   label: 'Post',   btnClass: 'success', icon: 'approve'  },
     { key: 'delete', label: 'Delete', btnClass: 'danger',  icon: 'delete' },
   ];
 
@@ -50,11 +51,16 @@ export class DebitNoteListComponent implements OnInit {
     this.loading = true;
     this.svc.getDebitNotes().subscribe({
       next: res => {
+        const toStatusLabel = (s: any): string => {
+          if (typeof s === 'string' && isNaN(Number(s))) return s;
+          return ({ 0: 'Draft', 1: 'Pending', 2: 'Posted', 3: 'Posted', 4: 'Posted' } as any)[Number(s)] ?? 'Draft';
+        };
         this.rows = this.svc.unwrap(res).map((r: any) => ({
           ...r,
           id: r.id ?? r.iD,
           debitNoteNo: r.debitNoteNo ?? r.DebitNoteNo ?? '',
           supplierName: r.name ?? r.supplierName ?? '',
+          status: toStatusLabel(r.status),
         }));
         this.applyFilter();
         this.loading = false;
@@ -80,7 +86,7 @@ export class DebitNoteListComponent implements OnInit {
   }
 
   openLinesModal(row: any): void {
-    const raw = row?.debitNoteLines ?? row?.DebitNoteLines ?? row?.lines ?? [];
+    const raw = row?.debitNoteLines ?? row?.DebitNoteLines ?? row?.lines ?? row?.linesJson ?? row?.LinesJson ?? [];
     const lines: any[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw || '[]'); } catch { return []; } })();
     this.modalLines = lines;
     this.modalDnNo = row.debitNoteNo ?? '';
@@ -91,8 +97,10 @@ export class DebitNoteListComponent implements OnInit {
       this.svc.getDebitNoteById(row.id).subscribe({
         next: res => {
           const d = this.svc.unwrapOne(res);
-          const r2 = d.debitNoteLines ?? d.DebitNoteLines ?? d.lines ?? [];
-          this.modalLines = Array.isArray(r2) ? r2 : (() => { try { return JSON.parse(r2 || '[]'); } catch { return []; } })();
+          const raw2 = d.debitNoteLines ?? d.DebitNoteLines ?? d.lines ?? d.linesJson ?? d.LinesJson ?? [];
+          this.modalLines = Array.isArray(raw2)
+            ? raw2
+            : (() => { try { return JSON.parse(raw2 || '[]'); } catch { return []; } })();
           this.modalTotal = d.amount ?? d.netTotal ?? this.modalTotal;
         }
       });
@@ -105,7 +113,21 @@ export class DebitNoteListComponent implements OnInit {
   onAction(e: { action: string; row: any }): void {
     if (e.action === 'view')   this.openLinesModal(e.row);
     if (e.action === 'edit')   this.router.navigate(['/app/purchase/debit-note', e.row.id]);
+    if (e.action === 'post')   this.postDebitNote(e.row);
     if (e.action === 'delete') this.delete(e.row);
+  }
+
+  postDebitNote(row: any): void {
+    const st = String(row.status ?? '').toLowerCase();
+    if (st === 'posted') { Swal.fire('Already Posted', 'This debit note is already posted.', 'info'); return; }
+    Swal.fire({ title: 'Post Debit Note?', text: `Post ${row.debitNoteNo}? Once posted it cannot be edited.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Post', confirmButtonColor: '#0e7490' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.svc.postDebitNote(row.id).subscribe({
+          next: () => { Swal.fire('Posted', 'Debit note posted successfully.', 'success'); this.load(); },
+          error: err => Swal.fire('Error', err?.error?.message || 'Unable to post debit note.', 'error')
+        });
+      });
   }
 
   delete(row: any): void {

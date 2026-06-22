@@ -73,7 +73,7 @@
                 <td class="right muted">{{ grp.invoices.length }}</td>
                 <td class="right">{{ grp.total | number:'1.2-2' }}</td>
                 <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
-                <td class="right info-text">0.00</td>
+                <td class="right info-text">{{ grp.creditNote | number:'1.2-2' }}</td>
                 <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
               </tr>
               <ng-container *ngIf="isExpanded(grp.customer)">
@@ -83,7 +83,7 @@
                   <td class="right muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                   <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }}</td>
                   <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
-                  <td class="right info-text">0.00</td>
+                  <td class="right info-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
                   <td class="right">
                     <span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span>
                   </td>
@@ -110,8 +110,11 @@
       </div>
       <div class="form-grid">
         <label class="form-field">
-          <span>Customer ID <span class="req">*</span></span>
-          <input type="number" [(ngModel)]="receiptForm.customerId" placeholder="Customer ID">
+          <span>Customer <span class="req">*</span></span>
+          <select [(ngModel)]="receiptForm.customerId">
+            <option value="">— Select Customer —</option>
+            <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
+          </select>
         </label>
         <label class="form-field">
           <span>Receipt Date <span class="req">*</span></span>
@@ -206,8 +209,11 @@
       </div>
       <div class="form-grid">
         <label class="form-field">
-          <span>Customer ID <span class="req">*</span></span>
-          <input type="number" [(ngModel)]="advanceForm.customerId">
+          <span>Customer <span class="req">*</span></span>
+          <select [(ngModel)]="advanceForm.customerId" (change)="onCustomerSelect()">
+            <option value="">— Select Customer —</option>
+            <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
+          </select>
         </label>
         <label class="form-field">
           <span>Advance Date <span class="req">*</span></span>

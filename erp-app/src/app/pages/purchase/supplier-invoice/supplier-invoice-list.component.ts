@@ -141,7 +141,10 @@ export class SupplierInvoiceListComponent implements OnInit {
           id: g.id ?? g.iD,
           grnNo: g.grnNo ?? g.grnNumber ?? g.number ?? '',
           supplierName: g.supplierName ?? '',
-          poNo: g.poNo ?? ''
+          poNo: g.poNo ?? '',
+          supplierId: Number(g.supplierId ?? g.SupplierId ?? 0),
+          currencyId: g.currencyId ?? g.CurrencyId ?? null,
+          fxRate: Number(g.fxRate ?? g.FxRate ?? 1)
         }));
       }
     });
@@ -194,13 +197,76 @@ export class SupplierInvoiceListComponent implements OnInit {
   }
 
   createFromOcr(): void {
-    sessionStorage.setItem('ocrPinDraft', JSON.stringify({
-      ...this.ocrResult,
-      grnIds: this.ocrSelectedGrns.map(g => g.id),
-      grnNos: this.ocrSelectedGrns.map(g => g.grnNo)
-    }));
-    this.closeOcrModal();
-    this.router.navigate(['/app/purchase/supplier-invoice/new']);
+    if (!this.ocrResult) return;
+
+    const grnIds = this.ocrSelectedGrns.map((g: any) => Number(g.id));
+    const grnNos = this.ocrSelectedGrns.map((g: any) => g.grnNo as string);
+    const firstGrn = this.ocrSelectedGrns[0] as any;
+
+    const ocrLines: any[] = this.ocrResult.lines ?? [];
+    const linesData = ocrLines.map((l: any) => {
+      const qty       = Number(l.qty ?? 0);
+      const unitPrice = Number(l.unitPrice ?? 0);
+      const discPct   = Number(l.discountPct ?? 0);
+      const base      = qty * unitPrice * (1 - discPct / 100);
+      return {
+        itemId: null,
+        itemName: l.item ?? l.itemName ?? '',
+        locationId: null,
+        poQty: 0,
+        grnQty: qty,
+        qty,
+        unitPrice,
+        discountPct: discPct,
+        taxMode: 'Exclusive',
+        lineTotal: +base.toFixed(2),
+        taxAmt: 0,
+        lineGrandTotal: +base.toFixed(2),
+        budgetLineId: null,
+        dcNoteNo: '',
+        remarks: '',
+        matchStatus: ''
+      };
+    });
+
+    const grandTotal  = +linesData.reduce((s: number, l: any) => s + l.lineGrandTotal, 0).toFixed(2);
+    const loginUserId = Number(localStorage.getItem('id')) || 0;
+    const today       = new Date().toISOString().substring(0, 10);
+
+    const payload = {
+      InvoiceNo   : this.ocrResult.invoiceNo ?? '',
+      InvoiceDate : this.ocrResult.invoiceDate ? String(this.ocrResult.invoiceDate).substring(0, 10) : today,
+      SupplierId  : firstGrn?.supplierId ?? 0,
+      CurrencyId  : firstGrn?.currencyId ?? 0,
+      FxRate      : firstGrn?.fxRate ?? 1,
+      TaxRate     : Number(this.ocrResult.taxPercent ?? 0),
+      Tax         : Number(this.ocrResult.taxAmount ?? 0),
+      Amount      : grandTotal,
+      GrnNos      : grnNos.join(','),
+      Status      : 1,
+      LinesJson   : JSON.stringify(linesData),
+      GrnId       : grnIds[0] ?? null,
+      GrnIds      : grnIds,
+      IsPartial   : false,
+      CreatedBy   : loginUserId,
+      UpdatedBy   : loginUserId
+    };
+
+    this.ocrLoading = true;
+    this.ocrError   = '';
+    this.svc.createSupplierInvoice(payload).subscribe({
+      next: () => {
+        this.ocrLoading = false;
+        this.closeOcrModal();
+        Swal.fire('Created!', 'Supplier invoice created successfully from scan.', 'success');
+        this.load();
+      },
+      error: (err: any) => {
+        this.ocrLoading = false;
+        const msg = err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.';
+        Swal.fire('Error', msg, 'error');
+      }
+    });
   }
 
   // ── Lines Modal ──────────────────────────────────────

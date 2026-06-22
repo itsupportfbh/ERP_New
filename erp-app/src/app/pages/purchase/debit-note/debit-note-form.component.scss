@@ -15,6 +15,11 @@
 .wizard-footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 0; flex-shrink: 0; }
 .btn-icon { width: 28px; height: 28px; border: none; border-radius: 6px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; &.danger:hover { background: rgba(239,68,68,0.1); color: var(--danger); } svg { width: 14px; height: 14px; } }
 
+.form-field { display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.erp-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--text); background: #fff; outline: none; box-sizing: border-box; transition: border-color .15s; &:focus { border-color: var(--primary); } &:disabled { background: #f8fafc; color: var(--text-muted); cursor: not-allowed; } }
+.lines-cell-input { width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 5px; font-size: 12px; background: transparent; outline: none; box-sizing: border-box; &:focus { border-color: var(--primary); background: #fff; } &:disabled { color: var(--text-muted); } }
+
 .lines-table-wrap { overflow-x: auto; }
 .lines-table { width: 100%; border-collapse: collapse; font-size: 12px;
   th { padding: 6px 8px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); background: var(--surface); border-bottom: 1px solid var(--border); }

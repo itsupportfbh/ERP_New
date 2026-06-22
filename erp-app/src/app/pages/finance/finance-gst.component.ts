@@ -72,7 +72,7 @@ export class FinanceGstComponent implements OnInit {
     this.loading = true;
     this.finance.list(this.taxConfig.endpoint).subscribe({
       next: res => {
-        this.taxCodes = this.finance.unwrap(res);
+        this.taxCodes = this.finance.unwrap(res).map(row => this.normalizeTax(row));
         this.applyFilter();
         this.loading = false;
       },
@@ -115,7 +115,7 @@ export class FinanceGstComponent implements OnInit {
     this.finance.gstReturnForPeriod(this.selectedPeriodId).subscribe({
       next: res => {
         const list = this.finance.unwrap(res);
-        this.gstReturns = list.length ? list : [this.finance.unwrapOne(res)].filter(x => x && Object.keys(x).length);
+        this.gstReturns = (list.length ? list : [this.finance.unwrapOne(res)].filter(x => x && Object.keys(x).length)).map(row => this.normalizeReturn(row));
         this.calcReturnSummary();
         this.loading = false;
       },
@@ -127,7 +127,7 @@ export class FinanceGstComponent implements OnInit {
     this.loading = true;
     this.finance.gstDetails({ startDate: this.reportFromDate, endDate: this.reportToDate }).subscribe({
       next: res => {
-        this.gstReport = this.finance.unwrap(res);
+        this.gstReport = this.finance.unwrap(res).map(row => this.normalizeDetail(row));
         this.calcReportSummary();
         this.loading = false;
       },
@@ -138,7 +138,7 @@ export class FinanceGstComponent implements OnInit {
   applyFilter(): void {
     const q = this.search.toLowerCase();
     this.filteredTaxCodes = q
-      ? this.taxCodes.filter(r => ['code', 'description', 'type'].some(k => String(r[k] ?? '').toLowerCase().includes(q)))
+      ? this.taxCodes.filter(r => ['code', 'description', 'type', 'name'].some(k => String(r[k] ?? '').toLowerCase().includes(q)))
       : [...this.taxCodes];
   }
 
@@ -148,7 +148,15 @@ export class FinanceGstComponent implements OnInit {
       return;
     }
     this.savingTax = true;
-    const payload = { ...this.taxForm };
+    const payload = {
+      id: this.editingTax?.id,
+      taxCode: this.taxForm.code,
+      taxName: this.taxForm.description || this.taxForm.name || this.taxForm.code,
+      taxRate: Number(this.taxForm.rate || 0),
+      taxType: this.taxForm.type,
+      description: this.taxForm.description,
+      isActive: this.taxForm.isActive !== false
+    };
     const obs = this.editingTax
       ? this.finance.update(this.taxConfig.endpoint, this.editingTax.id, payload)
       : this.finance.create(this.taxConfig.endpoint, payload);
@@ -169,6 +177,7 @@ export class FinanceGstComponent implements OnInit {
     this.editingTax = row;
     this.taxForm = {
       code: row.code ?? row.taxCode,
+      name: row.name ?? row.taxName,
       description: row.description ?? row.taxName,
       rate: row.rate ?? row.taxRate,
       type: row.type ?? row.taxType ?? 'GST',
@@ -187,17 +196,45 @@ export class FinanceGstComponent implements OnInit {
 
   runReport(): void { this.loadReport(); }
 
+  fileReturn(row: any): void {
+    this.finance.run(this.returnConfig.endpoint, 'file', { id: row.id, filingNo: row.filingNo || `GST-${row.periodId || row.id}` }).subscribe({
+      next: () => { this.message = 'GST return marked as filed.'; this.loadReturnForYear(); },
+      error: err => { this.error = err?.error?.message || 'Unable to file GST return.'; }
+    });
+  }
+
+  reopenReturn(row: any): void {
+    this.finance.run(this.returnConfig.endpoint, 'reopen', { id: row.id }).subscribe({
+      next: () => { this.message = 'GST return reopened.'; this.loadReturnForYear(); },
+      error: err => { this.error = err?.error?.message || 'Unable to reopen GST return.'; }
+    });
+  }
+
+  postReturn(row: any): void {
+    this.finance.run(this.returnConfig.endpoint, 'post', { id: row.id }).subscribe({
+      next: () => { this.message = 'GST return posted to GL.'; this.loadReturnForYear(); },
+      error: err => { this.error = err?.error?.message || 'Unable to post GST return.'; }
+    });
+  }
+
+  exportReturn(row: any): void {
+    this.finance.run(this.returnConfig.endpoint, 'export', { id: row.periodId || row.id }).subscribe({
+      next: (blob: Blob) => this.downloadBlob(blob, `GST-${row.period || row.periodName || row.id}.xlsx`),
+      error: err => { this.error = err?.error?.message || 'Unable to export GST return.'; }
+    });
+  }
+
   private calcReturnSummary(): void {
-    this.returnSummary.totalOutput = this.gstReturns.reduce((s, r) => s + (r.outputTax || r.gstCollected || 0), 0);
-    this.returnSummary.totalInput  = this.gstReturns.reduce((s, r) => s + (r.inputTax || r.gstPaid || 0), 0);
+    this.returnSummary.totalOutput = this.gstReturns.reduce((s, r) => s + (r.outputTax || 0), 0);
+    this.returnSummary.totalInput  = this.gstReturns.reduce((s, r) => s + (r.inputTax || 0), 0);
     this.returnSummary.netPayable  = this.returnSummary.totalOutput - this.returnSummary.totalInput;
   }
 
   private calcReportSummary(): void {
-    this.reportSummary.totalSales     = this.gstReport.reduce((s, r) => s + (r.totalSales || r.amount || 0), 0);
-    this.reportSummary.totalPurchases = this.gstReport.reduce((s, r) => s + (r.totalPurchases || 0), 0);
-    this.reportSummary.outputTax      = this.gstReport.reduce((s, r) => s + (r.outputTax || r.gstCollected || 0), 0);
-    this.reportSummary.inputTax       = this.gstReport.reduce((s, r) => s + (r.inputTax || r.gstPaid || 0), 0);
+    this.reportSummary.totalSales     = this.gstReport.reduce((s, r) => s + (r.type === 'OUTPUT' ? (r.taxableAmount || 0) : 0), 0);
+    this.reportSummary.totalPurchases = this.gstReport.reduce((s, r) => s + (r.type === 'INPUT' ? (r.taxableAmount || 0) : 0), 0);
+    this.reportSummary.outputTax      = this.gstReport.reduce((s, r) => s + (r.type === 'OUTPUT' ? (r.taxAmount || 0) : 0), 0);
+    this.reportSummary.inputTax       = this.gstReport.reduce((s, r) => s + (r.type === 'INPUT' ? (r.taxAmount || 0) : 0), 0);
     this.reportSummary.netGST         = this.reportSummary.outputTax - this.reportSummary.inputTax;
   }
 
@@ -215,5 +252,61 @@ export class FinanceGstComponent implements OnInit {
 
   periodLabel(period: any): string {
     return String(period?.periodName ?? period?.name ?? period?.label ?? this.periodValue(period));
+  }
+
+  private normalizeTax(row: any): any {
+    return {
+      ...row,
+      id: row.id ?? row.iD ?? row.ID,
+      code: row.code ?? row.taxCode ?? row.TaxCode,
+      name: row.name ?? row.taxName ?? row.TaxName,
+      description: row.description ?? row.Description ?? row.taxName ?? row.TaxName,
+      rate: Number(row.rate ?? row.taxRate ?? row.TaxRate ?? 0),
+      type: row.type ?? row.taxType ?? row.TaxType ?? 'GST',
+      isActive: row.isActive ?? row.IsActive ?? true
+    };
+  }
+
+  private normalizeReturn(row: any): any {
+    const outputTax = Number(row.outputTax ?? row.OutputTax ?? row.gstCollected ?? row.GstCollected ?? 0);
+    const inputTax = Number(row.inputTax ?? row.InputTax ?? row.gstPaid ?? row.GstPaid ?? 0);
+    return {
+      ...row,
+      id: row.id ?? row.returnId ?? row.gstReturnId ?? row.periodId ?? row.PeriodId,
+      periodId: row.periodId ?? row.PeriodId ?? row.id,
+      period: row.period ?? row.periodName ?? row.PeriodName ?? row.quarter ?? row.year,
+      totalSales: Number(row.totalSales ?? row.TotalSales ?? row.box1TotalSales ?? row.Box1TotalSales ?? 0),
+      taxablePurchases: Number(row.taxablePurchases ?? row.TaxablePurchases ?? row.totalPurchases ?? row.TotalPurchases ?? 0),
+      outputTax,
+      inputTax,
+      netTax: Number(row.netTax ?? row.NetTax ?? outputTax - inputTax),
+      status: row.status ?? row.Status ?? 'Draft',
+      filingNo: row.filingNo ?? row.FilingNo
+    };
+  }
+
+  private normalizeDetail(row: any): any {
+    const type = String(row.type ?? row.TaxType ?? row.docType ?? row.DocType ?? '').toUpperCase();
+    const taxAmount = Number(row.gstAmount ?? row.GstAmount ?? row.taxAmount ?? row.TaxAmount ?? 0);
+    return {
+      ...row,
+      date: row.date ?? row.postingDate ?? row.PostingDate ?? row.docDate ?? row.DocDate,
+      documentNo: row.documentNo ?? row.DocumentNo ?? row.invoiceNo ?? row.InvoiceNo ?? row.docNo ?? row.DocNo,
+      description: row.description ?? row.Description ?? row.partyName ?? row.PartyName,
+      type: type.includes('OUT') || type.includes('SALE') ? 'OUTPUT' : 'INPUT',
+      taxCode: row.taxCode ?? row.TaxCode,
+      taxableAmount: Number(row.taxableAmount ?? row.TaxableAmount ?? row.amount ?? row.Amount ?? 0),
+      taxAmount,
+      gstAmount: taxAmount
+    };
+  }
+
+  private downloadBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 }

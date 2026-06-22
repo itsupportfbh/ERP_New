@@ -87,7 +87,7 @@
           <tbody>
             <tr *ngFor="let tc of filteredTaxCodes">
               <td class="mono teal-bold">{{ tc.code }}</td>
-              <td>{{ tc.description || '—' }}</td>
+              <td>{{ tc.description || tc.name || '—' }}</td>
               <td>{{ tc.type || 'GST' }}</td>
               <td class="right">{{ (tc.rate || 0) | number:'1.1-2' }}%</td>
               <td class="center">
@@ -161,6 +161,7 @@
               <th class="right">Box 7 – Input Tax</th>
               <th class="right teal-hdr">Net GST Payable</th>
               <th class="center">Status</th>
+              <th class="center">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -168,17 +169,23 @@
               <td class="mono">{{ r.period || r.quarter || r.year || '—' }}</td>
               <td class="right">{{ (r.totalSales || 0) | number:'1.2-2' }}</td>
               <td class="right">{{ (r.taxablePurchases || r.totalPurchases || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (r.outputTax || r.gstCollected || 0) | number:'1.2-2' }}</td>
-              <td class="right success-text">{{ (r.inputTax || r.gstPaid || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ ((r.outputTax || r.gstCollected || 0) - (r.inputTax || r.gstPaid || 0)) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (r.outputTax || 0) | number:'1.2-2' }}</td>
+              <td class="right success-text">{{ (r.inputTax || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (r.netTax || 0) | number:'1.2-2' }}</td>
               <td class="center">
                 <span class="status-badge" [ngClass]="r.status === 'Filed' ? 'badge-success' : r.status === 'Overdue' ? 'badge-danger' : 'badge-warning'">
                   {{ r.status || 'Draft' }}
                 </span>
               </td>
+              <td class="center action-cell">
+                <button class="edit-btn" type="button" (click)="postReturn(r)">Post</button>
+                <button class="edit-btn" type="button" (click)="fileReturn(r)">File</button>
+                <button class="edit-btn" type="button" (click)="reopenReturn(r)">Reopen</button>
+                <button class="edit-btn" type="button" (click)="exportReturn(r)">Export</button>
+              </td>
             </tr>
             <tr *ngIf="gstReturns.length === 0 && !loading">
-              <td colspan="7" class="gst-empty">No GST return data. Select a year.</td>
+              <td colspan="8" class="gst-empty">No GST return data. Select a year.</td>
             </tr>
           </tbody>
         </table>
@@ -252,7 +259,7 @@
               </td>
               <td class="mono">{{ row.taxCode || '—' }}</td>
               <td class="right">{{ (row.taxableAmount || row.amount || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (row.gstAmount || row.taxAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (row.taxAmount || row.gstAmount || 0) | number:'1.2-2' }}</td>
             </tr>
             <tr *ngIf="gstReport.length === 0 && !loading">
               <td colspan="7" class="gst-empty">No GST detail data. Run with date filters.</td>

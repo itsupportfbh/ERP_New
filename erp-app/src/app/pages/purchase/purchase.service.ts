@@ -244,6 +244,9 @@ export class PurchaseService {
   markDebitNote(pinId: number | string): Observable<any> {
     return this.http.post(`${this.api}/SupplierInvoicePin/MarkDebitNote/${pinId}`, {});
   }
+  postDebitNote(id: number | string): Observable<any> {
+    return this.http.post(`${this.api}/SupplierDebitNote/MarkDebitNote/${id}`, {});
+  }
   createDebitNote(data: any): Observable<any> {
     return this.http.post(`${this.api}/SupplierDebitNote/Create`, data);
   }
@@ -297,6 +300,9 @@ export class PurchaseService {
   }
   getItems(): Observable<any> {
     return this.http.get(`${this.api}/Item/GetItems`);
+  }
+  getCategories(): Observable<any> {
+    return this.http.get(`${this.api}/Catagory/GetAllCatagory`);
   }
   getUOMs(): Observable<any> {
     return this.http.get(`${this.api}/Uom/GetUoms`);

@@ -28,7 +28,13 @@ export class FinanceTrialBalanceComponent implements OnInit {
 
   constructor(private finance: FinanceService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    const today = new Date();
+    const from = new Date(today.getFullYear(), 0, 1);
+    this.fromDate = this.dateOnly(from);
+    this.toDate = this.dateOnly(today);
+    this.load();
+  }
 
   load(): void {
     this.loading = true;
@@ -36,7 +42,7 @@ export class FinanceTrialBalanceComponent implements OnInit {
     const body = this.fromDate || this.toDate ? { fromDate: this.fromDate, toDate: this.toDate } : {};
     this.finance.list(this.endpoint, body).subscribe({
       next: res => {
-        this.rows = this.finance.unwrap(res);
+        this.rows = this.finance.unwrap(res).map(row => this.normalizeRow(row));
         this.buildMap();
         this.calcSummary();
         this.loading = false;
@@ -50,7 +56,7 @@ export class FinanceTrialBalanceComponent implements OnInit {
     this.rows.forEach(r => {
       const id = r.id ?? r.accountId ?? r.accountCode;
       r._id = id;
-      r._parentId = r.parentAccountId ?? r.parentId ?? null;
+      r._parentId = r.parentAccountId ?? r.parentId ?? r.ParentAccountId ?? r.ParentId ?? null;
       r._level = r.level ?? 0;
       r._hasChildren = false;
       this.rowMap.set(id, r);
@@ -102,4 +108,28 @@ export class FinanceTrialBalanceComponent implements OnInit {
   get totalCloseCredit(): number { return this.rows.reduce((s, r) => s + Math.abs(Math.min(r.closingBalance ?? 0, 0)), 0); }
 
   indentPx(row: any): string { return `${(row._level || 0) * 20}px`; }
+
+  private normalizeRow(row: any): any {
+    const opening = Number(row.openingBalance ?? row.OpeningBalance ?? row.opening ?? row.Opening ?? 0);
+    const debit = Number(row.debit ?? row.Debit ?? row.debitAmount ?? row.DebitAmount ?? 0);
+    const credit = Number(row.credit ?? row.Credit ?? row.creditAmount ?? row.CreditAmount ?? 0);
+    const closing = Number(row.closingBalance ?? row.ClosingBalance ?? row.balance ?? row.Balance ?? opening + debit - credit);
+    return {
+      ...row,
+      id: row.id ?? row.ID ?? row.accountId ?? row.AccountId ?? row.accountCode ?? row.AccountCode,
+      accountId: row.accountId ?? row.AccountId,
+      accountCode: row.accountCode ?? row.AccountCode ?? row.headCode ?? row.HeadCode,
+      accountName: row.accountName ?? row.AccountName ?? row.headName ?? row.HeadName,
+      parentAccountId: row.parentAccountId ?? row.ParentAccountId ?? row.parentId ?? row.ParentId,
+      level: row.level ?? row.Level ?? 0,
+      openingBalance: opening,
+      debit,
+      credit,
+      closingBalance: closing
+    };
+  }
+
+  private dateOnly(date: Date): string {
+    return date.toISOString().slice(0, 10);
+  }
 }

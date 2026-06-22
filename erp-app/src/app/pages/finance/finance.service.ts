@@ -85,10 +85,11 @@ export class FinanceService {
   list(config: FinanceEndpointConfig, params?: Record<string, string | number | null | undefined>): Observable<any> {
     const url = config.list || config.report;
     if (!url) throw new Error('List endpoint missing');
+    const resolvedUrl = this.interpolate(url, params);
     if (config.listMethod === 'POST') {
-      return this.http.post(this.url(url), config.listBody ?? params ?? {});
+      return this.http.post(this.url(resolvedUrl), { ...(config.listBody ?? {}), ...(params ?? {}) });
     }
-    return this.http.get(this.url(url), { params: this.params(params) });
+    return this.http.get(this.url(resolvedUrl), { params: this.params(params) });
   }
 
   get(config: FinanceEndpointConfig, id: number | string): Observable<any> {
@@ -117,10 +118,22 @@ export class FinanceService {
     if (!endpoint) throw new Error(`${action} endpoint missing`);
     const needsBody = ['post', 'pay', 'lock', 'unlock', 'reconcile', 'email', 'import', 'run', 'preview', 'file', 'fx'].includes(action);
     const body = needsBody ? rowOrPayload : {};
+    const resolvedEndpoint = this.interpolate(endpoint, rowOrPayload);
     if (action === 'export') {
-      return this.http.get(this.url(endpoint, id), { responseType: 'blob' });
+      return this.http.get(this.url(resolvedEndpoint, endpoint.endsWith('/') ? id : undefined), { responseType: 'blob' });
     }
-    return this.http.post(this.url(endpoint, endpoint.endsWith('/') ? id : undefined), body);
+    if (action === 'preview') {
+      return this.http.get(this.url(resolvedEndpoint, endpoint.endsWith('/') ? id : undefined), { params: this.params(rowOrPayload) });
+    }
+    return this.http.post(this.url(resolvedEndpoint, endpoint.endsWith('/') ? id : undefined), body);
+  }
+
+  getSuppliers(): Observable<any> {
+    return this.http.get(this.url('/Suppliers/getAllSupplier'));
+  }
+
+  getCustomers(): Observable<any> {
+    return this.http.get(this.url('/CustomerMaster/GetAllCustomerMaster'));
   }
 
   dashboard(): Observable<any> {
@@ -158,6 +171,16 @@ export class FinanceService {
       if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
     });
     return params;
+  }
+
+  private interpolate(endpoint: string, values?: Record<string, any>): string {
+    let resolved = endpoint;
+    Object.entries(values ?? {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        resolved = resolved.replace(`:${key}`, encodeURIComponent(String(value))).replace(`{${key}}`, encodeURIComponent(String(value)));
+      }
+    });
+    return resolved;
   }
 }
 
@@ -410,7 +433,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'year-end-close',
     title: 'Year End Close',
     subtitle: 'Fiscal year closing workflow',
-    endpoint: { list: '/YearEndClose/status/2026', preview: '/YearEndClose/preview', run: '/YearEndClose/run' },
+    endpoint: { list: '/YearEndClose/status/:fyStartYear', preview: '/YearEndClose/preview', run: '/YearEndClose/run' },
     columns: [
       { key: 'fiscalYear', header: 'Fiscal Year' },
       { key: 'startDate', header: 'Start', type: 'date' },

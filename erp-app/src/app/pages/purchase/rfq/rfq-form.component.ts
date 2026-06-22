@@ -85,7 +85,7 @@ export class RfqFormComponent implements OnInit {
       })));
     this.svc.getCurrencies().subscribe(r =>
       this.currencyOptions = this.svc.unwrap(r).map((c: any) => ({
-        label: `${c.currencyCode} - ${c.currencyName ?? c.name}`, value: c.id
+        label: `${c.currencyCode ?? c.code ?? c.currency ?? ''} - ${c.currencyName ?? c.name ?? ''}`.replace(/^-\s*|-\s*$/, '').trim(), value: c.id ?? c.iD
       })));
     this.svc.getPaymentTerms().subscribe(r =>
       this.paymentTermOptions = this.svc.unwrap(r).map((p: any) => ({
@@ -101,7 +101,7 @@ export class RfqFormComponent implements OnInit {
       })));
     this.svc.getTaxCodes().subscribe(r =>
       this.taxCodeOptions = this.svc.unwrap(r).map((t: any) => ({
-        label: `${t.taxCode} (${t.taxRate}%)`, value: t.id, raw: t
+        label: `${t.taxCode ?? t.code ?? t.taxName ?? t.name ?? ''} (${t.taxRate ?? t.rate ?? t.percentage ?? 0}%)`, value: t.id ?? t.iD, raw: t
       })));
   }
 
