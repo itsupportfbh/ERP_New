@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { RowAction, TableColumn, SortState } from '../../shared/components/data-table/data-table.component';
 import { BusinessPartnersService } from './business-partners.service';
+import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
 type PartnerTab = 'customers' | 'suppliers' | 'users';
 
@@ -24,9 +25,18 @@ export class BusinessPartnersComponent implements OnInit {
   allData: any[] = [];
   tableData: any[] = [];
   selectedRows: any[] = [];
-  readonly userRowActions: RowAction[] = [
-    { key: 'edit', label: 'Edit' },
-    { key: 'delete', label: 'Delete' }
+
+  private readonly tabFunctionIds: Record<PartnerTab, string> = {
+    customers: 'bp-customer',
+    suppliers: 'bp-supplier',
+    users: 'users'
+  };
+  private loginUserId: number = 0;
+  tabPermissions: Record<PartnerTab, FunctionPermission>;
+
+  private readonly allUserRowActions: RowAction[] = [
+    { key: 'edit',   label: 'Edit',   icon: 'edit',   btnClass: 'info' },
+    { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' }
   ];
 
   readonly customerColumns: TableColumn[] = [
@@ -59,8 +69,16 @@ export class BusinessPartnersComponent implements OnInit {
   constructor(
     private partners: BusinessPartnersService,
     private route: ActivatedRoute,
-    private router: Router
-  ) {}
+    private router: Router,
+    private permissionService: PermissionService
+  ) {
+    this.loginUserId = Number(localStorage.getItem('id') || 0);
+    this.tabPermissions = {
+      customers: this.permissionService.getEmptyPermission('bp-customer'),
+      suppliers: this.permissionService.getEmptyPermission('bp-supplier'),
+      users:     this.permissionService.getEmptyPermission('users')
+    };
+  }
 
   get columns(): TableColumn[] {
     return this.activeTab === 'customers'
@@ -75,10 +93,29 @@ export class BusinessPartnersComponent implements OnInit {
   }
 
   get rowActions(): RowAction[] {
-    return this.activeTab === 'users' ? this.userRowActions : [];
+    if (this.activeTab !== 'users') return [];
+    return this.allUserRowActions.filter(a =>
+      (a.key === 'edit'   && this.canEdit()) ||
+      (a.key === 'delete' && this.canDelete())
+    );
+  }
+
+  canCreate(): boolean { return this.permissionService.hasCreate(this.tabPermissions[this.activeTab]); }
+  canEdit():   boolean { return this.permissionService.hasEdit(this.tabPermissions[this.activeTab]); }
+  canDelete(): boolean { return this.permissionService.hasDelete(this.tabPermissions[this.activeTab]); }
+
+  private loadAllTabPermissions(): void {
+    if (!this.loginUserId) return;
+    (['customers', 'suppliers', 'users'] as PartnerTab[]).forEach(tab => {
+      this.permissionService.getFunctionPermission(this.loginUserId, this.tabFunctionIds[tab]).subscribe({
+        next: perm => { this.tabPermissions[tab] = perm; },
+        error: () => {}
+      });
+    });
   }
 
   ngOnInit(): void {
+    this.loadAllTabPermissions();
     this.route.queryParamMap.subscribe(params => {
       const tab = params.get('tab');
       this.activeTab = tab === 'suppliers' || tab === 'users' ? tab : 'customers';

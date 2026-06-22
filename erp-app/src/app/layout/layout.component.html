@@ -2,11 +2,11 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <span class="logo-icon">⚡</span>
+      <img class="logo-img" src="assets/images/catering-logo.png" alt="Catering Solutions">
       <span class="logo-text" *ngIf="sidebarOpen">Unity ERP</span>
     </div>
     <nav class="sidebar-nav">
-      <ng-container *ngFor="let m of menus">
+      <ng-container *ngFor="let m of filteredMenus">
 
         <!-- Parent menu (has children) -->
         <ng-container *ngIf="hasChildren(m)">

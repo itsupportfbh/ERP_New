@@ -3,7 +3,7 @@
     <div class="mcard">
       <div class="mcard-head">
         <div class="mcard-title"><div class="mcard-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3a3 3 0 00-3 3c0 .6.2 1.2.5 1.7L5 15a1 1 0 000 2h1l8-8c.5.3 1.1.5 1.7.5a3 3 0 000-6z"/></svg></div><span>Service List</span></div>
-        <button class="mbtn-create" (click)="showForm()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><line x1="10" y1="6" x2="10" y2="14"/><line x1="6" y1="10" x2="14" y2="10"/></svg> Create</button>
+        <button class="mbtn-create" (click)="showForm()" *ngIf="canCreate()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><line x1="10" y1="6" x2="10" y2="14"/><line x1="6" y1="10" x2="14" y2="10"/></svg> Create</button>
       </div>
       <div class="mcard-body">
         <div class="mlist-loading" *ngIf="loading">Loading...</div>
@@ -17,8 +17,8 @@
             </div>
           </div>
           <div class="mitem-actions">
-            <button class="micon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
-            <button class="micon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
+            <button class="micon-btn edit" (click)="edit(item)" title="Edit" *ngIf="canEdit()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+            <button class="micon-btn del" (click)="openDelete(item)" title="Delete" *ngIf="canDelete()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
           </div>
         </div>
       </div>

@@ -62,6 +62,7 @@ const APP_MENU_TREE: MenuNode[] = [
       { id: 'currency', title: 'Currency', type: 'item' },
       { id: 'customergroups', title: 'Customer Groups', type: 'item' },
       { id: 'department', title: 'Department', type: 'item' },
+      { id: 'department-menu-access', title: 'Department Menu Access', type: 'item' },
       { id: 'driver', title: 'Driver', type: 'item' },
       { id: 'exchangerate', title: 'Exchange Rate', type: 'item' },
       { id: 'flagissue', title: 'Flag Issue', type: 'item' },
@@ -210,6 +211,8 @@ export class UserAccessComponent implements OnInit {
   loading  = false;
   saving   = false;
   error    = '';
+  private permissionsLoaded = false;
+  private loadedDepartmentId: number | null = null;
 
   // ── Step 1 ──────────────────────────────────────
   account: UserPayload = this.emptyAccount();
@@ -311,13 +314,23 @@ export class UserAccessComponent implements OnInit {
       if (this.error) await this.showWarning('Validation', this.error);
       return;
     }
-    if (n >= 2) this.loadDepartmentPermissions(this.account.departmentId);
+    if (n === 2 && (!this.permissionsLoaded || this.loadedDepartmentId !== (this.account.departmentId ?? null))) {
+      this.loadDepartmentPermissions(this.account.departmentId);
+    }
     this.step  = n;
     this.error = '';
   }
 
   next(): void { void this.goStep(this.step + 1); }
   prev(): void { this.step--; this.error = ''; }
+
+  onDepartmentChanged(_departmentId: number | null): void {
+    this.permissionsLoaded = false;
+    this.loadedDepartmentId = null;
+    this.modules = [];
+    this.activeModuleId = '';
+    this.permRows = [];
+  }
 
   private validateStep1(): boolean {
     if (!this.account.username?.trim())     { this.error = 'Username is required.';   return false; }
@@ -471,7 +484,7 @@ export class UserAccessComponent implements OnInit {
   // ── Private helpers ──────────────────────────────
   private buildPermRows(): PermRow[] {
     const emptyFlags = (): Record<PermFlag, boolean> =>
-      ({ V: true, C: false, E: false, D: false, S: false, A: false, R: false, N: false, X: false, P: false, M: false });
+      ({ V: false, C: false, E: false, D: false, S: false, A: false, R: false, N: false, X: false, P: false, M: false });
 
     return this.modules.flatMap(mod =>
       mod.fns.map(fn => ({
@@ -494,37 +507,42 @@ export class UserAccessComponent implements OnInit {
       this.permRows = this.buildPermRows();
       if (this.userId) this.patchSavedPermissions();
       this.loadingPermissions = false;
+      this.permissionsLoaded = true;
+      this.loadedDepartmentId = departmentId;
     });
   }
 
   private buildModules(menuIds: string[]): ModuleDef[] {
-    if (!menuIds.length) return FALLBACK_MODULES;
+    if (!menuIds.length) return [];
     const allowed = new Set(menuIds.map(id => id.toLowerCase()));
-    const topLevelFns = APP_MENU_TREE
-      .filter(item => item.type === 'item' && !item.hidden)
-      .filter(item => allowed.has(item.id.toLowerCase()))
-      .map(item => ({ id: item.id, title: item.title }));
+    const modules: ModuleDef[] = [];
 
-    const topLevelModule = topLevelFns.length
-      ? [{ id: 'general', title: 'General', fns: topLevelFns }]
-      : [];
+    if (allowed.has('home')) {
+      modules.push({
+        id: 'general',
+        title: 'General',
+        fns: [{ id: 'home', title: 'Dashboard' }]
+      });
+    }
 
-    const modules = APP_MENU_TREE
+    const mappedModules = APP_MENU_TREE
       .filter(item => item.type === 'collapsible' && !item.hidden)
       .map(module => {
-        const fns = this.flattenAllowedFns(module.children || [], allowed, allowed.has(module.id.toLowerCase()));
+        if (!allowed.has(module.id.toLowerCase())) return null;
+        const fns = this.flattenModuleFns(module.children || []);
         return fns.length ? { id: module.id, title: module.title, fns } : null;
       })
       .filter((module): module is ModuleDef => !!module);
 
-    const allModules = [...topLevelModule, ...modules];
-    const deduped = allModules.map(module => ({
+    modules.push(...mappedModules);
+
+    const deduped = modules.map(module => ({
       ...module,
       fns: module.fns.filter((fn, index, arr) =>
         arr.findIndex(candidate => candidate.id.toLowerCase() === fn.id.toLowerCase()) === index
       )
     })).filter(module => module.fns.length);
-    return deduped.length ? deduped : FALLBACK_MODULES;
+    return deduped;
   }
 
   private extractMenuIds(res: any): string[] {
@@ -554,16 +572,15 @@ export class UserAccessComponent implements OnInit {
       .filter(Boolean);
   }
 
-  private flattenAllowedFns(nodes: MenuNode[], allowed: Set<string>, parentAllowed = false): Array<{ id: string; title: string }> {
+  private flattenModuleFns(nodes: MenuNode[]): Array<{ id: string; title: string }> {
     const result: Array<{ id: string; title: string }> = [];
     for (const node of nodes || []) {
       if (!node || node.hidden) continue;
-      const currentAllowed = parentAllowed || allowed.has(node.id.toLowerCase());
-      if (node.type === 'item' && currentAllowed) {
+      if (node.type === 'item') {
         result.push({ id: node.id, title: node.title });
       }
       if (node.children?.length) {
-        result.push(...this.flattenAllowedFns(node.children, allowed, currentAllowed));
+        result.push(...this.flattenModuleFns(node.children));
       }
     }
     return result;
@@ -572,37 +589,73 @@ export class UserAccessComponent implements OnInit {
   private patchSavedPermissions(): void {
     if (!this.userId) return;
     this.svc.getOrganizationRoleByUserId(this.userId).pipe(catchError(() => of(null))).subscribe(res => {
-      const data = res?.data ?? res;
-      const jsonText = data?.rolesJSON ?? data?.RolesJSON;
-      if (!jsonText) return;
-      let saved: any[] = [];
-      try { saved = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText; } catch { saved = []; }
-      if (!Array.isArray(saved)) return;
+      if (!res) return;
+      const saved = this.extractPermissionsArray(res);
+      if (!saved.length) return;
       this.permRows = this.permRows.map(row => {
-        const found = saved.find(item =>
-          String(item?.FunctionId ?? item?.functionId ?? '').toLowerCase() === row.functionId.toLowerCase()
-          && String(item?.ModuleId ?? item?.moduleId ?? '').toLowerCase() === row.moduleId.toLowerCase()
-        );
+        const found = saved.find(item => {
+          const idMatch =
+            String(item?.FunctionId ?? item?.functionId ?? '').toLowerCase() === row.functionId.toLowerCase()
+            && String(item?.ModuleId ?? item?.moduleId ?? '').toLowerCase() === row.moduleId.toLowerCase();
+          const titleMatch =
+            String(item?.FunctionTitle ?? item?.functionTitle ?? '').toLowerCase() === row.functionTitle.toLowerCase()
+            && String(item?.ModuleTitle ?? item?.moduleTitle ?? '').toLowerCase() === row.moduleTitle.toLowerCase();
+          return idMatch || titleMatch;
+        });
         if (!found) return row;
         const permissions = found.Permissions ?? found.permissions ?? found.flags ?? found.Flags ?? {};
         return {
           ...row,
           flags: {
-            V: !!(permissions.View ?? permissions.view ?? permissions.V),
-            C: !!(permissions.Create ?? permissions.create ?? permissions.C),
-            E: !!(permissions.Edit ?? permissions.edit ?? permissions.E),
-            D: !!(permissions.Delete ?? permissions.delete ?? permissions.D),
-            S: !!(permissions.Submit ?? permissions.submit ?? permissions.S),
-            A: !!(permissions.Approve ?? permissions.approve ?? permissions.A),
-            R: !!(permissions.Reject ?? permissions.reject ?? permissions.R),
-            N: !!(permissions.Cancel ?? permissions.cancel ?? permissions.N),
-            X: !!(permissions.Export ?? permissions.export ?? permissions.X),
-            P: !!(permissions.Print ?? permissions.print ?? permissions.P),
-            M: !!(permissions.Post ?? permissions.post ?? permissions.Finalize ?? permissions.M)
+            V: !!(permissions.View   ?? permissions.view   ?? permissions.V ?? false),
+            C: !!(permissions.Create ?? permissions.create ?? permissions.C ?? false),
+            E: !!(permissions.Edit   ?? permissions.edit   ?? permissions.E ?? false),
+            D: !!(permissions.Delete ?? permissions.delete ?? permissions.D ?? false),
+            S: !!(permissions.Submit ?? permissions.submit ?? permissions.S ?? false),
+            A: !!(permissions.Approve ?? permissions.approve ?? permissions.A ?? false),
+            R: !!(permissions.Reject ?? permissions.reject ?? permissions.R ?? false),
+            N: !!(permissions.Cancel ?? permissions.cancel ?? permissions.N ?? false),
+            X: !!(permissions.Export ?? permissions.export ?? permissions.X ?? false),
+            P: !!(permissions.Print  ?? permissions.print  ?? permissions.P ?? false),
+            M: !!(permissions.Post   ?? permissions.post   ?? permissions.Finalize ?? permissions.M ?? false)
           }
         };
       });
     });
+  }
+
+  private extractPermissionsArray(res: any): any[] {
+    if (!res) return [];
+    const isPermRow = (item: any) =>
+      item && typeof item === 'object' &&
+      (item.functionId || item.FunctionId || item.functionTitle || item.FunctionTitle);
+
+    if (Array.isArray(res) && res.length && isPermRow(res[0])) return res;
+
+    const data = res?.data ?? res;
+
+    if (Array.isArray(data) && data.length) {
+      if (isPermRow(data[0])) return data;
+      const fromFirst = this.extractPermissionsArray(data[0]);
+      if (fromFirst.length) return fromFirst;
+    }
+
+    if (data && typeof data === 'object') {
+      for (const key of ['permissions', 'Permissions', 'items', 'Items', 'roles', 'Roles', 'functionPermissions', 'FunctionPermissions']) {
+        if (Array.isArray(data[key]) && data[key].length && isPermRow(data[key][0])) return data[key];
+      }
+      for (const key of Object.keys(data)) {
+        const val = data[key];
+        if (typeof val === 'string' && val.trim().startsWith('[')) {
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed) && parsed.length && isPermRow(parsed[0])) return parsed;
+          } catch {}
+        }
+      }
+    }
+
+    return [];
   }
 
   private getPermissionPayload(): any[] {

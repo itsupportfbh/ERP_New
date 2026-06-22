@@ -6,7 +6,7 @@ export const payloadInterceptor: HttpInterceptorFn = (req, next) => {
   const isWriteMethod = req.method === 'POST' || req.method === 'PUT';
   const isSkipped = SKIP_PATHS.some(p => req.url.includes(p));
 
-  if (isWriteMethod && !isSkipped && req.body && typeof req.body === 'object' && !(req.body instanceof FormData)) {
+ if (isWriteMethod && !isSkipped && req.body && typeof req.body === 'object' && !(req.body instanceof FormData)) {
     const userId = Number(localStorage.getItem('id') || 0);
     const companyId = Number(localStorage.getItem('companyId') || 0);
     const now = new Date().toISOString();
