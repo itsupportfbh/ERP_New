@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
+import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
 const accountTypes = [
   { id: 1, name: 'Checking' },
@@ -33,6 +34,10 @@ export class BankComponent implements OnInit {
   currencies: any[] = []; countries: any[] = []; budgetLines: any[] = []; accountTypes = accountTypes;
   searchText = ''; pageSize = 10; sortField = ''; sortAsc = true;
   form = { ...blank };
+  permission: FunctionPermission;
+  isPermissionLoaded = false;
+  userId: number = 0;
+  functionId = 'bank';
 
   get filteredItems(): any[] {
     let list = this.items;
@@ -52,10 +57,13 @@ export class BankComponent implements OnInit {
 
   get pagedItems(): any[] { return this.filteredItems.slice(0, this.pageSize); }
 
-  constructor(private masterSvc: MasterService) {}
+  constructor(private masterSvc: MasterService, private permissionService: PermissionService) {
+    this.userId = Number(localStorage.getItem('id') || 0);
+    this.permission = this.permissionService.getEmptyPermission(this.functionId);
+  }
 
   ngOnInit(): void {
-    this.load();
+    this.loadPermission();
     this.masterSvc.getCurrencies().subscribe({ next: (res: any) => { this.currencies = res?.data || res || []; }, error: () => {} });
     this.masterSvc.getCountries().subscribe({ next: (res: any) => { this.countries = res?.data || res || []; }, error: () => {} });
     this.masterSvc.getChartOfAccounts().subscribe({
@@ -136,4 +144,27 @@ export class BankComponent implements OnInit {
     if (!this.itemToDelete) return;
     this.masterSvc.deleteBank(this.itemToDelete.id).subscribe({ next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } }, error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; } });
   }
+
+  loadPermission(): void {
+    if (!this.userId || this.userId <= 0) {
+      this.permission = this.permissionService.getEmptyPermission(this.functionId);
+      this.isPermissionLoaded = true;
+      return;
+    }
+    this.permissionService.getFunctionPermission(this.userId, this.functionId).subscribe({
+      next: (res: FunctionPermission) => {
+        this.permission = res || this.permissionService.getEmptyPermission(this.functionId);
+        this.isPermissionLoaded = true;
+        this.load();
+      },
+      error: () => {
+        this.permission = this.permissionService.getEmptyPermission(this.functionId);
+        this.isPermissionLoaded = true;
+        this.load();
+      }
+    });
+  }
+  canCreate(): boolean { return this.permissionService.hasCreate(this.permission); }
+  canEdit(): boolean { return this.permissionService.hasEdit(this.permission); }
+  canDelete(): boolean { return this.permissionService.hasDelete(this.permission); }
 }

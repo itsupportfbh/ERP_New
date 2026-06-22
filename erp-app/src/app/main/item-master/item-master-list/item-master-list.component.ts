@@ -42,9 +42,9 @@ export class ItemMasterListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'view', label: 'View', btnClass: 'btn-outline-info' },
-    { key: 'edit', label: 'Edit', btnClass: 'btn-outline-primary' },
-    { key: 'delete', label: 'Delete', btnClass: 'btn-outline-danger' }
+    { key: 'view', label: 'View', icon: 'view', btnClass: 'view-action' },
+    { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'warning' },
+    { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' }
   ];
 
   // paging + search

@@ -52,6 +52,7 @@ import { CountriesComponent } from './pages/master/countries/countries.component
 import { CurrencyComponent } from './pages/master/currency/currency.component';
 import { CustomerGroupsComponent } from './pages/master/customer-groups/customer-groups.component';
 import { DepartmentComponent } from './pages/master/department/department.component';
+import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
 import { DriverComponent } from './pages/master/driver/driver.component';
 import { ExchangeRateComponent } from './pages/master/exchange-rate/exchange-rate.component';
 import { FlagIssueComponent } from './pages/master/flag-issue/flag-issue.component';
@@ -117,6 +118,7 @@ import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobi
     CurrencyComponent,
     CustomerGroupsComponent,
     DepartmentComponent,
+    DepartmentMenuAccessComponent,
     DriverComponent,
     ExchangeRateComponent,
     FlagIssueComponent,

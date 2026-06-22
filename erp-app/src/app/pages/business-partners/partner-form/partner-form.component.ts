@@ -176,8 +176,13 @@ export class PartnerFormComponent implements OnInit {
         : this.saveUser();
 
     request.subscribe({
-      next: async () => {
+      next: async (res: any) => {
         this.saving = false;
+        if (res && res.isSuccess === false) {
+          this.error = res.message || 'Unable to save record.';
+          void this.showError('Save Failed', this.error);
+          return;
+        }
         await this.showSuccess(
           this.isEdit ? 'Updated' : 'Created',
           `${this.title} saved successfully.`
@@ -307,36 +312,39 @@ export class PartnerFormComponent implements OnInit {
 
   private saveCustomer() {
     const formData = new FormData();
-    const append = (key: string, value: any) => {
-      if (value !== undefined && value !== null && value !== '') formData.append(key, String(value));
-    };
-    append('CustomerId', this.customer.customerId ?? this.id);
-    append('KycId', this.customer.kycId);
-    append('CustomerName', this.customer.customerName);
-    append('CustomerCode', this.customer.customerCode);
-    append('CountryId', this.customer.countryId);
-    append('LocationId', this.customer.locationId);
-    append('ContactNumber', this.customer.phone);
-    append('PointOfContactPerson', this.customer.contactPerson);
-    append('Email', this.customer.email);
-    append('CustomerGroupId', this.customer.customerGroupId);
-    append('BudgetLineId', this.customer.budgetLineId);
-    append('PaymentTermId', this.customer.paymentTermId);
-    append('CreditAmount', this.customer.creditAmount ?? 0);
-    append('TaxRegNo', this.customer.taxRegNo);
-    append('Address', this.customer.address);
-    append('StatusId', this.customer.statusId ?? 1);
-    append('CreatedBy', Number(localStorage.getItem('id')) || 0);
-    append('UpdatedBy', Number(localStorage.getItem('id')) || 0);
-    append('CompanyId', localStorage.getItem('companyId') || 0);
-    append('IsApproved', !!this.customer.approvedBy || this.kycLocked);
-    append('ApprovedBy', this.customer.approvedBy);
+
+    if (this.customer.kycId) formData.append('KycId', this.customer.kycId.toString());
+    const customerId = this.customer.customerId ?? (this.id ? Number(this.id) : null);
+    if (customerId) formData.append('CustomerId', customerId.toString());
+
+    formData.append('CustomerName', this.customer.customerName || '');
+    formData.append('CountryId', (this.customer.countryId ?? '').toString());
+    formData.append('LocationId', (this.customer.locationId ?? '').toString());
+    formData.append('ContactNumber', this.customer.phone || '');
+    formData.append('PointOfContactPerson', this.customer.contactPerson || '');
+    formData.append('Email', this.customer.email || '');
+    formData.append('CustomerGroupId', (this.customer.customerGroupId ?? '').toString());
+    formData.append('BudgetLineId', (this.customer.budgetLineId ?? '').toString());
+    formData.append('PaymentTermId', (this.customer.paymentTermId ?? '').toString());
+    formData.append('CreditAmount', (this.customer.creditAmount ?? 0).toString());
+    formData.append('CreatedBy', String(Number(localStorage.getItem('id')) || 0));
+    formData.append('UpdatedBy', String(Number(localStorage.getItem('id')) || 0));
+    formData.append('CompanyId', (localStorage.getItem('companyId') || '0').toString());
+
+    const approvedId = Number(this.customer.approvedBy || 0);
+    const isApproved = this.kycLocked || approvedId > 0;
+    formData.append('IsApproved', isApproved ? 'true' : 'false');
+    if (approvedId > 0) {
+      formData.append('ApprovedBy', String(approvedId));
+    }
+
     if (!this.kycLocked) {
       if (this.kycFiles.drivingLicence) formData.append('DrivingLicence', this.kycFiles.drivingLicence);
       if (this.kycFiles.utilityBill) formData.append('UtilityBill', this.kycFiles.utilityBill);
       if (this.kycFiles.bankStatement) formData.append('BankStatement', this.kycFiles.bankStatement);
       if (this.kycFiles.acra) formData.append('Acra', this.kycFiles.acra);
     }
+
     return this.isEdit
       ? this.partners.updateCustomer(formData)
       : this.partners.createCustomer(formData);

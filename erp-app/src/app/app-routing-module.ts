@@ -73,6 +73,7 @@ import { FinanceTrialBalanceComponent } from './pages/finance/finance-trial-bala
 import { FinancePlComponent } from './pages/finance/finance-pl.component';
 import { FinanceBsComponent } from './pages/finance/finance-bs.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
+import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login',            component: LoginComponent },
@@ -210,13 +211,14 @@ const routes: Routes = [
       { path: 'master/currency',        component: CurrencyComponent        },
       { path: 'master/customergroups',  component: CustomerGroupsComponent  },
       { path: 'master/department',      component: DepartmentComponent      },
+      {path: 'master/department-menu-access', component: DepartmentMenuAccessComponent },
       { path: 'master/driver',          component: DriverComponent          },
       { path: 'master/exchangerate',    component: ExchangeRateComponent    },
       { path: 'master/flagIssue',       component: FlagIssueComponent       },
       { path: 'master/incoterms',       component: IncotermsComponent       },
-      { path: 'master/itemType',        component: ItemTypeComponent        },
+      { path: 'master/itemType',        component: ItemTypeComponent       },
       { path: 'master/location',        component: LocationComponent        },
-      { path: 'master/itemSet',         component: ItemSetComponent         },
+      { path: 'master/itemSet',         component: ItemSetComponent         }, 
       { path: 'master/paymentTerms',    component: PaymentTermsComponent    },
       { path: 'master/recurring',       component: RecurringComponent       },
       { path: 'master/service',         component: ServiceComponent         },

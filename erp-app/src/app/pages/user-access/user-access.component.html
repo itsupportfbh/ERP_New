@@ -82,6 +82,7 @@
           placeholder="Select department"
           [required]="true"
           [options]="departmentOptions"
+          (ngModelChange)="onDepartmentChanged($event)"
           [(ngModel)]="account.departmentId">
         </erp-dropdown>
         <erp-dropdown
@@ -170,8 +171,12 @@
         </button>
       </div>
 
+      <div class="loading-row" *ngIf="!loadingPermissions && modules.length === 0">
+        No modules mapped in Department Menu Access for this department.
+      </div>
+
       <!-- Permission matrix table -->
-      <div class="perm-table-wrap">
+      <div class="perm-table-wrap" *ngIf="modules.length > 0">
         <table class="perm-table">
           <thead>
             <tr>

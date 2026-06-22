@@ -118,32 +118,59 @@ $mrq-brand-dark: #0e3a4c;
   width: 100%;
 }
 
+.mrq-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .mrq-btn-outline {
-  height: 40px;
-  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px solid #dbe6ef;
   background: #fff;
   color: $mrq-brand-dark;
-  font-weight: 900;
+  font-weight: 600;
   font-size: 13px;
-  padding: 8px 14px;
+  padding: 0 14px;
   white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 
-  &:hover { border-color: #c7d7e3; background: #f6fbfd; }
+  svg { flex: 0 0 auto; }
+
+  &:hover {
+    border-color: $mrq-brand;
+    background: #f0f7fa;
+    box-shadow: 0 1px 4px rgba(46, 95, 115, 0.10);
+  }
 }
 
 .mrq-btn-primary {
-  height: 40px;
-  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: $mrq-brand;
   color: #fff;
-  font-weight: 900;
+  font-weight: 600;
   font-size: 13px;
-  padding: 8px 14px;
+  padding: 0 16px;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 6px rgba(46, 95, 115, 0.25);
 
-  &:hover { background: darken($mrq-brand, 6%); }
+  svg { flex: 0 0 auto; }
+
+  &:hover { background: $mrq-brand-dark; box-shadow: 0 3px 10px rgba(46, 95, 115, 0.35); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
 }
 
 /* =========================

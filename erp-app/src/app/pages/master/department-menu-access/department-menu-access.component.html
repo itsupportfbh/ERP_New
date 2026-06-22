@@ -1,0 +1,147 @@
+<div class="master-pg dma-master-pg">
+  <div class="master-wrap">
+    <div class="mcard">
+      <div class="mcard-head">
+        <div class="mcard-title">
+          <div class="mcard-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="8" y="2" width="4" height="4" rx="1" />
+              <rect x="2" y="14" width="4" height="4" rx="1" />
+              <rect x="14" y="14" width="4" height="4" rx="1" />
+              <path d="M10 6v4M6 14v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </div>
+          <span>Department Menu Access</span>
+        </div>
+        <button class="mbtn-create" type="button" (click)="showCreate()" *ngIf="canCreate()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="10" cy="10" r="8" />
+            <line x1="10" y1="6" x2="10" y2="14" />
+            <line x1="6" y1="10" x2="14" y2="10" />
+          </svg>
+          Create
+        </button>
+      </div>
+
+      <div class="mcard-body">
+        <div class="mlist-loading" *ngIf="loading">Loading...</div>
+        <div class="mlist-empty" *ngIf="!loading && rows.length === 0">No records found.</div>
+
+        <div class="mlist-item dma-item" *ngFor="let row of rows; trackBy: trackByDepartment">
+          <div class="mitem-left dma-item-left">
+            <div class="mitem-avatar">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="7" y="2" width="6" height="4" rx="0.5" />
+                <rect x="2" y="14" width="5" height="4" rx="0.5" />
+                <rect x="13" y="14" width="5" height="4" rx="0.5" />
+                <line x1="10" y1="6" x2="10" y2="10" />
+                <line x1="4.5" y1="10" x2="15.5" y2="10" />
+                <line x1="4.5" y1="10" x2="4.5" y2="14" />
+                <line x1="15.5" y1="10" x2="15.5" y2="14" />
+              </svg>
+            </div>
+
+            <div class="mitem-info dma-item-info">
+              <div class="dma-item-head">
+                <div class="mitem-name">{{ row.departmentName }}</div>
+                <span class="dma-badge">{{ row.menuIds?.length || 0 }} modules</span>
+              </div>
+              <div class="mitem-sub">Top-level module visibility configured for this department.</div>
+
+              <div class="dma-chip-row" *ngIf="getPreviewNames(row).length">
+                <span class="dma-chip" *ngFor="let name of getPreviewNames(row) | slice:0:4">{{ name }}</span>
+                <span class="dma-chip more" *ngIf="getPreviewNames(row).length > 4">+{{ getPreviewNames(row).length - 4 }} more</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mitem-actions">
+            <button class="micon-btn edit" type="button" (click)="edit(row)" title="Edit" *ngIf="canEdit()">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M13 3l4 4-10 10H3v-4L13 3z" />
+              </svg>
+            </button>
+            <button class="micon-btn del" type="button" (click)="remove(row)" title="Delete" *ngIf="canDelete()">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                <polyline points="5 7 5 18 15 18 15 7" />
+                <line x1="3" y1="7" x2="17" y2="7" />
+                <path d="M8 7V4h4v3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="dt-modal-overlay dma-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
+    <div class="dt-modal dt-modal-wide dma-modal" (click)="$event.stopPropagation()">
+      <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Create' }} Department Menu Access</h3>
+
+      <div class="mf-group dma-department-field">
+        <label class="mf-label" for="departmentId">Department</label>
+        <select
+          id="departmentId"
+          class="mf-select"
+          [(ngModel)]="selectedDepartmentId"
+          (change)="onDepartmentChange()"
+          [disabled]="isEditMode"
+        >
+          <option [ngValue]="null">-- Select Department --</option>
+          <option *ngFor="let department of departments" [ngValue]="department.id">
+            {{ department.departmentName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="dma-inline-note muted" *ngIf="!selectedDepartmentId && !loading">
+        Select a department to configure visible modules.
+      </div>
+
+      <div class="dma-loading" *ngIf="loading">Loading modules...</div>
+
+      <div class="dma-module-grid" *ngIf="!loading && selectedDepartmentId">
+        <button
+          class="dma-module-card"
+          type="button"
+          *ngFor="let module of modules; trackBy: trackByModule"
+          [class.active]="isChecked(module.id)"
+          (click)="toggleModule(module.id)"
+        >
+          <div class="dma-module-top">
+            <i [class]="module.icon"></i>
+            <input
+              type="checkbox"
+              [checked]="isChecked(module.id)"
+              (click)="$event.stopPropagation()"
+              (change)="toggleModule(module.id)"
+            />
+          </div>
+          <div class="dma-module-title">{{ module.title }}</div>
+          <div class="dma-module-sub">{{ module.description }}</div>
+        </button>
+      </div>
+
+      <div class="dma-selected-count" *ngIf="selectedDepartmentId && !loading">
+        Selected Modules: <strong>{{ getSelectedCount() }}</strong>
+      </div>
+
+      <div class="mf-actions">
+        <button type="button" class="mf-btn submit" (click)="save()" [disabled]="saving || !selectedDepartmentId">
+          <svg viewBox="0 0 20 20">
+            <polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          {{ saving ? 'Saving...' : 'Submit' }}
+        </button>
+        <button type="button" class="mf-btn cancel" (click)="cancel()">
+          <svg viewBox="0 0 20 20">
+            <line x1="5" y1="5" x2="15" y2="15" fill="none" stroke="currentColor" stroke-width="2" />
+            <line x1="15" y1="5" x2="5" y2="15" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

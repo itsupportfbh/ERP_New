@@ -226,5 +226,20 @@
   &.info:hover    { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
   &.success:hover { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
   &.warning:hover { background: #fef9c3; color: #a16207; border-color: #fde68a; }
+   &.warning:hover { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
   &.danger:hover  { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+
+  &.warning { color: #ea580c; }
+  &.danger  { color: #dc2626; }
+
+  &.view-action {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #2563eb;
+    svg { width: 16px; height: 16px; }
+    &:hover { background: #eff6ff; color: #1d4ed8; }
+  }
 }

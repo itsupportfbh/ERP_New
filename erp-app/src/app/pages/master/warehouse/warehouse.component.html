@@ -5,7 +5,7 @@
       <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
       <div class="dt-right">
         <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Search..."/></div>
-        <button class="mbtn-add" (click)="showForm()">Add</button>
+        <button class="mbtn-add" (click)="showForm()" *ngIf="canCreate()">Add</button>
       </div>
     </div>
     <div class="dt-table-wrap">
@@ -22,8 +22,8 @@
             <td>{{ item.phone }}</td>
             <td>{{ item.address }}</td>
             <td><div class="dt-actions-cell">
-              <button class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
-              <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
+              <button class="dt-icon-btn edit" (click)="edit(item)" title="Edit" *ngIf="canEdit()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+              <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete" *ngIf="canDelete()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>
           </tr>
           <tr *ngIf="!loading && filteredItems.length===0"><td colspan="4" class="dt-empty">No records found.</td></tr>

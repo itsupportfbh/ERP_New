@@ -2,9 +2,9 @@
   <div class="page-header">
     <div class="btn-group">
       <button class="btn btn-outline btn-sm" (click)="load()">Refresh</button>
-      <button class="btn btn-outline btn-sm" [disabled]="selectedRows.length !== 1" (click)="edit()">Edit</button>
-      <button class="btn btn-danger btn-sm" [disabled]="selectedRows.length !== 1" (click)="deleteSelected()">Delete</button>
-      <button class="btn btn-primary btn-sm" (click)="create()">+ New {{ activeTab === 'customers' ? 'Customer' : activeTab === 'suppliers' ? 'Supplier' : 'User' }}</button>
+      <button class="btn btn-outline btn-sm" *ngIf="canEdit()" [disabled]="selectedRows.length !== 1" (click)="edit()">Edit</button>
+      <button class="btn btn-danger btn-sm" *ngIf="canDelete()" [disabled]="selectedRows.length !== 1" (click)="deleteSelected()">Delete</button>
+      <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="create()">+ New {{ activeTab === 'customers' ? 'Customer' : activeTab === 'suppliers' ? 'Supplier' : 'User' }}</button>
     </div>
   </div>
 

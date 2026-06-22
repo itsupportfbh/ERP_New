@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
+import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
 const blank = () => ({ name: '', countryId: null as any, stateId: null as any, cityId: null as any, contactNumber: '' });
 
@@ -36,10 +37,18 @@ export class LocationComponent implements OnInit {
 
   get pagedItems(): any[] { return this.filteredItems.slice(0, this.pageSize); }
 
-  constructor(private masterSvc: MasterService) {}
+  permission: FunctionPermission;
+  isPermissionLoaded = false;
+  userId: number = 0;
+  functionId = 'location';
+
+  constructor(private masterSvc: MasterService, private permissionService: PermissionService) {
+    this.userId = Number(localStorage.getItem('id') || 0);
+    this.permission = this.permissionService.getEmptyPermission(this.functionId);
+  }
 
   ngOnInit(): void {
-    this.load();
+    this.loadPermission();
     this.masterSvc.getCountries().subscribe({ next: (r: any) => { this.countries = r?.data || r || []; }, error: () => {} });
     this.masterSvc.getStates().subscribe({ next: (r: any) => { this.allStates = r?.data || r || []; }, error: () => {} });
     this.masterSvc.getCities().subscribe({ next: (r: any) => { this.allCities = r?.data || r || []; }, error: () => {} });
@@ -124,4 +133,27 @@ export class LocationComponent implements OnInit {
     if (!this.itemToDelete) return;
     this.masterSvc.deleteLocation(this.itemToDelete.id).subscribe({ next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } }, error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; } });
   }
+
+  loadPermission(): void {
+    if (!this.userId || this.userId <= 0) {
+      this.permission = this.permissionService.getEmptyPermission(this.functionId);
+      this.isPermissionLoaded = true;
+      return;
+    }
+    this.permissionService.getFunctionPermission(this.userId, this.functionId).subscribe({
+      next: (res: FunctionPermission) => {
+        this.permission = res || this.permissionService.getEmptyPermission(this.functionId);
+        this.isPermissionLoaded = true;
+        this.load();
+      },
+      error: () => {
+        this.permission = this.permissionService.getEmptyPermission(this.functionId);
+        this.isPermissionLoaded = true;
+        this.load();
+      }
+    });
+  }
+  canCreate(): boolean { return this.permissionService.hasCreate(this.permission); }
+  canEdit(): boolean { return this.permissionService.hasEdit(this.permission); }
+  canDelete(): boolean { return this.permissionService.hasDelete(this.permission); }
 }
