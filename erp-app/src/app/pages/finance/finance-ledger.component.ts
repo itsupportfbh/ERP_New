@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
+import Swal from 'sweetalert2';
 
 interface LedgerFlat {
   id: number;
@@ -59,7 +60,6 @@ export class FinanceLedgerComponent implements OnInit {
   displayRows: LedgerNode[] = [];
 
   loading = false;
-  error = '';
   fromDate = '';
   toDate = '';
   showFilter = false;
@@ -91,7 +91,6 @@ export class FinanceLedgerComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.error = '';
     this.showFilter = false;
     this.roots = [];
     this.displayRows = [];
@@ -105,7 +104,7 @@ export class FinanceLedgerComponent implements OnInit {
         }
 
         const flat: LedgerFlat[] = raw.map((x: any) => ({
-          id:             Number(x.headId ?? 0),
+          id:             Number(x.headId ?? x.HeadId ?? x.id ?? x.Id ?? 0),
           headCode:       Number(x.headCode ?? 0),
           headName:       String(x.headName ?? '').trim(),
           parentHead:     x.parentHead == null ? 0 : Number(x.parentHead),
@@ -124,7 +123,6 @@ export class FinanceLedgerComponent implements OnInit {
         }));
 
         const flatActive = flat.filter(r => !!r.isActive);
-        const nodesById   = new Map<number, LedgerNode>();
         const nodesByCode = new Map<number, LedgerNode>();
 
         flatActive.forEach(f => {
@@ -142,12 +140,11 @@ export class FinanceLedgerComponent implements OnInit {
             displayDebit: 0, displayCredit: 0, displayBalance: 0,
             children: [], hasChildren: false, $$expanded: false, level: 0, parent: null
           };
-          nodesById.set(node.id, node);
           nodesByCode.set(node.headCode, node);
         });
 
         const roots: LedgerNode[] = [];
-        nodesById.forEach(node => {
+        nodesByCode.forEach(node => {
           const p = node.parentHead ?? 0;
           if (!p) {
             roots.push(node);
@@ -179,7 +176,7 @@ export class FinanceLedgerComponent implements OnInit {
         this.roots = [];
         this.displayRows = [];
         this.loading = false;
-        this.error = 'General Ledger data unavailable.';
+        Swal.fire({ icon: 'error', title: 'Load Failed', text: 'General Ledger data unavailable.', confirmButtonColor: '#0e4a60' });
       }
     });
   }
@@ -318,9 +315,9 @@ export class FinanceLedgerComponent implements OnInit {
     this.rebuildDisplayRows();
   }
 
-  get totalDebit():   number { return this.displayRows.reduce((s, r) => s + (r.displayDebit  || 0), 0); }
-  get totalCredit():  number { return this.displayRows.reduce((s, r) => s + (r.displayCredit || 0), 0); }
-  get totalBalance(): number { return this.displayRows.reduce((s, r) => s + (r.displayBalance || 0), 0); }
+  get totalDebit():   number { return this.roots.reduce((s, r) => s + (r.totalDebitBase  || 0), 0); }
+  get totalCredit():  number { return this.roots.reduce((s, r) => s + (r.totalCreditBase || 0), 0); }
+  get totalBalance(): number { return Math.abs(this.totalDebit - this.totalCredit); }
 
   levelClass(row: LedgerNode): string {
     if (row.level === 0) return 'lvl-0';
