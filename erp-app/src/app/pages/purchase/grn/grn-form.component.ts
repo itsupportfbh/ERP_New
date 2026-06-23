@@ -75,6 +75,11 @@ export class GrnFormComponent implements OnInit {
 
   loginUserId = Number(localStorage.getItem('id')) || null;
 
+  // ── Auto-warehouse from user's outlet (locationId in localStorage) ──
+  locationId         = Number(localStorage.getItem('locationId') || 0);
+  defaultWarehouseId: number | null = null;
+  supplierId: number | null = null;
+
   constructor(
     private svc: PurchaseService,
     private route: ActivatedRoute,
@@ -109,9 +114,24 @@ export class GrnFormComponent implements OnInit {
         }));
     });
     this.svc.getWarehouses().subscribe(r => {
-      this.warehouseOptions = this.svc.unwrap(r).map((w: any) => ({
-        label: w.warehouseName ?? w.name, value: w.id
+      const all = this.svc.unwrap(r).map((w: any) => ({
+        label: w.warehouseName ?? w.name ?? '',
+        value: w.id,
+        locationId: Number(w.locationId ?? w.outletId ?? w.LocationId ?? 0)
       }));
+
+      // filter to user's outlet if locationId is set in localStorage
+      const filtered = this.locationId > 0
+        ? all.filter(w => w.locationId === this.locationId)
+        : all;
+
+      this.warehouseOptions = (filtered.length ? filtered : all);
+
+      // set first warehouse as default and pre-apply to any existing lines
+      if (this.warehouseOptions.length) {
+        this.defaultWarehouseId = Number(this.warehouseOptions[0].value);
+        this.applyDefaultWarehouse();
+      }
     });
     this.svc.getFlagIssues().subscribe(r => {
       this.flagIssueOptions = this.svc.unwrap(r).map((f: any) => ({
@@ -128,6 +148,7 @@ export class GrnFormComponent implements OnInit {
         const d = this.svc.unwrapOne(res);
         this.grnNo = d.grnNo ?? d.GrnNo ?? '';
         this.poId = d.poid ?? d.poId ?? null;
+        this.supplierId = d.supplierId ?? d.SupplierId ?? null;
         this.receiptDate = d.receptionDate
           ? d.receptionDate.substring(0, 10)
           : (d.receiptDate ? d.receiptDate.substring(0, 10) : this.receiptDate);
@@ -177,11 +198,29 @@ export class GrnFormComponent implements OnInit {
     });
   }
 
+  // Apply the default warehouse (from locationId) to all lines that have no warehouseId yet
+  private applyDefaultWarehouse(): void {
+    if (!this.defaultWarehouseId) return;
+    this.lines = this.lines.map(l => ({
+      ...l,
+      warehouseId: l.warehouseId ?? this.defaultWarehouseId
+    }));
+    // pre-load bins for the default warehouse
+    if (!this.binOptions[this.defaultWarehouseId]) {
+      this.svc.getWarehouseBins(this.defaultWarehouseId).subscribe(r => {
+        this.binOptions[this.defaultWarehouseId!] = this.svc.unwrap(r).map((b: any) => ({
+          label: b.binName ?? b.binCode ?? b.name, value: b.id
+        }));
+      });
+    }
+  }
+
   onPoChange(): void {
     const found = this.poOptions.find(o => o.value === this.poId);
     if (!found) return;
     const po = found.raw;
     this.supplierName = po.supplierName ?? '';
+    this.supplierId = po.supplierId ?? po.SupplierId ?? null;
 
     const rawLines = po.poLines ?? po.PoLines ?? '[]';
     const parsedLines: any[] = typeof rawLines === 'string'
@@ -193,7 +232,7 @@ export class GrnFormComponent implements OnInit {
       itemCode: l.itemCode ?? '',
       itemName: l.itemSearch ?? l.itemName ?? '',
       supplierName: po.supplierName ?? '',
-      warehouseId: null,
+      warehouseId: this.defaultWarehouseId,   // ← auto from locationId
       binId: null,
       qtyOrdered: l.qty ?? l.quantity ?? null,
       qtyReceived: null,
@@ -219,6 +258,10 @@ export class GrnFormComponent implements OnInit {
       qtyError: ''
     }));
     if (!this.lines.length) this.addLine();
+    // pre-load bins for the auto-set warehouse
+    if (this.defaultWarehouseId) {
+      this.applyDefaultWarehouse();
+    }
   }
 
   onQtyChange(line: GRNLine, newQty: number | null): void {
@@ -250,7 +293,8 @@ export class GrnFormComponent implements OnInit {
   private emptyLine(): GRNLine {
     return {
       itemId: null, itemCode: '', itemName: '', supplierName: '',
-      warehouseId: null, binId: null,
+      warehouseId: this.defaultWarehouseId,   // ← auto from locationId
+      binId: null,
       qtyOrdered: null, qtyReceived: null, qtyRemaining: null, unitPrice: null,
       qualityCheck: 'Pass', storageType: '', surfaceTemp: null,
       batchNo: '', serialNo: '', expiryDate: '', time: '',
@@ -280,29 +324,137 @@ export class GrnFormComponent implements OnInit {
   }
 
   postToInventory(line: GRNLine, i: number): void {
-    Swal.fire({ title: 'Post to Inventory?', text: `Post line ${i + 1} – ${line.itemName}?`, icon: 'question', showCancelButton: true, confirmButtonText: 'Post', confirmButtonColor: '#0e7490' })
-      .then(result => {
-        if (!result.isConfirmed) return;
-        this.svc.checkPeriodLock(this.receiptDate).subscribe({
-          next: (res: any) => {
-            const d = res?.data ?? res ?? {};
-            if (d.isClosed || d.IsClosed || d.status === 'Closed' || d.Status === 'Closed') {
-              Swal.fire('Period Closed', `The accounting period for ${this.receiptDate} is closed. Contact Finance to post.`, 'error');
-              return;
-            }
-            this.doPost(line);
-          },
-          error: () => this.doPost(line)
-        });
+    if (!this.id) {
+      Swal.fire('Save First', 'Please save the GRN before posting lines to inventory.', 'warning');
+      return;
+    }
+    Swal.fire({
+      title: 'Post to Inventory?',
+      html: `Post line ${i + 1} – <strong>${line.itemName}</strong>?<br><small>Qty: ${line.qtyReceived} → <em>ItemWarehouseStock</em> will be updated.</small>`,
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Post', confirmButtonColor: '#0e7490'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.svc.checkPeriodLock(this.receiptDate).subscribe({
+        next: (res: any) => {
+          const d = res?.data ?? res ?? {};
+          if (d.isClosed || d.IsClosed || d.status === 'Closed' || d.Status === 'Closed') {
+            Swal.fire('Period Closed', `The accounting period for ${this.receiptDate} is closed. Contact Finance to post.`, 'error');
+            return;
+          }
+          this.doPost(line);
+        },
+        error: () => this.doPost(line)
       });
+    });
   }
 
   private doPost(line: GRNLine): void {
-    this.svc.postGRNToInventory({ grnId: this.id, itemId: line.itemId, warehouseId: line.warehouseId, binId: line.binId, qty: line.qtyReceived })
-      .subscribe({
-        next: () => { line.isPosted = true; Swal.fire('Posted', 'Line posted to inventory.', 'success'); },
-        error: err => { this.error = err?.error?.message ?? 'Post failed.'; }
-      });
+    if (!line.itemCode) {
+      Swal.fire('Missing Item Code', 'Item code is required to post to inventory.', 'error');
+      return;
+    }
+    if (!line.warehouseId) {
+      Swal.fire('Missing Warehouse', 'Please select a warehouse before posting.', 'error');
+      return;
+    }
+    const qtyDelta = Number(line.qtyReceived) || 0;
+    if (qtyDelta <= 0) {
+      Swal.fire('Invalid Qty', 'Qty received must be greater than 0 to post.', 'error');
+      return;
+    }
+
+    // Step 1 — update ItemWarehouseStock via /ItemMaster/ApplyGrn
+    const applyReq = {
+      grnNo: this.grnNo || undefined,
+      receptionDate: this.receiptDate,
+      updatedBy: this.loginUserId,
+      lines: [{
+        itemCode: line.itemCode,
+        supplierId: this.supplierId ?? null,
+        warehouseId: line.warehouseId,
+        binId: line.binId ?? null,
+        qtyDelta,
+        price: line.unitPrice ?? null,
+        batchFlag: !!line.batchNo,
+        serialFlag: !!line.serialNo,
+        barcode: line.batchNo || line.serialNo || null,
+        remarks: line.remarks || null
+      }]
+    };
+
+    this.svc.applyGrnToInventory(applyReq).subscribe({
+      next: () => {
+        // Step 2 — update supplier price record (non-critical; continue on error)
+        const priceDto = {
+          itemCode: line.itemCode,
+          warehouseId: line.warehouseId,
+          binId: line.binId ?? null,
+          qtyDelta,
+          supplierId: this.supplierId ?? null,
+          price: line.unitPrice ?? null,
+          batchFlag: !!line.batchNo,
+          serialFlag: !!line.serialNo,
+          barcode: line.batchNo || line.serialNo || null,
+          remarks: line.remarks || null,
+          updatedBy: this.loginUserId
+        };
+        this.svc.updateWarehouseAndSupplierPrice(priceDto).subscribe({
+          next: () => this.markLinePosted(line),
+          error: () => this.markLinePosted(line)  // non-critical — proceed
+        });
+      },
+      error: err => {
+        this.error = err?.error?.message ?? 'Failed to post to inventory.';
+        Swal.fire('Post Failed', this.error, 'error');
+      }
+    });
+  }
+
+  private markLinePosted(line: GRNLine): void {
+    line.isPosted = true;
+
+    if (this.id) {
+      // Step 3a — persist isPostInventory flag back to GRN JSON
+      this.persistGrnJson();
+      // Step 3b — apply GRN to SO (updates SO procurement status / alerts)
+      this.svc.applyGrnToSo(this.id, this.loginUserId ?? 0).subscribe({ error: () => {} });
+    }
+
+    const remaining = this.lines.filter(l => !l.isPosted).length;
+    const title = remaining === 0 ? 'All Lines Posted!' : 'Posted';
+    const msg   = remaining === 0
+      ? 'All GRN lines have been posted to inventory successfully.'
+      : `Line posted to inventory. ${remaining} line${remaining !== 1 ? 's' : ''} remaining.`;
+
+    Swal.fire(title, msg, 'success').then(() => this.router.navigate(['/app/purchase/grn']));
+  }
+
+  private persistGrnJson(): void {
+    if (!this.id) return;
+    this.svc.updateGRNFlagIssues({
+      ID: this.id, POID: this.poId, ReceptionDate: this.receiptDate,
+      OverReceiptTolerance: this.overReceiptTolerance ?? 0,
+      GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
+    }).subscribe({ error: () => {} });
+  }
+
+  private buildGrnLinesData(): any[] {
+    return this.lines.map(l => ({
+      itemId: l.itemId, itemCode: l.itemCode, itemName: l.itemName,
+      supplierName: l.supplierName, warehouseId: l.warehouseId,
+      binId: l.binId, qtyReceived: l.qtyReceived ?? 0, qtyOrdered: l.qtyOrdered,
+      qtyRemaining: l.qtyRemaining, unitPrice: l.unitPrice,
+      qualityCheck: l.qualityCheck, storageType: l.storageType,
+      surfaceTemp: l.surfaceTemp, batchSerial: l.batchNo,
+      serialNo: l.serialNo, expiry: l.expiryDate || null, time: l.time,
+      pestSign: l.pestSign, drySpillage: l.drySpillage, odor: l.odor,
+      plateNumber: l.plateNumber, defectLabels: l.defectLabels,
+      damagedPackage: l.damagedPackage,
+      isPostInventory: l.isPosted,
+      isFlagIssue: !!l.flagIssueId, flagIssueId: l.flagIssueId,
+      isPartial: l.isPartial, initial: this.currentUsername,
+      remarks: l.remarks
+    }));
   }
 
   closeGrn(): void {
@@ -378,7 +530,7 @@ export class GrnFormComponent implements OnInit {
       POID: this.poId,
       ReceptionDate: this.receiptDate,
       OverReceiptTolerance: this.overReceiptTolerance ?? 0,
-      GrnNo: 'GRN-PENDING',
+      GrnNo: this.grnNo || 'GRN-PENDING',
       GRNJson: JSON.stringify(grnLinesData),
       isActive: true
     };
@@ -388,7 +540,24 @@ export class GrnFormComponent implements OnInit {
       : this.svc.createGRN(payload);
 
     obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
+      next: (res: any) => {
+        if (this.poId) this.svc.updateSoProcurementByPO(this.poId, 4).subscribe({ error: () => {} });
+        this.saving = false;
+
+        if (!this.isEdit) {
+          // Navigate to the new GRN's summary page — it has Post + Flag buttons per line
+          const newId = res?.data ?? res?.id ?? res;
+          if (typeof newId === 'number' && newId > 0) {
+            this.router.navigate(['/app/purchase/grn', newId]);
+          } else {
+            this.back();
+          }
+        } else {
+          // After update: reload and show summary view (with Post + Flag buttons)
+          this.viewMode = true;
+          this.loadForEdit();
+        }
+      },
       error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
     });
   }
@@ -467,7 +636,18 @@ export class GrnFormComponent implements OnInit {
     }).then(r => {
       if (!r.isConfirmed) return;
       line.flagIssueId = r.value;
-      if (this.id) this.doSubmit();
+      if (!this.id) return;
+      this.svc.updateGRNFlagIssues({
+        ID: this.id, POID: this.poId, ReceptionDate: this.receiptDate,
+        OverReceiptTolerance: this.overReceiptTolerance ?? 0,
+        GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
+      }).subscribe({
+        next: () => {
+          Swal.fire('Flagged', 'Line flagged successfully.', 'warning')
+            .then(() => this.router.navigate(['/app/purchase/grn']));
+        },
+        error: err => { this.error = err?.error?.message ?? 'Flag save failed.'; }
+      });
     });
   }
 

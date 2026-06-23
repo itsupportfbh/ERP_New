@@ -157,7 +157,6 @@
               <th>PR No</th>
               <th>Item</th>
               <th class="r-col">Qty</th>
-              <th>UOM</th>
               <th class="r-col">Unit Price</th>
               <th class="r-col">Disc %</th>
               <th class="r-col">Tax Amt</th>
@@ -167,7 +166,7 @@
           </thead>
           <tbody>
             <tr *ngIf="!lines.length">
-              <td colspan="10" class="empty-lines">No lines yet — click "+ Add Line" to add items.</td>
+              <td colspan="9" class="empty-lines">No lines yet — click "+ Add Line" to add items.</td>
             </tr>
             <tr *ngFor="let line of lines; let i = index">
               <td class="c-col"><span class="row-badge">{{ i + 1 }}</span></td>
@@ -177,7 +176,6 @@
                 <div class="item-code" *ngIf="line.itemCode">{{ line.itemCode }}</div>
               </td>
               <td class="r-col num-cell">{{ line.quantity }}</td>
-              <td>{{ getLabel(uomOptions, line.uomId) }}</td>
               <td class="r-col num-cell">{{ line.unitPrice | number:'1.2-2' }}</td>
               <td class="r-col num-cell">{{ line.discountPct || 0 }}%</td>
               <td class="r-col num-cell">{{ line.taxAmt | number:'1.2-2' }}</td>
@@ -203,7 +201,7 @@
           </tbody>
           <tfoot *ngIf="lines.length">
             <tr class="tfoot-total">
-              <td colspan="8" class="r-col tfoot-label">Sub Total</td>
+              <td colspan="7" class="r-col tfoot-label">Sub Total</td>
               <td class="r-col num-cell tfoot-val">{{ lineGrandTotal | number:'1.2-2' }}</td>
               <td></td>
             </tr>
@@ -286,7 +284,7 @@
             </div>
           </div>
           <div class="tile-amounts">
-            <div class="tile-qty">{{ line.quantity }} {{ getLabel(uomOptions, line.uomId) }}</div>
+            <div class="tile-qty">{{ line.quantity }}</div>
             <div class="tile-price">@ {{ line.unitPrice | number:'1.2-2' }}</div>
             <div class="tile-total">{{ line.lineTotal | number:'1.2-2' }} {{ getCurrencyCode() }}</div>
           </div>
@@ -424,23 +422,23 @@
         <erp-input label="Description" [(ngModel)]="modalLine.description" placeholder="Item description (auto-filled)"></erp-input>
       </div>
 
-      <!-- Row 3: Qty, UOM, Unit Price, Disc % -->
-      <div class="form-row cols-4 block-gap">
+      <!-- Row 3: Qty, Unit Price, Disc % -->
+      <div class="form-row cols-3 block-gap">
         <erp-input label="Quantity *" type="number" [(ngModel)]="modalLine.quantity"
           (ngModelChange)="recalcModal()" placeholder="0"></erp-input>
-        <erp-dropdown label="UOM" [options]="uomOptions"
-          [(ngModel)]="modalLine.uomId" placeholder="—"></erp-dropdown>
         <erp-input label="Unit Price" type="number" [(ngModel)]="modalLine.unitPrice"
           (ngModelChange)="recalcModal()" placeholder="0.00"></erp-input>
         <erp-input label="Discount %" type="number" [(ngModel)]="modalLine.discountPct"
           (ngModelChange)="recalcModal()" placeholder="0"></erp-input>
       </div>
 
-      <!-- Row 4: Tax Code, Tax Amt (readonly), Line Total (readonly) -->
-      <div class="form-row cols-3 block-gap">
-        <erp-dropdown label="Tax Code" [options]="taxCodeOptions"
-          [(ngModel)]="modalLine.taxCodeId" (ngModelChange)="onModalTaxChange()"
-          placeholder="Select tax…"></erp-dropdown>
+      <!-- Row 4: Tax Mode, Tax Rate %, Tax Amt (readonly), Line Total (readonly) -->
+      <div class="form-row cols-4 block-gap">
+        <erp-dropdown label="Tax Mode" [options]="taxModeOptions"
+          [(ngModel)]="modalLine.taxMode" (ngModelChange)="onTaxModeChange()"></erp-dropdown>
+        <erp-input label="Tax Rate %" type="number"
+          [(ngModel)]="modalLine.taxRate" (ngModelChange)="recalcModal()"
+          placeholder="0"></erp-input>
         <div class="readonly-field">
           <label class="field-label">Tax Amount</label>
           <div class="readonly-val">{{ modalLine.taxAmt | number:'1.4-4' }}</div>

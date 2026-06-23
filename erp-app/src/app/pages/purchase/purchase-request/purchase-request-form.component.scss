@@ -20,6 +20,17 @@
 .btn-xs { padding: 4px 10px; font-size: 12px; }
 .footer-right { display: flex; gap: 8px; }
 
+/* Source origin banner */
+.source-banner {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 14px; border-radius: var(--radius, 8px);
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  font-size: 12.5px; color: #1e40af; flex-shrink: 0;
+  svg { width: 15px; height: 15px; flex-shrink: 0; color: #3b82f6; }
+  .source-ref { font-weight: 700; }
+  .source-ids { margin-left: auto; font-size: 11px; color: #4b5563; code { background: #e0f2fe; border-radius: 4px; padding: 1px 5px; font-family: monospace; font-size: 11px; color: #0369a1; } }
+}
+
 /* Lines table */
 .lines-table-wrap { overflow-x: auto; }
 .lines-table { width: 100%; border-collapse: collapse; font-size: 12px;
@@ -61,6 +72,12 @@
 .qty-pill { font-size: 1.1rem; font-weight: 800; color: var(--primary, #2563eb); }
 .uom-pill { font-size: 0.75rem; color: #6b7280; }
 .empty-tile { text-align: center; color: #9ca3af; padding: 20px; font-size: 0.85rem; }
+
+/* Source origin in review */
+.source-row { background: #eff6ff; border-radius: 4px; }
+.source-type-tag { font-size: 11px; font-weight: 700; background: #bfdbfe; color: #1e40af; padding: 2px 8px; border-radius: 10px; }
+.src-code { background: #e0f2fe; border-radius: 4px; padding: 1px 6px; font-family: monospace; font-size: 12px; color: #0369a1; }
+.review-origin { font-weight: 600; color: #1e40af; font-size: 12.5px; }
 
 /* Modal overlay */
 .prl-overlay {

@@ -61,6 +61,12 @@ export class PurchaseRequestFormComponent implements OnInit {
 
   loginUserId = Number(localStorage.getItem('id')) || 0;
 
+  // ── Source tracking (auto-PR from SO / Recipe) ────────────
+  sourceId: number | null = null;
+  sourceReferenceId: number | null = null;
+  sourceType: 'SO' | 'RECIPE' | 'MANUAL' = 'MANUAL';
+  sourceName = '';
+
   constructor(
     private svc: PurchaseService,
     private route: ActivatedRoute,
@@ -68,9 +74,28 @@ export class PurchaseRequestFormComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const paramId = this.route.snapshot.paramMap.get('id');
+    const paramId  = this.route.snapshot.paramMap.get('id');
     const draftParam = this.route.snapshot.queryParamMap.get('draftId');
+    const fromSo   = this.route.snapshot.queryParamMap.get('fromSo');
+    const fromRecipe = this.route.snapshot.queryParamMap.get('fromRecipe');
+    const refId    = this.route.snapshot.queryParamMap.get('refId');
+
     this.isEdit = !!paramId && paramId !== 'new';
+
+    // Populate source fields from query params
+    if (fromSo) {
+      this.sourceId = Number(fromSo);
+      this.sourceType = 'SO';
+      this.sourceName = `Sales Order #${fromSo}`;
+      this.description = `Auto PR from Sales Order #${fromSo}`;
+    } else if (fromRecipe) {
+      this.sourceId = Number(fromRecipe);
+      this.sourceReferenceId = refId ? Number(refId) : null;
+      this.sourceType = 'RECIPE';
+      this.sourceName = `Production Plan #${fromRecipe}${refId ? ' / SO #' + refId : ''}`;
+      this.description = `Auto PR from Production Plan #${fromRecipe}`;
+    }
+
     this.loadLookups();
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
     else if (draftParam) { this.draftId = Number(draftParam); this.loadFromDraft(); }
@@ -187,6 +212,13 @@ export class PurchaseRequestFormComponent implements OnInit {
         this.numericStatus = d.status ?? d.approvalStatus ?? 1;
         this.status = this.numericStatus === 2 ? 'Approved' : this.numericStatus === 3 ? 'Rejected' : this.numericStatus === 0 ? 'Draft' : 'Pending';
         this.prLines = this.parseLines(d.pRLines ?? d.prLines ?? d.PRLines ?? '[]');
+        // restore source tracking from saved record
+        this.sourceId = d.sourceId ?? d.SourceId ?? null;
+        this.sourceReferenceId = d.sourceReferenceId ?? d.SourceReferenceId ?? null;
+        const st = (d.sourceType ?? d.SourceType ?? '') as string;
+        this.sourceType = st === 'SO' ? 'SO' : st === 'RECIPE' ? 'RECIPE' : 'MANUAL';
+        if (this.sourceType === 'SO' && this.sourceId) this.sourceName = `Sales Order #${this.sourceId}`;
+        else if (this.sourceType === 'RECIPE' && this.sourceId) this.sourceName = `Production Plan #${this.sourceId}${this.sourceReferenceId ? ' / SO #' + this.sourceReferenceId : ''}`;
         this.resolveDeptName();
         this.loading = false;
       },
@@ -345,7 +377,11 @@ export class PurchaseRequestFormComponent implements OnInit {
       Status: 1,
       IsReorder: false,
       CreatedBy: this.loginUserId,
-      UpdatedBy: this.loginUserId
+      UpdatedBy: this.loginUserId,
+      // source tracking — links PR back to its originating SO or Production Plan
+      SourceId: this.sourceId ?? null,
+      SourceReferenceId: this.sourceReferenceId ?? null,
+      SourceType: this.sourceType !== 'MANUAL' ? this.sourceType : null
     };
   }
 
@@ -359,7 +395,10 @@ export class PurchaseRequestFormComponent implements OnInit {
       : this.svc.createPurchaseRequestDraft(payload);
 
     obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
+      next: () => {
+        this.saving = false;
+        Swal.fire('Draft Saved', 'Purchase request draft saved successfully.', 'success').then(() => this.back());
+      },
       error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Draft save failed.'; }
     });
   }
@@ -404,7 +443,7 @@ export class PurchaseRequestFormComponent implements OnInit {
         if (this.draftId) {
           this.svc.deletePurchaseRequestDraft(this.draftId, this.loginUserId).subscribe({ error: () => {} });
         }
-        this.back();
+        Swal.fire('Submitted', this.isEdit ? 'Purchase request updated successfully.' : 'Purchase request submitted successfully.', 'success').then(() => this.back());
       },
       error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
     });
@@ -434,6 +473,8 @@ export class PurchaseRequestFormComponent implements OnInit {
 
   get totalQty(): number { return this.prLines.reduce((s, l) => s + Number(l.qty || 0), 0); }
   get today(): string { return new Date().toISOString().substring(0, 10); }
+  get isAutoSource(): boolean { return this.sourceType !== 'MANUAL' && !!this.sourceId; }
+  get sourceTypeLabel(): string { return this.sourceType === 'SO' ? 'Sales Order' : this.sourceType === 'RECIPE' ? 'Production Plan' : ''; }
   get title(): string {
     if (this.isEdit) return 'Edit Purchase Request';
     if (this.draftId) return 'Edit PR Draft';

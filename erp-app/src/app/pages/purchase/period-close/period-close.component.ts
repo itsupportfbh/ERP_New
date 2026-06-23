@@ -4,6 +4,7 @@ import {
   PeriodOption,
   PeriodStatus
 } from '../../../main/financial/period-close-fx/period-close-fx.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-period-close',
@@ -85,23 +86,30 @@ export class PeriodCloseComponent implements OnInit {
   onToggleLock(): void {
     if (!this.selectedPeriodId || !this.status) return;
     const target = !this.status.isLocked;
-    const msg = target
-      ? 'Lock this period? Users cannot post transactions while locked.'
-      : 'Unlock this period? Users can modify transactions again.';
-    if (!confirm(msg)) return;
-    this.isLocking = true;
-    this.error = '';
-    this.periodSvc.setLock(this.selectedPeriodId, target).subscribe({
-      next: s => {
-        this.status = s;
-        this.isLocking = false;
-        this.successMsg = `Period ${target ? 'locked' : 'unlocked'} successfully.`;
-        setTimeout(() => this.successMsg = '', 3000);
-      },
-      error: err => {
-        this.isLocking = false;
-        this.error = err?.error?.message || 'Failed to change lock status.';
-      }
+    Swal.fire({
+      title: target ? 'Lock this period?' : 'Unlock this period?',
+      text: target
+        ? 'Users cannot post transactions while locked.'
+        : 'Users can modify transactions again.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: target ? 'Lock' : 'Unlock',
+      confirmButtonColor: '#0e4a60'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.isLocking = true;
+      this.error = '';
+      this.periodSvc.setLock(this.selectedPeriodId!, target).subscribe({
+        next: s => {
+          this.status = s;
+          this.isLocking = false;
+          Swal.fire('Success', `Period ${target ? 'locked' : 'unlocked'} successfully.`, 'success');
+        },
+        error: err => {
+          this.isLocking = false;
+          this.error = err?.error?.message || 'Failed to change lock status.';
+        }
+      });
     });
   }
 
@@ -110,30 +118,37 @@ export class PeriodCloseComponent implements OnInit {
       this.error = 'Please select a period and FX revaluation date.';
       return;
     }
-    const msg = 'Run FX Revaluation?\n\nThis will:\n• Revalue all open AR/AP foreign currency balances\n• Calculate Unrealized Gain / Loss\n• Post GL Journal automatically';
-    if (!confirm(msg)) return;
-    this.isRunningFx = true;
-    this.error = '';
-    this.periodSvc.runFxReval({ periodId: this.selectedPeriodId, fxDate: this.fxRevalDate }).subscribe({
-      next: (res: any) => {
-        this.isRunningFx = false;
-        const data = res?.data ?? res ?? {};
-        const totalGain = Number(data.totalGain ?? 0);
-        const totalLoss = Number(data.totalLoss ?? 0);
-        this.lastRunResult = {
-          runId: Number(data.runId ?? 0),
-          fxDate: this.fxRevalDate,
-          totalGain,
-          totalLoss,
-          net: totalGain - totalLoss
-        };
-        this.successMsg = 'FX Revaluation completed successfully.';
-        setTimeout(() => this.successMsg = '', 5000);
-      },
-      error: err => {
-        this.isRunningFx = false;
-        this.error = err?.error?.message || 'FX Revaluation failed.';
-      }
+    Swal.fire({
+      title: 'Run FX Revaluation?',
+      html: 'This will:<br>• Revalue all open AR/AP foreign currency balances<br>• Calculate Unrealized Gain / Loss<br>• Post GL Journal automatically',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Run',
+      confirmButtonColor: '#0e4a60'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.isRunningFx = true;
+      this.error = '';
+      this.periodSvc.runFxReval({ periodId: this.selectedPeriodId!, fxDate: this.fxRevalDate }).subscribe({
+        next: (res: any) => {
+          this.isRunningFx = false;
+          const data = res?.data ?? res ?? {};
+          const totalGain = Number(data.totalGain ?? 0);
+          const totalLoss = Number(data.totalLoss ?? 0);
+          this.lastRunResult = {
+            runId: Number(data.runId ?? 0),
+            fxDate: this.fxRevalDate,
+            totalGain,
+            totalLoss,
+            net: totalGain - totalLoss
+          };
+          Swal.fire('Success', 'FX Revaluation completed successfully.', 'success');
+        },
+        error: err => {
+          this.isRunningFx = false;
+          this.error = err?.error?.message || 'FX Revaluation failed.';
+        }
+      });
     });
   }
 

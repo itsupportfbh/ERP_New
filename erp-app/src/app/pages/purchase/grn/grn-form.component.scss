@@ -6,6 +6,17 @@
 }
 
 
+/* ─── Auto-warehouse banner ───────────────────────────────── */
+.grn-auto-wh-banner {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 14px; border-radius: var(--radius, 8px);
+  background: #f0fdf4; border: 1px solid #a7f3d0; font-size: 12.5px; color: #065f46;
+  flex-shrink: 0;
+  svg { width: 15px; height: 15px; color: #16a34a; flex-shrink: 0; }
+  strong { font-weight: 700; color: #047857; }
+  .grn-wh-note { font-size: 11px; color: #6b7280; margin-left: 4px; }
+}
+
 /* ─── GRN Summary View ───────────────────────────────────── */
 .grn-chips-row {
   display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0;

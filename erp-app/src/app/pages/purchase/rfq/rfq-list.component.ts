@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
-import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-rfq-list',
@@ -22,6 +21,12 @@ export class RfqListComponent implements OnInit {
   modalSupplier = '';
   modalStatus = '';
   modalTotal: number | null = null;
+
+  showActionConfirm = false;
+  actionRow: any = null;
+  actionType = '';
+  actionLoading = false;
+  actionError = '';
 
   columns: TableColumn[] = [
     { key: 'number', header: 'RFQ No', sortable: true },
@@ -76,7 +81,7 @@ export class RfqListComponent implements OnInit {
 
   create(): void { this.router.navigate(['/app/purchase/rfq/new']); }
 
-  onRowClick(row: any): void { this.router.navigate(['/app/purchase/rfq', row.id]); }
+  onRowClick(row: any): void { this.openLinesModal(row); }
 
   openLinesModal(row: any): void {
     const raw = row?.rfqLines ?? row?.RfqLines ?? row?.lines ?? [];
@@ -107,18 +112,29 @@ export class RfqListComponent implements OnInit {
     if (e.action === 'delete') this.delete(e.row);
   }
 
-  send(row: any): void {
-    Swal.fire({ title: 'Send RFQ?', text: `Send RFQ ${row.number} to supplier?`, icon: 'question', showCancelButton: true, confirmButtonText: 'Send', confirmButtonColor: '#22c55e' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.sendRfq({ ...row, status: 'Sent' }).subscribe({ next: () => this.load(), error: err => Swal.fire('Error', err?.error?.message || 'Unable to send RFQ.', 'error') });
-      });
-  }
+  send(row: any): void { this.openActionConfirm(row, 'send-rfq'); }
 
-  delete(row: any): void {
-    Swal.fire({ title: 'Delete RFQ?', text: `Delete RFQ ${row.number}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deleteRfq(row.id).subscribe({ next: () => { Swal.fire('Deleted', 'RFQ deleted.', 'success'); this.load(); } });
+  delete(row: any): void { this.openActionConfirm(row, 'delete-rfq'); }
+
+  openActionConfirm(row: any, type: string): void {
+    this.actionRow = row; this.actionType = type; this.actionError = ''; this.showActionConfirm = true;
+  }
+  closeActionConfirm(): void { this.showActionConfirm = false; this.actionRow = null; this.actionError = ''; }
+  doActionConfirm(): void {
+    if (!this.actionRow) return;
+    this.actionLoading = true; this.actionError = '';
+    const row = this.actionRow;
+    if (this.actionType === 'send-rfq') {
+      this.svc.sendRfq({ ...row, status: 'Sent' }).subscribe({
+        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to send RFQ.'; }
       });
+    } else if (this.actionType === 'delete-rfq') {
+      this.svc.deleteRfq(row.id).subscribe({
+        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete RFQ.'; }
+      });
+    }
   }
 
   get pendingCount(): number { return this.rows.filter(r => ['Pending', 'Submitted', 'Sent'].includes(r.statusLabel ?? '')).length; }

@@ -79,6 +79,12 @@ export class PurchaseService {
   deletePurchaseRequest(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/PurchaseRequest/DeletePurchaseRequestById/${id}`);
   }
+  createPrFromSalesOrder(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequest/CreateFromSalesOrder`, data);
+  }
+  createPrFromRecipeShortage(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequest/create-from-recipe-shortage`, data);
+  }
 
   // ── Purchase Order ───────────────────────────────────
   getPurchaseOrders(): Observable<any> {
@@ -104,6 +110,9 @@ export class PurchaseService {
   }
   emailSupplierPo(id: number | string): Observable<any> {
     return this.http.post(`${this.api}/PurchaseOrder/${id}/email-supplier`, null);
+  }
+  updateSoProcurementByPO(poId: number, status: number): Observable<any> {
+    return this.http.put(`${this.api}/PurchaseOrder/UpdateSoProcurementStatus/${poId}`, { status });
   }
   updatePurchaseOrderApprovalStatus(id: number | string, status: number): Observable<any> {
     return this.http.put(`${this.api}/PurchaseOrder/UpdateApprovalStatus/${id}`, { approvalStatus: status });
@@ -187,13 +196,19 @@ export class PurchaseService {
     return this.http.delete(`${this.api}/PurchaseGoodReceipt/delete/${id}`);
   }
   closeGRN(id: number | string): Observable<any> {
-    return this.http.post(`${this.api}/PurchaseGoodReceipt/apply-grn-update-salesorder`, { id });
+    return this.http.post(`${this.api}/PurchaseGoodReceipt/Close/${id}`, null);
   }
   reopenGRN(id: number | string): Observable<any> {
-    return this.http.put(`${this.api}/PurchaseGoodReceipt/update`, { id, isClosed: false });
+    return this.http.post(`${this.api}/PurchaseGoodReceipt/Reopen/${id}`, null);
   }
-  postGRNToInventory(data: any): Observable<any> {
-    return this.http.put(`${this.api}/PurchaseGoodReceipt/update`, data);
+  applyGrnToSo(grnId: number | string, updatedBy: number): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseGoodReceipt/apply-grn-to-so/${grnId}?updatedBy=${updatedBy}`, null);
+  }
+  applyGrnToInventory(req: any): Observable<any> {
+    return this.http.post(`${this.api}/ItemMaster/ApplyGrn`, req);
+  }
+  updateWarehouseAndSupplierPrice(dto: any): Observable<any> {
+    return this.http.post(`${this.api}/ItemMaster/UpdateWarehouseAndSupplierPrice`, dto);
   }
 
   // ── Supplier Invoice (PIN) ───────────────────────────
