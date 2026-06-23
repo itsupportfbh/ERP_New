@@ -26,10 +26,10 @@
         <div class="mf-group"><label class="mf-label">Set Name <span style="color:red">*</span></label><input class="mf-input" type="text" [(ngModel)]="form.setName" name="setName" placeholder="Set Name"/></div>
         <div class="mf-group">
           <label class="mf-label">Sales Budget Line</label>
-          <select class="mf-select" [(ngModel)]="form.salesBudgetLineId" name="salesBudgetLineId">
-            <option [ngValue]="null">-- Select Budget Line --</option>
-            <option *ngFor="let line of budgetLines" [ngValue]="line.id">{{ line.label }}</option>
-          </select>
+          <erp-dropdown name="salesBudgetLineId" [(ngModel)]="form.salesBudgetLineId"
+            [items]="budgetLines" bindLabel="label" bindValue="id"
+            placeholder="-- Select Budget Line --">
+          </erp-dropdown>
         </div>
         <div class="mf-group">
           <label class="mf-label">Select Items (Multi)</label>

@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 interface PickRow {
   soLineId: number | null;
@@ -32,8 +34,6 @@ export class PickingFormComponent implements OnInit {
   id: number | null = null;
   loading = false;
   saving = false;
-  error = '';
-  success = '';
 
   // Header
   soId: number | null = null;
@@ -59,10 +59,12 @@ export class PickingFormComponent implements OnInit {
 
   loginUserId = Number(localStorage.getItem('id')) || null;
 
+  readonly fnId = 'sales-pp-list';
   constructor(
     private svc: SalesService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    public perm: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -92,7 +94,6 @@ export class PickingFormComponent implements OnInit {
 
     this.loading = true;
     this.codesLoading = true;
-    this.error = '';
 
     forkJoin({
       head: this.svc.getSalesOrderById(sid),
@@ -136,7 +137,7 @@ export class PickingFormComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.codesLoading = false;
-        this.error = 'Unable to load sales order lines / codes.';
+        void Swal.fire('Error', 'Unable to load sales order lines / codes.', 'error');
       }
     });
   }
@@ -209,11 +210,9 @@ export class PickingFormComponent implements OnInit {
 
   // ── Save ──────────────────────────────────────────────
   submit(): void {
-    if (!this.soId) { this.error = 'Please select a Sales Order.'; return; }
-    if (!this.rows.length) { this.error = 'No pick lines to save.'; return; }
+    if (!this.soId) { void Swal.fire('Validation', 'Please select a Sales Order.', 'warning'); return; }
+    if (!this.rows.length) { void Swal.fire('Validation', 'No pick lines to save.', 'warning'); return; }
     this.saving = true;
-    this.error = '';
-    this.success = '';
 
     const payload: any = {
       SoId: this.soId,
@@ -239,7 +238,7 @@ export class PickingFormComponent implements OnInit {
     const obs$ = this.isEdit ? this.svc.updatePacking(payload) : this.svc.createPacking(payload);
     obs$.subscribe({
       next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed.', 'error'); }
     });
   }
 
@@ -247,7 +246,7 @@ export class PickingFormComponent implements OnInit {
   copy(text: string): void {
     if (!text) return;
     navigator.clipboard?.writeText(text).then(
-      () => { this.success = 'Copied to clipboard.'; setTimeout(() => this.success = '', 1500); },
+      () => { void Swal.fire({ icon: 'success', title: 'Copied!', text: 'Copied to clipboard.', timer: 1500, showConfirmButton: false }); },
       () => {}
     );
   }
@@ -263,7 +262,7 @@ export class PickingFormComponent implements OnInit {
   }
 
   downloadPickList(): void {
-    if (!this.rows.length) { this.error = 'Select a Sales Order first.'; return; }
+    if (!this.rows.length) { void Swal.fire('Validation', 'Select a Sales Order first.', 'warning'); return; }
     const rowsHtml = this.rows.map((r, i) => `
       <tr>
         <td>${i + 1}</td>

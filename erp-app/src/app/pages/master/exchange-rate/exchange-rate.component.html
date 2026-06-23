@@ -27,15 +27,15 @@
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Exchange Rate</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group"><label class="mf-label">From Currency</label>
-          <select class="mf-select" [(ngModel)]="form.fromCurrencyId" name="fromCurrencyId">
-            <option [ngValue]="null">Select From Currency</option>
-            <option *ngFor="let x of currencies" [ngValue]="x.id">{{ x.currencyName || x.name }}</option>
-          </select></div>
+          <erp-dropdown name="fromCurrencyId" [(ngModel)]="form.fromCurrencyId"
+            [items]="currencies" bindLabel="currencyName" bindValue="id"
+            placeholder="Select From Currency">
+          </erp-dropdown></div>
         <div class="mf-group"><label class="mf-label">To Currency</label>
-          <select class="mf-select" [(ngModel)]="form.toCurrencyId" name="toCurrencyId">
-            <option [ngValue]="null">Select To Currency</option>
-            <option *ngFor="let x of currencies" [ngValue]="x.id">{{ x.currencyName || x.name }}</option>
-          </select></div>
+          <erp-dropdown name="toCurrencyId" [(ngModel)]="form.toCurrencyId"
+            [items]="currencies" bindLabel="currencyName" bindValue="id"
+            placeholder="Select To Currency">
+          </erp-dropdown></div>
         <div class="mf-group"><label class="mf-label">Rate</label><input class="mf-input" type="number" [(ngModel)]="form.rate" name="rate" placeholder="Exchange Rate"/></div>
         <div class="mf-group"><label class="mf-label">Rate Date</label><input class="mf-input" type="date" [(ngModel)]="form.rateDate" name="rateDate"/></div>
         <div class="mf-actions">

@@ -93,7 +93,6 @@ export class BusinessPartnersComponent implements OnInit {
   }
 
   get rowActions(): RowAction[] {
-    if (this.activeTab !== 'users') return [];
     return this.allUserRowActions.filter(a =>
       (a.key === 'edit'   && this.canEdit()) ||
       (a.key === 'delete' && this.canDelete())

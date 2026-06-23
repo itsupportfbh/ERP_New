@@ -27,15 +27,15 @@
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} UOM Conversion</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group"><label class="mf-label">From UOM</label>
-          <select class="mf-select" [(ngModel)]="form.fromUomId" name="fromUomId">
-            <option [ngValue]="null">Select From UOM</option>
-            <option *ngFor="let x of uoms" [ngValue]="x.id">{{ x.uomName || x.name }}</option>
-          </select></div>
+          <erp-dropdown name="fromUomId" [(ngModel)]="form.fromUomId"
+            [items]="uoms" bindLabel="uomName" bindValue="id"
+            placeholder="Select From UOM">
+          </erp-dropdown></div>
         <div class="mf-group"><label class="mf-label">To UOM</label>
-          <select class="mf-select" [(ngModel)]="form.toUomId" name="toUomId">
-            <option [ngValue]="null">Select To UOM</option>
-            <option *ngFor="let x of uoms" [ngValue]="x.id">{{ x.uomName || x.name }}</option>
-          </select></div>
+          <erp-dropdown name="toUomId" [(ngModel)]="form.toUomId"
+            [items]="uoms" bindLabel="uomName" bindValue="id"
+            placeholder="Select To UOM">
+          </erp-dropdown></div>
         <div class="mf-group"><label class="mf-label">Conversion Factor</label><input class="mf-input" type="number" [(ngModel)]="form.factor" name="factor" placeholder="Factor"/></div>
         <div class="mf-group"><label class="mf-label">Description</label><input class="mf-input" type="text" [(ngModel)]="form.description" name="description" placeholder="Description"/></div>
         <div class="mf-actions">

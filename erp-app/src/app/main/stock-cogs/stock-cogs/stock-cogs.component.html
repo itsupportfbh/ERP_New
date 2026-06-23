@@ -44,10 +44,10 @@
           </div>
           <div class="mf-group" style="margin:0;min-width:200px">
             <label class="mf-label">Warehouse</label>
-            <select class="mf-select" [(ngModel)]="warehouseId">
-              <option [ngValue]="null">All Warehouses</option>
-              <option *ngFor="let w of warehouseList" [ngValue]="w.id">{{ w.name }}</option>
-            </select>
+            <erp-dropdown [(ngModel)]="warehouseId"
+              [items]="warehouseList" bindLabel="name" bindValue="id"
+              placeholder="All Warehouses">
+            </erp-dropdown>
           </div>
           <button class="btn btn-primary" (click)="load()" [disabled]="loading">
             {{ loading ? 'Loading...' : 'Load COGS' }}

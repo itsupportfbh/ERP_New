@@ -68,6 +68,12 @@ export class SalesService {
   previewAllocation(lines: { itemId: number; quantity: number }[]): Observable<any> {
     return this.http.post(`${this.api}/SalesOrder/preview-allocation`, { lines });
   }
+  triggerAutoPr(salesOrderId: number, createdByUserId: number, locationId: number): Observable<any> {
+    return this.http.post(
+      `${this.api}/SalesOrder/${salesOrderId}/auto-pr?createdByUserId=${createdByUserId}&locationId=${locationId}`,
+      {}
+    );
+  }
 
   // ── Picking / Packing ────────────────────────────────
   getPackings(): Observable<any> {

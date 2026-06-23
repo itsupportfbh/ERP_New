@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef, HostListener, ElementRef } from '@angular/core';
+import { Component, Input, forwardRef, HostListener, ElementRef, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { DropdownOption } from '../dropdown/dropdown.component';
 
@@ -13,7 +13,7 @@ import { DropdownOption } from '../dropdown/dropdown.component';
     multi: true
   }]
 })
-export class MultiselectDropdownComponent implements ControlValueAccessor {
+export class MultiselectDropdownComponent implements ControlValueAccessor, OnInit, OnDestroy {
   @Input() label = '';
   @Input() placeholder = 'Select...';
   @Input() options: DropdownOption[] = [];
@@ -30,7 +30,21 @@ export class MultiselectDropdownComponent implements ControlValueAccessor {
   onChange = (_: any) => {};
   onTouched = () => {};
 
-  constructor(private el: ElementRef) {}
+  constructor(private el: ElementRef, private ngZone: NgZone) {}
+
+  private readonly closeOnDocMousedown = (e: MouseEvent) => {
+    if (!this.el.nativeElement.contains(e.target as Node)) {
+      this.ngZone.run(() => { this.open = false; this.search = ''; });
+    }
+  };
+
+  ngOnInit(): void {
+    document.addEventListener('mousedown', this.closeOnDocMousedown, true);
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('mousedown', this.closeOnDocMousedown, true);
+  }
 
   get filteredOptions(): DropdownOption[] {
     const q = this.search.toLowerCase();
@@ -73,7 +87,8 @@ export class MultiselectDropdownComponent implements ControlValueAccessor {
 
   isSelected(val: any): boolean { return this.selected.some(v => this.sameValue(v, val)); }
 
-  toggleOption(opt: DropdownOption): void {
+  toggleOption(opt: DropdownOption, e?: MouseEvent): void {
+    e?.preventDefault();
     const idx = this.selected.findIndex(v => this.sameValue(v, opt.value));
     if (idx >= 0) this.selected.splice(idx, 1);
     else this.selected.push(opt.value);
@@ -84,11 +99,6 @@ export class MultiselectDropdownComponent implements ControlValueAccessor {
     e.stopPropagation();
     this.selected = [];
     this.onChange([]);
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocClick(e: Event): void {
-    if (!this.el.nativeElement.contains(e.target)) { this.open = false; this.search = ''; }
   }
 
   @HostListener('window:scroll')

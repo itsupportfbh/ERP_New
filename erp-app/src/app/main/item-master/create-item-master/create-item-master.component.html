@@ -12,10 +12,10 @@
       </div>
     </div>
     <div class="btn-group">
-      <button class="btn btn-outline btn-sm" type="button" (click)="onGoToItemList()">← List</button>
       <button class="btn btn-outline btn-sm" type="button" (click)="prev()" [disabled]="step===0 || stepsView.length===1">Back</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="next()" *ngIf="step<stepsView.length-1">Next →</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="onSave()" *ngIf="step===stepsView.length-1">Save</button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="onGoToItemList()">← List</button>
     </div>
   </div>
 
@@ -52,33 +52,31 @@
         </div>
         <div>
           <label class="fc-label">Item Type *</label>
-          <select class="fc-select" [(ngModel)]="item.itemType" name="itemType" required>
-            <option value="" [ngValue]="null" disabled>Select Item Type</option>
-            <option *ngFor="let i of ItemTypeList" [ngValue]="i.id">{{ i.itemTypeName }}</option>
-          </select>
+          <erp-dropdown name="itemType" [(ngModel)]="item.itemType"
+            [items]="ItemTypeList" bindLabel="itemTypeName" bindValue="id"
+            placeholder="Select Item Type">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Category *</label>
-          <select class="fc-select" [(ngModel)]="item.categoryId" name="categoryId" (change)="onCategoryChange(true)" required>
-            <option value="" [ngValue]="null" disabled>Select Category</option>
-            <option *ngFor="let c of CategoryList" [ngValue]="c.id">{{ c.catagoryName }}</option>
-          </select>
+          <erp-dropdown name="categoryId" [(ngModel)]="item.categoryId"
+            [items]="CategoryList" bindLabel="catagoryName" bindValue="id"
+            placeholder="Select Category" (ngModelChange)="onCategoryChange(true)">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">UOM *</label>
-          <ng-select class="fc-ng" [items]="uomList" bindLabel="name" bindValue="id"
-            [(ngModel)]="item.uomId" name="uomId" placeholder="Select UOM"
-            [searchable]="true" [clearable]="true" (change)="onBaseOrPurchaseUomChange()"
-            appendTo="body" required>
-          </ng-select>
+          <erp-dropdown name="uomId" [(ngModel)]="item.uomId"
+            [items]="uomList" bindLabel="name" bindValue="id"
+            placeholder="Select UOM" (ngModelChange)="onBaseOrPurchaseUomChange()" required>
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Base UOM *</label>
-          <ng-select class="fc-ng" [items]="uomList" bindLabel="name" bindValue="id"
-            [(ngModel)]="item.baseUomId" name="baseUomId" placeholder="Select Base UOM"
-            [searchable]="true" [clearable]="true" (change)="onBaseOrPurchaseUomChange()"
-            appendTo="body" required>
-          </ng-select>
+          <erp-dropdown name="baseUomId" [(ngModel)]="item.baseUomId"
+            [items]="uomList" bindLabel="name" bindValue="id"
+            placeholder="Select Base UOM" (ngModelChange)="onBaseOrPurchaseUomChange()" required>
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Conversion Factor *</label>
@@ -101,17 +99,17 @@
       <div class="form-row cols-4">
         <div>
           <label class="fc-label">Costing Method</label>
-          <select class="fc-select" [(ngModel)]="item.costingMethodId" name="costingMethodId" (change)="onCostingSelectedId(item.costingMethodId)">
-            <option value="" [ngValue]="null" disabled>Select costing</option>
-            <option *ngFor="let c of costingMethodList" [ngValue]="c.id">{{ c.name }}</option>
-          </select>
+          <erp-dropdown name="costingMethodId" [(ngModel)]="item.costingMethodId"
+            [items]="costingMethodList" bindLabel="name" bindValue="id"
+            placeholder="Select costing" (ngModelChange)="onCostingSelectedId($event)">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Recurring</label>
-          <select class="fc-select" [(ngModel)]="item.taxCodeId" name="taxCodeId" (change)="onTaxSelectedId(item.taxCodeId)">
-            <option value="" [ngValue]="null" disabled>Select Recurring</option>
-            <option *ngFor="let t of taxCodeList" [ngValue]="t.id">{{ t.recurringName }}</option>
-          </select>
+          <erp-dropdown name="taxCodeId" [(ngModel)]="item.taxCodeId"
+            [items]="taxCodeList" bindLabel="recurringName" bindValue="id"
+            placeholder="Select Recurring" (ngModelChange)="onTaxSelectedId($event)">
+          </erp-dropdown>
         </div>
       </div>
 
@@ -497,26 +495,26 @@
       <div class="form-row cols-2" style="margin-bottom:14px">
         <div>
           <label class="fc-label">Warehouse</label>
-          <select class="fc-select" [(ngModel)]="whDraft.warehouseId" name="warehouseId" (change)="getBinsForWarehouse(whDraft.warehouseId)" required>
-            <option [ngValue]="null" disabled>Select warehouse</option>
-            <option *ngFor="let w of warehouseList" [ngValue]="w.id">{{ w.name }}</option>
-          </select>
+          <erp-dropdown name="warehouseId" [(ngModel)]="whDraft.warehouseId"
+            [items]="warehouseList" bindLabel="name" bindValue="id"
+            placeholder="Select warehouse" (ngModelChange)="getBinsForWarehouse($event)">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Bin / Location</label>
-          <select class="fc-select" [(ngModel)]="whDraft.binId" name="binId" [disabled]="!whDraft.warehouseId" required>
-            <option [ngValue]="null" disabled>Select bin</option>
-            <option *ngFor="let b of binList" [ngValue]="b.binID">{{ b.binName }}</option>
-          </select>
+          <erp-dropdown name="binId" [(ngModel)]="whDraft.binId"
+            [items]="binList" bindLabel="binName" bindValue="binID"
+            placeholder="Select bin" [disabled]="!whDraft.warehouseId">
+          </erp-dropdown>
         </div>
       </div>
       <div class="form-row cols-2" style="margin-bottom:14px">
         <div>
           <label class="fc-label">Frequency</label>
-          <select class="fc-select" [(ngModel)]="whDraft.strategyId" name="strategyId" required>
-            <option [ngValue]="null" disabled>Select Frequency</option>
-            <option *ngFor="let s of strategyList" [ngValue]="s.id">{{ s.strategyName }}</option>
-          </select>
+          <erp-dropdown name="strategyId" [(ngModel)]="whDraft.strategyId"
+            [items]="strategyList" bindLabel="strategyName" bindValue="id"
+            placeholder="Select Frequency">
+          </erp-dropdown>
         </div>
       </div>
       <div class="form-row cols-4" style="margin-bottom:14px">

@@ -1,4 +1,4 @@
-﻿import {
+import {
   Component,
   OnInit,
   ViewChild,
@@ -27,10 +27,8 @@ interface ApiRow {
   fromWarehouseName?: string;
   toWarehouseName?: string;
 
-  // ✅ DB field
-  transferQty?: number | string | null;  // if API returns
-  TransferQty?: number | string | null;  // if pascal
-  // requestQty is different, don't show in transfer qty column
+  transferQty?: number | string | null;
+  TransferQty?: number | string | null;
   requestQty?: number | string;
 
   remarks?: string | null;
@@ -44,7 +42,6 @@ interface UiRow extends ApiRow {
   fromWarehouseIdNum?: number;
   toWarehouseIdNum?: number;
 
-  // ✅ normalized transfer qty (null stays null)
   transferQtyNum: number | null;
 
   statusNum: number;
@@ -93,18 +90,17 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
   currentPage = 1;
 
   userId: number = 0;
-    functionId = 'mr-list';
-  
-    permission: FunctionPermission;
-    isPermissionLoaded = false;
-    isPageLoading = false;
-  
+  functionId = 'mr-list';
+
+  permission: FunctionPermission;
+  isPermissionLoaded = false;
+  isPageLoading = false;
+
   constructor(
     private router: Router,
     private stockService: StackOverviewService,
-      private permissionService: PermissionService
-  ) 
-  {
+    private permissionService: PermissionService
+  ) {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
   }
@@ -165,66 +161,53 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
     }
   }
 
-   loadPermission(): void {
-      if (!this.userId || this.userId <= 0) {
+  loadPermission(): void {
+    if (!this.userId || this.userId <= 0) {
+      this.permission = this.permissionService.getEmptyPermission(this.functionId);
+      this.isPermissionLoaded = true;
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Access Denied',
+        text: 'User not found. Please login again.',
+        confirmButtonColor: '#0e3a4c'
+      });
+      return;
+    }
+
+    this.isPageLoading = true;
+
+    this.permissionService.getFunctionPermission(this.userId, this.functionId).subscribe({
+      next: (res: FunctionPermission) => {
+        this.permission = res || this.permissionService.getEmptyPermission(this.functionId);
+        this.isPermissionLoaded = true;
+        this.isPageLoading = false;
+
+        if (this.canView()) {
+          this.loadList();
+        } else {
+          this.rows = [];
+        }
+      },
+      error: (err) => {
         this.permission = this.permissionService.getEmptyPermission(this.functionId);
         this.isPermissionLoaded = true;
-  
+        this.isPageLoading = false;
+
         Swal.fire({
-          icon: 'warning',
-          title: 'Access Denied',
-          text: 'User not found. Please login again.',
-          confirmButtonColor: '#0e3a4c'
+          icon: 'error',
+          title: 'Error',
+          text: this.getErrorMessage(err, 'Unable to load permission.'),
+          confirmButtonColor: '#d33'
         });
-        return;
       }
-  
-      this.isPageLoading = true;
-  
-      this.permissionService.getFunctionPermission(this.userId, this.functionId).subscribe({
-        next: (res: FunctionPermission) => {
-          this.permission = res || this.permissionService.getEmptyPermission(this.functionId);
-          this.isPermissionLoaded = true;
-          this.isPageLoading = false;
-  
-          if (this.canView()) {
-            this.loadList();  
-          } else {
-            this.rows = [];
-            // this.isDisplay = false;
-          }
-        },
-        error: (err) => {
-          this.permission = this.permissionService.getEmptyPermission(this.functionId);
-          this.isPermissionLoaded = true;
-          this.isPageLoading = false;
-  
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: this.getErrorMessage(err, 'Unable to load permission.'),
-            confirmButtonColor: '#d33'
-          });
-        }
-      });
-    }
-  
-    canView(): boolean {
-      return this.permissionService.hasView(this.permission);
-    }
-  
-    canCreate(): boolean {
-      return this.permissionService.hasCreate(this.permission);
-    }
-  
-    canEdit(): boolean {
-      return this.permissionService.hasEdit(this.permission);
-    }
-  
-    canDelete(): boolean {
-      return this.permissionService.hasDelete(this.permission);
-    }
-  
+    });
+  }
+
+  canView(): boolean { return this.permissionService.hasView(this.permission); }
+  canCreate(): boolean { return this.permissionService.hasCreate(this.permission); }
+  canEdit(): boolean { return this.permissionService.hasEdit(this.permission); }
+  canDelete(): boolean { return this.permissionService.hasDelete(this.permission); }
 
   ngAfterViewInit(): void { feather.replace(); }
   ngAfterViewChecked(): void { feather.replace(); }
@@ -259,8 +242,6 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
     const toWarehouseIdNum   = this.toNum(api.toWarehouseId   ?? api.ToWarehouseId);
 
     const statusNum = Number(api.status ?? api.Status ?? 0);
-
-    // ✅ IMPORTANT: take transferQty only
     const transferQtyNum = this.toNumOrNull(api.transferQty ?? api.TransferQty);
 
     return {
@@ -269,11 +250,9 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
       itemIdNum,
       fromWarehouseIdNum,
       toWarehouseIdNum,
-
       itemName: api.itemName ?? api.ItemName ?? api.name ?? api.Name ?? '',
       statusNum,
       statusLabel: this.statusLabel(statusNum),
-
       transferQtyNum
     };
   }
@@ -348,4 +327,3 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
     });
   }
 }
-

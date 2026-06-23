@@ -4,10 +4,10 @@
   <div class="page-header">
     <h2>{{ isEdit ? 'Edit Material Requisition' : 'Create Material Requisition' }}</h2>
     <div class="btn-group">
-      <button class="btn btn-outline btn-sm" type="button" (click)="close()">Close</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="save()" [disabled]="isSaving">
         {{ isSaving ? 'Saving...' : 'Save' }}
       </button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="close()">← Back</button>
     </div>
   </div>
 
@@ -24,17 +24,17 @@
       <div class="form-row cols-4">
         <div>
           <label class="fc-label">Warehouse</label>
-          <ng-select class="fc-ng" [items]="OutletList" bindLabel="name" bindValue="id"
-            [(ngModel)]="header.OutletId" placeholder="Select Warehouse"
-            [searchable]="true" [clearable]="false" [disabled]="isEdit" (change)="onOutletChanged()" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="header.OutletId" name="OutletId"
+            [items]="OutletList" bindLabel="name" bindValue="id"
+            placeholder="Select Warehouse" [disabled]="true" (ngModelChange)="onOutletChanged()">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Bin</label>
-          <ng-select class="fc-ng" [items]="binList" bindLabel="binName" bindValue="id"
-            [(ngModel)]="header.BinId" placeholder="Select Bin"
-            [searchable]="true" [clearable]="false" [disabled]="!header.OutletId" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="header.BinId" name="BinId"
+            [items]="binList" bindLabel="binName" bindValue="id"
+            placeholder="Select Bin" [disabled]="!header.OutletId">
+          </erp-dropdown>
           <small *ngIf="header.OutletId && !binList.length" style="font-size:11px;color:var(--text-muted);margin-top:3px;display:block">No bins found.</small>
         </div>
         <div>
@@ -93,25 +93,18 @@
             </td>
             <td style="color:var(--text-muted);font-size:12px">{{ i+1 }}</td>
             <td>
-              <ng-select class="fc-ng-sm" [(ngModel)]="row.itemId" [items]="items"
-                bindLabel="name" bindValue="id" [searchable]="true" [searchFn]="searchFn"
-                [clearable]="true" appendTo="body" placeholder="Select Item"
-                dropdownPosition="bottom" (change)="onItemChanged(i)" [disabled]="isEdit">
-                <ng-template ng-option-tmp let-item="item">
-                  <div style="font-size:12px;font-weight:600;color:var(--text)">{{ item.name }}</div>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:1px">{{ item.sku }} &bull; Base: {{ item.baseUom }}</div>
-                </ng-template>
-                <ng-template ng-label-tmp let-item="item">{{ item.name }} ({{ item.sku }})</ng-template>
-              </ng-select>
+              <erp-dropdown [(ngModel)]="row.itemId" [name]="'itemId_' + i"
+                [items]="items" bindLabel="displayName" bindValue="id"
+                placeholder="Select Item" [disabled]="isEdit" (ngModelChange)="onItemChanged(i)">
+              </erp-dropdown>
             </td>
             <td><input class="fc-tbl-input" type="text" [value]="row.sku" readonly /></td>
             <td><input class="fc-tbl-input" type="text" [value]="row.baseUom" readonly /></td>
             <td>
-              <ng-select class="fc-ng-sm" [(ngModel)]="row.enterUomId" [items]="row.uomOptions"
-                bindLabel="uomName" bindValue="uomId" placeholder="UOM"
-                [searchable]="true" [clearable]="false" appendTo="body"
-                dropdownPosition="bottom" (change)="onUomChanged(i)">
-              </ng-select>
+              <erp-dropdown [(ngModel)]="row.enterUomId" [name]="'enterUomId_' + i"
+                [items]="row.uomOptions" bindLabel="uomName" bindValue="uomId"
+                placeholder="UOM" (ngModelChange)="onUomChanged(i)">
+              </erp-dropdown>
             </td>
             <td>
               <input class="fc-tbl-input" type="number" min="0" placeholder="0"

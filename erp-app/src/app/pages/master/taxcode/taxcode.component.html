@@ -30,11 +30,10 @@
         <div class="mf-group"><label class="mf-label">Description</label><input class="mf-input" type="text" [(ngModel)]="form.description" name="description" placeholder="Description"/></div>
         <div class="mf-group">
           <label class="mf-label">Type</label>
-          <select class="mf-select" [(ngModel)]="form.type" name="type">
-            <option value="">Select Type</option>
-            <option value="Input GST">Input GST</option>
-            <option value="Output GST">Output GST</option>
-          </select>
+          <erp-dropdown name="type" [(ngModel)]="form.type"
+            [options]="[{label:'Input GST',value:'Input GST'},{label:'Output GST',value:'Output GST'}]"
+            placeholder="Select Type">
+          </erp-dropdown>
         </div>
         <div class="mf-group"><label class="mf-label">Rate (%)</label><input class="mf-input" type="number" [(ngModel)]="form.rate" name="rate" placeholder="Rate %"/></div>
         <div class="mf-actions">

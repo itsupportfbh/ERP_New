@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { PermissionService } from '../../../core/services/permission.service';
 
 const STATUS_MAP: Record<number, string> = {
   0: 'Draft',
@@ -55,7 +56,8 @@ export class DeliveryOrderListComponent implements OnInit {
     { header: 'Notes', key: 'notes' },
   ];
 
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService) {}
+  readonly fnId = 'do-list2';
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();

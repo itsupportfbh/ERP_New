@@ -16,6 +16,7 @@ type ItemMaster = {
   id: number;
   name: string;
   sku: string;
+  displayName: string;
 
   uomId: number | null;
   uomName: string;
@@ -116,19 +117,24 @@ loadItem(done?: () => void): void {
     next: (res: any) => {
       const data = res?.data ?? [];
 
-      this.items = (data || []).map((x: any) => ({
-        id: Number(x.id),
-        name: String(x.itemName ?? ''),
-        sku: String(x.itemCode ?? ''),
+      this.items = (data || []).map((x: any) => {
+        const name = String(x.itemName ?? '');
+        const sku  = String(x.itemCode ?? '');
+        return {
+          id: Number(x.id),
+          name,
+          sku,
+          displayName: sku ? `${name} - ${sku}` : name,
 
-        uomId: x.uomId != null ? Number(x.uomId) : null,
-        uomName: String(x.uomName ?? ''),
+          uomId: x.uomId != null ? Number(x.uomId) : null,
+          uomName: String(x.uomName ?? ''),
 
-        baseUomId: x.baseUomId != null ? Number(x.baseUomId) : null,
-        baseUom: String(x.baseUomName ?? ''),
+          baseUomId: x.baseUomId != null ? Number(x.baseUomId) : null,
+          baseUom: String(x.baseUomName ?? ''),
 
-        uomFactor: Number(x.uomFactor ?? 1)
-      }));
+          uomFactor: Number(x.uomFactor ?? 1)
+        };
+      });
 
       this.items.sort((a, b) => a.name.localeCompare(b.name));
       done?.();

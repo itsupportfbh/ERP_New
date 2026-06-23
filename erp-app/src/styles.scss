@@ -12,7 +12,7 @@
   --border:  #cce8ed;
   --text:    #1a3038;
   --text-muted: #5a8290;
-  --sidebar-width: 220px;
+  --sidebar-width: 245px;
   --topbar-height: 52px;
   --radius: 6px;
   --shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -61,16 +61,18 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 14px;
-  border-radius: var(--radius);
-  font-size: 12px;
-  font-weight: 500;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
-  line-height: 1.5;
+  line-height: 1;
   &:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 
@@ -78,14 +80,15 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
   background: var(--primary-light);
   color: #fff;
   border-color: var(--primary-light);
-  &:hover:not(:disabled) { background: var(--primary); border-color: var(--primary); }
+  box-shadow: 0 2px 6px rgba(45, 138, 158, 0.25);
+  &:hover:not(:disabled) { background: var(--primary); border-color: var(--primary); box-shadow: 0 3px 10px rgba(45, 138, 158, 0.35); }
 }
 
 .btn-outline {
-  background: transparent;
-  color: var(--primary-light);
-  border-color: var(--primary-light);
-  &:hover:not(:disabled) { background: var(--primary-pale); }
+  background: #fff;
+  color: var(--primary);
+  border-color: #dbe6ef;
+  &:hover:not(:disabled) { background: var(--primary-pale); border-color: var(--primary-light); }
 }
 
 .btn-danger {
@@ -102,9 +105,9 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
   &:hover:not(:disabled) { background: #15803d; }
 }
 
-.btn-sm { padding: 3px 10px; font-size: 11px; }
+.btn-sm { height: 32px; padding: 0 12px; font-size: 12px; border-radius: 8px; }
 
-.btn-group { display: flex; gap: 6px; }
+.btn-group { display: flex; gap: 8px; align-items: center; }
 
 /* Page components injected by router-outlet grow to natural height;
    .content (overflow-y: auto) is the single vertical scroll container. */

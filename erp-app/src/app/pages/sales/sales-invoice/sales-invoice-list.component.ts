@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { PermissionService } from '../../../core/services/permission.service';
 
 // Status -> badge code: 0 Draft (grey), 1 Printed/Pending (amber), 4 Posted (blue)
 const STATUS_CODE: Record<string, number> = { Draft: 0, Printed: 1, Posted: 4 };
@@ -45,7 +46,8 @@ export class SalesInvoiceListComponent implements OnInit {
     { header: 'Total', key: 'lineTotal', align: 'right', type: 'number' },
   ];
 
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService) {}
+  readonly fnId = 'si-list';
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();

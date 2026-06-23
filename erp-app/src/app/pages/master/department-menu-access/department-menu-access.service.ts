@@ -34,16 +34,22 @@ export class DepartmentMenuAccessService {
 
   constructor(private http: HttpClient) {}
 
-  getDepartments(): Observable<ApiResponse<DepartmentDto[]>> {
-    return this.http.get<ApiResponse<DepartmentDto[]>>(`${this.apiUrl}/Department/getAll`);
+  getDepartments(companyId: number): Observable<ApiResponse<DepartmentDto[]>> {
+    return this.http.get<ApiResponse<DepartmentDto[]>>(`${this.apiUrl}/Department/getAll`, {
+      params: { companyId: companyId.toString() }
+    });
   }
 
-  getAllDepartmentMenuAccess(): Observable<DepartmentMenuAccessListItem[]> {
-    return this.http.get<DepartmentMenuAccessListItem[]>(`${this.apiUrl}/DepartmentMenuAccess/list`);
+  getAllDepartmentMenuAccess(companyId: number): Observable<DepartmentMenuAccessListItem[]> {
+    return this.http.get<DepartmentMenuAccessListItem[]>(`${this.apiUrl}/DepartmentMenuAccess/list`, {
+      params: { companyId: companyId.toString() }
+    });
   }
 
-  getByDepartmentId(departmentId: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/DepartmentMenuAccess/by-department/${departmentId}`);
+  getByDepartmentId(departmentId: number, companyId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/DepartmentMenuAccess/by-department/${departmentId}`, {
+      params: { companyId: companyId.toString() }
+    });
   }
 
   saveDepartmentMenuAccess(payload: SaveDepartmentMenuAccessRequest): Observable<ApiResponse> {

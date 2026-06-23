@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { PermissionService } from '../../../core/services/permission.service';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Picked', 2: 'Packed', 3: 'Closed' };
 
@@ -50,7 +51,8 @@ export class PickingListComponent implements OnInit {
     { header: 'Bin', key: 'binName', align: 'center' },
   ];
 
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService) {}
+  readonly fnId = 'sales-pp-list';
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();

@@ -3,8 +3,8 @@
   <div class="page-header">
     <h2>{{ stockTakeId ? 'Edit Stock Take' : 'Create Stock Take' }}</h2>
     <div class="btn-group">
-      <button class="btn btn-outline btn-sm" type="button" (click)="goToStockTakeList()">Cancel</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="onSave(1)">Save</button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="goToStockTakeList()">← Back</button>
     </div>
   </div>
 
@@ -18,24 +18,24 @@
         </div>
         <div>
           <label class="fc-label">Warehouse <span style="color:red">*</span></label>
-          <ng-select class="fc-ng" [items]="warehouseTypes" bindLabel="name" bindValue="id"
-            [(ngModel)]="warehouseTypeId" placeholder="Select warehouse"
-            [clearable]="false" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="warehouseTypeId" name="warehouseTypeId"
+            [items]="warehouseTypes" bindLabel="name" bindValue="id"
+            placeholder="Select warehouse">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Supplier <span style="font-size:11px;color:var(--text-muted)">(blank = ALL)</span></label>
-          <ng-select class="fc-ng" [items]="supplierList" bindLabel="name" bindValue="id"
-            [(ngModel)]="supplierId" (ngModelChange)="onSupplierChanged($event)"
-            placeholder="ALL Suppliers" [clearable]="true" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="supplierId" name="supplierId"
+            [items]="supplierList" bindLabel="name" bindValue="id"
+            placeholder="ALL Suppliers" (ngModelChange)="onSupplierChanged($event)">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Type <span style="font-size:11px;color:var(--text-muted)">(blank = ALL)</span></label>
-          <ng-select class="fc-ng" [items]="strategies" bindLabel="strategyName" bindValue="id"
-            [(ngModel)]="strategyId" (ngModelChange)="onTypeChanged($event)"
-            placeholder="ALL Types" [clearable]="true" [disabled]="strategyCheck" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="strategyId" name="strategyId"
+            [items]="strategies" bindLabel="strategyName" bindValue="id"
+            placeholder="ALL Types" (ngModelChange)="onTypeChanged($event)" [disabled]="strategyCheck">
+          </erp-dropdown>
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:12px">
@@ -111,9 +111,10 @@
             </td>
             <td class="st-uom">{{ r.baseUomName || '-' }}</td>
             <td>
-              <ng-select class="fc-ng-sm" [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
-                [(ngModel)]="r.reasonId" placeholder="Reason" (change)="onCheckReview()" appendTo="body">
-              </ng-select>
+              <erp-dropdown [(ngModel)]="r.reasonId" [name]="'reasonId_' + i"
+                [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
+                placeholder="Reason" (ngModelChange)="onCheckReview()">
+              </erp-dropdown>
             </td>
             <td>
               <textarea class="fc-tbl-input st-remarks" [(ngModel)]="r.remarks"
@@ -209,9 +210,10 @@
                 {{ signed(getVariance(r)) }}
               </td>
               <td>
-                <ng-select class="fc-ng-sm" [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
-                  [(ngModel)]="r.reasonId" placeholder="Reason" appendTo="body">
-                </ng-select>
+                <erp-dropdown [(ngModel)]="r.reasonId" [name]="'reasonId2_' + r.itemId"
+                  [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
+                  placeholder="Reason">
+                </erp-dropdown>
               </td>
               <td>
                 <textarea class="fc-tbl-input st-remarks" [(ngModel)]="r.remarks"

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { PermissionService } from '../../../core/services/permission.service';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected' };
 
@@ -41,11 +42,11 @@ export class SalesOrderListComponent implements OnInit {
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
     { header: 'UOM', key: 'uomName', align: 'center' },
-    { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
-    { header: 'Unit Price', key: 'unitPrice', align: 'right', type: 'number' },
-    { header: 'Allocated', key: 'allocated', align: 'right', type: 'qty' },
-    { header: 'Shortage', key: 'shortage', align: 'right', type: 'qty' },
-    { header: 'Total', key: 'lineTotal', align: 'right', type: 'number' },
+    { header: 'Qty', key: 'qty', align: 'center', type: 'qty' },
+    { header: 'Unit Price', key: 'unitPrice', align: 'center', type: 'number' },
+    { header: 'Allocated', key: 'allocated', align: 'center', type: 'qty' },
+    { header: 'Shortage', key: 'shortage', align: 'center', type: 'qty' },
+    { header: 'Total', key: 'lineTotal', align: 'center', type: 'number' },
     { header: 'Proc. Status', key: 'procStatus', align: 'center' },
   ];
 
@@ -60,7 +61,8 @@ export class SalesOrderListComponent implements OnInit {
       : '—';
   }
 
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService) {}
+  readonly fnId = 'so-list';
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();
@@ -146,7 +148,7 @@ export class SalesOrderListComponent implements OnInit {
           const base = qty * unitPrice;
           const lineNet = base - base * (discountPct / 100);
           const allocated = +(l.lockedQty ?? l.allocated ?? l.allocatedQty ?? 0) || 0;
-          const shortageRaw = l.shortageQty ?? l.shortage;
+          const shortageRaw = l.shortageQty ?? l.ShortageQty ?? l.shortage ?? l.Shortage;
           const shortage = shortageRaw != null ? (+shortageRaw || 0) : Math.max(qty - allocated, 0);
           const lineTotal = +(l.total ?? l.lineTotal ?? lineNet) || 0;
           return {

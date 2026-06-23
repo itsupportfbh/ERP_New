@@ -12,32 +12,30 @@
         &#128196; OCR Upload
         <input type="file" hidden accept="image/*,application/pdf" #ocrInput (change)="onOcrUpload(ocrInput)" />
       </label>
-      <button class="btn btn-primary btn-sm" type="button" [disabled]="saving" (click)="submit()">
+      <button *ngIf="(isEdit && perm.canEdit(fnId)) || (!isEdit && perm.canCreate(fnId))" class="btn btn-primary btn-sm" type="button" [disabled]="saving" (click)="submit()">
         &#128190; {{ saving ? 'Saving…' : (isEdit ? 'Update Invoice' : 'Create Invoice') }}
       </button>
     </div>
   </div>
 
   <div class="loading-row" *ngIf="loading">Loading…</div>
-  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
-  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
 
   <!-- Header fields -->
   <div class="card si-card">
     <div class="si-grid4">
       <div class="mf-group">
         <label class="mf-label">Source</label>
-        <select class="mf-select" [(ngModel)]="sourceType" name="sourceType" (change)="onSourceTypeChange()" [disabled]="isEdit">
-          <option *ngFor="let s of sourceTypeOptions" [ngValue]="s.value">{{ s.label }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="sourceType" name="sourceType"
+          [items]="sourceTypeOptions" bindLabel="label" bindValue="value"
+          [disabled]="isEdit" (ngModelChange)="onSourceTypeChange()"></erp-dropdown>
       </div>
       <div class="mf-group">
         <label class="mf-label">{{ sourceType === 1 ? 'Sales Order' : 'Delivery Order' }}</label>
         <input *ngIf="isEdit" type="text" class="mf-input" [value]="sourceRef" disabled placeholder="—" />
-        <select *ngIf="!isEdit" class="mf-select" [(ngModel)]="sourceId" name="sourceId" (change)="onSourceDocChange()">
-          <option [ngValue]="null">{{ sourceType === 1 ? 'Select SO…' : 'Select DO…' }}</option>
-          <option *ngFor="let d of sourceDocOptions" [ngValue]="d.value">{{ d.label }}</option>
-        </select>
+        <erp-dropdown *ngIf="!isEdit" [(ngModel)]="sourceId" name="sourceId"
+          [items]="sourceDocOptions" bindLabel="label" bindValue="value"
+          [placeholder]="sourceType === 1 ? 'Select SO…' : 'Select DO…'"
+          (ngModelChange)="onSourceDocChange()"></erp-dropdown>
       </div>
       <div class="mf-group">
         <label class="mf-label">Invoice Date</label>
@@ -77,17 +75,15 @@
           <tbody>
             <tr *ngFor="let l of lines; let i = index">
               <td class="si-item">
-                <select class="mf-select si-cell" [(ngModel)]="l.itemId" name="item{{i}}" (change)="onItemSelect(l)">
-                  <option [ngValue]="null">{{ l.itemName || 'Select item…' }}</option>
-                  <option *ngFor="let it of itemOptions" [ngValue]="it.value">{{ it.label }}</option>
-                </select>
+                <erp-dropdown [(ngModel)]="l.itemId"
+                  [items]="itemOptions" bindLabel="label" bindValue="value"
+                  placeholder="Select item…" (ngModelChange)="onItemSelect(l)"></erp-dropdown>
               </td>
               <td><input class="mf-input si-cell" [(ngModel)]="l.description" name="desc{{i}}" placeholder="-" /></td>
               <td>
-                <select class="mf-select si-cell" [(ngModel)]="l.ledgerId" name="ledger{{i}}">
-                  <option [ngValue]="null">Select ledger…</option>
-                  <option *ngFor="let g of ledgerOptions" [ngValue]="g.value">{{ g.label }}</option>
-                </select>
+                <erp-dropdown [(ngModel)]="l.ledgerId"
+                  [items]="ledgerOptions" bindLabel="label" bindValue="value"
+                  placeholder="Select ledger…"></erp-dropdown>
               </td>
               <td>{{ l.uom || '—' }}</td>
               <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.qty" name="qty{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>

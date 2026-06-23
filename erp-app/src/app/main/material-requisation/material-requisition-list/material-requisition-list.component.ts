@@ -23,12 +23,13 @@ type MaterialReqRow = {
   id: number;
   reqNo: string;
   outletId?: number | null;
-    outletName?: number | null;
+  outletName?: number | null;
   requesterName?: string | null;
   reqDate?: string | Date | null;
   status?: number | null;
   statusLabel?: string;
   isActive?: boolean;
+  companyId?: number;
   lines?: MaterialReqLine[];
   lineCount?: number;
   totalQty?: number;
@@ -68,9 +69,14 @@ export class MaterialRequisitionListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'view', label: 'View', btnClass: 'btn-outline-info' },
-    { key: 'edit', label: 'Edit', btnClass: 'btn-outline-primary' }
+    { key: 'view', label: 'View', icon: 'view', btnClass: 'info' },
+    { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'warning' }
   ];
+
+  rowActionFilter = (action: string, row: MaterialReqRow): boolean => {
+    if (action === 'edit') return row.companyId === this.companyId;
+    return true;
+  };
 
   // view modal
   selectedReq: MaterialReqRow | null = null;
@@ -303,7 +309,8 @@ getStatusClass(status?: number | null): string {
             id: Number(x.id ?? 0),
             reqNo: String(x.reqNo ?? ''),
             outletId: x.outletId ?? null,
-             outletName: x.outletName ?? null,
+            outletName: x.outletName ?? null,
+            companyId: Number(x.companyId ?? 0),
             requesterName: x.requesterName ?? null,
             reqDate: x.reqDate ?? null,
             status: x.status ?? null,

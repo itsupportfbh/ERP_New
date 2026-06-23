@@ -11,8 +11,6 @@
   </div>
 
   <div class="loading-row" *ngIf="loading">Loading…</div>
-  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
-  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
 
   <!-- ===== Header Card ===== -->
   <div class="card qf-card">
@@ -23,20 +21,10 @@
       <!-- Customer -->
       <div class="mf-group">
         <label class="mf-label">Customer</label>
-        <div class="qf-control" #customerBox>
-          <input type="text" class="mf-input qf-input--icon" placeholder="Search customer..."
-            [(ngModel)]="customerSearch" name="customerSearch" autocomplete="off"
-            (focus)="openCustomerDropdown()" (input)="filterCustomers()" />
-          <button type="button" class="qf-dropBtn" (click)="toggleCustomerDropdown()"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <div *ngIf="customerDdOpen" class="qf-menu">
-            <div class="qf-mi qf-mi--split" *ngFor="let c of filteredCustomers"
-              (mousedown)="$event.preventDefault()" (click)="selectCustomer(c)">
-              <span class="qf-trunc">{{ c.name }}</span>
-              <small class="qf-muted" *ngIf="c.isCashSales">Cash Sales</small>
-            </div>
-            <div class="qf-mi qf-mi--muted" *ngIf="!filteredCustomers?.length">No results</div>
-          </div>
-        </div>
+        <erp-dropdown [(ngModel)]="header.customerId" name="customerSearch"
+          [items]="customers" bindLabel="name" bindValue="id"
+          placeholder="Search customer..."
+          (ngModelChange)="onCustomerChange($event)"></erp-dropdown>
       </div>
 
       <!-- Delivery Date -->
@@ -151,11 +139,9 @@
       <!-- Line Source -->
       <div class="mf-group">
         <label class="mf-label">Line Source</label>
-        <select class="mf-select" [(ngModel)]="header.lineSourceId" name="lineSourceId"
-          (change)="onLineSourceChange()">
-          <option [ngValue]="1">Custom Selection</option>
-          <option [ngValue]="2">Bundle Packages</option>
-        </select>
+        <erp-dropdown [(ngModel)]="header.lineSourceId" name="lineSourceId"
+          [items]="lineSourceOptions" bindLabel="label" bindValue="value"
+          (ngModelChange)="onLineSourceChange()"></erp-dropdown>
       </div>
 
       <!-- Cost Centre -->
@@ -193,20 +179,9 @@
     <div class="qf-grid2" *ngIf="showPackages">
       <div class="mf-group">
         <label class="mf-label">Select Packages (Multi)</label>
-        <div class="qf-control" #itemSetBox>
-          <input type="text" class="mf-input qf-input--icon" placeholder="Search packages..."
-            [(ngModel)]="itemSetSearch" name="itemSetSearch" autocomplete="off"
-            (focus)="openItemSetDropdown()" (input)="filterItemSets()" />
-          <button type="button" class="qf-dropBtn" (click)="toggleItemSetDropdown()"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <div *ngIf="itemSetDdOpen" class="qf-menu">
-            <div class="qf-mi qf-mi--split" *ngFor="let s of filteredItemSets; trackBy: trackByItemSetId"
-              (mousedown)="$event.preventDefault()" (click)="addItemSetDirect(s)">
-              <span class="qf-trunc">{{ s.setName }}</span>
-              <small class="qf-muted">#{{ s.id }}</small>
-            </div>
-            <div class="qf-mi qf-mi--muted" *ngIf="!filteredItemSets?.length">No results</div>
-          </div>
-        </div>
+        <erp-multiselect [(ngModel)]="selectedPackageIds" name="packages"
+          [options]="packageOptions" placeholder="Search packages..."
+          (ngModelChange)="onPackageSelectionChange($event)"></erp-multiselect>
         <div class="qf-chipWrap" *ngIf="selectedItemSets.length">
           <div class="qf-chip" *ngFor="let s of selectedItemSets; trackBy: trackByItemSetId">
             <span class="t">{{ s.setName }}</span>
@@ -243,8 +218,8 @@
             <th class="qf-c">Qty</th>
             <th class="qf-c">Unit Price <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
             <th class="qf-c">Discount %</th>
-            <th>Tax Mode</th>
-            <th>Fulfillment</th>
+            <th style="min-width:148px">Tax Mode</th>
+            <th style="min-width:130px">Fulfillment</th>
             <th class="qf-c">Line Total <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
             <th class="qf-c">Action</th>
           </tr>
@@ -289,16 +264,14 @@
                   (ngModelChange)="onLineChanged(i)" min="0" max="100" step="0.01" />
               </td>
               <td>
-                <select class="mf-select qf-cellInput" [(ngModel)]="l.taxMode" (ngModelChange)="onLineChanged(i)">
-                  <option *ngFor="let m of taxModesForCurrentGst" [ngValue]="m">{{ m }}</option>
-                </select>
+                <erp-dropdown [(ngModel)]="l.taxMode"
+                  [items]="taxModeItems" bindLabel="label" bindValue="value"
+                  (ngModelChange)="onLineChanged(i)"></erp-dropdown>
               </td>
               <td>
-                <select class="mf-select qf-cellInput" [(ngModel)]="l.fulfillmentMode" (change)="onFulfillmentChanged(l, i)">
-                  <option [ngValue]="null">Select</option>
-                  <option [ngValue]="2">Direct DO</option>
-                  <option [ngValue]="1">PP</option>
-                </select>
+                <erp-dropdown [(ngModel)]="l.fulfillmentMode"
+                  [items]="fulfillmentOptions" bindLabel="label" bindValue="value"
+                  (ngModelChange)="onFulfillmentChanged(l, i)"></erp-dropdown>
               </td>
               <td class="qf-c qf-total">{{ (l.lineTotal || 0) | number:'1.2-2' }}</td>
               <td class="qf-c">
@@ -355,7 +328,7 @@
   <div class="qf-saveBar">
     <div class="qf-saveBar__right">
       <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
-      <button class="btn btn-primary" type="button" [disabled]="saving" (click)="submit()">
+      <button *ngIf="(isEdit && perm.canEdit(fnId)) || (!isEdit && perm.canCreate(fnId))" class="btn btn-primary" type="button" [disabled]="saving" (click)="submit()">
         {{ saving ? 'Saving…' : 'Save Quotation' }}
       </button>
     </div>
@@ -373,24 +346,12 @@
     <form (ngSubmit)="addLineFromModal()">
       <div class="qf-modalGrid">
         <!-- Item -->
-        <div class="mf-group qf-mCol6" #modalItemBox>
+        <div class="mf-group qf-mCol6">
           <label class="mf-label">Item</label>
-          <div class="qf-control">
-            <input class="mf-input qf-input--icon" name="modalItemSearch" [(ngModel)]="modal.itemSearch"
-              placeholder="Search item..." autocomplete="off"
-              (click)="toggleModalItemDropdown()" (input)="onModalItemInput()" />
-            <button type="button" class="qf-dropBtn" (click)="toggleModalItemDropdown()"><svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <div class="qf-menu qf-menu--modal" *ngIf="modal.dropdownOpen">
-              <ng-container *ngIf="modal.filteredItems?.length; else noMatches">
-                <div class="qf-mi qf-mi--split" *ngFor="let row of modal.filteredItems; trackBy: trackByItemId"
-                  (mousedown)="$event.preventDefault()" (click)="selectModalItem(row)">
-                  <span class="qf-trunc">{{ row.itemName }}</span>
-                  <small class="qf-muted">{{ row.itemCode }}</small>
-                </div>
-              </ng-container>
-              <ng-template #noMatches><div class="qf-mi qf-mi--muted">No matches</div></ng-template>
-            </div>
-          </div>
+          <erp-dropdown [(ngModel)]="modal.itemId" name="modalItem"
+            [items]="itemsList" bindLabel="itemName" bindValue="id"
+            placeholder="Search item..."
+            (ngModelChange)="onModalItemSelect($event)"></erp-dropdown>
         </div>
 
         <!-- Qty -->
@@ -423,19 +384,16 @@
         <!-- Fulfillment -->
         <div class="mf-group qf-mCol3">
           <label class="mf-label">Fulfillment Mode</label>
-          <select class="mf-select" [(ngModel)]="modal.fulfillmentMode" name="modalFulfillment">
-            <option [ngValue]="null">Select</option>
-            <option [ngValue]="2">Direct DO</option>
-            <option [ngValue]="1">PP</option>
-          </select>
+          <erp-dropdown [(ngModel)]="modal.fulfillmentMode" name="modalFulfillment"
+            [items]="fulfillmentOptions" bindLabel="label" bindValue="value"></erp-dropdown>
         </div>
 
         <!-- Tax Mode -->
         <div class="mf-group qf-mCol3">
           <label class="mf-label">Tax Mode (Line)</label>
-          <select class="mf-select" [(ngModel)]="modal.taxMode" name="modalTaxMode" (ngModelChange)="previewLineTotals()">
-            <option *ngFor="let m of taxModesForCurrentGst" [ngValue]="m">{{ m }}</option>
-          </select>
+          <erp-dropdown [(ngModel)]="modal.taxMode" name="modalTaxMode"
+            [items]="taxModeItems" bindLabel="label" bindValue="value"
+            (ngModelChange)="previewLineTotals()"></erp-dropdown>
           <small class="qf-hint">GST% used: <b>{{ modal.taxMode === 'Standard-Rated' ? (header.taxPct || 0) : 0 }}%</b></small>
         </div>
 

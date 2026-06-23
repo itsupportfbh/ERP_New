@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { PermissionService } from '../../../core/services/permission.service';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Submitted', 2: 'Approved', 3: 'Rejected', 4: 'Posted' };
 
@@ -49,7 +50,8 @@ export class CreditNoteListComponent implements OnInit {
   private reasonMap = new Map<number, string>();
   private dispositionMap: Record<number, string> = { 1: 'RESTOCK', 2: 'SCRAP' };
 
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService) {}
+  readonly fnId = 'cn-list';
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();
