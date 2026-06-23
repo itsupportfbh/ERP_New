@@ -278,7 +278,7 @@ export class StockHistoryListComponent implements OnInit, OnDestroy {
   // ── Export Modal ───────────────────────────────────────────────
   openExportModal(): void {
     if (!this.allItems?.length) {
-      Swal.fire('No Data', 'No data available to export', 'warning');
+      Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data available to export', confirmButtonColor: '#16a34a' });
       return;
     }
     this.showExportModal = true;
@@ -308,7 +308,7 @@ export class StockHistoryListComponent implements OnInit, OnDestroy {
   exportToExcel(): void {
     const rows = this.getExportRows();
     if (!rows.length) {
-      Swal.fire('No Data', 'No data available to export', 'warning');
+      Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data available to export', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -324,7 +324,7 @@ export class StockHistoryListComponent implements OnInit, OnDestroy {
   exportToPdf(): void {
     const rows = this.getExportRows();
     if (!rows.length) {
-      Swal.fire('No Data', 'No data available to export', 'warning');
+      Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data available to export', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -386,7 +386,7 @@ tbody tr:nth-child(even) { background:#f9fafb }
 
     const w = window.open('', '_blank', 'width=1200,height=800');
     if (!w) {
-      Swal.fire('Popup Blocked', 'Please allow popup for PDF export.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Popup Blocked', text: 'Please allow popup for PDF export.', confirmButtonColor: '#16a34a' });
       return;
     }
     w.document.open(); w.document.write(html); w.document.close();

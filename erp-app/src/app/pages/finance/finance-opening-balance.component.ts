@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
@@ -117,8 +117,8 @@ export class FinanceOpeningBalanceComponent implements OnInit {
   }
 
   save(): void {
-    if (!this.form.budgetLineId) { Swal.fire('Required', 'Please select a ledger account.', 'warning'); return; }
-    if (!(Number(this.form.openingBalanceAmount) >= 0)) { Swal.fire('Required', 'Opening balance amount is required.', 'warning'); return; }
+    if (!this.form.budgetLineId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a ledger account.', confirmButtonColor: '#16a34a' }); return; }
+    if (!(Number(this.form.openingBalanceAmount) >= 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Opening balance amount is required.', confirmButtonColor: '#16a34a' }); return; }
 
     this.saving = true;
     this.error = '';
@@ -158,8 +158,8 @@ export class FinanceOpeningBalanceComponent implements OnInit {
       text: `${this.getAccountLabel(item.budgetLineId)} — ${item.openingBalanceAmount}`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#e74c3c',
-      cancelButtonColor: '#6c757d',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it'
     }).then(result => {
       if (!result.isConfirmed) return;

@@ -4,7 +4,7 @@ import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
 
-const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected' };
+const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'Completed' };
 
 @Component({
   selector: 'erp-sales-order-list',
@@ -87,8 +87,14 @@ export class SalesOrderListComponent implements OnInit {
           deliveryDate: r.deliveryDate ?? null,
           currencyName: r.currencyName ?? r.currencyCode ?? '',
           netTotal: r.netTotal ?? r.grandTotal ?? 0,
+          procurementStatus: r.procurementStatus ?? r.ProcurementStatus ?? 0,
           status: r.approvalStatus ?? r.status ?? 0,
-          statusLabel: STATUS_MAP[r.approvalStatus ?? r.status] ?? 'Pending',
+          statusLabel: (+(r.procurementStatus ?? r.ProcurementStatus ?? 0) === 4)
+            ? 'Completed'
+            : (STATUS_MAP[r.approvalStatus ?? r.status] ?? 'Pending'),
+          statusClass: (+(r.procurementStatus ?? r.ProcurementStatus ?? 0) === 4)
+            ? 'st-completed'
+            : ('st-' + (r.approvalStatus ?? r.status ?? 0)),
         }));
         this.applyFilter();
         this.loading = false;

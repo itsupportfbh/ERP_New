@@ -220,7 +220,7 @@ export class StockTransferCreateComponent implements OnInit {
         const row = list.find(x => this.extractStockId(x) === stockId);
         if (!row) {
           this.loading = false;
-          Swal.fire('Not Found', 'Cannot find transfer row by stockId.', 'warning')
+          Swal.fire({ icon: 'warning', title: 'Not Found', text: 'Cannot find transfer row by stockId.', confirmButtonColor: '#16a34a' })
             .then(() => this.goToStockTransferList());
           return;
         }
@@ -248,7 +248,7 @@ export class StockTransferCreateComponent implements OnInit {
 
         if (!list.length) {
           this.loading = false;
-          Swal.fire('No Data', 'Transfer list empty.', 'warning')
+          Swal.fire({ icon: 'warning', title: 'No Data', text: 'Transfer list empty.', confirmButtonColor: '#16a34a' })
             .then(() => this.goToStockTransferList());
           return;
         }
@@ -425,7 +425,7 @@ submitTransferFinal(): void {
   const avail = Math.max(0, this.toNum(r?.available ?? 0, 0));
 
   if (avail <= 0) {
-    Swal.fire('No Stock', 'No available stock for this transfer.', 'warning');
+    Swal.fire({ icon: 'warning', title: 'No Stock', text: 'No available stock for this transfer.', confirmButtonColor: '#16a34a' });
     return;
   }
 

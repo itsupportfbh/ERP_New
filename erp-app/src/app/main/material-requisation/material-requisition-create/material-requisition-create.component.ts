@@ -251,7 +251,7 @@ if (!this.isEdit) {
 
         const x = res?.data ?? res;
         if (!x) {
-          Swal.fire('Not Found', 'Record not found', 'warning');
+          Swal.fire({ icon: 'warning', title: 'Not Found', text: 'Record not found', confirmButtonColor: '#16a34a' });
           this.router.navigate(['/app/inventory/list-material-requisition']);
           return;
         }
@@ -421,19 +421,19 @@ searchFn = (term: string, item: ItemMaster) => {
     if (this.isSaving) return;
 
     if (!this.header.OutletId) {
-      Swal.fire('Validation', 'Please select Warehouse', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select Warehouse', confirmButtonColor: '#16a34a' });
       return;
     }
 
     if (!this.header.BinId) {
-      Swal.fire('Validation', 'Please select Bin', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select Bin', confirmButtonColor: '#16a34a' });
       return;
     }
 
     const requester = (this.header.requesterName ?? '').trim();
 
     if (!requester) {
-      Swal.fire('Validation', 'Requester name missing', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Validation', text: 'Requester name missing', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -462,14 +462,14 @@ receivedQty: 0
       });
 
     if (validLines.length === 0) {
-      Swal.fire('Validation', 'Please add at least 1 item with Qty', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please add at least 1 item with Qty', confirmButtonColor: '#16a34a' });
       return;
     }
 
     const invalidUom = validLines.some(x => !x.uomId || !x.baseUomId);
 
     if (invalidUom) {
-      Swal.fire('Validation', 'Please check UOM for all selected items', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please check UOM for all selected items', confirmButtonColor: '#16a34a' });
       return;
     }
 

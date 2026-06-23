@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -102,15 +102,15 @@ export class FinanceJournalFormComponent implements OnInit {
 
   submit(): void {
     if (!this.journalDate) {
-      Swal.fire('Required', 'Journal date is required.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Journal date is required.', confirmButtonColor: '#16a34a' });
       return;
     }
     if (!this.hasValidLines) {
-      Swal.fire('Required', 'Add at least one valid journal line with an account and amount.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Add at least one valid journal line with an account and amount.', confirmButtonColor: '#16a34a' });
       return;
     }
     if (!this.isBalanced) {
-      Swal.fire('Not Balanced', 'Total debit and credit must be equal before submitting.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Not Balanced', text: 'Total debit and credit must be equal before submitting.', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -140,7 +140,7 @@ export class FinanceJournalFormComponent implements OnInit {
     this.finance.create({ create: '/Journal/create' }, payload).subscribe({
       next: () => {
         this.saving = false;
-        Swal.fire('Success', 'Journal saved successfully.', 'success')
+        Swal.fire({ icon: 'success', title: 'Success', text: 'Journal saved successfully.', confirmButtonColor: '#16a34a' })
           .then(() => this.router.navigate(['/app/financial/journal']));
       },
       error: err => {

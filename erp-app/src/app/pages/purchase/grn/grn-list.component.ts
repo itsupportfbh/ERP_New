@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
@@ -163,18 +163,18 @@ export class GrnListComponent implements OnInit {
       text: `Delete GRN ${row.grnNo}? This action cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it!'
     });
     if (!result.isConfirmed) return;
     this.svc.deleteGRN(row.id).subscribe({
       next: () => {
         this.load();
-        Swal.fire({ icon: 'success', title: 'Deleted!', text: `GRN ${row.grnNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `GRN ${row.grnNo} deleted.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete GRN.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete GRN.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -191,11 +191,11 @@ export class GrnListComponent implements OnInit {
       this.svc.deleteGRN(row.id).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load();
-          Swal.fire({ icon: 'success', title: 'Deleted!', text: `GRN ${row.grnNo} deleted.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `GRN ${row.grnNo} deleted.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete GRN.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete GRN.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete GRN.', confirmButtonColor: '#16a34a' });
         }
       });
     }

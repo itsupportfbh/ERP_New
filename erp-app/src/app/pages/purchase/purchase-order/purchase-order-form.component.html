@@ -435,14 +435,14 @@
 
       <!-- Row 4: Tax Amt (readonly), Line Total (readonly) — aligned under cols-3 above -->
       <div class="form-row cols-3 block-gap">
-        <div class="readonly-field" style="grid-column: span 2">
-          <label class="field-label">Tax Amount <span style="font-weight:400;color:#6b7280">(GST {{ gstPct }}%)</span></label>
-          <div class="readonly-val">{{ modalLine.taxAmt | number:'1.4-4' }}</div>
+        <div style="grid-column: span 2">
+          <erp-input [label]="'Tax Amount (GST ' + gstPct + '%)'"
+            type="number" [ngModel]="modalLine.taxAmt" [disabled]="true"
+            placeholder="0.0000"></erp-input>
         </div>
-        <div class="readonly-field">
-          <label class="field-label">Line Total</label>
-          <div class="readonly-val bold-val">{{ modalLine.lineTotal | number:'1.4-4' }}</div>
-        </div>
+        <erp-input label="Line Total" type="number"
+          [ngModel]="modalLine.lineTotal" [disabled]="true"
+          placeholder="0.0000"></erp-input>
       </div>
 
       <!-- Row 5: Remarks -->

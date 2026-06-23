@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
@@ -405,7 +405,18 @@ export class PurchaseOrderFormComponent implements OnInit {
       if (s.paymentTermId) this.paymentTermId = s.paymentTermId;
       if (s.currencyId) { this.currencyId = s.currencyId; this.onCurrencyChange(); }
       if (s.incotermsId) this.incotermsId = s.incotermsId;
-      this.gstPct = Number(s.taxRate ?? s.gstPercentage ?? s.tax ?? s.gstRate ?? 0);
+      const countryId = s.countryId ?? s.CountryId ?? 0;
+      if (countryId) {
+        this.svc.getCountryById(countryId).subscribe({
+          next: (res: any) => {
+            const country = this.svc.unwrapOne(res);
+            const gst = Number(country?.gSTPercentage ?? country?.gstPercentage ?? country?.GSTPercentage ?? 0);
+            this.gstPct = gst;
+            this.onGstPctChange();
+          },
+          error: () => {}
+        });
+      }
     }
   }
 
@@ -431,6 +442,17 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.incotermsId = null;
       this.shipping = null;
       this.discount = null;
+    }
+  }
+
+  onGstPctChange(): void {
+    this.lines.forEach(l => {
+      l.taxRate = this.gstPct ?? 0;
+      this.recalcLine(l);
+    });
+    if (this.showModal) {
+      this.modalLine.taxRate = this.gstPct ?? 0;
+      this.recalcLine(this.modalLine);
     }
   }
 
@@ -465,6 +487,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   openAddLine(): void {
     this.editingIndex = null;
     this.modalLine = this.emptyLine();
+    if (this.gstPct > 0) this.modalLine.taxRate = this.gstPct;
     this.error = '';
     this.showModal = true;
   }
@@ -505,7 +528,29 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   onModalPrChange(): void {
     const found = this.availablePROptions.find(o => o.value === this.modalLine.prId);
-    if (found?.raw) this.modalLine.prNumber = found.raw.purchaseRequestNo ?? '';
+    if (!found) { this.modalLine.prNumber = ''; return; }
+    this.modalLine.prNumber = found.raw?.purchaseRequestNo ?? '';
+
+    if (this.editingIndex !== null) return;
+
+    this.svc.getPurchaseRequestById(this.modalLine.prId!).subscribe({
+      next: (res: any) => {
+        const pr = this.svc.unwrapOne(res);
+        const rawLines = pr?.pRLines ?? pr?.PRLines ?? pr?.prLines ?? '[]';
+        const lines: any[] = typeof rawLines === 'string' ? JSON.parse(rawLines || '[]') : (Array.isArray(rawLines) ? rawLines : []);
+        if (!lines.length) return;
+        const first = lines[0];
+        const itemId = first.itemId ?? null;
+        const itemOpt = this.itemOptions.find(o => o.value === itemId);
+        this.modalLine.itemId = itemId;
+        this.modalLine.itemCode = first.itemCode ?? itemOpt?.raw?.itemCode ?? '';
+        this.modalLine.itemName = first.itemSearch ?? first.itemName ?? itemOpt?.raw?.itemName ?? '';
+        this.modalLine.description = first.remarks ?? first.description ?? '';
+        this.modalLine.quantity = first.qty ?? first.quantity ?? null;
+        this.modalLine.uomId = first.uomId ?? null;
+        this.recalcModal();
+      }
+    });
   }
 
   onModalBudgetChange(): void {
@@ -513,7 +558,10 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (found) this.modalLine.budget = found.label;
   }
 
-  recalcModal(): void { this.recalcLine(this.modalLine); }
+  recalcModal(): void {
+    this.modalLine.taxRate = this.gstPct ?? 0;
+    this.recalcLine(this.modalLine);
+  }
 
   saveModal(): void {
     this.error = '';
@@ -521,6 +569,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (!isPRLineEdit && !this.modalLine.itemId) { this.error = 'Please select an Item.'; return; }
     if (isPRLineEdit && !this.modalLine.itemName) { this.error = 'Item name is missing.'; return; }
     if (!this.modalLine.quantity || (this.modalLine.quantity ?? 0) <= 0) { this.error = 'Please enter a valid Quantity.'; return; }
+    if (!this.modalLine.unitPrice || (this.modalLine.unitPrice ?? 0) <= 0) { this.error = 'Please enter a Unit Price.'; return; }
     this.recalcLine(this.modalLine);
     if (this.editingIndex !== null) {
       this.lines[this.editingIndex] = { ...this.modalLine };
@@ -534,9 +583,11 @@ export class PurchaseOrderFormComponent implements OnInit {
     this.error = '';
     if (!this.modalLine.itemId) { this.error = 'Please select an Item.'; return; }
     if (!this.modalLine.quantity || (this.modalLine.quantity ?? 0) <= 0) { this.error = 'Please enter a valid Quantity.'; return; }
+    if (!this.modalLine.unitPrice || (this.modalLine.unitPrice ?? 0) <= 0) { this.error = 'Please enter a Unit Price.'; return; }
     this.recalcLine(this.modalLine);
     this.lines.push({ ...this.modalLine });
     this.modalLine = this.emptyLine();
+    if (this.gstPct > 0) this.modalLine.taxRate = this.gstPct;
   }
 
   removeLine(i: number): void { this.lines.splice(i, 1); }
@@ -559,7 +610,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     ];
     const html = rows.filter(([, v]) => v != null && v !== '' && v !== '—')
       .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
-    Swal.fire({ title: line.itemName || 'Line Detail', html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#1a9db8', width: 500, showCloseButton: true });
+    Swal.fire({ title: line.itemName || 'Line Detail', html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#16a34a', width: 500, showCloseButton: true });
   }
 
   // ── Tax recalc ────────────────────────────────────────
@@ -589,6 +640,8 @@ export class PurchaseOrderFormComponent implements OnInit {
         if (!this.lines.length) { this.error = 'Please add at least one line item.'; return; }
         const invalid = this.lines.some(l => (!l.itemId && !l.itemName) || !l.quantity || (l.quantity ?? 0) <= 0);
         if (invalid) { this.error = 'Each line requires an Item and Quantity > 0.'; return; }
+        const missingPrice = this.lines.some(l => !l.unitPrice || (l.unitPrice ?? 0) <= 0);
+        if (missingPrice) { this.error = 'Each line requires a Unit Price > 0.'; return; }
       }
     }
     this.poStep = Math.max(0, Math.min(next, this.poSteps.length - 1));
@@ -636,6 +689,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   private buildPayload(statusOverride?: number): any {
     const locationName = this.getLabel(this.locationOptions, this.locationId);
     const poLinesData = this.lines.map(l => ({
+      __fromPR: !!(l.prNumber),
       prNo: l.prNumber,
       itemId: l.itemId,
       itemCode: l.itemCode,
@@ -692,12 +746,12 @@ export class PurchaseOrderFormComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.markClean();
-        Swal.fire({ icon: 'success', title: 'Saved!', text: 'Purchase order saved as draft.', confirmButtonColor: '#1a9db8' }).then(() => this.goToList());
+        Swal.fire({ icon: 'success', title: 'Saved!', text: 'Purchase order saved as draft.', confirmButtonColor: '#16a34a' }).then(() => this.goToList());
       },
       error: (err: any) => {
         this.saving = false;
         this.error = err?.error?.message ?? 'Draft save failed.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Draft save failed.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Draft save failed.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -731,13 +785,13 @@ export class PurchaseOrderFormComponent implements OnInit {
         if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
         const savedId = this.id ?? this.svc.unwrapOne(res)?.id ?? this.svc.unwrapOne(res)?.iD ?? null;
         if (savedId) this.svc.updateSoProcurementByPO(Number(savedId), 3).subscribe({ error: () => {} });
-        Swal.fire({ icon: 'success', title: 'Submitted!', text: this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', confirmButtonColor: '#1a9db8' })
+        Swal.fire({ icon: 'success', title: 'Submitted!', text: this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', confirmButtonColor: '#16a34a' })
           .then(() => this.goToList());
       },
       error: (err: any) => {
         this.saving = false;
         this.error = err?.error?.message ?? 'Save failed. Please try again.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed. Please try again.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed. Please try again.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -749,7 +803,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     Swal.fire({
       title: `${action} PO?`, text: `${action} purchase order ${this.purchaseOrderNo}?`,
       icon: 'question', showCancelButton: true, confirmButtonText: action,
-      confirmButtonColor: '#1a9db8', cancelButtonColor: '#6b7280'
+      confirmButtonColor: '#16a34a', cancelButtonColor: '#dc2626'
     }).then(r => {
       if (!r.isConfirmed) return;
       this.saving = true; this.error = '';
@@ -759,12 +813,12 @@ export class PurchaseOrderFormComponent implements OnInit {
       req$.subscribe({
         next: () => {
           this.saving = false; this.approvalStatus = status;
-          Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: `PO ${status === 2 ? 'approved' : 'rejected'} successfully.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: `PO ${status === 2 ? 'approved' : 'rejected'} successfully.`, confirmButtonColor: '#16a34a' });
         },
         error: (err: any) => {
           this.saving = false;
           this.error = err?.error?.message ?? `${action} failed.`;
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? `${action} failed.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? `${action} failed.`, confirmButtonColor: '#16a34a' });
         }
       });
     });
@@ -778,7 +832,7 @@ export class PurchaseOrderFormComponent implements OnInit {
         text: 'You have unsaved changes. Save as draft before leaving?',
         showCancelButton: true, showDenyButton: true,
         confirmButtonText: 'Save as Draft', denyButtonText: 'Discard', cancelButtonText: 'Stay',
-        confirmButtonColor: '#1a9db8'
+        confirmButtonColor: '#16a34a'
       });
       if (result.isConfirmed) { this.saveDraft(); return; }
       if (result.isDenied) { this.goToList(); }

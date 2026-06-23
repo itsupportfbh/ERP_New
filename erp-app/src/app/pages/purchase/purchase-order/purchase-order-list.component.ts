@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { PurchaseService } from '../purchase.service';
@@ -440,20 +440,20 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
     request$.subscribe({
       next: () => {
         this.confirmLoading = false; this.closeConfirm(); this.load();
-        Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: status === 2 ? `PO ${row.purchaseOrderNo} approved successfully.` : `PO ${row.purchaseOrderNo} rejected.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: status === 2 ? `PO ${row.purchaseOrderNo} approved successfully.` : `PO ${row.purchaseOrderNo} rejected.`, confirmButtonColor: '#16a34a' });
         this.syncLinkedPrStatus(row.id, status);
       },
       error: () => {
         this.svc.updatePurchaseOrderApprovalStatus(row.id, status).subscribe({
           next: () => {
             this.confirmLoading = false; this.closeConfirm(); this.load();
-            Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: status === 2 ? `PO ${row.purchaseOrderNo} approved successfully.` : `PO ${row.purchaseOrderNo} rejected.`, confirmButtonColor: '#1a9db8' });
+            Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: status === 2 ? `PO ${row.purchaseOrderNo} approved successfully.` : `PO ${row.purchaseOrderNo} rejected.`, confirmButtonColor: '#16a34a' });
             this.syncLinkedPrStatus(row.id, status);
           },
           error: err => {
             this.confirmLoading = false;
             this.confirmError = err?.error?.message || 'Action failed. Please try again.';
-            Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Action failed. Please try again.', confirmButtonColor: '#1a9db8' });
+            Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Action failed. Please try again.', confirmButtonColor: '#16a34a' });
           }
         });
       }
@@ -472,17 +472,17 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       text: `Send PO ${row.purchaseOrderNo} to supplier via email?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, send it!'
     });
     if (!result.isConfirmed) return;
     this.svc.emailSupplierPo(row.id).subscribe({
       next: () => {
-        Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -494,18 +494,18 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       text: `Delete PO ${row.purchaseOrderNo}? This action cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it!'
     });
     if (!result.isConfirmed) return;
     this.svc.deletePurchaseOrder(row.id).subscribe({
       next: () => {
         this.load();
-        Swal.fire({ icon: 'success', title: 'Deleted!', text: `PO ${row.purchaseOrderNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `PO ${row.purchaseOrderNo} deleted.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -517,18 +517,18 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       text: 'Promote this draft to a purchase order?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, promote it!'
     });
     if (!result.isConfirmed) return;
     this.svc.promotePurchaseOrderDraft(draft.id ?? draft.iD, this.currentUserId()).subscribe({
       next: () => {
         this.load(); this.loadDrafts();
-        Swal.fire({ icon: 'success', title: 'Promoted!', text: 'Draft promoted to purchase order.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Promoted!', text: 'Draft promoted to purchase order.', confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to promote draft.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to promote draft.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -540,18 +540,18 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       text: 'Delete this draft? This action cannot be undone.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it!'
     });
     if (!result.isConfirmed) return;
     this.svc.deletePurchaseOrderDraft(draft.id ?? draft.iD).subscribe({
       next: () => {
         this.loadDrafts();
-        Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Draft deleted.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Draft deleted.', confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete draft.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete draft.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -568,44 +568,44 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       this.svc.deletePurchaseOrder(row.id).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load();
-          Swal.fire({ icon: 'success', title: 'Deleted!', text: `PO ${row.purchaseOrderNo} deleted.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `PO ${row.purchaseOrderNo} deleted.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#16a34a' });
         }
       });
     } else if (this.actionType === 'email-supplier') {
       this.svc.emailSupplierPo(row.id).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm();
-          Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to send email.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' });
         }
       });
     } else if (this.actionType === 'promote-draft') {
       this.svc.promotePurchaseOrderDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load(); this.loadDrafts();
-          Swal.fire({ icon: 'success', title: 'Promoted!', text: 'Draft promoted to purchase order.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Promoted!', text: 'Draft promoted to purchase order.', confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to promote draft.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to promote draft.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to promote draft.', confirmButtonColor: '#16a34a' });
         }
       });
     } else if (this.actionType === 'delete-draft') {
       this.svc.deletePurchaseOrderDraft(row.id ?? row.iD).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.loadDrafts();
-          Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Draft deleted.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Draft deleted.', confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete draft.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete draft.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete draft.', confirmButtonColor: '#16a34a' });
         }
       });
     }

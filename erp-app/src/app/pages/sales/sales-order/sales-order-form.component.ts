@@ -1,4 +1,4 @@
-import {
+﻿import {
   Component,
   ElementRef,
   HostListener,
@@ -500,7 +500,7 @@ export class SalesOrderFormComponent implements OnInit {
         this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
         this.loading = false;
       },
-      error: () => { this.loading = false; void Swal.fire('Error', 'Unable to load quotation details.', 'error'); }
+      error: () => { this.loading = false; void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load quotation details.', confirmButtonColor: '#16a34a' }); }
     });
   }
 
@@ -683,7 +683,7 @@ export class SalesOrderFormComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        void Swal.fire('Error', 'Unable to load sales order for edit.', 'error');
+        void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load sales order for edit.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -1113,9 +1113,9 @@ export class SalesOrderFormComponent implements OnInit {
     this.modalPreview = (qty > 0 || price > 0 || discPct > 0) ? { net, tax, total } : null;
   }
   addLineFromModal(): void {
-    if (!this.modal.itemId) { void Swal.fire('Validation', 'Item is required.', 'warning'); return; }
+    if (!this.modal.itemId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Item is required.', confirmButtonColor: '#16a34a' }); return; }
     if (this.modal.fulfillmentMode === null || this.modal.fulfillmentMode === undefined) {
-      void Swal.fire('Validation', 'Please select a Fulfillment Mode.', 'warning');
+      void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Fulfillment Mode.', confirmButtonColor: '#16a34a' });
       return;
     }
     const payload: UiLine = {
@@ -1205,11 +1205,11 @@ export class SalesOrderFormComponent implements OnInit {
   // ── Save ─────────────────────────────────────────────
   private validateBeforeSave(): boolean {
     if (!this.header.customerId && !this.header.isCashSales) {
-      void Swal.fire('Validation', 'Please select a Customer.', 'warning'); return false;
+      void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Customer.', confirmButtonColor: '#16a34a' }); return false;
     }
-    if (!this.header.deliveryDate) { void Swal.fire('Validation', 'Please set a Delivery Date.', 'warning'); return false; }
+    if (!this.header.deliveryDate) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please set a Delivery Date.', confirmButtonColor: '#16a34a' }); return false; }
     const itemRows = this.lines.filter(l => !l.isSetHeader);
-    if (!itemRows.length) { void Swal.fire('Validation', 'Please add at least one line.', 'warning'); return false; }
+    if (!itemRows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please add at least one line.', confirmButtonColor: '#16a34a' }); return false; }
     for (let idx = 0; idx < itemRows.length; idx++) {
       const l = itemRows[idx];
       const q = l.qty == null ? 0 : +l.qty;
@@ -1306,7 +1306,7 @@ export class SalesOrderFormComponent implements OnInit {
         showCancelButton: true,
         confirmButtonText: 'Yes, Continue',
         cancelButtonText: 'No',
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
 
       if (!confirm.isConfirmed) return;
@@ -1326,7 +1326,7 @@ export class SalesOrderFormComponent implements OnInit {
 
         // Step 4: if shortage → auto-create PR, else navigate back
         if (!shortageLines.length) {
-          void Swal.fire('Success', 'Sales Order saved successfully.', 'success').then(() => this.back());
+          void Swal.fire({ icon: 'success', title: 'Success', text: 'Sales Order saved successfully.', confirmButtonColor: '#16a34a' }).then(() => this.back());
           return;
         }
 
@@ -1337,11 +1337,11 @@ export class SalesOrderFormComponent implements OnInit {
             const prNo = data?.purchaseRequestNo ?? data?.PurchaseRequestNo ?? '';
             let html = 'Sales Order saved successfully.';
             if (created) html += `<br/><br/><b>PR Auto Created</b>${prNo ? '<br/>PR No: ' + prNo : ''}`;
-            void Swal.fire({ icon: 'success', title: 'Success', html, confirmButtonColor: '#0e3a4c' })
+            void Swal.fire({ icon: 'success', title: 'Success', html, confirmButtonColor: '#16a34a' })
               .then(() => { if (created) this.router.navigate(['/app/purchase/requests']); else this.back(); });
           },
           error: () => {
-            void Swal.fire('Success', 'Sales Order saved. PR creation failed — please create manually.', 'warning')
+            void Swal.fire({ icon: 'warning', title: 'Success', text: 'Sales Order saved. PR creation failed — please create manually.', confirmButtonColor: '#16a34a' })
               .then(() => this.back());
           }
         });

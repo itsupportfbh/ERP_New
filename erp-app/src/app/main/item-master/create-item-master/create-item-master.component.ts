@@ -569,7 +569,7 @@ export class CreateItemMasterComponent implements OnInit {
           icon: 'success',
           title: creating ? 'Created!' : 'Updated!',
           text: res?.message || (creating ? 'Item created successfully' : 'Item updated successfully'),
-          confirmButtonColor: '#0e3a4c'
+          confirmButtonColor: '#16a34a'
         });
 
         if (creating) { this.onGoToItemList(); return; }
@@ -579,7 +579,7 @@ export class CreateItemMasterComponent implements OnInit {
             this.loadBomSnapshotOrFallback();
           }
       } else {
-        Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#0e3a4c' });
+        Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Save failed', confirmButtonColor: '#16a34a' });
       }
     };
 
@@ -588,7 +588,7 @@ export class CreateItemMasterComponent implements OnInit {
         icon: 'error',
         title: 'Error',
         text: this.getErrorMessage(err, creating ? 'Create failed' : 'Update failed'),
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
 
     if (creating) this.itemsSvc.createItemMaster(payload).subscribe({ next: onApiSuccess, error: onApiError });

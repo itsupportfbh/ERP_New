@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
@@ -152,7 +152,7 @@ export class FinanceCoaComponent implements OnInit {
 
   save(): void {
     if (!this.form.headCode || !this.form.headName) {
-      Swal.fire('Required', 'Head Code and Name are required.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Head Code and Name are required.', confirmButtonColor: '#16a34a' });
       return;
     }
     this.saving = true;
@@ -166,7 +166,7 @@ export class FinanceCoaComponent implements OnInit {
   }
 
   delete(row: any): void {
-    Swal.fire({ title: 'Delete Account?', text: row.headName, icon: 'warning', showCancelButton: true, confirmButtonColor: '#e74c3c', confirmButtonText: 'Delete' })
+    Swal.fire({ title: 'Delete Account?', text: row.headName, icon: 'warning', showCancelButton: true, confirmButtonColor: '#16a34a', confirmButtonText: 'Delete' })
       .then(r => {
         if (r.isConfirmed) {
           this.finance.delete(this.endpoint, row._dbId).subscribe({

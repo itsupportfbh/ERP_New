@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
@@ -266,12 +266,12 @@ export class SupplierInvoiceListComponent implements OnInit {
     this.svc.createSupplierInvoice(payload).subscribe({
       next: () => {
         this.ocrLoading = false; this.closeOcrModal(); this.load();
-        Swal.fire({ icon: 'success', title: 'Invoice Created!', text: 'Supplier invoice created successfully from OCR.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Invoice Created!', text: 'Supplier invoice created successfully from OCR.', confirmButtonColor: '#16a34a' });
       },
       error: (err: any) => {
         this.ocrLoading = false;
         this.ocrError = err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -359,11 +359,11 @@ export class SupplierInvoiceListComponent implements OnInit {
     this.svc.postPinToAP(row.id).subscribe({
       next: () => {
         this.isPosting = false; this.closeMatchModal(); this.load();
-        Swal.fire({ icon: 'success', title: 'Posted!', text: 'Invoice posted to Accounts Payable successfully.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Posted!', text: 'Invoice posted to Accounts Payable successfully.', confirmButtonColor: '#16a34a' });
       },
       error: err => {
         this.isPosting = false; this.postError = err?.error?.message || 'Unable to post to A/P.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to post to A/P.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to post to A/P.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -375,18 +375,18 @@ export class SupplierInvoiceListComponent implements OnInit {
       text: `Delete invoice ${row.invoiceNo}? This action cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it!'
     });
     if (!result.isConfirmed) return;
     this.svc.deleteSupplierInvoice(row.id).subscribe({
       next: () => {
         this.load();
-        Swal.fire({ icon: 'success', title: 'Deleted!', text: `Invoice ${row.invoiceNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `Invoice ${row.invoiceNo} deleted.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -403,11 +403,11 @@ export class SupplierInvoiceListComponent implements OnInit {
       this.svc.deleteSupplierInvoice(row.id).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load();
-          Swal.fire({ icon: 'success', title: 'Deleted!', text: `Invoice ${row.invoiceNo} deleted.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `Invoice ${row.invoiceNo} deleted.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#16a34a' });
         }
       });
     }

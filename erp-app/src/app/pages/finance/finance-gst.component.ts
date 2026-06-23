@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -142,7 +142,7 @@ export class FinanceGstComponent implements OnInit {
 
   saveTax(): void {
     if (!this.taxForm.code || this.taxForm.rate === null) {
-      Swal.fire('Required', 'Code and rate are required.', 'warning'); return;
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Code and rate are required.', confirmButtonColor: '#16a34a' }); return;
     }
     this.savingTax = true;
     const payload = {
@@ -175,7 +175,7 @@ export class FinanceGstComponent implements OnInit {
   }
 
   deleteTax(row: any): void {
-    Swal.fire({ title: 'Delete Tax Code?', text: `${row.code} – ${row.description || ''}`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#e74c3c', confirmButtonText: 'Delete' })
+    Swal.fire({ title: 'Delete Tax Code?', text: `${row.code} – ${row.description || ''}`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#16a34a', confirmButtonText: 'Delete' })
       .then(r => {
         if (r.isConfirmed) {
           this.finance.delete(this.taxConfig.endpoint, row.id).subscribe({
@@ -309,12 +309,12 @@ export class FinanceGstComponent implements OnInit {
 
   markAsFiled(): void {
     if (!this.gstModel || this.statusNo !== 1 || !this.permission?.post) return;
-    Swal.fire({ title: 'Confirm GST Filing', input: 'text', inputLabel: 'IRAS Submission / Acknowledgement No', inputPlaceholder: 'GST-F5-2026-Q1-0001', showCancelButton: true, confirmButtonText: 'Confirm Filed', confirmButtonColor: '#2e5f73', inputValidator: v => (!v?.trim() ? 'Submission no is required' : null) })
+    Swal.fire({ title: 'Confirm GST Filing', input: 'text', inputLabel: 'IRAS Submission / Acknowledgement No', inputPlaceholder: 'GST-F5-2026-Q1-0001', showCancelButton: true, confirmButtonText: 'Confirm Filed', confirmButtonColor: '#16a34a', inputValidator: v => (!v?.trim() ? 'Submission no is required' : null) })
       .then(r => {
         if (!r.isConfirmed) return;
         this.gstSaving = true;
         this.http.post<GstReturnModel>(`${this.base}/GstReturns/mark-filed/${this.gstModel!.id}`, { filingNo: r.value }).subscribe({
-          next: updated => { this.gstModel = updated || this.gstModel; if (this.gstModel) (this.gstModel as any).status = 'FILED'; this.gstSaving = false; Swal.fire('Filed', 'GST return marked as filed.', 'success'); },
+          next: updated => { this.gstModel = updated || this.gstModel; if (this.gstModel) (this.gstModel as any).status = 'FILED'; this.gstSaving = false; Swal.fire({ icon: 'success', title: 'Filed', text: 'GST return marked as filed.', confirmButtonColor: '#16a34a' }); },
           error: err => { this.gstSaving = false; Swal.fire('Error', err?.error?.message || 'Unable to mark filed.', 'error'); }
         });
       });
@@ -322,12 +322,12 @@ export class FinanceGstComponent implements OnInit {
 
   postToGl(): void {
     if (!this.gstModel || this.statusNo !== 2 || !this.permission?.post) return;
-    Swal.fire({ title: 'Post GST to GL?', text: 'This will create a GST journal entry.', icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, Post', confirmButtonColor: '#2e5f73' })
+    Swal.fire({ title: 'Post GST to GL?', text: 'This will create a GST journal entry.', icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, Post', confirmButtonColor: '#16a34a' })
       .then(r => {
         if (!r.isConfirmed) return;
         this.gstSaving = true;
         this.http.post<GstReturnModel>(`${this.base}/GstReturns/${this.gstModel!.id}/post-to-gl`, {}).subscribe({
-          next: updated => { this.gstModel = updated || this.gstModel; this.gstSaving = false; Swal.fire('Posted', 'GST return posted to GL.', 'success'); },
+          next: updated => { this.gstModel = updated || this.gstModel; this.gstSaving = false; Swal.fire({ icon: 'success', title: 'Posted', text: 'GST return posted to GL.', confirmButtonColor: '#16a34a' }); },
           error: err => { this.gstSaving = false; Swal.fire('Error', err?.error?.message || 'Unable to post to GL.', 'error'); }
         });
       });

@@ -100,7 +100,7 @@ export class StockTakeListComponent implements OnInit {
         icon: 'warning',
         title: 'Access Denied',
         text: 'User not found. Please login again.',
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -130,7 +130,7 @@ export class StockTakeListComponent implements OnInit {
           icon: 'error',
           title: 'Error',
           text: this.getErrorMessage(err, 'Unable to load permission.'),
-          confirmButtonColor: '#d33'
+          confirmButtonColor: '#16a34a'
         });
       }
     });
@@ -257,15 +257,15 @@ export class StockTakeListComponent implements OnInit {
       text: 'This will permanently delete the Stock Take.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
       if (result.isConfirmed) {
         this.stockTakeService.deleteStockTake(id, this.userId).subscribe({
           next: () => {
             this.loadRequests();
-            Swal.fire('Deleted!', 'Stock Take has been deleted.', 'success');
+            Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Stock Take has been deleted.', confirmButtonColor: '#16a34a' });
           },
           error: (err) => {
             Swal.fire('Error', this.getErrorMessage(err, 'Failed to delete stock take'), 'error');
@@ -363,7 +363,7 @@ export class StockTakeListComponent implements OnInit {
       text: 'This will create inventory adjustments and set OnHand.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#2E5F73',
+      confirmButtonColor: '#16a34a',
       confirmButtonText: 'Yes, Post'
     }).then((r) => {
       if (!r.isConfirmed) return;

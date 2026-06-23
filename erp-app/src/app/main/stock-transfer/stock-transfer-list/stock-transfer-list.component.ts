@@ -1,4 +1,4 @@
-import {
+﻿import {
   Component,
   OnInit,
   ViewChild,
@@ -170,7 +170,7 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
         icon: 'warning',
         title: 'Access Denied',
         text: 'User not found. Please login again.',
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -198,7 +198,7 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
           icon: 'error',
           title: 'Error',
           text: this.getErrorMessage(err, 'Unable to load permission.'),
-          confirmButtonColor: '#d33'
+          confirmButtonColor: '#16a34a'
         });
       }
     });
@@ -311,13 +311,13 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
 
   editTransfer(row: UiRow) {
     if (Number(row.statusNum) !== 1) {
-      Swal.fire('Not Allowed', 'Edit only for Pending (Status = 1).', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Not Allowed', text: 'Edit only for Pending (Status = 1).', confirmButtonColor: '#16a34a' });
       return;
     }
 
     const stockId = row.stockIdNum ?? this.toNum(row.stockId);
     if (!stockId) {
-      Swal.fire('Missing stockId', 'Cannot edit without stockId.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Missing stockId', text: 'Cannot edit without stockId.', confirmButtonColor: '#16a34a' });
       return;
     }
 

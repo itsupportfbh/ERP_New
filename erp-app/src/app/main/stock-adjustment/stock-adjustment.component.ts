@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, TemplateRef, ViewChild } from '@angular/core';
+﻿import { Component, EventEmitter, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { ItemMasterService } from '../item-master/item-master.service';
 import { NgSelectComponent } from '@ng-select/ng-select';
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
@@ -314,7 +314,7 @@ onTypeChange() {
         }
 
         this.modalService.dismissAll();
-        Swal.fire('Adjusted', 'Stock adjustment posted successfully.', 'success');
+        Swal.fire({ icon: 'success', title: 'Adjusted', text: 'Stock adjustment posted successfully.', confirmButtonColor: '#16a34a' });
         if (this.selectedItemId) this.loadGridData(this.selectedItemId);
       },
       error: (err) => {

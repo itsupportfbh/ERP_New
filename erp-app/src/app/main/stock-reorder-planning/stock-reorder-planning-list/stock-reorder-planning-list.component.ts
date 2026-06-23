@@ -105,7 +105,7 @@ export class StockReorderPlanningListComponent implements OnInit, AfterViewInit,
           icon: 'warning',
           title: 'Access Denied',
           text: 'User not found. Please login again.',
-          confirmButtonColor: '#0e3a4c'
+          confirmButtonColor: '#16a34a'
         });
         return;
       }
@@ -134,7 +134,7 @@ export class StockReorderPlanningListComponent implements OnInit, AfterViewInit,
             icon: 'error',
             title: 'Error',
             text: this.getErrorMessage(err, 'Unable to load permission.'),
-            confirmButtonColor: '#d33'
+            confirmButtonColor: '#16a34a'
           });
         }
       });

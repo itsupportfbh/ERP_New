@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn } from '../../../shared/components/data-table/data-table.component';
 import Swal from 'sweetalert2';
@@ -48,7 +48,7 @@ export class ThreeWayMatchComponent implements OnInit {
       next: res => { this.rows = this.svc.unwrap(res); this.applyFilter(); this.loading = false; },
       error: err => {
         this.loading = false;
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to load 3-way match data.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to load 3-way match data.', confirmButtonColor: '#16a34a' });
       }
     });
   }

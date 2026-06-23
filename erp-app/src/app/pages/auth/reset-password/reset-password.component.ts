@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import Swal from 'sweetalert2';
@@ -53,7 +53,7 @@ export class ResetPasswordComponent implements OnInit {
           icon: 'success',
           title: 'Password Reset!',
           text: 'Your password has been reset successfully.',
-          confirmButtonColor: '#2E5F73',
+          confirmButtonColor: '#16a34a',
           showConfirmButton: false,
           timer: 2500
         });
@@ -62,7 +62,7 @@ export class ResetPasswordComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         const msg = err.error?.message || (typeof err.error === 'string' ? err.error : 'Something went wrong.');
-        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
+        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#16a34a' });
       }
     });
   }

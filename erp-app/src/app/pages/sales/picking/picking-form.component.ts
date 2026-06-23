@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
@@ -137,7 +137,7 @@ export class PickingFormComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.codesLoading = false;
-        void Swal.fire('Error', 'Unable to load sales order lines / codes.', 'error');
+        void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load sales order lines / codes.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -210,8 +210,8 @@ export class PickingFormComponent implements OnInit {
 
   // ── Save ──────────────────────────────────────────────
   submit(): void {
-    if (!this.soId) { void Swal.fire('Validation', 'Please select a Sales Order.', 'warning'); return; }
-    if (!this.rows.length) { void Swal.fire('Validation', 'No pick lines to save.', 'warning'); return; }
+    if (!this.soId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Sales Order.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.rows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'No pick lines to save.', confirmButtonColor: '#16a34a' }); return; }
     this.saving = true;
 
     const payload: any = {
@@ -262,7 +262,7 @@ export class PickingFormComponent implements OnInit {
   }
 
   downloadPickList(): void {
-    if (!this.rows.length) { void Swal.fire('Validation', 'Select a Sales Order first.', 'warning'); return; }
+    if (!this.rows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Select a Sales Order first.', confirmButtonColor: '#16a34a' }); return; }
     const rowsHtml = this.rows.map((r, i) => `
       <tr>
         <td>${i + 1}</td>

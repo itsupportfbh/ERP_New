@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -277,8 +277,8 @@ export class CreditNoteFormComponent implements OnInit {
   saveAndApprove(): void { this.submit(2); }
 
   private submit(statusValue: number): void {
-    if (!this.doId) { void Swal.fire('Validation', 'Select a Delivery Order.', 'warning'); return; }
-    if (!this.lines.length) { void Swal.fire('Validation', 'No lines to return.', 'warning'); return; }
+    if (!this.doId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Select a Delivery Order.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.lines.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'No lines to return.', confirmButtonColor: '#16a34a' }); return; }
 
     this.saving = true;
     const firstSiId = this.siId ?? (this.lines[0]?.siId ?? null);

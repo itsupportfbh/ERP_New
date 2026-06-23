@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+﻿import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import Swal from 'sweetalert2';
@@ -28,7 +28,7 @@ export class ForgotPasswordComponent {
           icon: 'success',
           title: 'Email Sent!',
           text: 'A password reset link has been sent to your email.',
-          confirmButtonColor: '#2E5F73',
+          confirmButtonColor: '#16a34a',
           showConfirmButton: false,
           timer: 2500
         });
@@ -37,7 +37,7 @@ export class ForgotPasswordComponent {
       error: (err) => {
         this.loading = false;
         const msg = err.error?.message || (typeof err.error === 'string' ? err.error : 'Something went wrong.');
-        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
+        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#16a34a' });
       }
     });
   }
