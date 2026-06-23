@@ -8,11 +8,12 @@
 
   <div class="card table-section">
     <div class="table-search-bar">
-      <ng-select style="width:220px;display:inline-block"
-        [items]="toOutletOptions" bindLabel="name" bindValue="id"
-        [(ngModel)]="selectedToOutletId" (ngModelChange)="onToOutletChange()"
-        placeholder="Select Warehouse" [clearable]="false" [searchable]="true" appendTo="body">
-      </ng-select>
+      <div style="width:220px;display:inline-block">
+        <erp-dropdown [items]="toOutletOptions" bindLabel="name" bindValue="id"
+          [(ngModel)]="selectedToOutletId" (ngModelChange)="onToOutletChange()"
+          placeholder="Search warehouse...">
+        </erp-dropdown>
+      </div>
       <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search TransferNo / SKU / From / Reason"/>
     </div>
     <erp-table

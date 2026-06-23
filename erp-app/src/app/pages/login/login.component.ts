@@ -24,9 +24,7 @@ export class LoginComponent implements OnInit {
   selectedCompanyId: number | null = null;
   private pendingOrgGuid = '';
 
-  constructor(private auth: AuthService, private router: Router) {
-    if (this.auth.isLoggedIn()) this.router.navigate(['/app/dashboard']);
-  }
+  constructor(private auth: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     const saved = this.auth.getRememberedUser();

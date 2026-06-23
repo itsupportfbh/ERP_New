@@ -96,35 +96,21 @@
       <!-- Currency -->
       <div class="mf-group">
         <label class="mf-label">Currency</label>
-        <div class="qf-control" #currencyBox>
-          <input type="text" class="mf-input" placeholder="Type to search currency..."
-            [(ngModel)]="currencySearch" name="currencySearch" autocomplete="off"
-            (focus)="openCurrencyDropdown()" (input)="filterCurrencies()" />
-          <div *ngIf="currencyDdOpen" class="qf-menu">
-            <div class="qf-mi" *ngFor="let cur of filteredCurrencies"
-              (mousedown)="$event.preventDefault()" (click)="selectCurrency(cur)">
-              {{ cur.name }}<span class="qf-muted" *ngIf="cur.code"> ({{ cur.code }})</span>
-            </div>
-            <div class="qf-mi qf-mi--muted" *ngIf="!filteredCurrencies?.length">No results</div>
-          </div>
-        </div>
+        <erp-dropdown [(ngModel)]="header.currencyId" name="currencyId"
+          [items]="currenciesSrv" bindLabel="name" bindValue="id"
+          placeholder="Search currency..."
+          (ngModelChange)="onCurrencyChange($event)">
+        </erp-dropdown>
       </div>
 
       <!-- Payment Terms -->
       <div class="mf-group">
         <label class="mf-label">Payment Terms</label>
-        <div class="qf-control" #paymentBox>
-          <input type="text" class="mf-input" placeholder="Search payment terms..."
-            [(ngModel)]="paymentTermsSearch" name="paymentTermsSearch" autocomplete="off"
-            (focus)="openPaymentTermsDropdown()" (input)="filterPaymentTerms()" />
-          <div *ngIf="paymentTermsDdOpen" class="qf-menu">
-            <div class="qf-mi" *ngFor="let p of filteredPaymentTerms"
-              (mousedown)="$event.preventDefault()" (click)="selectPaymentTerms(p)">
-              {{ p.name }}
-            </div>
-            <div class="qf-mi qf-mi--muted" *ngIf="!filteredPaymentTerms?.length">No results</div>
-          </div>
-        </div>
+        <erp-dropdown [(ngModel)]="header.paymentTermsId" name="paymentTermsId"
+          [items]="paymentTermsSrv" bindLabel="name" bindValue="id"
+          placeholder="Search payment terms..."
+          (ngModelChange)="onPaymentTermsChange($event)">
+        </erp-dropdown>
       </div>
 
       <!-- GST % -->

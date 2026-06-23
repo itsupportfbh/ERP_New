@@ -865,6 +865,35 @@ export class QuotationFormComponent implements OnInit {
     this.lastAutoRemarks = desc;
   }
 
+  onCurrencyChange(id: number): void {
+    const cur = this.currenciesSrv.find(c => c.id === id);
+    if (!cur) return;
+    this.header.currency = cur.name;
+    if (cur.id === this.baseCurrencyId) {
+      this.header.fxRate = 1;
+      this.computeTotals();
+      this.calcGrandTotalBase();
+    } else {
+      this.fetchFxRate(cur.id);
+      this.computeTotals();
+    }
+  }
+
+  onPaymentTermsChange(id: number): void {
+    const p = this.paymentTermsSrv.find(x => x.id === id);
+    if (!p) return;
+    this.header.paymentTerms = p.name;
+    const desc = (p.description || '').trim();
+    if (!desc) return;
+    const current = (this.header.remarks || '').trim();
+    if (!current) { this.header.remarks = desc; this.lastAutoRemarks = desc; return; }
+    if (this.lastAutoRemarks && current === this.lastAutoRemarks.trim()) {
+      this.header.remarks = desc; this.lastAutoRemarks = desc; return;
+    }
+    this.header.remarks = `${this.header.remarks}\n${desc}`;
+    this.lastAutoRemarks = desc;
+  }
+
   // ── Item set multi ───────────────────────────────────
   trackByItemSetId = (_: number, s: ItemSetHeaderRow) => s.id;
   trackByItemId = (_: number, it: SimpleItem) => it.id;
