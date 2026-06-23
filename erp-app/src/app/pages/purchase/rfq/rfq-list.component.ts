@@ -2,6 +2,7 @@
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -11,6 +12,7 @@ import Swal from 'sweetalert2';
   styleUrls: ['./rfq-list.component.scss']
 })
 export class RfqListComponent implements OnInit {
+  readonly fnId = 'rfq';
   loading = false;
   rows: any[] = [];
   filtered: any[] = [];
@@ -48,7 +50,15 @@ export class RfqListComponent implements OnInit {
     { key: 'delete', label: 'Delete', btnClass: 'danger',  icon: 'delete' },
   ];
 
-  constructor(private svc: PurchaseService, private router: Router) {}
+  rowActionFilter = (action: string, _row: any): boolean => {
+    switch (action) {
+      case 'edit':   return this.perm.canEdit(this.fnId);
+      case 'delete': return this.perm.canDelete(this.fnId);
+      default:       return true;
+    }
+  };
+
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
 
   ngOnInit(): void { this.load(); }
 

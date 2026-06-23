@@ -2,6 +2,7 @@
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import { environment } from '../../../../environments/environment';
 import Swal from 'sweetalert2';
 
 interface DoLine {
@@ -161,13 +162,13 @@ export class DeliveryOrderFormComponent implements OnInit {
           } as DoLine;
         });
 
-        const soStatus = Number(d.status ?? d.Status ?? 0);
         const hasDirectDoShortage = arr.some((l: any) => {
           const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
           const sq = Number(l.shortageQty ?? l.ShortageQty ?? 0);
-          return sm === 2 && sq > 0;
+          const ps = Number(l.procurementStatus ?? l.ProcurementStatus ?? 0);
+          return sm === 2 && sq > 0 && ps < 4;
         });
-        if (soStatus === 1 || hasDirectDoShortage) {
+        if (hasDirectDoShortage) {
           void Swal.fire({
             icon: 'warning',
             title: 'Stock Not Yet Received',
@@ -220,7 +221,16 @@ export class DeliveryOrderFormComponent implements OnInit {
         this.driverMobileNo = String(h.driverMobileNo ?? h.DriverMobileNo ?? '');
         this.receivedPersonName = String(h.receivedPersonName ?? h.ReceivedPersonName ?? '');
         this.receivedPersonMobileNo = String(h.receivedPersonMobileNo ?? h.ReceivedPersonMobileNo ?? '');
-        this.receivedSignature = h.receivedSignature ?? h.ReceivedSignature ?? null;
+        const sig = h.receivedSignature ?? h.ReceivedSignature ?? null;
+        if (!sig) {
+          this.receivedSignature = null;
+        } else if (sig.startsWith('data:') || sig.startsWith('http')) {
+          this.receivedSignature = sig;
+        } else {
+          // Backend saved as file path e.g. /uploads/do-signatures/xxx.png
+          const apiOrigin = environment.apiUrl.replace(/\/api.*$/i, '');
+          this.receivedSignature = `${apiOrigin}${sig}`;
+        }
 
         const rawLines = data.lines ?? data.Lines ?? h.lines ?? [];
         const arr: any[] = Array.isArray(rawLines) ? rawLines : [];
@@ -323,7 +333,11 @@ export class DeliveryOrderFormComponent implements OnInit {
         ReceivedSignature: this.receivedSignature || null
       };
       this.svc.updateDeliveryOrderHeader(this.id!, header).subscribe({
-        next: () => { this.saving = false; this.back(); },
+        next: () => {
+          this.saving = false;
+          void Swal.fire({ icon: 'success', title: 'Updated!', text: 'Delivery Order updated successfully.', confirmButtonColor: '#16a34a' })
+            .then(() => this.back());
+        },
         error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed.', 'error'); }
       });
       return;
@@ -359,7 +373,11 @@ export class DeliveryOrderFormComponent implements OnInit {
     };
 
     this.svc.createDeliveryOrder(payload).subscribe({
-      next: () => { this.saving = false; this.back(); },
+      next: () => {
+        this.saving = false;
+        void Swal.fire({ icon: 'success', title: 'Saved!', text: 'Delivery Order created successfully.', confirmButtonColor: '#16a34a' })
+          .then(() => this.back());
+      },
       error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Failed to create delivery order.', 'error'); }
     });
   }

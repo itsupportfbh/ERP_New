@@ -51,7 +51,7 @@
     </div>
 
     <div class="do-grid3 block-gap">
-      <div class="mf-group">
+      <div class="mf-group" *ngIf="!isSelfMode">
         <label class="mf-label">Delivery To</label>
         <input type="text" class="mf-input" [(ngModel)]="deliveryTo" name="deliveryTo" placeholder="Delivery location" />
       </div>
@@ -75,7 +75,7 @@
           [items]="vehicleOptions" bindLabel="label" bindValue="id"
           placeholder="Select Vehicle"></erp-dropdown>
       </div>
-      <div class="mf-group">
+      <div class="mf-group" *ngIf="!isSelfMode">
         <label class="mf-label">Delivery Date</label>
         <input type="date" class="mf-input" [(ngModel)]="deliveryDate" name="deliveryDate" />
       </div>

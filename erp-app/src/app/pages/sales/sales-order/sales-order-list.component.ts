@@ -77,25 +77,29 @@ export class SalesOrderListComponent implements OnInit {
     this.loading = true;
     this.svc.getSalesOrders().subscribe({
       next: res => {
-        this.rows = this.svc.unwrap(res).map((r: any) => ({
-          ...r,
-          id: r.id ?? r.iD,
-          salesOrderNo: r.salesOrderNo ?? r.soNo ?? r.sO_No ?? '',
-          customerName: (r.customerId === 0 || r.customerId == null) && (r.isCashSales)
-            ? 'Cash Sales' : (r.customerName ?? ''),
-          orderDate: r.orderDate ?? r.requestedDate ?? r.poDate ?? null,
-          deliveryDate: r.deliveryDate ?? null,
-          currencyName: r.currencyName ?? r.currencyCode ?? '',
-          netTotal: r.netTotal ?? r.grandTotal ?? 0,
-          procurementStatus: r.procurementStatus ?? r.ProcurementStatus ?? 0,
-          status: r.approvalStatus ?? r.status ?? 0,
-          statusLabel: (+(r.procurementStatus ?? r.ProcurementStatus ?? 0) === 4)
-            ? 'Completed'
-            : (STATUS_MAP[r.approvalStatus ?? r.status] ?? 'Pending'),
-          statusClass: (+(r.procurementStatus ?? r.ProcurementStatus ?? 0) === 4)
-            ? 'st-completed'
-            : ('st-' + (r.approvalStatus ?? r.status ?? 0)),
-        }));
+        this.rows = this.svc.unwrap(res).map((r: any) => {
+          const lineItems: any[] = r.lineItems ?? r.LineItems ?? r.salesOrderLines ?? r.SalesOrderLines ?? [];
+          const allFullyReceived = lineItems.length > 0 &&
+            lineItems.every((l: any) => +(l.procurementStatus ?? l.ProcurementStatus ?? 0) === 4);
+          return {
+            ...r,
+            id: r.id ?? r.iD,
+            salesOrderNo: r.salesOrderNo ?? r.soNo ?? r.sO_No ?? '',
+            customerName: (r.customerId === 0 || r.customerId == null) && (r.isCashSales)
+              ? 'Cash Sales' : (r.customerName ?? ''),
+            orderDate: r.orderDate ?? r.requestedDate ?? r.poDate ?? null,
+            deliveryDate: r.deliveryDate ?? null,
+            currencyName: r.currencyName ?? r.currencyCode ?? '',
+            netTotal: r.netTotal ?? r.grandTotal ?? 0,
+            status: r.approvalStatus ?? r.status ?? 0,
+            statusLabel: allFullyReceived
+              ? 'Completed'
+              : (STATUS_MAP[r.approvalStatus ?? r.status] ?? 'Pending'),
+            statusClass: allFullyReceived
+              ? 'st-completed'
+              : ('st-' + (r.approvalStatus ?? r.status ?? 0)),
+          };
+        });
         this.applyFilter();
         this.loading = false;
       },

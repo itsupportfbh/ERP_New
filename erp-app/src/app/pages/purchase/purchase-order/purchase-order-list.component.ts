@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected' };
@@ -14,6 +15,7 @@ const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Appro
   styleUrls: ['./purchase-order-list.component.scss']
 })
 export class PurchaseOrderListComponent implements OnInit {
+  readonly fnId = 'po-list';
   loading = false;
   rows: any[] = [];
   filtered: any[] = [];
@@ -90,8 +92,10 @@ export class PurchaseOrderListComponent implements OnInit {
   poActionFilter = (action: string, row: any): boolean => {
     const s = this.poStatusNum(row);
     switch (action) {
-      case 'edit':   return s !== 2 && s !== 3;
-      case 'delete': return s !== 2 && s !== 3;
+      case 'email':  return this.perm.canPrint(this.fnId);
+      case 'print':  return this.perm.canPrint(this.fnId);
+      case 'edit':   return s !== 2 && s !== 3 && this.perm.canEdit(this.fnId);
+      case 'delete': return s !== 2 && s !== 3 && this.perm.canDelete(this.fnId);
       default:       return true;
     }
   };
@@ -106,7 +110,7 @@ export class PurchaseOrderListComponent implements OnInit {
     return 1;
   }
 
-  constructor(private svc: PurchaseService, private router: Router) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();
@@ -168,6 +172,7 @@ export class PurchaseOrderListComponent implements OnInit {
   }
 
   createPoFromPr(pr: any): void {
+    if (!this.perm.canCreate(this.fnId)) return;
     this.showAlerts = false;
     this.router.navigate(['/app/purchase/orders/new'], { queryParams: { fromPR: pr.id ?? pr.iD } });
   }
@@ -181,17 +186,20 @@ export class PurchaseOrderListComponent implements OnInit {
   }
 
   openDraft(draft: any): void {
+    if (!this.perm.canCreate(this.fnId)) return;
     const id = draft.id ?? draft.iD;
     this.router.navigate(['/app/purchase/orders/new'], { queryParams: { draftId: id } });
   }
 
   promoteDraft(draft: any, e: Event): void {
     e.stopPropagation();
+    if (!this.perm.canCreate(this.fnId)) return;
     this.openActionConfirm(draft, 'promote-draft');
   }
 
   deleteDraft(draft: any, e: Event): void {
     e.stopPropagation();
+    if (!this.perm.canCreate(this.fnId)) return;
     this.openActionConfirm(draft, 'delete-draft');
   }
 
@@ -251,6 +259,7 @@ export class PurchaseOrderListComponent implements OnInit {
   }
 
   printPo(row: any): void {
+    if (!this.perm.canPrint(this.fnId)) return;
     this.svc.getPurchaseOrderById(row.id).subscribe({
       next: res => {
         const po = this.svc.unwrapOne(res);
@@ -467,6 +476,7 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
   }
 
   async emailSupplier(row: any): Promise<void> {
+    if (!this.perm.canPrint(this.fnId)) return;
     const result = await Swal.fire({
       title: 'Email Supplier?',
       text: `Send PO ${row.purchaseOrderNo} to supplier via email?`,

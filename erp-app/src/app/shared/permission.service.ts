@@ -19,6 +19,16 @@ export interface FunctionPermission {
   post: boolean;
 }
 
+const LS_KEY = 'userPermissions';
+const FUNCTION_ID_ALIAS: Record<string, string> = {
+  general: 'home',
+  dashboard: 'home',
+  'stock-overview': 'mr-list',
+  'stock transfer': 'mr-list',
+  'stock-transfer': 'mr-list',
+  'stock_transfer': 'mr-list'
+};
+
 @Injectable({ providedIn: 'root' })
 export class PermissionService {
   private readonly baseUrl = environment.apiUrl;
@@ -26,29 +36,26 @@ export class PermissionService {
   constructor(private http: HttpClient) {}
 
   getFunctionPermission(userId: number, functionId: string): Observable<FunctionPermission> {
+    const normalizedFunctionId = this.normalizeFunctionId(functionId);
+
+    if (localStorage.getItem('isMasterOwner') === 'true') {
+      return of(this.getFullPermission(normalizedFunctionId));
+    }
+
     return this.http
       .get<any>(`${this.baseUrl}/OrganizationRole/permission`, {
-        params: { userId: String(userId), functionId }
+        params: { userId: String(userId), functionId: normalizedFunctionId }
       })
       .pipe(
         map((res: any) => {
-          const data = res?.data || {};
-          return {
-            functionId: data.functionId || data.FunctionId || functionId,
-            view: !!(data.view ?? data.View),
-            create: !!(data.create ?? data.Create),
-            edit: !!(data.edit ?? data.Edit),
-            delete: !!(data.delete ?? data.Delete),
-            submit: !!(data.submit ?? data.Submit),
-            approve: !!(data.approve ?? data.Approve),
-            reject: !!(data.reject ?? data.Reject),
-            cancel: !!(data.cancel ?? data.Cancel),
-            print: !!(data.print ?? data.Print),
-            export: !!(data.export ?? data.Export),
-            post: !!(data.post ?? data.Post)
-          } as FunctionPermission;
+          const parsed = this.parsePermissionResponse(res, normalizedFunctionId);
+          if (parsed) {
+            return parsed;
+          }
+
+          return this.getCachedPermission(normalizedFunctionId);
         }),
-        catchError(() => of(this.getFullPermission(functionId)))
+        catchError(() => of(this.getCachedPermission(normalizedFunctionId)))
       );
   }
 
@@ -90,7 +97,72 @@ export class PermissionService {
   hasCreate(permission: FunctionPermission | null | undefined): boolean { return !!permission?.create; }
   hasEdit(permission: FunctionPermission | null | undefined): boolean { return !!permission?.edit; }
   hasDelete(permission: FunctionPermission | null | undefined): boolean { return !!permission?.delete; }
+  hasSubmit(permission: FunctionPermission | null | undefined): boolean { return !!permission?.submit; }
+  hasApprove(permission: FunctionPermission | null | undefined): boolean { return !!permission?.approve; }
+  hasReject(permission: FunctionPermission | null | undefined): boolean { return !!permission?.reject; }
+  hasCancel(permission: FunctionPermission | null | undefined): boolean { return !!permission?.cancel; }
   hasExport(permission: FunctionPermission | null | undefined): boolean { return !!permission?.export; }
   hasPrint(permission: FunctionPermission | null | undefined): boolean { return !!permission?.print; }
   hasPost(permission: FunctionPermission | null | undefined): boolean { return !!permission?.post; }
+
+  private normalizeFunctionId(functionId: string): string {
+    const key = String(functionId || '').trim().toLowerCase();
+    return FUNCTION_ID_ALIAS[key] || key;
+  }
+
+  private parsePermissionResponse(res: any, fallbackFunctionId: string): FunctionPermission | null {
+    const data = res?.data;
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      return {
+        functionId: this.normalizeFunctionId(data.functionId || data.FunctionId || fallbackFunctionId),
+        view: !!(data.view ?? data.View),
+        create: !!(data.create ?? data.Create),
+        edit: !!(data.edit ?? data.Edit),
+        delete: !!(data.delete ?? data.Delete),
+        submit: !!(data.submit ?? data.Submit),
+        approve: !!(data.approve ?? data.Approve),
+        reject: !!(data.reject ?? data.Reject),
+        cancel: !!(data.cancel ?? data.Cancel),
+        print: !!(data.print ?? data.Print),
+        export: !!(data.export ?? data.Export),
+        post: !!(data.post ?? data.Post)
+      };
+    }
+
+    return null;
+  }
+
+  private getCachedPermission(functionId: string): FunctionPermission {
+    const normalizedFunctionId = this.normalizeFunctionId(functionId);
+
+    try {
+      const cached = localStorage.getItem(LS_KEY);
+      if (cached) {
+        const rows = JSON.parse(cached);
+        const match = Array.isArray(rows)
+          ? rows.find((item: any) => this.normalizeFunctionId(item?.FunctionId ?? item?.functionId ?? '') === normalizedFunctionId)
+          : null;
+
+        if (match) {
+          const p = match?.Permissions ?? match?.permissions ?? match?.flags ?? {};
+          return {
+            functionId: normalizedFunctionId,
+            view: !!(p?.View ?? p?.view ?? p?.V ?? false),
+            create: !!(p?.Create ?? p?.create ?? p?.C ?? false),
+            edit: !!(p?.Edit ?? p?.edit ?? p?.E ?? false),
+            delete: !!(p?.Delete ?? p?.delete ?? p?.D ?? false),
+            submit: !!(p?.Submit ?? p?.submit ?? p?.S ?? false),
+            approve: !!(p?.Approve ?? p?.approve ?? p?.A ?? false),
+            reject: !!(p?.Reject ?? p?.reject ?? p?.R ?? false),
+            cancel: !!(p?.Cancel ?? p?.cancel ?? p?.N ?? false),
+            print: !!(p?.Print ?? p?.print ?? p?.P ?? false),
+            export: !!(p?.Export ?? p?.export ?? p?.X ?? false),
+            post: !!(p?.Post ?? p?.post ?? p?.M ?? false)
+          };
+        }
+      }
+    } catch {}
+
+    return this.getEmptyPermission(normalizedFunctionId);
+  }
 }

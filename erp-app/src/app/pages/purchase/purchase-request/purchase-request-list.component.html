@@ -23,15 +23,15 @@
         </div>
       </div>
       <div class="list-card-actions">
-        <button class="panel-toggle-btn" (click)="showAlerts = true; loadAlerts()">
+        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showAlerts = true; loadAlerts()">
           &#128276; Alerts
           <span class="badge-pill warn" *ngIf="alertCount > 0">{{ alertCount }}</span>
         </button>
-        <button class="panel-toggle-btn" (click)="showDrafts = !showDrafts; loadDrafts()">
+        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()">
           &#128190; Drafts
           <span class="badge-pill info" *ngIf="draftCount > 0">{{ draftCount }}</span>
         </button>
-        <button class="list-add-btn" (click)="create()">
+        <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           New PR
         </button>
@@ -39,7 +39,7 @@
     </div>
 
     <!-- Drafts panel -->
-    <div class="side-panel" *ngIf="showDrafts">
+    <div class="side-panel" *ngIf="showDrafts && perm.canCreate(fnId)">
       <div class="sp-head">
         <strong>&#128190; Draft PRs</strong>
         <button class="sp-btn" (click)="loadDrafts()" [disabled]="sideLoading">Refresh</button>
@@ -74,7 +74,7 @@
 </div>
 
 <!-- PR ALERTS MODAL -->
-<div *ngIf="showAlerts"
+<div *ngIf="showAlerts && perm.canCreate(fnId)"
      (click)="showAlerts = false"
      style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
   <div (click)="$event.stopPropagation()"

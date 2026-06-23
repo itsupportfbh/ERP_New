@@ -1,6 +1,7 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -10,6 +11,7 @@ import Swal from 'sweetalert2';
   styleUrls: ['./supplier-invoice-list.component.scss']
 })
 export class SupplierInvoiceListComponent implements OnInit {
+  readonly fnId = 'pin-list';
   loading = false;
   rows: any[] = [];
   temp: any[] = [];
@@ -73,7 +75,7 @@ export class SupplierInvoiceListComponent implements OnInit {
   ocrSelectedGrns: any[] = [];
   ocrGrnDropOpen = false;
 
-  constructor(private svc: PurchaseService, private router: Router) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
 
   ngOnInit(): void { this.load(); }
 
