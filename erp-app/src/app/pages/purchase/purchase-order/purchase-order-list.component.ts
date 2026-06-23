@@ -80,22 +80,18 @@ export class PurchaseOrderListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'approve', label: 'Approve',       btnClass: 'success', icon: 'approve' },
-    { key: 'reject',  label: 'Reject',        btnClass: 'danger',  icon: 'reject'  },
-    { key: 'email',   label: 'Email Supplier', btnClass: 'default', icon: 'email'  },
-    { key: 'print',   label: 'Print',          btnClass: 'default', icon: 'print'  },
-    { key: 'edit',    label: 'Edit',           btnClass: 'default', icon: 'edit'   },
-    { key: 'delete',  label: 'Delete',         btnClass: 'danger',  icon: 'delete' },
+    { key: 'email',  label: 'Email Supplier', btnClass: 'default', icon: 'email'  },
+    { key: 'print',  label: 'Print',          btnClass: 'default', icon: 'print'  },
+    { key: 'edit',   label: 'Edit',           btnClass: 'default', icon: 'edit'   },
+    { key: 'delete', label: 'Delete',         btnClass: 'danger',  icon: 'delete' },
   ];
 
   poActionFilter = (action: string, row: any): boolean => {
     const s = this.poStatusNum(row);
     switch (action) {
-      case 'approve': return s === 1;
-      case 'reject':  return s === 1;
-      case 'edit':    return s !== 2 && s !== 3;
-      case 'delete':  return s !== 2 && s !== 3;
-      default:        return true;
+      case 'edit':   return s !== 2 && s !== 3;
+      case 'delete': return s !== 2 && s !== 3;
+      default:       return true;
     }
   };
 

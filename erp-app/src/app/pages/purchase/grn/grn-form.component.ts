@@ -414,10 +414,21 @@ export class GrnFormComponent implements OnInit {
     line.isPosted = true;
 
     if (this.id) {
-      // Step 3a — persist isPostInventory flag back to GRN JSON
-      this.persistGrnJson();
-      // Step 3b — apply GRN to SO (updates SO procurement status / alerts)
-      this.svc.applyGrnToSo(this.id, this.loginUserId ?? 0).subscribe({ error: () => {} });
+      // Step 3a — persist isPostInventory flag back to GRN JSON, THEN update procurement status
+      const grnId = this.id;
+      const updatedBy = this.loginUserId ?? 0;
+      this.svc.updateGRNFlagIssues({
+        ID: grnId, POID: this.poId, ReceptionDate: this.receiptDate,
+        OverReceiptTolerance: this.overReceiptTolerance ?? 0,
+        GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
+      }).subscribe({
+        next: () => {
+          // Step 3b — run AFTER GRN JSON is saved so backend reads updated isPostInventory flags
+          this.svc.applyGrnToSo(grnId, updatedBy).subscribe({ error: () => {} });
+          if (this.poId) this.svc.updateSoProcurementByPO(this.poId, 3).subscribe({ error: () => {} });
+        },
+        error: () => {}
+      });
     }
 
     const remaining = this.lines.filter(l => !l.isPosted).length;
@@ -429,14 +440,6 @@ export class GrnFormComponent implements OnInit {
     Swal.fire(title, msg, 'success').then(() => this.router.navigate(['/app/purchase/grn']));
   }
 
-  private persistGrnJson(): void {
-    if (!this.id) return;
-    this.svc.updateGRNFlagIssues({
-      ID: this.id, POID: this.poId, ReceptionDate: this.receiptDate,
-      OverReceiptTolerance: this.overReceiptTolerance ?? 0,
-      GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
-    }).subscribe({ error: () => {} });
-  }
 
   private buildGrnLinesData(): any[] {
     return this.lines.map(l => ({

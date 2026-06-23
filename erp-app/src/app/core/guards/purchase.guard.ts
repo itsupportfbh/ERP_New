@@ -22,6 +22,7 @@ export class PurchaseGuard implements CanActivate {
       return of(this.router.createUrlTree(['/app/dashboard']));
     }
 
+    const companyId = Number(localStorage.getItem('companyId') || 0);
     return this.deptMenuSvc.getByDepartmentId(deptId, companyId).pipe(
       map((res: any) => {
         const menuIds: string[] = res?.menuIds ?? res?.data?.menuIds ?? [];
