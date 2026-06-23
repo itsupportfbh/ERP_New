@@ -418,28 +418,26 @@
         </ng-template>
       </div>
 
-      <!-- Row 2: Description -->
-      <div class="form-row cols-1 block-gap">
+      <!-- Row 2: Description + Quantity -->
+      <div class="form-row cols-2 block-gap">
         <erp-input label="Description" [(ngModel)]="modalLine.description" placeholder="Item description (auto-filled)"></erp-input>
-      </div>
-
-      <!-- Row 3: Qty, Unit Price, Disc % -->
-      <div class="form-row cols-3 block-gap">
         <erp-input label="Quantity *" type="number" [(ngModel)]="modalLine.quantity"
           (ngModelChange)="recalcModal()" placeholder="0"></erp-input>
+      </div>
+
+      <!-- Row 3: Unit Price, Disc % -->
+      <div class="form-row cols-2 block-gap">
         <erp-input label="Unit Price" type="number" [(ngModel)]="modalLine.unitPrice"
           (ngModelChange)="recalcModal()" placeholder="0.00"></erp-input>
         <erp-input label="Discount %" type="number" [(ngModel)]="modalLine.discountPct"
           (ngModelChange)="recalcModal()" placeholder="0"></erp-input>
       </div>
 
-      <!-- Row 4: Tax Amt (readonly), Line Total (readonly) — aligned under cols-3 above -->
-      <div class="form-row cols-3 block-gap">
-        <div style="grid-column: span 2">
-          <erp-input [label]="'Tax Amount (GST ' + gstPct + '%)'"
-            type="number" [ngModel]="modalLine.taxAmt" [disabled]="true"
-            placeholder="0.0000"></erp-input>
-        </div>
+      <!-- Row 4: Tax Amt (readonly), Line Total (readonly) -->
+      <div class="form-row cols-2 block-gap">
+        <erp-input [label]="'Tax Amount (GST ' + gstPct + '%)'"
+          type="number" [ngModel]="modalLine.taxAmt" [disabled]="true"
+          placeholder="0.0000"></erp-input>
         <erp-input label="Line Total" type="number"
           [ngModel]="modalLine.lineTotal" [disabled]="true"
           placeholder="0.0000"></erp-input>

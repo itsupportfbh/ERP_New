@@ -23,19 +23,19 @@
         </div>
       </div>
       <div class="list-card-actions">
-        <button class="panel-toggle-btn" (click)="showApprovals = true">
+        <button class="panel-toggle-btn" *ngIf="perm.canApprove(fnId) || perm.canReject(fnId)" (click)="showApprovals = true">
           &#10003; Approvals
           <span class="badge-pill warn" *ngIf="approvalCount > 0">{{ approvalCount }}</span>
         </button>
-        <button class="panel-toggle-btn" (click)="showAlerts = true; loadPendingPrCount()">
+        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showAlerts = true; loadPendingPrCount()">
           &#128276; Alerts
           <span class="badge-pill danger" *ngIf="pendingPrCount > 0">{{ pendingPrCount }}</span>
         </button>
-        <button class="panel-toggle-btn" (click)="showDrafts = !showDrafts; loadDrafts()">
+        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()">
           &#128190; Drafts
           <span class="badge-pill info" *ngIf="draftCount > 0">{{ draftCount }}</span>
         </button>
-        <button class="list-add-btn" (click)="create()">
+        <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           New PO
         </button>
@@ -43,7 +43,7 @@
     </div>
 
     <!-- Drafts panel -->
-    <div class="side-panel" *ngIf="showDrafts">
+    <div class="side-panel" *ngIf="showDrafts && perm.canCreate(fnId)">
       <div class="sp-head">
         <strong>&#128190; Draft POs</strong>
         <button class="sp-btn" (click)="loadDrafts()" [disabled]="draftsLoading">Refresh</button>
@@ -78,7 +78,7 @@
 </div>
 
 <!-- PO ALERTS MODAL -->
-<div *ngIf="showAlerts"
+<div *ngIf="showAlerts && perm.canCreate(fnId)"
      (click)="showAlerts = false"
      style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
   <div (click)="$event.stopPropagation()"
@@ -225,11 +225,11 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <ng-container *ngIf="modalStatus !== 'Approved' && modalStatus !== 'Rejected'">
-          <button (click)="approveFromModal(2)"
+          <button *ngIf="perm.canApprove(fnId)" (click)="approveFromModal(2)"
             style="background:#16a34a;border:0;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">
             Approve
           </button>
-          <button (click)="approveFromModal(3)"
+          <button *ngIf="perm.canReject(fnId)" (click)="approveFromModal(3)"
             style="background:#dc2626;border:0;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">
             Reject
           </button>
@@ -284,7 +284,7 @@
 </div>
 
 <!-- APPROVALS MODAL -->
-<div *ngIf="showApprovals" (click)="showApprovals = false"
+<div *ngIf="showApprovals && (perm.canApprove(fnId) || perm.canReject(fnId))" (click)="showApprovals = false"
      style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
   <div (click)="$event.stopPropagation()"
        style="width:640px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);display:flex;flex-direction:column;max-height:80vh;">
@@ -327,11 +327,11 @@
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;">
-          <button (click)="approveReject(po, 2)"
+          <button *ngIf="perm.canApprove(fnId)" (click)="approveReject(po, 2)"
             style="background:#16a34a;border:0;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
             &#10003; Approve
           </button>
-          <button (click)="approveReject(po, 3)"
+          <button *ngIf="perm.canReject(fnId)" (click)="approveReject(po, 3)"
             style="background:#dc2626;border:0;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
             &#215; Reject
           </button>

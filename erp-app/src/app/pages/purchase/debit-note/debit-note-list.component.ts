@@ -2,6 +2,7 @@
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -11,6 +12,7 @@ import Swal from 'sweetalert2';
   styleUrls: ['./debit-note-list.component.scss']
 })
 export class DebitNoteListComponent implements OnInit {
+  readonly fnId = 'dn-list';
   loading = false;
   rows: any[] = [];
   filtered: any[] = [];
@@ -53,14 +55,14 @@ export class DebitNoteListComponent implements OnInit {
   dnActionFilter = (action: string, row: any): boolean => {
     const isPosted = (row.status ?? '').toLowerCase() === 'posted';
     switch (action) {
-      case 'edit':   return !isPosted;
-      case 'post':   return !isPosted;
-      case 'delete': return !isPosted;
+      case 'edit':   return !isPosted && this.perm.canEdit(this.fnId);
+      case 'post':   return !isPosted && this.perm.canPost(this.fnId);
+      case 'delete': return !isPosted && this.perm.canDelete(this.fnId);
       default:       return true;
     }
   };
 
-  constructor(private svc: PurchaseService, private router: Router) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
 
   ngOnInit(): void { this.load(); }
 

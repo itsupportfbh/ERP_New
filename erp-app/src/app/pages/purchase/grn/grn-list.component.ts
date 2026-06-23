@@ -2,6 +2,7 @@
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -11,6 +12,7 @@ import Swal from 'sweetalert2';
   styleUrls: ['./grn-list.component.scss']
 })
 export class GrnListComponent implements OnInit {
+  readonly fnId = 'grn-list';
   loading = false;
   rows: any[] = [];
   filtered: any[] = [];
@@ -47,11 +49,12 @@ export class GrnListComponent implements OnInit {
   ];
 
   rowActionFilter = (action: string, row: any): boolean => {
-    if (action === 'edit') return row.statusLabel !== 'Posted' && row.statusLabel !== 'Closed';
+    if (action === 'edit') return row.statusLabel !== 'Posted' && row.statusLabel !== 'Closed' && this.perm.canEdit(this.fnId);
+    if (action === 'delete') return this.perm.canDelete(this.fnId);
     return true;
   };
 
-  constructor(private svc: PurchaseService, private router: Router) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
 
   ngOnInit(): void { this.load(); }
 

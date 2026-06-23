@@ -1,5 +1,6 @@
 ﻿import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { PurchaseService } from '../purchase.service';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 type ScanRow = {
@@ -19,6 +20,7 @@ type ScanRow = {
 })
 export class MobileReceivingComponent implements OnInit {
   @ViewChild('barcodeInput') barcodeInput?: ElementRef<HTMLInputElement>;
+  readonly fnId = 'mobilereceiving';
 
   mrPo = '';
   mrBarcode = '';
@@ -34,14 +36,19 @@ export class MobileReceivingComponent implements OnInit {
   loginUserId = Number(localStorage.getItem('id')) || 0;
   lineInputQty: { [item: string]: number } = {};
 
-  constructor(private svc: PurchaseService) {}
+  constructor(private svc: PurchaseService, public perm: PermissionService) {}
 
   ngOnInit(): void {
+    if (!this.perm.canView(this.fnId)) {
+      this.error = 'You do not have permission to view Mobile Receiving.';
+      return;
+    }
     const savedPo = sessionStorage.getItem('mrPo');
     if (savedPo) { this.mrPo = savedPo; this.loadOffline(); this.loadPo(); }
   }
 
   loadPo(): void {
+    if (!this.perm.canView(this.fnId)) return;
     const poNo = this.mrPo.trim();
     if (!poNo) { this.error = 'Enter a PO number.'; return; }
     this.error = '';
@@ -57,6 +64,10 @@ export class MobileReceivingComponent implements OnInit {
   }
 
   addScan(): void {
+    if (!this.perm.canCreate(this.fnId)) {
+      this.error = 'You do not have permission to add mobile receiving scans.';
+      return;
+    }
     this.error = '';
     const poNo = this.mrPo.trim();
     const barcode = this.mrBarcode.trim();
@@ -101,6 +112,10 @@ export class MobileReceivingComponent implements OnInit {
   }
 
   syncMobile(): void {
+    if (!this.perm.canCreate(this.fnId)) {
+      this.error = 'You do not have permission to sync mobile receiving.';
+      return;
+    }
     if (!this.mrRows.length) { this.error = 'No scans to sync.'; return; }
     this.isSyncing = true;
     this.error = '';
@@ -130,9 +145,20 @@ export class MobileReceivingComponent implements OnInit {
     });
   }
 
-  removeScan(i: number): void { this.mrRows.splice(i, 1); this.saveOffline(); }
+  removeScan(i: number): void {
+    if (!this.perm.canCreate(this.fnId)) {
+      this.error = 'You do not have permission to modify the queue.';
+      return;
+    }
+    this.mrRows.splice(i, 1);
+    this.saveOffline();
+  }
 
   async clearQueue(): Promise<void> {
+    if (!this.perm.canCreate(this.fnId)) {
+      this.error = 'You do not have permission to clear the queue.';
+      return;
+    }
     if (!this.mrRows.length) return;
     const result = await Swal.fire({
       title: 'Clear Queue?',
@@ -149,9 +175,16 @@ export class MobileReceivingComponent implements OnInit {
     this.focusBarcode();
   }
 
-  toggleOffline(): void { this.mrOffline = !this.mrOffline; }
+  toggleOffline(): void {
+    if (!this.perm.canCreate(this.fnId)) return;
+    this.mrOffline = !this.mrOffline;
+  }
 
   addLineDirectly(line: any): void {
+    if (!this.perm.canCreate(this.fnId)) {
+      this.error = 'You do not have permission to add mobile receiving scans.';
+      return;
+    }
     const key = line.item ?? line.itemCode;
     const qty = Number(this.lineInputQty[key] || 1);
     if (qty <= 0) { this.error = 'Enter a valid qty.'; return; }

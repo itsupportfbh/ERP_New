@@ -19,6 +19,14 @@ interface PermFlags {
 }
 
 const LS_KEY = 'userPermissions';
+const FUNCTION_ID_ALIAS: Record<string, string> = {
+  general: 'home',
+  dashboard: 'home',
+  'stock-overview': 'mr-list',
+  'stock transfer': 'mr-list',
+  'stock-transfer': 'mr-list',
+  'stock_transfer': 'mr-list'
+};
 
 @Injectable({ providedIn: 'root' })
 export class PermissionService {
@@ -31,6 +39,7 @@ export class PermissionService {
       const cached = localStorage.getItem(LS_KEY);
       if (cached) {
         this.parsePermissions(JSON.parse(cached));
+        this.loaded = true;
       }
     } catch {}
     window.addEventListener('menu-permission-updated', () => this.load());
@@ -38,15 +47,12 @@ export class PermissionService {
 
   load(): void {
     const userId = localStorage.getItem('id');
-    const isMasterOwner = localStorage.getItem('isMasterOwner') === 'true';
     if (!userId) { this.loaded = true; return; }
-    if (isMasterOwner) { this.loaded = true; return; }
 
     this.http.get<any>(`${environment.apiUrl}/User/organization-role/${userId}`)
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
         this.parsePermissions(res);
-        // Cache to localStorage so page-refreshes don't lose permissions
         try {
           const arr = this.extractArray(res);
           if (arr.length) localStorage.setItem(LS_KEY, JSON.stringify(arr));
@@ -73,77 +79,96 @@ export class PermissionService {
 
   private flags(functionId: string): PermFlags | null {
     if (!functionId) return null;
-    return this.permMap.get(functionId.toLowerCase()) ?? null;
+    return this.permMap.get(this.normalizeFunctionId(functionId)) ?? null;
   }
 
   canView(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
-    return this.flags(functionId)?.View ?? false;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
+    return this.flags(functionId)?.View ?? this.isMaster();
   }
 
   canCreate(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Create ?? false;
   }
 
   canEdit(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Edit ?? false;
   }
 
   canDelete(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Delete ?? false;
   }
 
   canApprove(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Approve ?? false;
   }
 
   canReject(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Reject ?? false;
   }
 
   canExport(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Export ?? false;
   }
 
   canPrint(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Print ?? false;
   }
 
   canPost(functionId: string): boolean {
-    if (this.isMaster()) return true;
-    if (!this.loaded || !functionId) return true;
-    if (!this.hasData()) return true;
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Post ?? false;
+  }
+
+  canSubmit(functionId: string): boolean {
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
+    return this.flags(functionId)?.Submit ?? false;
+  }
+
+  canCancel(functionId: string): boolean {
+    if (!functionId) return true;
+    if (!this.loaded) return this.isMaster();
+    if (!this.hasData()) return this.isMaster();
+    return this.flags(functionId)?.Cancel ?? false;
+  }
+
+  private normalizeFunctionId(functionId: string): string {
+    const key = String(functionId || '').trim().toLowerCase();
+    return FUNCTION_ID_ALIAS[key] || key;
   }
 
   private parsePermissions(res: any): void {
     this.permMap.clear();
     const arr = this.extractArray(res);
     for (const item of arr) {
-      const fnId = String(item?.FunctionId ?? item?.functionId ?? '').toLowerCase();
+      const fnId = this.normalizeFunctionId(item?.FunctionId ?? item?.functionId ?? '');
       if (!fnId) continue;
       const p = item?.Permissions ?? item?.permissions ?? item?.flags ?? {};
       this.permMap.set(fnId, {
@@ -169,6 +194,14 @@ export class PermissionService {
       item && typeof item === 'object' &&
       (item.functionId || item.FunctionId || item.functionTitle || item.FunctionTitle);
 
+    const tryParseJson = (s: any): any[] => {
+      if (typeof s !== 'string' || !s.trim()) return [];
+      try {
+        const p = JSON.parse(s);
+        return Array.isArray(p) ? p : [];
+      } catch { return []; }
+    };
+
     if (Array.isArray(res) && res.length && isPermRow(res[0])) return res;
 
     const data = res?.data ?? res;
@@ -182,6 +215,13 @@ export class PermissionService {
     }
 
     if (data && typeof data === 'object') {
+      // Handle { RolesJSON: "[...]" } response from /User/organization-role endpoint
+      const rolesJson = data.rolesJSON ?? data.RolesJSON ?? null;
+      if (rolesJson) {
+        const parsed = tryParseJson(rolesJson);
+        if (parsed.length && isPermRow(parsed[0])) return parsed;
+      }
+
       for (const key of ['permissions', 'Permissions', 'items', 'Items', 'roles', 'Roles', 'functionPermissions', 'FunctionPermissions']) {
         if (Array.isArray(data[key]) && data[key].length && isPermRow(data[key][0])) return data[key];
       }

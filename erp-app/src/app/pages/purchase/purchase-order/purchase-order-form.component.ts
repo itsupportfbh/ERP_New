@@ -691,6 +691,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     const poLinesData = this.lines.map(l => ({
       __fromPR: !!(l.prNumber),
       prNo: l.prNumber,
+      prId: l.prId ?? null,
       itemId: l.itemId,
       itemCode: l.itemCode,
       itemSearch: l.itemName,

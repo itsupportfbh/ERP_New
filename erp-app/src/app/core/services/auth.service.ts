@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { PermissionService } from './permission.service';
 
 export interface LoginPayload {
   email: string;
@@ -47,13 +48,14 @@ export class AuthService {
   private readonly TOKEN_KEY = 'token';
   private readonly REMEMBER_KEY = 'erp_remember_user';
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private perm: PermissionService) {}
 
   login(payload: LoginPayload): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/user/login`, payload).pipe(
       tap(res => {
         if (res.success && res.data) {
           this.storeUserData(res.data);
+          this.perm.load();
         }
       }),
       catchError(err => {
@@ -94,7 +96,8 @@ export class AuthService {
       'companyId', 'companyName', 'locationId', 'departmentId',
       'orgGuid', 'databaseName', 'isMasterOwner', 'isTenantUser',
       'organizations', 'companies', 'organizationId',
-      'companyCurrencyId', 'companyCurrencyName'
+      'companyCurrencyId', 'companyCurrencyName',
+      'userPermissions'
     ];
     keys.forEach(k => localStorage.removeItem(k));
     this.router.navigate(['/login']);

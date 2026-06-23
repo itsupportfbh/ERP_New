@@ -2,6 +2,7 @@
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'Draft' };
@@ -13,6 +14,7 @@ const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Appro
   styleUrls: ['./purchase-request-list.component.scss']
 })
 export class PurchaseRequestListComponent implements OnInit {
+  readonly fnId = 'pr-list';
   loading = false;
   rows: any[] = [];
   filtered: any[] = [];
@@ -83,8 +85,8 @@ export class PurchaseRequestListComponent implements OnInit {
   prActionFilter = (action: string, row: any): boolean => {
     const s = this.prStatusNum(row);
     switch (action) {
-      case 'edit':   return s !== 2 && s !== 3;
-      case 'delete': return s !== 2 && s !== 3;
+      case 'edit':   return s !== 2 && s !== 3 && this.perm.canEdit(this.fnId);
+      case 'delete': return s !== 2 && s !== 3 && this.perm.canDelete(this.fnId);
       default:       return true;
     }
   };
@@ -99,7 +101,7 @@ export class PurchaseRequestListComponent implements OnInit {
     return 1;
   }
 
-  constructor(private svc: PurchaseService, private router: Router) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();
