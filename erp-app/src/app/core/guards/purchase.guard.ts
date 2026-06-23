@@ -17,11 +17,12 @@ export class PurchaseGuard implements CanActivate {
     }
 
     const deptId = Number(localStorage.getItem('departmentId') || 0);
+    const companyId = Number(localStorage.getItem('companyId') || 0);
     if (!deptId) {
       return of(this.router.createUrlTree(['/app/dashboard']));
     }
 
-    return this.deptMenuSvc.getByDepartmentId(deptId).pipe(
+    return this.deptMenuSvc.getByDepartmentId(deptId, companyId).pipe(
       map((res: any) => {
         const menuIds: string[] = res?.menuIds ?? res?.data?.menuIds ?? [];
         return menuIds.includes('purchase') ? true : this.router.createUrlTree(['/app/dashboard']);

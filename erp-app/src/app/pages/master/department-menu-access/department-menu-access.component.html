@@ -11,7 +11,7 @@
               <path d="M10 6v4M6 14v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
           </div>
-          <span>Department Menu Access</span>
+          <span>Department Access</span>
         </div>
         <button class="mbtn-create" type="button" (click)="showCreate()" *ngIf="canCreate()">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
@@ -77,7 +77,7 @@
 
   <div class="dt-modal-overlay dma-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
     <div class="dt-modal dt-modal-wide dma-modal" (click)="$event.stopPropagation()">
-      <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Create' }} Department Menu Access</h3>
+      <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Create' }} Department Access</h3>
 
       <div class="mf-group dma-department-field">
         <label class="mf-label" for="departmentId">Department</label>
