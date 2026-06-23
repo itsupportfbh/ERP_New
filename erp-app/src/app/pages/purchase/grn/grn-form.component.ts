@@ -1,6 +1,7 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
 import Swal from 'sweetalert2';
 
 type QualityCheck = 'Pass' | 'Fail' | 'NotVerify' | '';
@@ -9,6 +10,7 @@ interface GRNLine {
   itemId: number | null;
   itemCode: string;
   itemName: string;
+  supplierId: number | null;
   supplierName: string;
   warehouseId: number | null;
   binId: number | null;
@@ -74,6 +76,56 @@ export class GrnFormComponent implements OnInit {
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+
+  // ── Summary view table ──
+  summaryColumns: TableColumn[] = [
+    { key: 'item',        header: 'Item',          type: 'text' },
+    { key: 'supplierName',header: 'Supplier',      type: 'text' },
+    { key: 'batchNo',     header: 'Batch / Serial',type: 'text' },
+    { key: 'qtyReceived', header: 'Qty',           type: 'number', align: 'right' },
+    { key: 'unitPrice',   header: 'Unit Price',    type: 'text',   align: 'right' },
+    { key: 'lineTotal',   header: 'Line Total',    type: 'text',   align: 'right' },
+    { key: 'qualityCheck',header: 'Quality',       type: 'text' },
+    { key: 'storageType', header: 'Storage',       type: 'text' },
+    { key: 'expiryDate',  header: 'Expiry',        type: 'date' },
+    { key: 'status',      header: 'Status',        type: 'badge',
+      badgeMap: { 'Posted': 'success', 'Pending': 'warning' } }
+  ];
+
+  summaryActions: RowAction[] = [
+    { key: 'flag', label: 'Flag Issue',       icon: 'flag', btnClass: 'warning' },
+    { key: 'post', label: 'Post to Inventory',icon: 'post' }
+  ];
+
+  summaryActionFilter = (action: string, row: any): boolean => {
+    if (action === 'post') return !row.isPosted;
+    return true;
+  };
+
+  get summaryRows(): any[] {
+    return this.lines.map((l, i) => ({
+      _idx: i,
+      item: l.itemCode ? `${l.itemCode} – ${l.itemName}` : (l.itemName || '—'),
+      supplierName: l.supplierName || '—',
+      batchNo: l.batchNo || l.serialNo || '—',
+      qtyReceived: l.qtyReceived,
+      unitPrice: l.unitPrice != null ? Number(l.unitPrice).toFixed(2) : '—',
+      lineTotal: this.lineTotal(l).toFixed(2),
+      qualityCheck: l.qualityCheck || '—',
+      storageType: l.storageType || '—',
+      expiryDate: l.expiryDate || null,
+      status: l.isPosted ? 'Posted' : 'Pending',
+      isPosted: l.isPosted,
+    }));
+  }
+
+  onSummaryAction(e: { action: string; row: any }): void {
+    const line = this.lines[e.row._idx];
+    if (!line) return;
+    if (e.action === 'view') this.viewLineDetail(line);
+    if (e.action === 'flag') this.flagLine(line);
+    if (e.action === 'post') this.postToInventory(line, e.row._idx);
+  }
 
   // ── Auto-warehouse from user's outlet (locationId in localStorage) ──
   locationId         = Number(localStorage.getItem('locationId') || 0);
@@ -164,6 +216,7 @@ export class GrnFormComponent implements OnInit {
           itemId: l.itemId ?? null,
           itemCode: l.itemCode ?? '',
           itemName: l.itemName ?? '',
+          supplierId: l.supplierId ?? this.supplierId,
           supplierName: l.supplierName ?? '',
           warehouseId: l.warehouseId ?? null,
           binId: l.binId ?? null,
@@ -231,6 +284,7 @@ export class GrnFormComponent implements OnInit {
       itemId: l.itemId ?? null,
       itemCode: l.itemCode ?? '',
       itemName: l.itemSearch ?? l.itemName ?? '',
+      supplierId: this.supplierId,
       supplierName: po.supplierName ?? '',
       warehouseId: this.defaultWarehouseId,   // ← auto from locationId
       binId: null,
@@ -292,7 +346,7 @@ export class GrnFormComponent implements OnInit {
 
   private emptyLine(): GRNLine {
     return {
-      itemId: null, itemCode: '', itemName: '', supplierName: '',
+      itemId: null, itemCode: '', itemName: '', supplierId: null, supplierName: '',
       warehouseId: this.defaultWarehouseId,   // ← auto from locationId
       binId: null,
       qtyOrdered: null, qtyReceived: null, qtyRemaining: null, unitPrice: null,
@@ -370,7 +424,7 @@ export class GrnFormComponent implements OnInit {
       updatedBy: this.loginUserId,
       lines: [{
         itemCode: line.itemCode,
-        supplierId: this.supplierId ?? null,
+        supplierId: line.supplierId ?? this.supplierId ?? null,
         warehouseId: line.warehouseId,
         binId: line.binId ?? null,
         qtyDelta,
@@ -390,7 +444,7 @@ export class GrnFormComponent implements OnInit {
           warehouseId: line.warehouseId,
           binId: line.binId ?? null,
           qtyDelta,
-          supplierId: this.supplierId ?? null,
+          supplierId: line.supplierId ?? this.supplierId ?? null,
           price: line.unitPrice ?? null,
           batchFlag: !!line.batchNo,
           serialFlag: !!line.serialNo,
@@ -444,6 +498,7 @@ export class GrnFormComponent implements OnInit {
   private buildGrnLinesData(): any[] {
     return this.lines.map(l => ({
       itemId: l.itemId, itemCode: l.itemCode, itemName: l.itemName,
+      supplierId: l.supplierId ?? this.supplierId,
       supplierName: l.supplierName, warehouseId: l.warehouseId,
       binId: l.binId, qtyReceived: l.qtyReceived ?? 0, qtyOrdered: l.qtyOrdered,
       qtyRemaining: l.qtyRemaining, unitPrice: l.unitPrice,
@@ -501,6 +556,7 @@ export class GrnFormComponent implements OnInit {
       itemId: l.itemId,
       itemCode: l.itemCode,
       itemName: l.itemName,
+      supplierId: l.supplierId ?? this.supplierId,
       supplierName: l.supplierName,
       warehouseId: l.warehouseId,
       binId: l.binId,

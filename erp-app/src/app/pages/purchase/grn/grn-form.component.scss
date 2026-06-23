@@ -90,7 +90,7 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
 }
 .section-card { padding: 18px 20px; flex-shrink: 0; }
-.lines-card   { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 18px 0 0; }
+.lines-card   { flex-shrink: 0; padding: 18px 0 0; }
 
 .section-label {
   font-size: 11px; font-weight: 700; color: #0e7490;
@@ -150,7 +150,7 @@
 }
 
 /* ─── Lines table ─────────────────────────────────────────── */
-.lines-table-wrap { overflow-x: auto; overflow-y: auto; flex: 1; min-height: 0; padding: 0 0 4px; }
+.lines-table-wrap { overflow-x: auto; padding: 0 0 4px; }
 
 .lines-table {
   width: 100%; border-collapse: collapse; font-size: 11.5px;

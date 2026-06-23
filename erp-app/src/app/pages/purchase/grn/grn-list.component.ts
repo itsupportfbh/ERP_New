@@ -147,7 +147,7 @@ export class GrnListComponent implements OnInit {
 
   onAction(e: { action: string; row: any }): void {
     if (e.action === 'view')   this.openLinesModal(e.row);
-    if (e.action === 'edit')   this.router.navigate(['/app/purchase/grn', e.row.id], { queryParams: { edit: '1' } });
+    if (e.action === 'edit')   this.router.navigate(['/app/purchase/grn', e.row.id]);
     if (e.action === 'delete') this.delete(e.row);
   }
 
