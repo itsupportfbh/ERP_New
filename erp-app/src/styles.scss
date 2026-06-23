@@ -604,9 +604,11 @@ html, body { height: 100%; font-family: 'Inter', 'Segoe UI', sans-serif; font-si
     }
     td {
       padding: 10px 14px;
-      font-size: 12.5px;
+      font-size: 11px;
+      font-weight: 400;
       color: var(--text);
       white-space: nowrap;
+      strong, b { font-weight: 400; }
     }
   }
 }
