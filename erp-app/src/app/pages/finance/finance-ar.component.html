@@ -11,6 +11,9 @@
   <!-- Alerts -->
   <div class="ar-alert ar-success" *ngIf="message">{{ message }}</div>
   <div class="ar-alert ar-danger"  *ngIf="error">{{ error }}</div>
+  <div class="ar-alert ar-period-locked" *ngIf="isPeriodLocked">
+    &#128274; Period <strong>{{ periodName }}</strong> is locked. New entries cannot be posted.
+  </div>
 
   <!-- Tabs -->
   <div class="ar-tabs">
@@ -46,6 +49,7 @@
     <div class="ar-search-row">
       <label>Search:</label>
       <input class="ar-search" type="text" [(ngModel)]="search" (ngModelChange)="applyInvoiceFilter()">
+      <button class="ar-btn ar-btn-primary" type="button" (click)="setTab('create-invoice')" *ngIf="permission?.create">+ Create Invoice</button>
     </div>
 
     <div class="ar-card invoice-card">
@@ -55,12 +59,13 @@
           <thead>
             <tr>
               <th style="width:32px"></th>
-              <th>Customer</th>
-              <th class="right">Invoices</th>
+              <th>Customer / Invoice No</th>
+              <th class="right">Due Date</th>
               <th class="right">Total Amount</th>
               <th class="right">Paid</th>
               <th class="right">Credit Note</th>
-              <th class="right teal-hdr">Net Outstanding</th>
+              <th class="right teal-hdr">Balance</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -70,28 +75,28 @@
                   <button class="expand-btn" type="button">{{ isExpanded(grp.customer) ? '−' : '+' }}</button>
                 </td>
                 <td class="customer-name">{{ grp.customer }}</td>
-                <td class="right muted">{{ grp.invoices.length }}</td>
+                <td class="right muted small">{{ grp.invoices.length }} invoice(s)</td>
                 <td class="right">{{ grp.total | number:'1.2-2' }}</td>
                 <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
                 <td class="right info-text">{{ grp.creditNote | number:'1.2-2' }}</td>
                 <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
+                <td></td>
               </tr>
               <ng-container *ngIf="isExpanded(grp.customer)">
                 <tr class="invoice-row" *ngFor="let inv of grp.invoices">
                   <td></td>
-                  <td class="invoice-no">{{ inv.invoiceNo || '—' }}</td>
-                  <td class="right muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                  <td class="invoice-no">{{ inv.invoiceNo || '—' }}<br><span class="muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</span></td>
+                  <td class="right muted small">{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
                   <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }}</td>
                   <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
                   <td class="right info-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
-                  <td class="right">
-                    <span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span>
-                  </td>
+                  <td class="right teal-bold">{{ (inv.balance || 0) | number:'1.2-2' }}</td>
+                  <td><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span></td>
                 </tr>
               </ng-container>
             </ng-container>
             <tr *ngIf="customerGroups.length === 0 && !loading">
-              <td colspan="7" class="ar-empty">No AR invoices found.</td>
+              <td colspan="8" class="ar-empty">No AR invoices found.</td>
             </tr>
           </tbody>
         </table>
@@ -120,7 +125,7 @@
         </label>
         <label class="form-field">
           <span>Receipt Date <span class="req">*</span></span>
-          <input type="date" [(ngModel)]="receiptForm.receiptDate">
+          <input type="date" [(ngModel)]="receiptForm.receiptDate" (change)="onReceiptDateChange()">
         </label>
         <label class="form-field">
           <span>Payment Mode</span>
@@ -255,24 +260,34 @@
           <thead>
             <tr>
               <th>Receipt No</th>
+              <th>Invoice(s)</th>
               <th>Customer</th>
               <th>Date</th>
-              <th>Payment Mode</th>
+              <th>Mode</th>
               <th class="right">Amount</th>
+              <th class="right teal-hdr">Base (SGD)</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let r of filteredReceipts">
               <td class="mono">{{ r.receiptNo || '—' }}</td>
+              <td class="muted small">{{ r.invoiceNos || '—' }}</td>
               <td>{{ r.customerName || '—' }}</td>
               <td>{{ r.receiptDate | date:'dd-MMM-yyyy' }}</td>
               <td>{{ r.paymentMode || '—' }}</td>
-              <td class="right teal-bold">{{ (r.amount || 0) | number:'1.2-2' }}</td>
-              <td><span class="status-badge" [ngClass]="statusClass(r.status)">{{ r.status || 'Open' }}</span></td>
+              <td class="right">
+                {{ (r.amountReceived || 0) | number:'1.2-2' }}
+                <span *ngIf="r.currencyName && r.currencyName !== 'SGD'" class="ccy-tag">{{ r.currencyName }}</span>
+              </td>
+              <td class="right teal-bold">
+                <ng-container *ngIf="r.currencyName && r.currencyName !== 'SGD'">{{ (r.amountBase || 0) | number:'1.2-2' }} SGD</ng-container>
+                <ng-container *ngIf="!r.currencyName || r.currencyName === 'SGD'">{{ (r.amountReceived || 0) | number:'1.2-2' }} SGD</ng-container>
+              </td>
+              <td><span class="status-badge" [ngClass]="statusClass(r.status)">{{ r.status || 'Posted' }}</span></td>
             </tr>
             <tr *ngIf="filteredReceipts.length === 0 && !loading">
-              <td colspan="6" class="ar-empty">No receipts found.</td>
+              <td colspan="8" class="ar-empty">No receipts found.</td>
             </tr>
           </tbody>
         </table>
@@ -343,7 +358,7 @@
         <!-- Advance Date -->
         <label class="adv-form-field">
           <span>Advance Date <span class="req">*</span></span>
-          <input type="date" [(ngModel)]="advanceForm.advanceDate">
+          <input type="date" [(ngModel)]="advanceForm.advanceDate" (change)="onAdvanceDateChange()">
         </label>
 
         <!-- Amount -->
@@ -509,7 +524,7 @@
         </label>
         <label class="form-field">
           <span>Invoice Date <span class="req">*</span></span>
-          <input type="date" [(ngModel)]="invoiceForm.invoiceDate">
+          <input type="date" [(ngModel)]="invoiceForm.invoiceDate" (change)="onInvoiceDateChange()">
         </label>
         <label class="form-field form-field-wide">
           <span>Remarks</span>

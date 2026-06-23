@@ -1,4 +1,7 @@
-﻿import { Component, OnInit } from '@angular/core';
+﻿
+
+
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
@@ -7,6 +10,7 @@ import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
 
 type ApTab = 'invoices' | 'payments' | 'aging' | 'advances' | 'match';
+type ApView = 'list' | 'payment-form' | 'advance-form';
 
 @Component({
   selector: 'erp-finance-ap',
@@ -17,6 +21,15 @@ type ApTab = 'invoices' | 'payments' | 'aging' | 'advances' | 'match';
 })
 export class FinanceApComponent implements OnInit {
   activeTab: ApTab = 'invoices';
+  view: ApView = 'list';
+
+  // Combobox open/search state
+  pmtSupplierOpen = false;  pmtSupplierSearch = '';
+  pmtInvoiceOpen  = false;  pmtInvoiceSearch  = '';
+  pmtBankOpen     = false;  pmtBankSearch     = '';
+  pmtCurrOpen     = false;  pmtCurrSearch     = '';
+  advSupplierOpen = false;  advSupplierSearch = '';
+  advBankOpen     = false;  advBankSearch     = '';
 
   // Supplier Invoices
   invoices: any[] = [];
@@ -35,13 +48,20 @@ export class FinanceApComponent implements OnInit {
     supplierId: null, supplierInvoiceId: null, paymentDate: '',
     paymentMethodId: 2, bankId: null, amount: null, referenceNo: '', notes: ''
   };
+  pmtSupplierName = '';
   paymentSupplierInvoices: any[] = [];  // all posted supplier invoices
   paymentFilteredInvoices: any[] = [];  // filtered by selected supplier
+  supplierInvoicesAll: any[] = [];      // open invoices for selected supplier (payment form)
+  payInvSelectAll = false;
+  amountEditedManually = false;
+  supTotalInvoice = 0; supTotalPaid = 0; supTotalDebitNote = 0; supTotalAdvance = 0; supTotalPayable = 0;
+  invoiceCurrencyName = '';
   bankAccounts: any[] = [];
   paymentCurrencies: any[] = [];
   paymentFxRate = 1;
   paymentCurrencyId: number | null = null;
   paymentCurrencyName = '';
+  paymentBankName = '';
   paymentBaseCurrencyId: number | null = null;
   paymentAmountBase = 0;
   paymentExchangeGainLoss = 0;
@@ -74,6 +94,9 @@ export class FinanceApComponent implements OnInit {
   // 3-Way Match
   matchRows: any[] = [];
 
+  isPeriodLocked = false;
+  periodName     = '';
+
   search = '';
   loading = false;
   error = '';
@@ -91,6 +114,7 @@ export class FinanceApComponent implements OnInit {
     this.loadSuppliers();
     this.loadBankAccounts();
     this.loadPaymentCurrencies();
+    this.checkPeriodLock(new Date().toISOString().slice(0, 10));
     const path = this.route.snapshot.routeConfig?.path || '';
     if (path.includes('ap-aging')) this.setTab('aging');
     else if (path.includes('ap-advance')) this.setTab('advances');
@@ -100,11 +124,52 @@ export class FinanceApComponent implements OnInit {
     });
   }
 
+  // ── Period Close ───────────────────────────────────────────────────────────
+
+  checkPeriodLock(date: string): void {
+    if (!date) return;
+    this.finance.list({ list: '/PeriodClose/status' }, { date }).subscribe({
+      next: (res: any) => {
+        const wasLocked = this.isPeriodLocked;
+        this.isPeriodLocked = !!res?.isLocked;
+        this.periodName     = res?.periodName || '';
+        if (this.isPeriodLocked && !wasLocked) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Period Locked',
+            text: `Period "${this.periodName || date}" is locked. New entries cannot be posted.`,
+            confirmButtonColor: '#2e5f73',
+            timer: 4000,
+            timerProgressBar: true
+          });
+        }
+      },
+      error: () => { this.isPeriodLocked = false; this.periodName = ''; }
+    });
+  }
+
+  onPaymentDateChange(): void {
+    this.checkPeriodLock(this.paymentForm.paymentDate);
+    if (this.paymentCurrencyId && this.paymentBaseCurrencyId && this.paymentCurrencyId !== this.paymentBaseCurrencyId) {
+      this.fetchPaymentFxRate();
+    }
+  }
+
+  onApAdvanceDateChange(): void {
+    this.checkPeriodLock(this.advanceForm.advanceDate);
+  }
+
   // ── Bank Accounts + Currencies ──────────────────────────────────────────────
 
   private loadBankAccounts(): void {
-    this.finance.list({ list: '/BankAccounts' }).subscribe({
-      next: res => { this.bankAccounts = this.finance.unwrap(res); },
+    this.finance.list({ list: '/finance/ap/bankaccount' }).subscribe({
+      next: res => {
+        this.bankAccounts = this.finance.unwrap(res).map((b: any) => ({
+          ...b,
+          id: b.id ?? b.Id,
+          displayName: b.headName ?? b.HeadName ?? b.bankName ?? b.name ?? b.accountName ?? '—'
+        }));
+      },
       error: () => { this.bankAccounts = []; }
     });
   }
@@ -128,6 +193,7 @@ export class FinanceApComponent implements OnInit {
 
   openPaymentForm(): void {
     this.showPaymentForm = true;
+    this.view = 'payment-form';
     this.message = '';
     this.error = '';
     this.paymentForm = {
@@ -136,20 +202,30 @@ export class FinanceApComponent implements OnInit {
       paymentMethodId: 2, bankId: null, amount: null, referenceNo: '', notes: ''
     };
     this.paymentFilteredInvoices = [];
+    this.supplierInvoicesAll = [];
+    this.payInvSelectAll = false;
+    this.amountEditedManually = false;
+    this.supTotalInvoice = this.supTotalPaid = this.supTotalDebitNote = this.supTotalAdvance = this.supTotalPayable = 0;
+    this.invoiceCurrencyName = '';
+    this.pmtSupplierName = '';
+    this.paymentBankName = '';
     this.paymentFxRate = 1;
     this.paymentAmountBase = 0;
     this.paymentExchangeGainLoss = 0;
-    const base = this.paymentCurrencies.find(c => c.isBase) ?? this.paymentCurrencies[0];
+    this.pmtSupplierSearch = ''; this.pmtBankSearch = ''; this.pmtCurrSearch = '';
+    const base = this.paymentCurrencies.find((c: any) => c.isBase) ?? this.paymentCurrencies[0];
     if (base) {
       this.paymentCurrencyId = base.id ?? base.currencyId;
       this.paymentCurrencyName = base.currencyCode ?? base.currencyName ?? '';
+      this.pmtCurrSearch = this.paymentCurrencyName;
     }
-    if (!this.paymentInvoicesLoaded) this.loadAllSupplierInvoices();
   }
 
   closePaymentForm(): void {
     this.showPaymentForm = false;
+    this.view = 'list';
     this.paymentFilteredInvoices = [];
+    this.closeAllComboboxes();
   }
 
   private loadAllSupplierInvoices(): void {
@@ -195,10 +271,76 @@ export class FinanceApComponent implements OnInit {
     this.paymentForm.amount = null;
     this.paymentAmountBase = 0;
     this.paymentExchangeGainLoss = 0;
+    this.supplierInvoicesAll = [];
+    this.payInvSelectAll = false;
+    this.amountEditedManually = false;
+    this.supTotalInvoice = this.supTotalPaid = this.supTotalDebitNote = this.supTotalAdvance = this.supTotalPayable = 0;
+    this.invoiceCurrencyName = '';
     if (!this.paymentForm.supplierId) { this.paymentFilteredInvoices = []; return; }
     this.paymentFilteredInvoices = this.paymentSupplierInvoices.filter(
       inv => inv.supplierId === Number(this.paymentForm.supplierId)
     );
+    // Load open invoices for this supplier for the invoice table
+    this.finance.list({ list: `/finance/ap/invoices/supplier/${this.paymentForm.supplierId}` }).subscribe({
+      next: res => {
+        const rows = this.finance.unwrap(res);
+        this.supplierInvoicesAll = rows
+          .map((x: any) => ({
+            ...x,
+            id: x.id ?? x.Id,
+            invoiceNo:   x.invoiceNo   ?? x.InvoiceNo   ?? '',
+            invoiceDate: x.invoiceDate ?? x.InvoiceDate ?? '',
+            dueDate:     x.dueDate     ?? x.DueDate     ?? '',
+            grandTotal:  this.money(x, ['amount','Amount','grandTotal','GrandTotal','totalAmount','TotalAmount']),
+            paidAmount:  this.money(x, ['paid','Paid','paidAmount','PaidAmount']),
+            debitNoteAmount: this.money(x, ['debitNote','DebitNote','debitNoteAmount','DebitNoteAmount']),
+            advanceAmount:   this.money(x, ['advance','Advance','advanceAppliedAmount','AdvanceAppliedAmount']),
+            payableAfterAdvance: this.money(x, ['outstanding','Outstanding','balance','Balance','netPayableAmount','NetPayableAmount']),
+            currencyName: x.currencyName ?? x.CurrencyName ?? 'SGD',
+            fxRate: Number(x.fxRate ?? x.FxRate ?? 1) || 1,
+            isSelected: false
+          }))
+          .filter((x: any) => x.payableAfterAdvance > 0);
+        this.supplierInvoicesAll.forEach((x: any) => {
+          this.supTotalInvoice  += x.grandTotal;
+          this.supTotalPaid     += x.paidAmount;
+          this.supTotalDebitNote += x.debitNoteAmount;
+          this.supTotalAdvance  += x.advanceAmount;
+          this.supTotalPayable  += x.payableAfterAdvance;
+        });
+        if (this.supplierInvoicesAll[0]) {
+          this.invoiceCurrencyName = this.supplierInvoicesAll[0].currencyName || '';
+        }
+      }
+    });
+  }
+
+  onInvoiceCheckboxChange(inv: any, checked: boolean): void {
+    inv.isSelected = checked;
+    if (checked) {
+      this.paymentForm.supplierInvoiceId = inv.id;
+      if (!this.amountEditedManually) {
+        this.paymentForm.amount = inv.payableAfterAdvance;
+        this.recalcPaymentBase();
+        this.recalcPaymentExchangeGainLoss();
+      }
+      // deselect others (single selection)
+      this.supplierInvoicesAll.forEach(x => { if (x !== inv) x.isSelected = false; });
+    } else {
+      this.paymentForm.supplierInvoiceId = null;
+      if (!this.amountEditedManually) { this.paymentForm.amount = null; this.paymentAmountBase = 0; }
+    }
+  }
+
+  onSelectAllInvoicesChange(checked: boolean): void {
+    this.payInvSelectAll = checked;
+    this.supplierInvoicesAll.forEach(x => (x.isSelected = checked));
+    if (checked && this.supplierInvoicesAll.length) {
+      this.paymentForm.supplierInvoiceId = this.supplierInvoicesAll[0].id;
+      this.paymentForm.amount = this.supTotalPayable;
+      this.amountEditedManually = false;
+      this.recalcPaymentBase();
+    }
   }
 
   onPaymentInvoiceSelect(): void {
@@ -266,10 +408,11 @@ export class FinanceApComponent implements OnInit {
   }
 
   savePayment(): void {
-    if (!this.paymentForm.supplierId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a supplier.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.paymentForm.supplierInvoiceId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a supplier invoice.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.paymentForm.paymentDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Payment date is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (!(Number(this.paymentForm.amount) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
+    if (!this.paymentForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
+    if (!this.paymentForm.supplierInvoiceId) { Swal.fire('Required', 'Please select a supplier invoice.', 'warning'); return; }
+    if (!this.paymentForm.paymentDate) { Swal.fire('Required', 'Payment date is required.', 'warning'); return; }
+    if (!(Number(this.paymentForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
 
     this.savingPayment = true;
     this.error = '';
@@ -289,18 +432,19 @@ export class FinanceApComponent implements OnInit {
       notes: this.paymentForm.notes || ''
     };
 
-    this.finance.create({ create: '/SupplierPayment/Create' }, payload).subscribe({
+    this.finance.create({ create: '/finance/ap/payments/create' }, payload).subscribe({
       next: () => {
         this.savingPayment = false;
         this.showPaymentForm = false;
+        this.view = 'list';
         this.paymentFilteredInvoices = [];
-        this.message = 'Payment saved successfully.';
         this.paymentInvoicesLoaded = false;
         this.loadPayments();
+        Swal.fire({ icon: 'success', title: 'Payment Posted', text: 'Supplier payment saved successfully.', confirmButtonColor: '#2e5f73', timer: 2500, timerProgressBar: true });
       },
       error: err => {
         this.savingPayment = false;
-        this.error = err?.error?.message || 'Unable to save payment.';
+        Swal.fire({ icon: 'error', title: 'Save Failed', text: err?.error?.message || 'Unable to save payment. Please try again.', confirmButtonColor: '#2e5f73' });
       }
     });
   }
@@ -350,14 +494,14 @@ export class FinanceApComponent implements OnInit {
         this.invoices = [];
         this.filteredInvoices = [];
         this.loading = false;
-        this.error = 'Accounts Payable data unavailable.';
+        Swal.fire({ icon: 'error', title: 'Load Failed', text: 'Accounts Payable data unavailable.', confirmButtonColor: '#2e5f73' });
       }
     });
   }
 
   private loadPayments(): void {
     this.loading = true;
-    this.finance.list({ list: '/SupplierPayment/GetAll' }).subscribe({
+    this.finance.list({ list: '/finance/ap/payments' }).subscribe({
       next: res => {
         this.payments = this.finance.unwrap(res).map(row => this.normalizePayment(row));
         this.filteredPayments = [...this.payments];
@@ -367,7 +511,7 @@ export class FinanceApComponent implements OnInit {
         this.payments = [];
         this.filteredPayments = [];
         this.loading = false;
-        this.error = 'Payments data unavailable.';
+        Swal.fire({ icon: 'error', title: 'Load Failed', text: 'Payments data unavailable.', confirmButtonColor: '#2e5f73' });
       }
     });
   }
@@ -383,7 +527,7 @@ export class FinanceApComponent implements OnInit {
         this.calculateAgingSummary();
         this.loading = false;
       },
-      error: () => { this.agingRows = []; this.loading = false; this.error = 'AP Aging data unavailable.'; }
+      error: () => { this.agingRows = []; this.loading = false; Swal.fire({ icon: 'error', title: 'Load Failed', text: 'AP Aging data unavailable.', confirmButtonColor: '#2e5f73' }); }
     });
   }
 
@@ -395,7 +539,7 @@ export class FinanceApComponent implements OnInit {
         this.calculateAdvanceSummary();
         this.loading = false;
       },
-      error: () => { this.advances = []; this.loading = false; this.error = 'AP Advances data unavailable.'; }
+      error: () => { this.advances = []; this.loading = false; Swal.fire({ icon: 'error', title: 'Load Failed', text: 'AP Advances data unavailable.', confirmButtonColor: '#2e5f73' }); }
     });
   }
 
@@ -406,7 +550,7 @@ export class FinanceApComponent implements OnInit {
         this.matchRows = this.finance.unwrap(res).map(row => this.normalizeMatch(row));
         this.loading = false;
       },
-      error: () => { this.matchRows = []; this.loading = false; this.error = '3-Way Match data unavailable.'; }
+      error: () => { this.matchRows = []; this.loading = false; Swal.fire({ icon: 'error', title: 'Load Failed', text: '3-Way Match data unavailable.', confirmButtonColor: '#2e5f73' }); }
     });
   }
 
@@ -478,6 +622,7 @@ export class FinanceApComponent implements OnInit {
 
   openApAdvanceForm(): void {
     this.showAdvanceForm = true;
+    this.view = 'advance-form';
     this.message = '';
     this.error = '';
     this.apAdvMethodId = 2;
@@ -494,7 +639,11 @@ export class FinanceApComponent implements OnInit {
     };
   }
 
-  closeApAdvanceForm(): void { this.showAdvanceForm = false; }
+  closeApAdvanceForm(): void {
+    this.showAdvanceForm = false;
+    this.view = 'list';
+    this.closeAllComboboxes();
+  }
 
   onApAdvMethodChange(): void {
     if (this.apAdvMethodId === 1) this.apAdvBankHeadId = null;
@@ -505,11 +654,12 @@ export class FinanceApComponent implements OnInit {
   }
 
   saveAdvance(): void {
-    if (!this.advanceForm.supplierId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a supplier.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.advanceForm.advanceDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Advance date is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
+    if (!this.advanceForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
+    if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
+    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
     if ((this.apAdvMethodId === 2 || this.apAdvMethodId === 3) && !this.apAdvBankHeadId) {
-      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a bank account.', confirmButtonColor: '#16a34a' }); return;
+      Swal.fire('Required', 'Please select a bank account.', 'warning'); return;
     }
 
     this.savingAdvance = true;
@@ -533,14 +683,111 @@ export class FinanceApComponent implements OnInit {
       next: () => {
         this.savingAdvance = false;
         this.showAdvanceForm = false;
-        this.message = 'Advance saved successfully.';
+        this.view = 'list';
         this.loadAdvances();
+        Swal.fire({ icon: 'success', title: 'Advance Saved', text: 'Supplier advance saved successfully.', confirmButtonColor: '#2e5f73', timer: 2500, timerProgressBar: true });
       },
       error: err => {
         this.savingAdvance = false;
-        this.error = err?.error?.message || 'Unable to save advance.';
+        Swal.fire({ icon: 'error', title: 'Save Failed', text: err?.error?.message || 'Unable to save advance. Please try again.', confirmButtonColor: '#2e5f73' });
       }
     });
+  }
+
+  // ── Combobox helpers ──────────────────────────────────────────────────────
+
+  @HostListener('document:mousedown', ['$event'])
+  onDocClick(e: MouseEvent): void {
+    const t = e.target as HTMLElement;
+    if (!t.closest('.ap-combo') && !t.closest('.ap-dd')) this.closeAllComboboxes();
+  }
+
+  closeAllComboboxes(): void {
+    this.pmtSupplierOpen = this.pmtInvoiceOpen = this.pmtBankOpen = this.pmtCurrOpen = false;
+    this.advSupplierOpen = this.advBankOpen = false;
+  }
+
+  toggleCombo(name: string): void {
+    const all = ['pmtSupplierOpen','pmtInvoiceOpen','pmtBankOpen','pmtCurrOpen','advSupplierOpen','advBankOpen'];
+    const cur = (this as any)[name];
+    all.forEach(f => { (this as any)[f] = false; });
+    (this as any)[name] = !cur;
+  }
+
+  // Payment form combobox getters
+  get pmtFilteredSuppliers(): any[] {
+    const q = this.pmtSupplierSearch.toLowerCase();
+    return q ? this.suppliers.filter(s => s.name.toLowerCase().includes(q)) : this.suppliers;
+  }
+  get pmtFilteredInvoices(): any[] {
+    const q = this.pmtInvoiceSearch.toLowerCase();
+    return q ? this.paymentFilteredInvoices.filter(i =>
+      (i.invoiceNo ?? '').toLowerCase().includes(q)) : this.paymentFilteredInvoices;
+  }
+  get pmtFilteredBanks(): any[] {
+    const q = this.pmtBankSearch.toLowerCase();
+    return q ? this.bankAccounts.filter(b => (b.displayName ?? '').toLowerCase().includes(q)) : this.bankAccounts;
+  }
+  get pmtFilteredCurrencies(): any[] {
+    const q = this.pmtCurrSearch.toLowerCase();
+    return q ? this.paymentCurrencies.filter(c =>
+      (c.currencyCode ?? c.currencyName ?? '').toLowerCase().includes(q)) : this.paymentCurrencies;
+  }
+
+  // Payment form select methods
+  selectPmtSupplier(s: any): void {
+    this.paymentForm.supplierId = s.id;
+    this.pmtSupplierName = s.name;
+    this.pmtSupplierSearch = '';
+    this.pmtSupplierOpen = false;
+    this.paymentForm.supplierInvoiceId = null;
+    this.onPaymentSupplierChange();
+  }
+  selectPmtInvoice(inv: any): void {
+    this.paymentForm.supplierInvoiceId = inv.id;
+    this.pmtInvoiceSearch = inv.invoiceNo ?? '';
+    this.pmtInvoiceOpen = false;
+    this.onPaymentInvoiceSelect();
+  }
+  selectPmtBank(b: any): void {
+    this.paymentForm.bankId = b.id;
+    this.pmtBankSearch = '';
+    this.pmtBankOpen = false;
+    this.paymentBankName = b.displayName;
+  }
+  selectPmtCurrency(c: any): void {
+    this.paymentCurrencyId = c.id ?? c.currencyId;
+    this.pmtCurrSearch = '';
+    this.pmtCurrOpen = false;
+    this.paymentCurrencyName = c.currencyCode ?? c.currencyName ?? '';
+    this.onPaymentCurrencyChange();
+  }
+
+  // Advance form combobox getters
+  get advFilteredSuppliers(): any[] {
+    const q = this.advSupplierSearch.toLowerCase();
+    return q ? this.suppliers.filter(s => s.name.toLowerCase().includes(q)) : this.suppliers;
+  }
+  get advFilteredBanks(): any[] {
+    const q = this.advBankSearch.toLowerCase();
+    return q ? this.bankAccounts.filter(b => (b.displayName ?? '').toLowerCase().includes(q)) : this.bankAccounts;
+  }
+
+  // Advance form select methods
+  selectAdvSupplier(s: any): void {
+    this.advanceForm.supplierId = s.id;
+    this.advSupplierSearch = s.name;
+    this.advSupplierOpen = false;
+    this.onSupplierSelect();
+  }
+  selectAdvBank(b: any): void {
+    this.apAdvBankHeadId = b.id;
+    this.advBankSearch = b.displayName;
+    this.advBankOpen = false;
+  }
+
+  getSelectedBank(bankId: any): any {
+    return this.bankAccounts.find(b => String(b.id) === String(bankId)) ?? null;
   }
 
   payInvoice(row: any): void {
@@ -637,16 +884,17 @@ export class FinanceApComponent implements OnInit {
   }
 
   private normalizeAging(row: any): any {
+    // Use *Base (SGD-converted) fields first — API DTO returns both raw FC and Base values
     return {
       ...row,
       supplierName: row.supplierName ?? row.SupplierName,
       supplierId: row.supplierId ?? row.SupplierId,
       invoiceCount: row.invoiceCount ?? row.InvoiceCount ?? 0,
-      total: this.money(row, ['total', 'totalOutstanding', 'TotalOutstanding', 'totalOutstandingBase', 'TotalOutstandingBase']),
-      current: this.money(row, ['current', 'days30', 'bucket0_30', 'Bucket0_30']),
-      days60: this.money(row, ['days60', 'bucket31_60', 'Bucket31_60']),
-      days90: this.money(row, ['days90', 'bucket61_90', 'Bucket61_90']),
-      days90plus: this.money(row, ['days90plus', 'bucket90Plus', 'Bucket90Plus'])
+      total:     this.money(row, ['totalOutstandingBase', 'TotalOutstandingBase', 'totalOutstanding', 'TotalOutstanding', 'total']),
+      current:   this.money(row, ['bucket0_30Base',  'Bucket0_30Base',  'bucket0_30',  'Bucket0_30',  'current', 'days30']),
+      days60:    this.money(row, ['bucket31_60Base', 'Bucket31_60Base', 'bucket31_60', 'Bucket31_60', 'days60']),
+      days90:    this.money(row, ['bucket61_90Base', 'Bucket61_90Base', 'bucket61_90', 'Bucket61_90', 'days90']),
+      days90plus: this.money(row, ['bucket90PlusBase', 'Bucket90PlusBase', 'bucket90Plus', 'Bucket90Plus', 'days90plus'])
     };
   }
 

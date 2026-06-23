@@ -10,7 +10,7 @@
       </div>
       <div>
         <h2>General Ledger</h2>
-        <p>Account balances and movements</p>
+        <p>Account balances &amp; movements &nbsp;·&nbsp; <strong class="currency-tag">{{ baseCurrency }}</strong></p>
       </div>
     </div>
     <button class="gl-filter-btn" type="button" (click)="showFilter = !showFilter" title="Date Filter">
@@ -57,7 +57,7 @@
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input class="gl-search" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="currentPage = 1">
+      <input class="gl-search" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
     </div>
   </div>
 
@@ -68,36 +68,44 @@
       <table class="gl-table">
         <thead>
           <tr>
-            <th class="th-code">HEAD CODE</th>
-            <th>HEAD NAME</th>
+            <th class="th-code">CODE</th>
+            <th>ACCOUNT NAME</th>
             <th class="right">OPENING BAL</th>
-            <th class="right">DEBIT (SGD)</th>
-            <th class="right">CREDIT (SGD)</th>
-            <th class="right">BALANCE (SGD)</th>
+            <th class="right">DEBIT ({{ baseCurrency }})</th>
+            <th class="right">CREDIT ({{ baseCurrency }})</th>
+            <th class="right">BALANCE ({{ baseCurrency }})</th>
           </tr>
         </thead>
         <tbody>
           <ng-container *ngFor="let row of pagedRows">
-            <tr [ngClass]="levelClass(row)">
+            <tr [ngClass]="levelClass(row)"
+                [style.border-left]="row.level === 1 ? '3px solid #c7dde4' : row.level > 1 ? '3px solid #e5eff2' : 'none'">
               <td class="td-code mono">{{ row.headCode }}</td>
               <td class="td-name">
                 <div class="name-wrap" [style.paddingLeft]="indentPx(row)">
-                  <button class="toggle-btn"
-                          [class.toggle-expanded]="isExpanded(row)"
+                  <button *ngIf="row.hasChildren"
+                          class="toggle-btn"
+                          [class.toggle-expanded]="row.$$expanded"
                           type="button"
-                          (click)="row._hasChildren ? toggle(row) : null">
-                    {{ row._hasChildren && isExpanded(row) ? '−' : '+' }}
+                          (click)="toggle(row)">
+                    {{ row.$$expanded ? '−' : '+' }}
                   </button>
-                  <span [class.fw-bold]="row._level === 0">{{ row.headName }}</span>
+                  <span *ngIf="!row.hasChildren" class="leaf-dot"></span>
+                  <span [style.fontWeight]="row.level === 0 ? '700' : row.hasChildren ? '600' : '400'"
+                        [style.color]="row.level === 0 ? '#1e3a4f' : '#374151'">{{ row.headName }}</span>
                 </div>
               </td>
               <td class="right muted">{{ (row.openingBalance || 0) | number:'1.2-2' }}</td>
-              <td class="right debit-val">{{ (row.debit || 0) | number:'1.2-2' }}</td>
-              <td class="right credit-val">{{ (row.credit || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (row.balance || 0) | number:'1.2-2' }}</td>
+              <td class="right debit-val">{{ (row.displayDebit || 0) | number:'1.2-2' }}</td>
+              <td class="right credit-val">{{ (row.displayCredit || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold"
+                  [style.fontWeight]="row.level === 0 ? '700' : '500'"
+                  [style.color]="(row.displayBalance || 0) !== 0 ? '#111827' : '#9ca3af'">
+                {{ (row.displayBalance || 0) | number:'1.2-2' }}
+              </td>
             </tr>
           </ng-container>
-          <tr *ngIf="visibleRows.length === 0 && !loading">
+          <tr *ngIf="displayRows.length === 0 && !loading">
             <td colspan="6" class="gl-empty">No ledger data found.</td>
           </tr>
         </tbody>
@@ -114,8 +122,8 @@
     </div>
 
     <!-- Pagination Footer -->
-    <div class="gl-pager" *ngIf="visibleRows.length > 0 && !loading">
-      <span class="pager-info">Showing {{ pageFrom }}-{{ pageTo }} of {{ visibleRows.length }} entries</span>
+    <div class="gl-pager" *ngIf="displayRows.length > 0 && !loading">
+      <span class="pager-info">Showing {{ pageFrom }}-{{ pageTo }} of {{ displayRows.length }} entries</span>
       <div class="pager-btns">
         <button class="pager-btn" type="button" (click)="setPage(currentPage - 1)" [disabled]="currentPage === 1">&#8249;</button>
         <button class="pager-btn"

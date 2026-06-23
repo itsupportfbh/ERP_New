@@ -1,0 +1,118 @@
+<div class="cf-page">
+
+  <!-- Page Header -->
+  <div class="cf-page-head">
+    <div>
+      <h2>Collection Forecast</h2>
+      <p>Expected customer collections by due date and probability</p>
+    </div>
+  </div>
+
+  <!-- Alert -->
+  <div class="cf-alert cf-danger" *ngIf="error">{{ error }}</div>
+
+  <!-- Filter Bar -->
+  <div class="cf-filter-bar">
+    <label class="cf-filter-field">
+      <span>From Date</span>
+      <input type="date" [(ngModel)]="fromDate">
+    </label>
+    <label class="cf-filter-field">
+      <span>To Date</span>
+      <input type="date" [(ngModel)]="toDate">
+    </label>
+    <button class="cf-btn cf-btn-primary" type="button" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Loading...' : 'Run Forecast' }}
+    </button>
+    <div class="cf-search-wrap">
+      <input class="cf-search" type="text" placeholder="Search customer, invoice..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+  </div>
+
+  <!-- Bucket Summary Cards -->
+  <div class="cf-buckets">
+    <div class="cf-bucket cf-bucket-total">
+      <span class="cf-bucket-label">Total Expected</span>
+      <strong class="cf-bucket-amt">{{ total | number:'1.2-2' }}</strong>
+      <span class="cf-bucket-count">{{ rows.length }} invoices</span>
+    </div>
+    <div class="cf-bucket cf-bucket-overdue">
+      <span class="cf-bucket-label">{{ buckets.overdue.label }}</span>
+      <strong class="cf-bucket-amt">{{ buckets.overdue.amount | number:'1.2-2' }}</strong>
+      <span class="cf-bucket-count">{{ buckets.overdue.count }} invoices</span>
+    </div>
+    <div class="cf-bucket cf-bucket-current">
+      <span class="cf-bucket-label">{{ buckets.current.label }}</span>
+      <strong class="cf-bucket-amt">{{ buckets.current.amount | number:'1.2-2' }}</strong>
+      <span class="cf-bucket-count">{{ buckets.current.count }} invoices</span>
+    </div>
+    <div class="cf-bucket cf-bucket-30">
+      <span class="cf-bucket-label">{{ buckets.days30.label }}</span>
+      <strong class="cf-bucket-amt">{{ buckets.days30.amount | number:'1.2-2' }}</strong>
+      <span class="cf-bucket-count">{{ buckets.days30.count }} invoices</span>
+    </div>
+    <div class="cf-bucket cf-bucket-60">
+      <span class="cf-bucket-label">{{ buckets.days60.label }}</span>
+      <strong class="cf-bucket-amt">{{ buckets.days60.amount | number:'1.2-2' }}</strong>
+      <span class="cf-bucket-count">{{ buckets.days60.count }} invoices</span>
+    </div>
+    <div class="cf-bucket cf-bucket-90">
+      <span class="cf-bucket-label">{{ buckets.days90.label }}</span>
+      <strong class="cf-bucket-amt">{{ buckets.days90.amount | number:'1.2-2' }}</strong>
+      <span class="cf-bucket-count">{{ buckets.days90.count }} invoices</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="cf-card">
+    <div class="cf-loading" *ngIf="loading">Loading collection forecast...</div>
+    <div class="cf-table-wrap" *ngIf="!loading">
+      <table class="cf-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Invoice No</th>
+            <th>Due Date</th>
+            <th>Expected Date</th>
+            <th class="right">Amount</th>
+            <th class="center">Probability</th>
+            <th class="center">Days to Due</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filtered" class="cf-row">
+            <td class="customer-cell">{{ row.customerName }}</td>
+            <td class="invoice-cell">{{ row.invoiceNo }}</td>
+            <td class="date-cell" [ngClass]="overdueClass(daysUntilDue(row.dueDate))">
+              {{ row.dueDate | date:'dd-MMM-yyyy' }}
+            </td>
+            <td class="date-cell muted">
+              {{ row.expectedDate | date:'dd-MMM-yyyy' }}
+            </td>
+            <td class="right amount-cell">{{ row.amount | number:'1.2-2' }}</td>
+            <td class="center">
+              <div class="prob-wrap">
+                <div class="prob-bar">
+                  <div class="prob-fill" [ngClass]="probabilityClass(row.probability)"
+                       [style.width.%]="row.probability"></div>
+                </div>
+                <span class="prob-label" [ngClass]="probabilityClass(row.probability)">
+                  {{ row.probability }}%
+                </span>
+              </div>
+            </td>
+            <td class="center">
+              <span class="days-badge" [ngClass]="overdueClass(daysUntilDue(row.dueDate))">
+                {{ daysUntilDue(row.dueDate) < 0 ? (daysUntilDue(row.dueDate) * -1) + ' days overdue' : daysUntilDue(row.dueDate) + ' days' }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="filtered.length === 0 && !loading">
+            <td colspan="7" class="cf-empty">No collection forecast data found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

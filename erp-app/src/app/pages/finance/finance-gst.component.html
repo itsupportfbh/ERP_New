@@ -343,7 +343,7 @@
                 <th>Type</th>
                 <th class="right">Amount</th>
                 <th>Description</th>
-                <th *ngIf="!isLocked" class="center">Del</th>
+                <th *ngIf="!isLocked" class="center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -352,7 +352,8 @@
                 <td class="right">{{ a.amount | number:'1.2-2' }}</td>
                 <td>{{ a.description || '—' }}</td>
                 <td *ngIf="!isLocked" class="center">
-                  <button class="f5-adj-del" type="button" (click)="deleteAdjustment(a)">&#215;</button>
+                  <button class="f5-adj-edit" type="button" (click)="editAdjustment(a)" title="Edit">&#9998;</button>
+                  <button class="f5-adj-del"  type="button" (click)="deleteAdjustment(a)" title="Delete">&#215;</button>
                 </td>
               </tr>
               <tr *ngIf="!adjustments.length">
@@ -370,16 +371,16 @@
             <thead><tr><th>Doc No</th><th>Date</th><th>Party</th><th class="right">Tax Amt</th></tr></thead>
             <tbody>
               <ng-container *ngIf="docsTab === 'SALES'">
-                <tr *ngFor="let d of salesDocs">
-                  <td class="mono">{{ d.docNo }}</td>
+                <tr *ngFor="let d of salesDocs" class="doc-clickable" title="Open document" (click)="openDocument(d)">
+                  <td class="mono teal-bold">{{ d.docNo }}</td>
                   <td>{{ d.docDate | date:'dd-MMM-yy' }}</td>
                   <td>{{ d.partyName || '—' }}</td>
                   <td class="right">{{ (d.taxAmount || 0) | number:'1.2-2' }}</td>
                 </tr>
               </ng-container>
               <ng-container *ngIf="docsTab === 'SUPPLIER'">
-                <tr *ngFor="let d of supplierDocs">
-                  <td class="mono">{{ d.docNo }}</td>
+                <tr *ngFor="let d of supplierDocs" class="doc-clickable" title="Open document" (click)="openDocument(d)">
+                  <td class="mono teal-bold">{{ d.docNo }}</td>
                   <td>{{ d.docDate | date:'dd-MMM-yy' }}</td>
                   <td>{{ d.partyName || '—' }}</td>
                   <td class="right">{{ (d.taxAmount || 0) | number:'1.2-2' }}</td>
@@ -424,7 +425,7 @@
       </div>
     </div>
 
-    <!-- Date Filter -->
+    <!-- Filters -->
     <div class="gst-filter-bar">
       <label class="filter-lbl">
         <span>From Date</span>
@@ -434,12 +435,26 @@
         <span>To Date</span>
         <input type="date" [(ngModel)]="reportToDate">
       </label>
+      <label class="filter-lbl">
+        <span>Type</span>
+        <select [(ngModel)]="detailDocType" (change)="detailPage = 1">
+          <option value="">All</option>
+          <option value="SI">Sales Invoice</option>
+          <option value="PIN">Supplier Invoice</option>
+        </select>
+      </label>
+      <input class="gst-search" style="width:180px;" type="text" placeholder="Search doc, description..." [(ngModel)]="detailSearch" (ngModelChange)="detailPage = 1">
       <button class="gst-btn gst-btn-primary" type="button" (click)="runReport()">Run Report</button>
+      <button class="gst-btn gst-btn-outline" type="button" (click)="resetDetailFilters()">Reset</button>
+      <button class="gst-btn gst-btn-outline" type="button" (click)="exportGstDetailsExcel()" [disabled]="!filteredGstReport.length">&#8595; Export Excel</button>
     </div>
 
     <div class="gst-card">
       <div class="gst-card-head">
         <strong class="gst-card-title">GST Transaction Detail</strong>
+        <span class="gst-count-lbl" *ngIf="filteredGstReport.length">
+          {{ filteredGstReport.length }} record{{ filteredGstReport.length !== 1 ? 's' : '' }}
+        </span>
       </div>
       <div class="gst-loading" *ngIf="loading">Loading...</div>
       <div class="gst-table-wrap" *ngIf="!loading">
@@ -456,7 +471,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of gstReport">
+            <tr *ngFor="let row of pagedGstReport">
               <td>{{ row.date | date:'dd-MMM-yyyy' }}</td>
               <td class="mono">{{ row.documentNo || row.invoiceNo || '—' }}</td>
               <td>{{ row.description || '—' }}</td>
@@ -469,11 +484,19 @@
               <td class="right">{{ (row.taxableAmount || row.amount || 0) | number:'1.2-2' }}</td>
               <td class="right teal-bold">{{ (row.taxAmount || row.gstAmount || 0) | number:'1.2-2' }}</td>
             </tr>
-            <tr *ngIf="gstReport.length === 0 && !loading">
+            <tr *ngIf="filteredGstReport.length === 0 && !loading">
               <td colspan="7" class="gst-empty">No GST detail data. Run with date filters.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="gst-pager" *ngIf="totalDetailPages > 1">
+        <button class="pager-btn" type="button" [disabled]="detailPage === 1" (click)="detailPage = detailPage - 1">&#8592;</button>
+        <button class="pager-btn" *ngFor="let p of detailPages" [class.active]="p === detailPage" type="button" (click)="detailPage = p">{{ p }}</button>
+        <button class="pager-btn" type="button" [disabled]="detailPage === totalDetailPages" (click)="detailPage = detailPage + 1">&#8594;</button>
+        <span class="pager-info">Page {{ detailPage }} of {{ totalDetailPages }}</span>
       </div>
     </div>
   </ng-container>

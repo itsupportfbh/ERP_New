@@ -239,11 +239,13 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
       { key: 'journalNo', header: 'Journal No' },
       { key: 'journalDate', header: 'Date', type: 'date' },
       { key: 'description', header: 'Description' },
+      { key: 'entryType', header: 'Entry Type' },
+      { key: 'recurringFrequency', header: 'Frequency' },
       { key: 'totalDebit', header: 'Debit', type: 'number', align: 'right' },
       { key: 'totalCredit', header: 'Credit', type: 'number', align: 'right' },
       { key: 'status', header: 'Status', type: 'badge' }
     ],
-    searchKeys: ['journalNo', 'description', 'status'],
+    searchKeys: ['journalNo', 'description', 'status', 'entryType'],
     actions: ['create', 'post'],
     formFields: [
       { key: 'journalDate', label: 'Journal Date', type: 'date' },
@@ -273,7 +275,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'accounts-payable',
     title: 'Accounts Payable',
     subtitle: 'Supplier invoices, payment status and AP posting',
-    endpoint: { list: '/SupplierInvoicePin/GetAll' },
+    endpoint: { list: '/finance/ap/invoices' },
     columns: [
       { key: 'supplierName', header: 'Supplier' },
       { key: 'invoiceNo', header: 'Invoice' },
@@ -290,7 +292,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'ap-advance',
     title: 'AP Advance',
     subtitle: 'Supplier advance payments and GRN adjustment',
-    endpoint: { list: '/AccountsPayable/getsupplier-advances', create: '/AccountsPayable/createsupplier-advance' },
+    endpoint: { list: '/finance/ap/getsupplier-advances', create: '/finance/ap/createsupplier-advance' },
     columns: [
       { key: 'supplierName', header: 'Supplier' },
       { key: 'advanceNo', header: 'Advance No' },

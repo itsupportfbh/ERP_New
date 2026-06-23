@@ -1,0 +1,116 @@
+<div class="ie-page">
+
+  <!-- Page Header -->
+  <div class="ie-page-head">
+    <div>
+      <h2>Invoice Email</h2>
+      <p>Send and track invoice emails to customers</p>
+    </div>
+    <div class="ie-head-actions">
+      <button class="ie-btn ie-btn-outline" type="button" (click)="load()" [disabled]="loading">
+        &#8635; Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="ie-alert ie-success" *ngIf="message">{{ message }}</div>
+  <div class="ie-alert ie-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Summary Cards -->
+  <div class="ie-summary-grid">
+    <div class="ie-sum-card ie-sum-total">
+      <span class="ie-sum-icon">&#9993;</span>
+      <span class="ie-sum-body">
+        <span class="ie-sum-label">Total Invoices</span>
+        <strong class="ie-sum-val">{{ summary.total }}</strong>
+      </span>
+    </div>
+    <div class="ie-sum-card ie-sum-sent">
+      <span class="ie-sum-icon">&#10003;</span>
+      <span class="ie-sum-body">
+        <span class="ie-sum-label">Sent</span>
+        <strong class="ie-sum-val green">{{ summary.sent }}</strong>
+      </span>
+    </div>
+    <div class="ie-sum-card ie-sum-pending">
+      <span class="ie-sum-icon">&#8987;</span>
+      <span class="ie-sum-body">
+        <span class="ie-sum-label">Not Sent / Pending</span>
+        <strong class="ie-sum-val orange">{{ summary.pending }}</strong>
+      </span>
+    </div>
+  </div>
+
+  <!-- Filter Row -->
+  <div class="ie-filter-row">
+    <!-- Status Tabs -->
+    <div class="ie-tabs">
+      <button class="ie-tab" [class.active]="statusFilter === 'all'"     type="button" (click)="setStatus('all')">
+        All <span class="ie-count" *ngIf="summary.total">{{ summary.total }}</span>
+      </button>
+      <button class="ie-tab" [class.active]="statusFilter === 'Pending'" type="button" (click)="setStatus('Pending')">
+        Pending <span class="ie-count pending" *ngIf="summary.pending">{{ summary.pending }}</span>
+      </button>
+      <button class="ie-tab" [class.active]="statusFilter === 'Sent'"    type="button" (click)="setStatus('Sent')">
+        Sent <span class="ie-count sent" *ngIf="summary.sent">{{ summary.sent }}</span>
+      </button>
+    </div>
+    <div class="ie-search-wrap">
+      <input class="ie-search" type="text" placeholder="Search invoice, customer, email..."
+             [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="ie-card">
+    <div class="ie-loading" *ngIf="loading">Loading invoices...</div>
+    <div class="ie-table-wrap" *ngIf="!loading">
+      <table class="ie-table">
+        <thead>
+          <tr>
+            <th>Invoice No</th>
+            <th>Customer</th>
+            <th>Email To</th>
+            <th>Invoice Date</th>
+            <th class="right">Amount</th>
+            <th>Status</th>
+            <th>Last Sent</th>
+            <th class="center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filtered" class="ie-row">
+            <td class="invoice-cell">{{ row.invoiceNo }}</td>
+            <td class="customer-cell">{{ row.customerName }}</td>
+            <td class="email-cell">{{ row.emailTo }}</td>
+            <td class="date-cell">{{ row.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="right amount-cell">{{ row.amount | number:'1.2-2' }}</td>
+            <td>
+              <span class="ie-badge" [ngClass]="row.status === 'Sent' ? 'badge-sent' : 'badge-pending'">
+                {{ row.status }}
+              </span>
+            </td>
+            <td class="date-cell muted">
+              {{ row.sentDate ? (row.sentDate | date:'dd-MMM-yyyy HH:mm') : '—' }}
+            </td>
+            <td class="center">
+              <button class="ie-send-btn" type="button"
+                      (click)="sendEmail(row)"
+                      [disabled]="isSending(row.id)">
+                <span *ngIf="!isSending(row.id)">
+                  {{ row.status === 'Sent' ? '&#8635; Resend' : '&#9993; Send' }}
+                </span>
+                <span *ngIf="isSending(row.id)">Sending...</span>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filtered.length === 0 && !loading">
+            <td colspan="8" class="ie-empty">No invoices found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

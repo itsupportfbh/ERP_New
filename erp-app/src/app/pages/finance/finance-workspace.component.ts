@@ -19,6 +19,7 @@ export class FinanceWorkspaceComponent implements OnInit {
   rows: any[] = [];
   filtered: any[] = [];
   search = '';
+  journalTypeFilter = '';
   fromDate = '';
   toDate = '';
   formOpen = false;
@@ -209,9 +210,19 @@ export class FinanceWorkspaceComponent implements OnInit {
 
   applyFilter(): void {
     const q = this.search.toLowerCase();
-    this.filtered = q
+    let result = q
       ? this.rows.filter(row => this.config.searchKeys.some(k => String(this.value(row, k) ?? '').toLowerCase().includes(q)))
       : [...this.rows];
+    if (this.config.key === 'journal' && this.journalTypeFilter) {
+      result = result.filter(row => (row.entryType ?? '') === this.journalTypeFilter);
+    }
+    this.filtered = result;
+  }
+
+  get journalTypeOptions(): string[] {
+    const types = new Set<string>();
+    this.rows.forEach(r => { if (r.entryType) types.add(r.entryType); });
+    return Array.from(types).sort();
   }
 
   openCreate(): void {

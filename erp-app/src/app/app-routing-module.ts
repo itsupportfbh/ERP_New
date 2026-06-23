@@ -76,6 +76,10 @@ import { FinancePlComponent } from './pages/finance/finance-pl.component';
 import { FinanceBsComponent } from './pages/finance/finance-bs.component';
 import { FinanceOpeningBalanceComponent } from './pages/finance/finance-opening-balance.component';
 import { FinanceYearEndCloseComponent } from './pages/finance/finance-year-end-close.component';
+import { FinanceBankReconComponent } from './pages/finance/finance-bank-recon.component';
+import { FinanceDaybookComponent } from './pages/finance/finance-daybook.component';
+import { FinanceCollectionForecastComponent } from './pages/finance/finance-collection-forecast.component';
+import { FinanceInvoiceEmailComponent } from './pages/finance/finance-invoice-email.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
 // Sales
@@ -206,10 +210,14 @@ const routes: Routes = [
       { path: 'finance/tax-gst',              component: FinanceGstComponent },
       { path: 'finance/gst-return',           component: FinanceGstComponent },
       { path: 'finance/gst-report',           component: FinanceGstComponent },
-      { path: 'finance/create-journal',       component: FinanceJournalFormComponent },
-      { path: 'finance/opening-balance',      component: FinanceOpeningBalanceComponent },
-      { path: 'finance/year-end-close',       component: FinanceYearEndCloseComponent },
-      { path: 'finance/:section',             component: FinanceWorkspaceComponent },
+      { path: 'finance/create-journal',          component: FinanceJournalFormComponent },
+      { path: 'finance/opening-balance',         component: FinanceOpeningBalanceComponent },
+      { path: 'finance/year-end-close',          component: FinanceYearEndCloseComponent },
+      { path: 'finance/bank-reconciliation',     component: FinanceBankReconComponent },
+      { path: 'finance/daybook',                 component: FinanceDaybookComponent },
+      { path: 'finance/collection-forecast',     component: FinanceCollectionForecastComponent },
+      { path: 'finance/invoice-email',           component: FinanceInvoiceEmailComponent },
+      { path: 'finance/:section',                component: FinanceWorkspaceComponent },
       { path: 'financial/dashboard',           component: FinanceDashboardComponent },
       { path: 'financial/ChartOfAccount',      component: FinanceCoaComponent },
       { path: 'financial/journal',             component: FinanceWorkspaceComponent, data: { section: 'journal' } },

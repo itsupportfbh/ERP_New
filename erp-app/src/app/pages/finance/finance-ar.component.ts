@@ -92,6 +92,9 @@ export class FinanceArComponent implements OnInit {
   taxCodes: Array<{ id: number; taxCode: string; taxName: string; taxRate: number }> = [];
   savingInvoice = false;
 
+  isPeriodLocked = false;
+  periodName     = '';
+
   search = '';
   loading = false;
   error = '';
@@ -113,6 +116,7 @@ export class FinanceArComponent implements OnInit {
     this.loadBankAccounts();
     this.loadReceiptCurrencies();
     this.invoiceForm.invoiceDate = new Date().toISOString().slice(0, 10);
+    this.checkPeriodLock(new Date().toISOString().slice(0, 10));
     const path = this.route.snapshot.routeConfig?.path || '';
     if (path.includes('receipts') || path.includes('AR-receipt')) this.setTab('receipts');
     else if (path.includes('ar-advance')) this.setTab('advances');
@@ -122,6 +126,34 @@ export class FinanceArComponent implements OnInit {
     this.permissionService.getFunctionPermission(this.userId, 'ar').subscribe({
       next: perm => { this.permission = perm; }
     });
+  }
+
+  // ── Period Close ───────────────────────────────────────────────────────────
+
+  checkPeriodLock(date: string): void {
+    if (!date) return;
+    this.finance.list({ list: '/PeriodClose/status' }, { date }).subscribe({
+      next: (res: any) => {
+        this.isPeriodLocked = !!res?.isLocked;
+        this.periodName     = res?.periodName || '';
+      },
+      error: () => { this.isPeriodLocked = false; this.periodName = ''; }
+    });
+  }
+
+  onReceiptDateChange(): void {
+    this.checkPeriodLock(this.receiptForm.receiptDate);
+    if (this.receiptCurrencyId && this.receiptBaseCurrencyId && this.receiptCurrencyId !== this.receiptBaseCurrencyId) {
+      this.fetchReceiptFxRate();
+    }
+  }
+
+  onAdvanceDateChange(): void {
+    this.checkPeriodLock(this.advanceForm.advanceDate);
+  }
+
+  onInvoiceDateChange(): void {
+    this.checkPeriodLock(this.invoiceForm.invoiceDate);
   }
 
   // ── Bank Accounts ──────────────────────────────────────────────────────────
@@ -311,9 +343,10 @@ export class FinanceArComponent implements OnInit {
   }
 
   saveReceipt(): void {
-    if (!this.receiptForm.customerId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a customer.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.receiptForm.receiptDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Receipt date is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (!(Number(this.receiptForm.amountReceived) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount received must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
+    if (!this.receiptForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
+    if (!this.receiptForm.receiptDate) { Swal.fire('Required', 'Receipt date is required.', 'warning'); return; }
+    if (!(Number(this.receiptForm.amountReceived) > 0)) { Swal.fire('Required', 'Amount received must be greater than 0.', 'warning'); return; }
 
     this.savingReceipt = true;
     this.error = '';
@@ -400,9 +433,10 @@ export class FinanceArComponent implements OnInit {
   get invoiceGrandTotal(): number { return this.invoiceSubtotal + this.invoiceTaxTotal; }
 
   saveInvoice(): void {
-    if (!this.invoiceForm.customerId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a customer.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.invoiceForm.invoiceDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Invoice date is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (this.invoiceLines.every(l => !l.itemName.trim())) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Add at least one line item.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
+    if (!this.invoiceForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
+    if (!this.invoiceForm.invoiceDate) { Swal.fire('Required', 'Invoice date is required.', 'warning'); return; }
+    if (this.invoiceLines.every(l => !l.itemName.trim())) { Swal.fire('Required', 'Add at least one line item.', 'warning'); return; }
 
     this.savingInvoice = true;
     this.error = '';
@@ -482,7 +516,7 @@ export class FinanceArComponent implements OnInit {
     this.loading = true;
     this.finance.list(this.invoiceConfig.endpoint).subscribe({
       next: res => {
-        this.invoices = this.finance.unwrap(res).map((r: any) => this.normalizeInvoice(r));
+        this.invoices = this.finance.unwrap(res).map((r: any) => this.normalizeInvoice(r)).filter((r: any) => r !== null);
         this.applyInvoiceFilter();
         this.calcInvoiceSummary();
         this.loading = false;
@@ -662,12 +696,13 @@ export class FinanceArComponent implements OnInit {
   }
 
   saveAdvance(): void {
-    if (!this.advanceForm.customerId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a customer.', confirmButtonColor: '#16a34a' }); return; }
-    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.advanceForm.advanceDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Advance date is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (!this.isOrderSpecific) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please tick "Link to Sales Order" and select an order.', confirmButtonColor: '#16a34a' }); return; }
-    if (this.isOrderSpecific && !this.advanceForm.salesOrderId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a Sales Order.', confirmButtonColor: '#16a34a' }); return; }
-    if (this.advanceForm.paymentMode === 'BANK' && !this.advanceForm.bankAccountId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a bank account.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
+    if (!this.advanceForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
+    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+    if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
+    if (!this.isOrderSpecific) { Swal.fire('Required', 'Please tick "Link to Sales Order" and select an order.', 'warning'); return; }
+    if (this.isOrderSpecific && !this.advanceForm.salesOrderId) { Swal.fire('Required', 'Please select a Sales Order.', 'warning'); return; }
+    if (this.advanceForm.paymentMode === 'BANK' && !this.advanceForm.bankAccountId) { Swal.fire('Required', 'Please select a bank account.', 'warning'); return; }
 
     this.savingAdvance = true;
     this.error = '';
@@ -726,10 +761,13 @@ export class FinanceArComponent implements OnInit {
   }
 
   private normalizeInvoice(row: any): any {
+    // Skip credit note rows — API may return rowType:'CN' mixed with invoices
+    if (row.rowType && row.rowType !== 'INV') return null;
     const amount = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal']);
     const paid = this.money(row, ['paid', 'Paid', 'paidAmount', 'PaidAmount', 'totalPaid', 'TotalPaid']);
-    const creditNote = this.money(row, ['creditNote', 'CreditNote', 'creditNoteAmount', 'CreditNoteAmount']);
-    const balance = this.money(row, ['balance', 'Balance', 'outstanding', 'Outstanding', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote);
+    const creditNote = this.money(row, ['creditNote', 'CreditNote', 'customerCreditNoteAmount', 'creditNoteAmount', 'CreditNoteAmount']);
+    // outstanding is the canonical field name from the API; balance is fallback
+    const balance = this.money(row, ['outstanding', 'Outstanding', 'balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote);
     return {
       ...row,
       customerName: row.customerName ?? row.CustomerName ?? row.customer ?? 'Unknown Customer',
@@ -745,13 +783,19 @@ export class FinanceArComponent implements OnInit {
   }
 
   private normalizeReceipt(row: any): any {
+    // amountReceived is the canonical field; fall back to amount then amountBase
+    const amountReceived = this.money(row, ['amountReceived', 'AmountReceived', 'amount', 'Amount']);
+    const amountBase     = this.money(row, ['amountBase', 'AmountBase'], amountReceived);
     return {
       ...row,
-      receiptNo: row.receiptNo ?? row.ReceiptNo,
+      receiptNo:    row.receiptNo    ?? row.ReceiptNo,
+      invoiceNos:   row.invoiceNos   ?? row.InvoiceNos   ?? row.invoiceNo ?? row.InvoiceNo ?? '',
       customerName: row.customerName ?? row.CustomerName,
-      receiptDate: row.receiptDate ?? row.ReceiptDate,
-      paymentMode: row.paymentMode ?? row.PaymentMode,
-      amount: this.money(row, ['amount', 'Amount', 'amountBase', 'AmountBase']),
+      receiptDate:  row.receiptDate  ?? row.ReceiptDate,
+      paymentMode:  row.paymentMode  ?? row.PaymentMode,
+      currencyName: row.currencyName ?? row.CurrencyName ?? '',
+      amountReceived,
+      amountBase,
       status: row.status ?? row.Status ?? 'Posted'
     };
   }
@@ -761,10 +805,10 @@ export class FinanceArComponent implements OnInit {
     const balance = this.money(row, ['balance', 'Balance', 'balanceAmount', 'BalanceAmount']);
     return {
       ...row,
-      advanceNo: row.advanceNo ?? row.AdvanceNo,
+      advanceNo:    row.advanceNo    ?? row.AdvanceNo,
       customerName: row.customerName ?? row.CustomerName,
-      advanceDate: row.advanceDate ?? row.AdvanceDate,
-      paymentMode: row.paymentMode ?? row.PaymentMode,
+      advanceDate:  row.advanceDate  ?? row.AdvanceDate,
+      paymentMode:  row.paymentMode  ?? row.PaymentMode,
       amount,
       utilised: this.money(row, ['utilised', 'Utilised', 'utilisedAmount', 'UtilisedAmount'], amount - balance),
       balance
@@ -772,14 +816,15 @@ export class FinanceArComponent implements OnInit {
   }
 
   private normalizeAging(row: any): any {
+    // Use *Base (SGD-converted) fields first, fall back to raw FC values
     return {
       ...row,
       customerName: row.customerName ?? row.CustomerName,
-      total: this.money(row, ['total', 'totalOutstanding', 'TotalOutstanding', 'totalOutstandingBase', 'TotalOutstandingBase']),
-      current: this.money(row, ['current', 'days30', 'bucket0_30', 'Bucket0_30', 'bucket0_30Base', 'Bucket0_30Base']),
-      days60: this.money(row, ['days60', 'bucket31_60', 'Bucket31_60', 'bucket31_60Base', 'Bucket31_60Base']),
-      days90: this.money(row, ['days90', 'bucket61_90', 'Bucket61_90', 'bucket61_90Base', 'Bucket61_90Base']),
-      days90plus: this.money(row, ['days90plus', 'bucket90Plus', 'Bucket90Plus', 'bucket90PlusBase', 'Bucket90PlusBase'])
+      total:     this.money(row, ['totalOutstandingBase', 'TotalOutstandingBase', 'totalOutstanding', 'TotalOutstanding', 'total']),
+      current:   this.money(row, ['bucket0_30Base',  'Bucket0_30Base',  'bucket0_30',  'current', 'days30']),
+      days60:    this.money(row, ['bucket31_60Base', 'Bucket31_60Base', 'bucket31_60', 'days60']),
+      days90:    this.money(row, ['bucket61_90Base', 'Bucket61_90Base', 'bucket61_90', 'days90']),
+      days90plus: this.money(row, ['bucket90PlusBase', 'Bucket90PlusBase', 'bucket90Plus', 'days90plus'])
     };
   }
 

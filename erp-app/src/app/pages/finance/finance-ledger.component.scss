@@ -114,6 +114,9 @@ $row-hover: #f5f9fb;
 .td-code { padding: 12px 16px; font-size: 13px; color: $muted; font-family: 'Courier New', monospace; }
 .td-name { padding: 8px 16px; }
 
+/* ── Currency tag in header ── */
+.currency-tag { color: #2E5F73; }
+
 /* ── Name cell with toggle (matches COA exactly) ── */
 .name-wrap { display: flex; align-items: center; gap: 10px; }
 .toggle-btn {
@@ -124,6 +127,11 @@ $row-hover: #f5f9fb;
   transition: background 0.12s;
   &.toggle-expanded { background: $teal-lt; }
   &:hover { background: $teal-lt; }
+}
+.leaf-dot {
+  width: 20px; height: 20px; min-width: 20px; display: inline-flex;
+  align-items: center; justify-content: center;
+  &::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #cbd5e1; display: block; }
 }
 
 /* ── Pagination ── */

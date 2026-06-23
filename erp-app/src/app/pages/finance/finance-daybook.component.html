@@ -1,0 +1,117 @@
+<div class="db-page">
+
+  <!-- Page Header -->
+  <div class="db-page-head">
+    <div>
+      <h2>Daybook</h2>
+      <p>Daily accounting transaction report</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="db-alert db-success" *ngIf="message">{{ message }}</div>
+  <div class="db-alert db-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Filter Bar -->
+  <div class="db-filter-bar">
+    <label class="db-filter-field">
+      <span>From Date</span>
+      <input type="date" [(ngModel)]="fromDate">
+    </label>
+    <label class="db-filter-field">
+      <span>To Date</span>
+      <input type="date" [(ngModel)]="toDate">
+    </label>
+    <button class="db-btn db-btn-primary" type="button" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Loading...' : 'Run Report' }}
+    </button>
+    <div class="db-search-wrap">
+      <input class="db-search" type="text" placeholder="Search voucher, account..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="db-summary-grid">
+    <div class="db-sum-card db-sum-txn">
+      <span class="db-sum-icon">&#9636;</span>
+      <span class="db-sum-body">
+        <span class="db-sum-label">Transactions</span>
+        <strong class="db-sum-val">{{ summary.transactions }}</strong>
+      </span>
+    </div>
+    <div class="db-sum-card db-sum-debit">
+      <span class="db-sum-icon">&#8593;</span>
+      <span class="db-sum-body">
+        <span class="db-sum-label">Total Debit</span>
+        <strong class="db-sum-val debit">{{ summary.totalDebit | number:'1.2-2' }}</strong>
+      </span>
+    </div>
+    <div class="db-sum-card db-sum-credit">
+      <span class="db-sum-icon">&#8595;</span>
+      <span class="db-sum-body">
+        <span class="db-sum-label">Total Credit</span>
+        <strong class="db-sum-val credit">{{ summary.totalCredit | number:'1.2-2' }}</strong>
+      </span>
+    </div>
+    <div class="db-sum-card db-sum-net">
+      <span class="db-sum-icon">&#8597;</span>
+      <span class="db-sum-body">
+        <span class="db-sum-label">Net</span>
+        <strong class="db-sum-val" [class.net-zero]="summary.net === 0" [class.net-nonzero]="summary.net !== 0">
+          {{ summary.net | number:'1.2-2' }}
+        </strong>
+      </span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="db-card">
+    <div class="db-loading" *ngIf="loading">Loading daybook entries...</div>
+    <div class="db-table-wrap" *ngIf="!loading">
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Voucher No</th>
+            <th>Type</th>
+            <th>Account Code</th>
+            <th>Account Name</th>
+            <th>Description</th>
+            <th class="right">Debit</th>
+            <th class="right">Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filtered" class="db-row">
+            <td class="date-cell">{{ row.postingDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="voucher-cell">{{ row.voucherNo }}</td>
+            <td class="type-cell">
+              <span class="type-tag" *ngIf="row.voucherType">{{ row.voucherType }}</span>
+            </td>
+            <td class="code-cell">{{ row.accountCode }}</td>
+            <td class="account-cell">{{ row.accountName }}</td>
+            <td class="desc-cell">{{ row.description }}</td>
+            <td class="right" [class.debit-amt]="row.debit > 0">
+              {{ row.debit > 0 ? (row.debit | number:'1.2-2') : '' }}
+            </td>
+            <td class="right" [class.credit-amt]="row.credit > 0">
+              {{ row.credit > 0 ? (row.credit | number:'1.2-2') : '' }}
+            </td>
+          </tr>
+
+          <!-- Totals Row -->
+          <tr class="db-totals-row" *ngIf="filtered.length > 0">
+            <td colspan="6" class="totals-label">Total</td>
+            <td class="right totals-debit">{{ summary.totalDebit | number:'1.2-2' }}</td>
+            <td class="right totals-credit">{{ summary.totalCredit | number:'1.2-2' }}</td>
+          </tr>
+
+          <tr *ngIf="filtered.length === 0 && !loading">
+            <td colspan="8" class="db-empty">No daybook entries found for the selected period.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

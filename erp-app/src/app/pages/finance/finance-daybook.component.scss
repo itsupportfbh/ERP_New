@@ -1,0 +1,183 @@
+$teal:      #2E5F73;
+$teal-lt:   #3a7a96;
+$teal-pale: #e8f4f8;
+$border:    #e7e9ee;
+$row-hover: #ebf4f7;
+$muted:     #6c757d;
+
+:host { display: block; }
+
+.db-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 20px 24px;
+  background: #fff;
+}
+
+/* ── Page Header ── */
+.db-page-head {
+  padding-bottom: 8px;
+  h2 { margin: 0; font-size: 18px; font-weight: 700; color: $teal; }
+  p  { margin: 2px 0 0; font-size: 12px; color: $muted; }
+}
+
+/* ── Alerts ── */
+.db-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
+.db-success { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
+.db-danger  { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+
+/* ── Filter Bar ── */
+.db-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.db-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  span { font-size: 11px; color: $muted; font-weight: 500; }
+  input {
+    padding: 6px 10px;
+    border: 1px solid $border;
+    border-radius: 6px;
+    font-size: 13px;
+    &:focus { outline: none; border-color: $teal-lt; }
+  }
+}
+.db-search-wrap { margin-left: auto; }
+.db-search {
+  padding: 7px 12px;
+  border: 1px solid $border;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 220px;
+  &:focus { outline: none; border-color: $teal-lt; }
+}
+
+/* ── Buttons ── */
+.db-btn {
+  padding: 7px 18px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+.db-btn-primary { background: $teal; color: #fff; }
+
+/* ── Summary Cards ── */
+.db-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.db-sum-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid $border;
+  background: #fafbfc;
+}
+.db-sum-icon {
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.db-sum-txn   .db-sum-icon { background: #e8f4f8; color: $teal; }
+.db-sum-debit .db-sum-icon { background: #fff0f0; color: #c0392b; }
+.db-sum-credit .db-sum-icon { background: #e6f9f0; color: #1e8449; }
+.db-sum-net   .db-sum-icon { background: #f0f0f8; color: #6c63ff; }
+
+.db-sum-body  { display: flex; flex-direction: column; gap: 2px; }
+.db-sum-label { font-size: 11px; color: $muted; font-weight: 500; }
+.db-sum-val   { font-size: 18px; font-weight: 700; color: #222; }
+.db-sum-val.debit   { color: #c0392b; }
+.db-sum-val.credit  { color: #1e8449; }
+.db-sum-val.net-zero    { color: #1e8449; }
+.db-sum-val.net-nonzero { color: #e67e22; }
+
+/* ── Table ── */
+.db-card {
+  border: 1px solid $border;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.db-loading { padding: 32px; text-align: center; color: $muted; font-size: 13px; }
+.db-table-wrap { overflow-x: auto; }
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead tr { background: $teal; color: #fff; }
+  th {
+    padding: 9px 12px;
+    font-weight: 600;
+    font-size: 11.5px;
+    text-align: left;
+    white-space: nowrap;
+    &.right { text-align: right; }
+  }
+
+  .db-row {
+    border-bottom: 1px solid $border;
+    transition: background 0.12s;
+    &:hover { background: $row-hover; }
+    &:last-child { border-bottom: none; }
+  }
+
+  td {
+    padding: 8px 12px;
+    color: #333;
+    vertical-align: middle;
+    &.right { text-align: right; }
+  }
+
+  .date-cell    { color: $muted; white-space: nowrap; font-size: 12px; }
+  .voucher-cell { font-family: monospace; font-size: 12px; color: $teal; font-weight: 600; }
+  .code-cell    { font-family: monospace; font-size: 12px; color: $muted; }
+  .account-cell { font-weight: 500; }
+  .desc-cell    { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: $muted; font-size: 12px; }
+
+  .type-tag {
+    padding: 2px 8px;
+    border-radius: 50px;
+    font-size: 10px;
+    font-weight: 600;
+    background: $teal-pale;
+    color: $teal;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .debit-amt  { color: #c0392b; font-weight: 600; }
+  .credit-amt { color: #1e8449; font-weight: 600; }
+
+  /* Totals Row */
+  .db-totals-row {
+    background: #f5f7fa;
+    border-top: 2px solid $border;
+    .totals-label  { font-weight: 700; color: $teal; padding-left: 12px; }
+    .totals-debit  { font-weight: 700; color: #c0392b; text-align: right; }
+    .totals-credit { font-weight: 700; color: #1e8449; text-align: right; }
+  }
+}
+
+.db-empty {
+  text-align: center;
+  padding: 40px;
+  color: $muted;
+  font-size: 13px;
+}
