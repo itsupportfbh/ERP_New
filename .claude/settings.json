@@ -6,13 +6,21 @@
       "PowerShell(Stop-Process -Id 26236 -Force -ErrorAction SilentlyContinue)",
       "PowerShell(dotnet run --project \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceAPI\\\\FinanceApi\")",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\Unity_ERP\\\\starter-kit\" -Depth 2 | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) } | Select-Object FullName, PSIsContainer | Format-Table -AutoSize)",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\Unity_ERP\\\\starter-kit\\\\src\\\\app\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object -ExpandProperty FullName | Sort-Object)"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\Unity_ERP\\\\starter-kit\\\\src\\\\app\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "Bash(xargs grep -l \"create\\\\|form\")",
+      "Bash(xargs grep -l \"searchable\\\\|search.*dropdown\\\\|filterSupplier\\\\|filterVendor\\\\|searchTerm\\\\|dropdownSearch\")",
+      "Bash(xargs grep -l \"selector: 'erp-dropdown'\")",
+      "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" log --oneline -10 -- \"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
+      "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 03f9f9e:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
+      "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 78ff235:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\main\\financial\\AR\\ar-advance",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\Controllers",
-      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi"
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\Repositories",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_Lat\\FinanceApi\\Repositories"
     ]
   }
 }

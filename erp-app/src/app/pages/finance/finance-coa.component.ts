@@ -26,7 +26,7 @@ export class FinanceCoaComponent implements OnInit {
   showForm = false;
   editRow: any = null;
   saving = false;
-  form: any = { headCode: null, headName: '', headType: '', parentHead: null, isGl: false, isTransaction: false };
+  form: any = { headCode: null, headName: '', headType: '', headLevel: null, parentHead: null, isGl: false, isTransaction: false };
   accountTypes = ['Asset', 'Liability', 'Equity', 'Income', 'Expense'];
 
   permission: FunctionPermission | null = null;
@@ -129,7 +129,8 @@ export class FinanceCoaComponent implements OnInit {
 
   openCreate(): void {
     this.editRow = null;
-    this.form = { headCode: null, headName: '', headType: '', parentHead: null, isGl: false, isTransaction: false };
+    this.form = { headCode: null, headName: '', headType: '', headLevel: null, parentHead: null, pHeadName: 'COA', isGl: false, isTransaction: false };
+    this.applyTopLevelDefaults();
     this.showForm = true;
     this.message = '';
     this.error = '';
@@ -137,12 +138,15 @@ export class FinanceCoaComponent implements OnInit {
 
   openEdit(row: any): void {
     this.editRow = row;
+    const parent = row.parentHead ? this.rows.find(r => Number(r.headCode) === Number(row.parentHead)) : null;
     this.form = {
-      headCode: row.headCode,
-      headName: row.headName,
-      headType: row.headType ?? '',
-      parentHead: row.parentHead ?? null,
-      isGl: row.isGl ?? false,
+      headCode:      row.headCode,
+      headName:      row.headName,
+      headType:      row.headType ?? '',
+      headLevel:     row.headLevel ?? (row._level + 1),
+      parentHead:    row.parentHead ?? null,
+      pHeadName:     parent ? parent.headName : 'COA',
+      isGl:          row.isGl ?? false,
       isTransaction: row.isTransaction ?? false
     };
     this.showForm = true;
@@ -150,31 +154,114 @@ export class FinanceCoaComponent implements OnInit {
     this.error = '';
   }
 
+  onParentHeadChange(): void {
+    if (this.editRow) return;
+    const parentCode = this.form.parentHead;
+    if (!parentCode) {
+      this.applyTopLevelDefaults();
+    } else {
+      this.applyChildDefaults(Number(parentCode));
+    }
+  }
+
+  private applyTopLevelDefaults(): void {
+    const levelOneItems = this.rows.filter(r => !r._parentId || r._parentId === '0' || r._parentId === 0);
+    const nextCode = (levelOneItems.length || 0) + 1;
+    this.form.headCode  = nextCode;
+    this.form.headLevel = 1;
+    this.form.pHeadName = 'COA';
+  }
+
+  private applyChildDefaults(parentCode: number): void {
+    const parent = this.rows.find(r => Number(r.headCode) === parentCode);
+    if (!parent) return;
+
+    const parentCodeStr = String(parent.headCode ?? '');
+    const parentLevel   = Number(parent.headLevel ?? (parent._level + 1));
+
+    const childCodes = this.rows
+      .filter(r =>
+        String(r.headCode ?? '').startsWith(parentCodeStr) &&
+        Number(r.headLevel ?? (r._level + 1)) === parentLevel + 1
+      )
+      .map(r => String(r.headCode ?? ''));
+
+    const suffixes = childCodes
+      .map(code => parseInt(code.substring(parentCodeStr.length) || '0', 10))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => a - b);
+
+    const nextSeq = suffixes.length ? suffixes[suffixes.length - 1] + 1 : 1;
+    const maxLen  = Math.max(2, ...childCodes.map(code => Math.max(0, code.length - parentCodeStr.length)));
+    const seqStr  = String(nextSeq).padStart(maxLen, '0');
+
+    this.form.headCode  = parentCodeStr + seqStr;
+    this.form.headLevel = parentLevel + 1;
+    this.form.headType  = parent.headType ?? '';
+    this.form.pHeadName = parent.headName ?? '';
+  }
+
   save(): void {
     if (!this.form.headCode || !this.form.headName) {
-      Swal.fire({ icon: 'warning', title: 'Required', text: 'Head Code and Name are required.', confirmButtonColor: '#16a34a' });
+      Swal.fire('Required', 'Head Code and Name are required.', 'warning');
       return;
     }
     this.saving = true;
-    const obs = this.editRow
+    const isEdit = !!this.editRow;
+    const obs = isEdit
       ? this.finance.update(this.endpoint, this.editRow._dbId, this.form)
       : this.finance.create(this.endpoint, this.form);
     obs.subscribe({
-      next: () => { this.saving = false; this.showForm = false; this.message = 'Account saved.'; this.load(); },
-      error: err => { this.saving = false; this.error = err?.error?.message || 'Unable to save.'; }
+      next: () => {
+        this.saving = false;
+        this.showForm = false;
+        this.load();
+        Swal.fire({
+          icon: 'success',
+          title: isEdit ? 'Updated!' : 'Created!',
+          text: isEdit
+            ? `"${this.form.headName}" updated successfully.`
+            : `"${this.form.headName}" created successfully.`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: err => {
+        this.saving = false;
+        Swal.fire('Error', err?.error?.message || 'Unable to save.', 'error');
+      }
     });
   }
 
   delete(row: any): void {
-    Swal.fire({ title: 'Delete Account?', text: row.headName, icon: 'warning', showCancelButton: true, confirmButtonColor: '#16a34a', confirmButtonText: 'Delete' })
-      .then(r => {
-        if (r.isConfirmed) {
-          this.finance.delete(this.endpoint, row._dbId).subscribe({
-            next: () => { this.message = 'Account deleted.'; this.load(); },
-            error: err => { this.error = err?.error?.message || 'Unable to delete.'; }
-          });
-        }
-      });
+    Swal.fire({
+      title: 'Delete Account?',
+      text: `"${row.headName}" will be permanently deleted.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e74c3c',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel'
+    }).then(r => {
+      if (r.isConfirmed) {
+        this.finance.delete(this.endpoint, row._dbId).subscribe({
+          next: () => {
+            this.load();
+            Swal.fire({
+              icon: 'success',
+              title: 'Deleted!',
+              text: `"${row.headName}" has been deleted.`,
+              timer: 2000,
+              showConfirmButton: false
+            });
+          },
+          error: err => {
+            Swal.fire('Error', err?.error?.message || 'Unable to delete.', 'error');
+          }
+        });
+      }
+    });
   }
 
   get parentAccounts(): any[] {

@@ -48,6 +48,20 @@ $muted:      #6c757d;
   flex-wrap: wrap;
 }
 
+.fw-type-select {
+  height: 36px;
+  padding: 0 28px 0 10px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236c757d' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 8px center;
+  appearance: none; -webkit-appearance: none;
+  min-width: 110px;
+  cursor: pointer;
+  &:focus { outline: none; border-color: $teal; }
+}
+
 /* ── Buttons ── */
 .fw-btn {
   display: inline-flex;

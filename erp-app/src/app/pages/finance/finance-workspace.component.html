@@ -7,6 +7,12 @@
       <p>{{ config.subtitle }}</p>
     </div>
     <div class="fw-head-right">
+      <!-- Journal-specific Type filter -->
+      <select class="fw-type-select" *ngIf="config.key === 'journal'"
+              [(ngModel)]="journalTypeFilter" (change)="applyFilter()">
+        <option value="">All</option>
+        <option *ngFor="let t of journalTypeOptions" [value]="t">{{ t }}</option>
+      </select>
       <erp-input placeholder="Search..." [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
       <button class="fw-btn fw-btn-outline" type="button" (click)="load()">
         &#8635; Refresh

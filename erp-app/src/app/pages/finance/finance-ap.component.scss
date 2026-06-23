@@ -24,9 +24,10 @@ $muted:     #6c757d;
 }
 
 /* ── Alerts ── */
-.ap-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
-.ap-success { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
-.ap-danger  { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+.ap-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; margin-bottom: 8px; }
+.ap-success       { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
+.ap-danger        { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+.ap-period-locked { background: #fff3cd; color: #856404; border: 1px solid #ffc107; font-weight: 500; }
 
 /* ── Tabs ── */
 .ap-tabs {
@@ -723,3 +724,444 @@ $muted:     #6c757d;
 
 .text-success { color: #1e8449; }
 .text-danger  { color: #c0392b; }
+.orange { color: #e67e22; }
+
+/* ── Create Screen (full-page form) ── */
+.ap-create-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ap-create-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0 14px;
+  border-bottom: 1px solid $border;
+  margin-bottom: 20px;
+  h2 { margin: 0; font-size: 19px; font-weight: 700; color: $teal; }
+  p  { margin: 3px 0 0; font-size: 12.5px; color: $muted; }
+}
+
+.ap-back-btn {
+  height: 36px; padding: 0 14px;
+  background: #fff; border: 1px solid $border; border-radius: 7px;
+  font-size: 13px; font-weight: 500; color: #444; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+  &:hover { background: $teal-pale; color: $teal; border-color: $teal; }
+}
+
+.ap-create-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 22px 24px;
+}
+
+.ap-form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 200px;
+  min-width: 180px;
+  &.ap-field-wide { flex: 2 1 400px; }
+}
+
+.ap-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $muted;
+  .req { color: #e74c3c; margin-left: 2px; }
+}
+
+.ap-input {
+  height: 36px;
+  border: 1px solid $border;
+  border-radius: 7px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a2e38;
+  &:focus { outline: none; border-color: $teal; }
+  &.ap-input-readonly { background: #f8fafc; font-weight: 600; color: $teal; }
+}
+
+.ap-select {
+  height: 36px;
+  border: 1px solid $border;
+  border-radius: 7px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a2e38;
+  background: #fff;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  &:focus { outline: none; border-color: $teal; }
+}
+
+.ap-textarea {
+  border: 1px solid $border;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a2e38;
+  resize: vertical;
+  &:focus { outline: none; border-color: $teal; }
+}
+
+.ap-create-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid $border;
+}
+
+/* ── Searchable Combobox ── */
+.ap-combo {
+  position: relative;
+
+  &.disabled { opacity: 0.55; pointer-events: none; }
+
+  .ap-combo-trigger {
+    display: flex;
+    align-items: center;
+    border: 1px solid $border;
+    border-radius: 7px;
+    background: #fff;
+    overflow: hidden;
+    cursor: pointer;
+    &:focus-within { border-color: $teal; }
+  }
+
+  .ap-combo-input {
+    flex: 1;
+    height: 36px;
+    border: none;
+    outline: none;
+    padding: 0 10px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1a2e38;
+    background: transparent;
+    cursor: pointer;
+    &::placeholder { color: #adb5bd; }
+    &:disabled { background: transparent; cursor: not-allowed; }
+  }
+
+  .ap-combo-arrow {
+    padding: 0 10px;
+    font-size: 11px;
+    color: $muted;
+    transition: transform 0.15s;
+    &.open { transform: rotate(180deg); }
+  }
+
+  .ap-combo-menu {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0; right: 0;
+    background: #fff;
+    border: 1px solid $border;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+    z-index: 500;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .ap-combo-item {
+    padding: 9px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #1a2e38;
+    &:hover { background: $teal-pale; color: $teal; }
+  }
+
+  .ap-combo-empty {
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: $muted;
+    text-align: center;
+  }
+}
+
+/* ── Dropdown-with-search-inside (ap-dd) ── */
+.ap-dd {
+  position: relative;
+
+  .ap-dd-trigger {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    border: 1px solid $border;
+    border-radius: 7px;
+    background: #fff;
+    padding: 0 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    &:hover { border-color: $teal-lt; background: #fbfcfd; }
+    &.is-open {
+      border-color: $teal;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      box-shadow: none;
+    }
+  }
+
+  .ap-dd-value {
+    flex: 1;
+    font-size: 13px;
+    color: #1a2e38;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    &.placeholder { color: #adb5bd; font-size: 13px; }
+  }
+
+  .ap-dd-arrow {
+    font-size: 10px;
+    color: $muted;
+    margin-left: 6px;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+    &.open { transform: rotate(180deg); }
+  }
+
+  .ap-dd-panel {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: #fff;
+    border: 1px solid $teal;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    z-index: 600;
+    min-width: 200px;
+    overflow: hidden;
+  }
+
+  .ap-dd-search {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    height: 38px;
+    border: none;
+    border-bottom: 1px solid $border;
+    padding: 0 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1a2e38;
+    outline: none;
+    background: #f0f7fa;
+    &:focus { background: #e8f3f8; }
+    &::placeholder { color: #adb5bd; }
+  }
+
+  .ap-dd-list {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .ap-dd-item {
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #1a2e38;
+    border-bottom: 1px solid #f2f4f6;
+    &:last-child { border-bottom: none; }
+    &:hover { background: $teal-pale; color: $teal; }
+  }
+
+  .ap-dd-empty {
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: $muted;
+    text-align: center;
+  }
+}
+
+/* Full-width supplier field */
+.ap-field-full {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+/* Row 1: supplier compact + pills inline */
+.ap-row-sup-pills {
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
+.ap-field-sup-compact {
+  flex: 0 0 220px;
+  min-width: 180px;
+}
+
+.sup-pills-inline {
+  flex: 1;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+
+/* Currency tag inside label */
+.ap-curr-tag {
+  font-size: 10px;
+  font-weight: 500;
+  color: $teal;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 2px;
+}
+
+/* ── Supplier Summary Pills ── */
+.sup-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sup-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f4f7fb;
+  border: 1.5px solid $border;
+  border-radius: 20px;
+  padding: 5px 14px;
+  white-space: nowrap;
+
+  .sup-pill-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $muted;
+  }
+
+  .sup-pill-val {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1a2e38;
+  }
+
+  &.green { background: #f0fdf4; border-color: #bbf7d0; .sup-pill-label { color: #15803d; } .sup-pill-val { color: #15803d; } }
+  &.red   { background: #fff1f2; border-color: #fecdd3; .sup-pill-label { color: #b91c1c; } .sup-pill-val { color: #b91c1c; } }
+  &.amber { background: #fffbeb; border-color: #fde68a; .sup-pill-label { color: #b45309; } .sup-pill-val { color: #b45309; } }
+  &.teal  { background: $teal-pale; border-color: #b6d9e8; .sup-pill-label { color: $teal; } .sup-pill-val { color: $teal; font-weight: 800; } }
+}
+
+/* ── Payment action row ── */
+.ap-form-row-actions {
+  align-items: flex-end;
+}
+
+.ap-field-ref  { flex: 1 1 200px; }
+.ap-field-notes { flex: 2 1 300px; }
+
+.ap-form-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 1px;
+  flex-shrink: 0;
+}
+
+/* ── Invoice table inside payment form ── */
+.pmt-inv-section {
+  border-top: 1px solid $border;
+  padding-top: 16px;
+}
+
+.pmt-inv-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: $teal;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pmt-inv-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: $teal;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  min-width: 22px;
+}
+
+.pmt-inv-scroll {
+  overflow-x: auto;
+}
+
+.pmt-inv-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+
+  thead tr th {
+    background: $teal;
+    color: #fff;
+    padding: 9px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    &.num { text-align: right; }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #eef2f5;
+    transition: background 0.12s;
+    &:hover { background: $row-hover; }
+    &.row-selected { background: #e8f4f8; }
+  }
+
+  tbody td {
+    padding: 9px 12px;
+    color: #252943;
+    vertical-align: middle;
+    &.num { text-align: right; font-variant-numeric: tabular-nums; }
+    &.inv-no { font-size: 12px; color: $muted; }
+    &.bold-val { font-weight: 700; color: $teal; }
+  }
+
+  input[type="checkbox"] { cursor: pointer; width: 15px; height: 15px; accent-color: $teal; }
+
+  .curr { font-size: 11px; color: $muted; margin-left: 2px; }
+}
+
+.pmt-inv-loading {
+  font-size: 12.5px;
+  color: $muted;
+  padding: 12px 0;
+  text-align: center;
+}

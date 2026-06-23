@@ -1,0 +1,142 @@
+<div class="br-page">
+
+  <!-- Page Header -->
+  <div class="br-page-head">
+    <div>
+      <h2>Bank Reconciliation</h2>
+      <p>Match bank statement lines with accounting ledger entries</p>
+    </div>
+    <div class="br-head-actions">
+      <button class="br-btn br-btn-outline" type="button" (click)="importStatement()" [disabled]="saving">
+        <span class="br-btn-icon">&#8659;</span> Import Statement
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="br-alert br-success" *ngIf="message">{{ message }}</div>
+  <div class="br-alert br-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Summary Cards -->
+  <div class="br-summary-grid">
+    <div class="br-sum-card br-sum-total">
+      <span class="br-sum-icon">&#9636;</span>
+      <span class="br-sum-body">
+        <span class="br-sum-label">Total Lines</span>
+        <strong class="br-sum-val">{{ summary.total }}</strong>
+      </span>
+    </div>
+    <div class="br-sum-card br-sum-recon">
+      <span class="br-sum-icon">&#10003;</span>
+      <span class="br-sum-body">
+        <span class="br-sum-label">Reconciled</span>
+        <strong class="br-sum-val green">{{ summary.reconciled }}</strong>
+      </span>
+    </div>
+    <div class="br-sum-card br-sum-unrecon">
+      <span class="br-sum-icon">&#9675;</span>
+      <span class="br-sum-body">
+        <span class="br-sum-label">Unreconciled</span>
+        <strong class="br-sum-val orange">{{ summary.unreconciled }}</strong>
+      </span>
+    </div>
+    <div class="br-sum-card br-sum-diff">
+      <span class="br-sum-icon">&#8597;</span>
+      <span class="br-sum-body">
+        <span class="br-sum-label">Bank vs Ledger Diff</span>
+        <strong class="br-sum-val" [class.red]="summary.difference !== 0" [class.green]="summary.difference === 0">
+          {{ summary.difference | number:'1.2-2' }}
+        </strong>
+      </span>
+    </div>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="br-filter-bar">
+    <label class="br-filter-field">
+      <span>From Date</span>
+      <input type="date" [(ngModel)]="fromDate">
+    </label>
+    <label class="br-filter-field">
+      <span>To Date</span>
+      <input type="date" [(ngModel)]="toDate">
+    </label>
+    <button class="br-btn br-btn-primary" type="button" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Loading...' : 'Run' }}
+    </button>
+    <div class="br-search-wrap">
+      <input class="br-search" type="text" placeholder="Search reference, bank..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="br-tabs">
+    <button class="br-tab" [class.active]="activeTab === 'unreconciled'" type="button" (click)="setTab('unreconciled')">
+      Unreconciled
+      <span class="br-tab-badge" *ngIf="unreconciledCount">{{ unreconciledCount }}</span>
+    </button>
+    <button class="br-tab" [class.active]="activeTab === 'reconciled'" type="button" (click)="setTab('reconciled')">
+      Reconciled
+      <span class="br-tab-badge recon" *ngIf="reconciledCount">{{ reconciledCount }}</span>
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="br-card">
+    <div class="br-loading" *ngIf="loading">Loading...</div>
+    <div class="br-table-wrap" *ngIf="!loading">
+      <table class="br-table">
+        <thead>
+          <tr>
+            <th>Bank</th>
+            <th>Statement Date</th>
+            <th>Reference No</th>
+            <th>Description</th>
+            <th class="right">Ledger Amount</th>
+            <th class="right">Bank Amount</th>
+            <th class="right">Difference</th>
+            <th>Status</th>
+            <th class="center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of filtered" class="br-row">
+            <td class="bank-cell">{{ row.bankName }}</td>
+            <td class="date-cell">{{ row.statementDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="ref-cell">{{ row.referenceNo }}</td>
+            <td class="desc-cell">{{ row.description }}</td>
+            <td class="right amt">{{ row.ledgerAmount | number:'1.2-2' }}</td>
+            <td class="right amt">{{ row.bankAmount | number:'1.2-2' }}</td>
+            <td class="right" [class.diff-zero]="(row.bankAmount - row.ledgerAmount) === 0"
+                              [class.diff-nonzero]="(row.bankAmount - row.ledgerAmount) !== 0">
+              {{ (row.bankAmount - row.ledgerAmount) | number:'1.2-2' }}
+            </td>
+            <td>
+              <span class="br-badge" [ngClass]="row.status === 'Reconciled' ? 'badge-success' : 'badge-open'">
+                {{ row.status }}
+              </span>
+            </td>
+            <td class="center">
+              <button class="br-action-btn recon-btn" type="button"
+                *ngIf="row.status !== 'Reconciled'"
+                (click)="reconcile(row)" [disabled]="saving">
+                Reconcile
+              </button>
+              <button class="br-action-btn unrecon-btn" type="button"
+                *ngIf="row.status === 'Reconciled'"
+                (click)="unreconcile(row)" [disabled]="saving">
+                Unreconcile
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filtered.length === 0 && !loading">
+            <td colspan="9" class="br-empty">
+              {{ activeTab === 'unreconciled' ? 'No unreconciled lines found.' : 'No reconciled lines found.' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

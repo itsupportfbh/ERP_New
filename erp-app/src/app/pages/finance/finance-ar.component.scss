@@ -26,9 +26,10 @@ $muted:     #6c757d;
 }
 
 /* ── Alerts ── */
-.ar-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
-.ar-success { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
-.ar-danger  { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+.ar-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; margin-bottom: 8px; }
+.ar-success       { background: #e6f9f0; color: #1e8449; border: 1px solid #a9dfbf; }
+.ar-danger        { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+.ar-period-locked { background: #fff3cd; color: #856404; border: 1px solid #ffc107; font-weight: 500; }
 
 /* ── Tabs ── */
 .ar-tabs {

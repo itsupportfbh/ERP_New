@@ -17,45 +17,81 @@
     <button class="coa-add-btn" type="button" (click)="openCreate()" *ngIf="permission?.create">+ Add</button>
   </div>
 
-  <!-- Alerts -->
-  <div class="coa-alert coa-success" *ngIf="message">{{ message }}</div>
-  <div class="coa-alert coa-danger"  *ngIf="error">{{ error }}</div>
+  <!-- Modal Backdrop -->
+  <div class="coa-backdrop" *ngIf="showForm" (click)="showForm = false"></div>
 
-  <!-- Form Card -->
-  <div class="coa-form-card" *ngIf="showForm">
-    <div class="coa-form-head">
-      <strong>{{ editRow ? 'Edit Account' : 'New Account' }}</strong>
-      <button class="coa-outline-btn" type="button" (click)="showForm = false">&#215; Close</button>
+  <!-- Modal -->
+  <div class="coa-modal" *ngIf="showForm">
+    <!-- Header -->
+    <div class="coa-modal-head">
+      <span>{{ editRow ? 'Edit Chart Of Account' : 'New Chart Of Account' }}</span>
+      <button class="coa-modal-x" type="button" (click)="showForm = false">&#215;</button>
     </div>
-    <div class="coa-form-grid">
-      <label class="coa-field">
-        <span>Head Code <span class="req">*</span></span>
-        <input type="number" [(ngModel)]="form.headCode" placeholder="e.g. 1001">
-      </label>
+
+    <!-- Body -->
+    <div class="coa-modal-body">
+      <div class="coa-alert coa-danger" *ngIf="error">{{ error }}</div>
+
+      <!-- Head Name -->
       <label class="coa-field">
         <span>Head Name <span class="req">*</span></span>
-        <input type="text" [(ngModel)]="form.headName" placeholder="Account name">
+        <input type="text" [(ngModel)]="form.headName" placeholder="Enter Head Name">
       </label>
+
+      <!-- Head Code -->
       <label class="coa-field">
-        <span>Head Type</span>
-        <select [(ngModel)]="form.headType">
-          <option value="">— Select —</option>
-          <option *ngFor="let t of accountTypes" [value]="t">{{ t }}</option>
-        </select>
+        <span>Head Code</span>
+        <input type="text" [(ngModel)]="form.headCode"
+               [readonly]="!editRow" [class.coa-readonly]="!editRow"
+               placeholder="Auto Generated">
       </label>
+
+      <!-- Parent Head -->
       <label class="coa-field">
-        <span>Parent Account</span>
-        <select [(ngModel)]="form.parentHead">
-          <option [ngValue]="null">— None (Top Level) —</option>
+        <span>Parent Head</span>
+        <select [(ngModel)]="form.parentHead" (change)="onParentHeadChange()">
+          <option [ngValue]="null">Search / choose Parent Head...</option>
           <option *ngFor="let p of rows" [ngValue]="p.headCode">{{ p.headCode }} – {{ p.headName }}</option>
         </select>
       </label>
+
+      <!-- P Head Name -->
+      <label class="coa-field">
+        <span>P Head Name</span>
+        <input type="text" [value]="form.pHeadName ?? ''" readonly class="coa-readonly">
+      </label>
+
+      <!-- Head Level + Head Type (2 col) -->
+      <div class="coa-row-2">
+        <label class="coa-field">
+          <span>Head Level</span>
+          <input type="text" [value]="form.headLevel ?? ''" readonly class="coa-readonly">
+        </label>
+        <label class="coa-field">
+          <span>Head Type</span>
+          <input type="text" [value]="form.headType ?? ''" readonly class="coa-readonly">
+        </label>
+      </div>
+
+      <!-- Is Transaction + Is Gl (checkboxes) -->
+      <div class="coa-row-checks">
+        <label class="coa-check">
+          <span>Is Transaction</span>
+          <input type="checkbox" [(ngModel)]="form.isTransaction">
+        </label>
+        <label class="coa-check">
+          <span>Is Gl</span>
+          <input type="checkbox" [(ngModel)]="form.isGl">
+        </label>
+      </div>
     </div>
-    <div class="coa-form-footer">
-      <button class="coa-outline-btn" type="button" (click)="showForm = false">Cancel</button>
-      <button class="coa-add-btn" type="button" (click)="save()" [disabled]="saving">
-        {{ saving ? 'Saving...' : (editRow ? 'Update' : 'Save') }}
+
+    <!-- Footer -->
+    <div class="coa-modal-foot">
+      <button class="coa-save-btn" type="button" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Saving...' : 'Save' }}
       </button>
+      <button class="coa-cancel-btn" type="button" (click)="showForm = false">Cancel</button>
     </div>
   </div>
 
