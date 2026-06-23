@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { RecipeService } from '../recipe.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-production-planning-list',
@@ -21,6 +22,13 @@ export class ProductionPlanningListComponent implements OnInit {
   showDeleteModal = false;
   itemToDelete: any = null;
 
+  // Shortage GRN alerts (bell): materials received against a RECIPE_SHORTAGE PR
+  showShortageGrnModal = false;
+  shortageGrnList: any[] = [];
+  shortageGrnCount = 0;
+  shortageGrnSearch = '';
+  markingPlanId: number | null = null;
+
   // view-details modal
   showView = false;
   viewLoading = false;
@@ -34,15 +42,14 @@ export class ProductionPlanningListComponent implements OnInit {
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
     { header: 'UOM', key: 'uomName', align: 'center' },
-    { header: 'Planned Qty', key: 'plannedQtyDisp', align: 'right' },
-    { header: 'Available', key: 'availableQtyDisp', align: 'right' },
-    { header: 'Shortage', key: 'shortageQtyDisp', align: 'right' },
+    { header: 'Required Qty', key: 'plannedQtyDisp', align: 'right' },
   ];
 
   constructor(private svc: RecipeService, private router: Router, private printSvc: DocumentPrintService) {}
 
   ngOnInit(): void {
     this.load();
+    this.loadShortageGrnCount();
   }
 
   load(): void {
@@ -138,18 +145,13 @@ export class ProductionPlanningListComponent implements OnInit {
         const whId = h.warehouseId ?? h.WarehouseId ?? null;
 
         const finalize = () => {
-          const totalPlanned = this.viewLines.reduce((s, l) => s + (+l.plannedQty || 0), 0);
-          const totalShortage = this.viewLines.reduce((s, l) => s + (+l.shortageQty || 0), 0);
           this.viewInfo = [
             { label: 'Plan No', value: row.productionPlanNo },
             { label: 'SO No', value: row.salesOrderNo || '—' },
             { label: 'Plan Date', value: this.fmtDate(planDate) },
             { label: 'Status', value: row.statusLabel },
           ];
-          this.viewTotals = [
-            { label: 'Total Planned', value: totalPlanned.toFixed(2) },
-            { label: 'Total Shortage', value: totalShortage.toFixed(2) },
-          ];
+          this.viewTotals = [];
           this.viewTitle = `Production Plan — ${row.productionPlanNo}`;
           this.viewSubtitle = `SO No: ${row.salesOrderNo || '—'} · Status: ${row.statusLabel}`;
           this.viewLoading = false;
@@ -227,6 +229,84 @@ export class ProductionPlanningListComponent implements OnInit {
     const dt = new Date(d);
     if (isNaN(dt.getTime())) return String(d);
     return `${String(dt.getDate()).padStart(2, '0')}-${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`;
+  }
+
+  // ── Shortage GRN alerts (bell) ────────────────────────
+  openShortageGrnAlerts(): void {
+    this.showShortageGrnModal = true;
+    this.loadShortageGrnAlerts();
+  }
+
+  closeShortageGrnModal(): void {
+    this.showShortageGrnModal = false;
+    this.shortageGrnSearch = '';
+  }
+
+  loadShortageGrnAlerts(): void {
+    this.svc.getShortageGrnAlerts().subscribe({
+      next: (res: any) => {
+        this.shortageGrnList = res?.data ?? this.svc.unwrap(res) ?? [];
+        this.shortageGrnCount = res?.count ?? this.shortageGrnList.length;
+      },
+      error: () => { this.shortageGrnList = []; this.shortageGrnCount = 0; }
+    });
+  }
+
+  loadShortageGrnCount(): void {
+    this.svc.getShortageGrnAlerts().subscribe({
+      next: (res: any) => {
+        const list = res?.data ?? this.svc.unwrap(res) ?? [];
+        this.shortageGrnCount = res?.count ?? list.length;
+      },
+      error: () => { this.shortageGrnCount = 0; }
+    });
+  }
+
+  filteredShortageGrnList(): any[] {
+    const v = (this.shortageGrnSearch || '').toLowerCase().trim();
+    if (!v) return this.shortageGrnList;
+    return this.shortageGrnList.filter((x: any) =>
+      String(x.productionPlanId ?? '').includes(v) ||
+      String(x.salesOrderNo ?? x.salesOrderId ?? '').toLowerCase().includes(v) ||
+      String(x.grnNo ?? '').toLowerCase().includes(v));
+  }
+
+  markPlanAsPending(planId: number): void {
+    if (!planId) return;
+    Swal.fire({
+      icon: 'question',
+      title: 'Mark as Pending?',
+      text: `Plan ${planId} status will change from Awaiting Material → Pending`,
+      showCancelButton: true,
+      confirmButtonText: 'Yes',
+      cancelButtonText: 'Cancel'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.markingPlanId = planId;
+      this.svc.updatePlanStatus(planId, {
+        status: 1,
+        updatedBy: Number(localStorage.getItem('id') || localStorage.getItem('userId') || 0)
+      }).subscribe({
+        next: () => {
+          // reflect new status in the grid
+          const apply = (x: any) => Number(x.id) === Number(planId)
+            ? { ...x, status: 1, statusLabel: 'Pending', statusCls: this.statusCls('Pending') }
+            : x;
+          this.rows = (this.rows || []).map(apply);
+          this.applyFilter();
+          // drop this plan from the alert list + update bell count
+          this.shortageGrnList = (this.shortageGrnList || []).filter(x => Number(x.productionPlanId) !== Number(planId));
+          this.shortageGrnCount = this.shortageGrnList.length;
+          this.markingPlanId = null;
+          if (this.shortageGrnCount === 0) this.closeShortageGrnModal();
+          void Swal.fire({ icon: 'success', title: 'Success', text: 'Production Plan status updated successfully', timer: 1500, showConfirmButton: false });
+        },
+        error: (e) => {
+          this.markingPlanId = null;
+          void Swal.fire('Failed', e?.error?.message || 'Status update failed', 'error');
+        }
+      });
+    });
   }
 
   // ── Delete ────────────────────────────────────────────

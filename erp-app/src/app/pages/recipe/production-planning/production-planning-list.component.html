@@ -5,6 +5,10 @@
       <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
       <div class="dt-right">
         <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Plan no / SO no / status"/></div>
+        <button class="pp-bell" type="button" title="Shortage GRN Alerts" (click)="openShortageGrnAlerts()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2a5 5 0 0 0-5 5c0 4-1.5 5.5-2 6h14c-.5-.5-2-2-2-6a5 5 0 0 0-5-5z"/><path d="M8.5 17a1.8 1.8 0 0 0 3 0"/></svg>
+          <span class="pp-bell-badge" *ngIf="shortageGrnCount > 0">{{ shortageGrnCount }}</span>
+        </button>
         <button class="mbtn-add" (click)="create()">Add</button>
       </div>
     </div>
@@ -28,7 +32,7 @@
             <td><div class="dt-actions-cell">
               <button class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
               <button class="dt-icon-btn print" (click)="print(item)" title="Print"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/></svg></button>
-              <button class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+              <button class="dt-icon-btn edit" [disabled]="true" title="Created plan cannot be edited"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
               <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>
           </tr>
@@ -53,6 +57,43 @@
     (print)="printActive()"
     (close)="showView=false">
   </erp-doc-view-modal>
+
+  <!-- Shortage GRN alerts modal -->
+  <div class="pp-alert-overlay" *ngIf="showShortageGrnModal" (click)="closeShortageGrnModal()">
+    <div class="pp-alert-modal" (click)="$event.stopPropagation()">
+      <div class="pp-alert-head">
+        <h3>Shortage GRN Alerts</h3>
+        <div class="pp-alert-head-right">
+          <input class="pp-alert-search" type="search" [(ngModel)]="shortageGrnSearch" name="grnSearch" placeholder="Search Plan / SO / GRN"/>
+          <button class="pp-alert-refresh" (click)="loadShortageGrnAlerts()">Refresh</button>
+          <button class="pp-alert-x" (click)="closeShortageGrnModal()" aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="pp-alert-body">
+        <table class="pp-alert-table">
+          <thead><tr>
+            <th>PLAN ID</th><th>SO NO</th><th>GRN NO</th><th>RECEIVED DATE</th><th>ITEM CODE</th><th>ITEM NAME</th><th class="ta-r">QTY RECEIVED</th><th class="ta-c">ACTION</th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let a of filteredShortageGrnList()">
+              <td class="pp-plan">{{ a.productionPlanId }}</td>
+              <td>{{ a.salesOrderNo || ('SOID:' + a.salesOrderId) }}</td>
+              <td>{{ a.grnNo }}</td>
+              <td>{{ a.receptionDate ? (a.receptionDate | date:'dd-MM-yyyy') : '—' }}</td>
+              <td>{{ a.itemCode }}</td>
+              <td>{{ a.itemName }}</td>
+              <td class="ta-r">{{ a.qtyReceived | number:'1.0-3' }}</td>
+              <td class="ta-c"><button class="pp-approve" [disabled]="markingPlanId === a.productionPlanId" (click)="markPlanAsPending(a.productionPlanId); $event.stopPropagation()">Approve</button></td>
+            </tr>
+            <tr *ngIf="filteredShortageGrnList().length === 0"><td colspan="8" class="pp-alert-empty">No alerts</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pp-alert-foot">
+        <button class="pp-alert-close" (click)="closeShortageGrnModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Delete confirm -->
   <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">

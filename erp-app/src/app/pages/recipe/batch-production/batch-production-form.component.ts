@@ -1,15 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RecipeService } from '../recipe.service';
+import Swal from 'sweetalert2';
 
 interface BatchLine {
   recipeId: number | null;
   finishedItemId: number | null;
   recipeName: string;
   finishedItemName: string;
-  plannedQty: number | null;
-  actualQty: number | null;
-  expectedOutput: number | null;
+  plannedQty: number;
+  actualQty: number;
   uom: string;
 }
 
@@ -23,23 +23,21 @@ export class BatchProductionFormComponent implements OnInit {
   isEdit = false;
   id: number | null = null;
   loading = false;
-  saving = false;
   posting = false;
-  error = '';
-  success = '';
 
   // Header
   productionPlanId: number | null = null;
   warehouseId: number | null = null;
   batchNo = '';
   status = 'Draft';
+  postedDate = '';
+  minPostedDate = '';
 
-  // Lines
   lines: BatchLine[] = [];
-
-  // Dropdowns
   planOptions: any[] = [];
-  warehouseOptions: any[] = [];
+
+  // finishedItemId -> UOM name (resolved from item master)
+  private uomByItem = new Map<number, string>();
 
   user = localStorage.getItem('username') || 'admin';
 
@@ -50,6 +48,8 @@ export class BatchProductionFormComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.postedDate = this.getTodayLocalDate();
+    this.minPostedDate = this.getTodayLocalDate();
     const paramId = this.route.snapshot.paramMap.get('id');
     this.isEdit = !!paramId && paramId !== 'new';
     this.loadLookups();
@@ -57,16 +57,38 @@ export class BatchProductionFormComponent implements OnInit {
   }
 
   loadLookups(): void {
+    this.svc.getItems().subscribe(r => {
+      this.svc.unwrap(r).forEach((i: any) => {
+        const uom = i.uomName ?? i.uom ?? '';
+        if (i.id != null && uom) this.uomByItem.set(Number(i.id), uom);
+      });
+      // re-resolve UOM for any lines already loaded
+      this.lines.forEach(l => { if (!l.uom) l.uom = this.uomByItem.get(Number(l.finishedItemId)) ?? ''; });
+    });
     this.svc.getProductionPlans().subscribe(r => {
-      this.planOptions = this.svc.unwrap(r).map((p: any) => ({
-        label: `${p.productionPlanNo ?? p.id} - ${p.salesOrderNo ?? ''}`,
-        value: p.id,
-        raw: p
-      }));
+      // Only Pending plans (status 1) are eligible for batch production.
+      // Plans still "Awaiting Material" (status 0) must not appear.
+      // In edit mode keep the already-selected plan even if its status changed.
+      this.planOptions = this.svc.unwrap(r)
+        .filter((p: any) => {
+          const st = Number(p.status ?? p.Status ?? 0);
+          const pid = Number(p.id ?? p.iD ?? 0);
+          if (st === 1) return true;
+          if (this.productionPlanId && pid === Number(this.productionPlanId)) return true;
+          return false;
+        })
+        .map((p: any) => ({
+          label: `${p.productionPlanNo ?? p.id} - ${p.salesOrderNo ?? ''}`,
+          value: p.id,
+          raw: p
+        }));
+      // if edit loaded the plan id before options arrived, apply lines now
+      if (this.productionPlanId && !this.lines.length) this.applyPlanLines(this.productionPlanId);
     });
-    this.svc.getWarehouses().subscribe(r => {
-      this.warehouseOptions = this.svc.unwrap(r).map((w: any) => ({ label: w.warehouseName ?? w.name, value: w.id }));
-    });
+  }
+
+  private resolveUom(l: any): string {
+    return l.uom ?? l.uomName ?? this.uomByItem.get(Number(l.finishedItemId)) ?? '';
   }
 
   loadForEdit(): void {
@@ -81,16 +103,16 @@ export class BatchProductionFormComponent implements OnInit {
         this.warehouseId = header.warehouseId ?? null;
         this.batchNo = header.batchNo ?? '';
         this.status = header.status ?? 'Draft';
+        if (header.postedDate) this.postedDate = this.formatDateForInput(header.postedDate);
 
         this.lines = (Array.isArray(lines) ? lines : []).map((l: any) => ({
           recipeId: l.recipeId ?? null,
           finishedItemId: l.finishedItemId ?? null,
           recipeName: l.recipeName ?? l.finishedItemName ?? '',
           finishedItemName: l.finishedItemName ?? l.recipeName ?? '',
-          plannedQty: l.plannedQty ?? 0,
-          actualQty: l.actualQty ?? l.plannedQty ?? 0,
-          expectedOutput: l.expectedOutput ?? 0,
-          uom: l.uom ?? ''
+          plannedQty: Number(l.plannedQty ?? 0),
+          actualQty: Number(l.actualQty ?? l.plannedQty ?? 0),
+          uom: this.resolveUom(l)
         }));
         this.loading = false;
       },
@@ -99,10 +121,14 @@ export class BatchProductionFormComponent implements OnInit {
   }
 
   onPlanChange(): void {
-    const found = this.planOptions.find(o => o.value === this.productionPlanId);
+    if (!this.productionPlanId) { this.lines = []; return; }
+    this.applyPlanLines(this.productionPlanId);
+  }
+
+  private applyPlanLines(planId: number): void {
+    const found = this.planOptions.find(o => Number(o.value) === Number(planId));
     if (!found) { this.lines = []; return; }
     const plan = found.raw ?? {};
-    // Adopt warehouse from plan when present
     if (plan.warehouseId != null) this.warehouseId = plan.warehouseId;
 
     const plines = plan.lines ?? plan.Lines ?? [];
@@ -111,73 +137,90 @@ export class BatchProductionFormComponent implements OnInit {
       finishedItemId: l.finishedItemId ?? null,
       recipeName: l.recipeName ?? l.finishedItemName ?? '',
       finishedItemName: l.finishedItemName ?? l.recipeName ?? '',
-      plannedQty: l.plannedQty ?? 0,
-      actualQty: l.plannedQty ?? 0,
-      expectedOutput: l.expectedOutput ?? 0,
-      uom: l.uom ?? ''
+      plannedQty: Number(l.plannedQty ?? 0),
+      actualQty: Number(l.plannedQty ?? 0),
+      uom: this.resolveUom(l)
     }));
   }
 
-  removeLine(i: number): void { this.lines.splice(i, 1); }
-
-  save(): void {
-    this.error = '';
-    this.success = '';
-    if (!this.productionPlanId) { this.error = 'Please select a production plan.'; return; }
-    if (!this.warehouseId) { this.error = 'Please select a warehouse.'; return; }
-
-    this.saving = true;
-    const payload: any = {
-      id: this.isEdit ? this.id : null,
-      productionPlanId: this.productionPlanId,
-      warehouseId: this.warehouseId,
-      batchNo: this.batchNo || null,
-      status: this.status || 'Draft',
-      user: this.user,
-      lines: this.lines.map(l => ({
-        recipeId: l.recipeId,
-        finishedItemId: l.finishedItemId,
-        plannedQty: l.plannedQty ?? 0,
-        actualQty: l.actualQty ?? 0,
-        recipeName: l.recipeName,
-        finishedItemName: l.finishedItemName,
-        uom: l.uom,
-        expectedOutput: l.expectedOutput ?? 0
-      }))
-    };
-
-    const obs$ = this.isEdit ? this.svc.updateBatch(payload) : this.svc.createBatch(payload);
-    obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
-    });
+  onActualChange(i: number, value: any): void {
+    const n = Number(value);
+    this.lines[i].actualQty = isNaN(n) ? 0 : n;
   }
+
+  variance(l: BatchLine): number { return (l.actualQty ?? 0) - (l.plannedQty ?? 0); }
+
+  varClass(l: BatchLine): string {
+    const v = this.variance(l);
+    if (v === 0) return 'ok';
+    return v < 0 ? 'neg' : 'pos';
+  }
+
+  get varianceCount(): number {
+    return (this.lines || []).filter(x => Math.abs((x.actualQty ?? 0) - (x.plannedQty ?? 0)) > 0).length;
+  }
+
+  get isPosted(): boolean { return (this.status || '').toLowerCase() === 'posted'; }
+
+  canPost(): boolean { return !!this.productionPlanId && this.lines.length > 0 && !this.isPosted && !this.posting; }
 
   postToInventory(): void {
-    if (!this.id) return;
-    if (!confirm('Post this batch to inventory?')) return;
-    this.posting = true;
-    this.error = '';
-    this.success = '';
-    this.svc.postBatch({ batchId: this.id, postedBy: this.user }).subscribe({
-      next: () => {
-        this.posting = false;
-        this.success = 'Batch posted to inventory.';
-        this.status = 'Posted';
-        this.loadForEdit();
-      },
-      error: err => { this.posting = false; this.error = err?.error?.message ?? 'Post failed.'; }
+    if (!this.productionPlanId || !this.lines.length) return;
+    if (!this.warehouseId) { void Swal.fire('Error', 'Warehouse not found in selected production plan.', 'error'); return; }
+
+    void Swal.fire({
+      title: 'Post & Save?',
+      text: 'This will save the batch and reduce ingredient stock.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, post'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.posting = true;
+      const payload = {
+        id: this.isEdit ? this.id : null,
+        productionPlanId: this.productionPlanId,
+        warehouseId: this.warehouseId,
+        batchNo: this.batchNo || null,
+        status: 'Posted',
+        postedDate: this.postedDate,
+        userId: Number(localStorage.getItem('id') || localStorage.getItem('userId') || 0),
+        user: this.user,
+        lines: this.lines.map(l => ({
+          recipeId: l.recipeId,
+          finishedItemId: l.finishedItemId,
+          plannedQty: l.plannedQty,
+          actualQty: l.actualQty,
+          recipeName: l.recipeName,
+          finishedItemName: l.finishedItemName
+        }))
+      };
+
+      this.svc.postBatch(payload).subscribe({
+        next: () => {
+          this.posting = false;
+          this.status = 'Posted';
+          void Swal.fire({ icon: 'success', title: 'Posted', text: 'Batch saved and inventory updated', timer: 1500, showConfirmButton: false })
+            .then(() => this.back());
+        },
+        error: err => {
+          this.posting = false;
+          void Swal.fire('Error', err?.error?.message ?? 'Post failed.', 'error');
+        }
+      });
     });
   }
 
+  cancel(): void { this.back(); }
   back(): void { this.router.navigate(['/app/recipe/batch-production']); }
 
-  get title(): string { return this.isEdit ? 'View / Edit Batch' : 'New Batch Production'; }
-
-  get statusClass(): string {
-    const s = (this.status || '').toLowerCase();
-    if (s === 'posted' || s === 'completed') return 'approved';
-    if (s === 'rejected') return 'rejected';
-    return 'pending';
+  private getTodayLocalDate(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  private formatDateForInput(v: any): string {
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return this.getTodayLocalDate();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }

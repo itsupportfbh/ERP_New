@@ -4,7 +4,7 @@
     <div class="dt-controls">
       <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
       <div class="dt-right">
-        <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Batch / plan / warehouse / status"/></div>
+        <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Batch / plan / outlet / status"/></div>
         <button class="mbtn-add" (click)="create()">Add</button>
       </div>
     </div>
@@ -12,26 +12,27 @@
       <table class="dt-table">
         <thead><tr>
           <th (click)="sortBy('batchNo')">BATCH NO <span class="sort-arr">⇅</span></th>
-          <th (click)="sortBy('productionPlanNo')">PRODUCTION PLAN <span class="sort-arr">⇅</span></th>
-          <th (click)="sortBy('warehouseName')">WAREHOUSE <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('productionPlanNo')">PROD PLAN NO <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('planDate')">PLAN DATE <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('postedDate')">POSTED DATE <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('outletName')">OUTLET <span class="sort-arr">⇅</span></th>
           <th (click)="sortBy('status')">STATUS <span class="sort-arr">⇅</span></th>
-          <th (click)="sortBy('createdDate')">CREATED DATE <span class="sort-arr">⇅</span></th>
-          <th (click)="sortBy('foodPrepLabel')">FOOD PREP <span class="sort-arr">⇅</span></th>
           <th>ACTION</th>
         </tr></thead>
         <tbody>
           <tr *ngFor="let item of pagedItems">
             <td><strong>{{ item.batchNo }}</strong></td>
             <td>{{ item.productionPlanNo || '—' }}</td>
-            <td>{{ item.warehouseName || '—' }}</td>
+            <td>{{ item.planDate ? (item.planDate | date:'dd-MM-yyyy') : '—' }}</td>
+            <td>{{ item.postedDate ? (item.postedDate | date:'dd-MM-yyyy') : '—' }}</td>
+            <td>{{ item.outletName || '—' }}</td>
             <td><span class="qt-badge" [ngClass]="'st-' + statusClass(item.status)">{{ item.status }}</span></td>
-            <td>{{ item.createdDate ? (item.createdDate | date:'dd-MM-yyyy') : '—' }}</td>
-            <td><span *ngIf="item.foodPrepLabel" class="qt-badge" [ngClass]="'st-' + statusClass(item.foodPrepLabel)">{{ item.foodPrepLabel }}</span><span *ngIf="!item.foodPrepLabel">—</span></td>
             <td><div class="dt-actions-cell">
               <button class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
               <button class="dt-icon-btn print" (click)="print(item)" title="Print"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/></svg></button>
-              <button class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
-              <button class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
+              <button class="dt-icon-btn food" [disabled]="isFoodPrepDone(item)" (click)="openFoodPrep(item)" [title]="foodPrepTooltip(item)"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 2v6a2 2 0 0 0 2 2h0v8M5 2v5M7.5 2v5M13 2c-1.5 1-2 3-2 5s.5 3 2 3v8"/></svg></button>
+              <button class="dt-icon-btn edit" [disabled]="isPosted(item)" (click)="edit(item)" [title]="isPosted(item) ? 'Posted batch cannot be edited' : 'Edit'"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
+              <button class="dt-icon-btn del" [disabled]="isPosted(item)" (click)="openDelete(item)" [title]="isPosted(item) ? 'Posted batch cannot be deleted' : 'Delete'"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>
           </tr>
           <tr *ngIf="!loading && filtered.length===0"><td colspan="7" class="dt-empty">No batches found.</td></tr>
