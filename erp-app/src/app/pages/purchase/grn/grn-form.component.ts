@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
@@ -58,6 +58,8 @@ export class GrnFormComponent implements OnInit {
   receiptDate = new Date().toISOString().substring(0, 10);
   overReceiptTolerance: number | null = null;
   supplierName = '';
+  invoiceNo = '';
+  taxRate = 0;
   isClosed = false;
 
   // Lines
@@ -206,12 +208,14 @@ export class GrnFormComponent implements OnInit {
           : (d.receiptDate ? d.receiptDate.substring(0, 10) : this.receiptDate);
         this.overReceiptTolerance = d.overReceiptTolerance ?? null;
         this.supplierName = d.supplierName ?? '';
+        this.invoiceNo = d.invoiceNo ?? d.InvoiceNo ?? '';
 
         const rawJson = d.gRNJson ?? d.GRNJson ?? d.grnJson ?? '[]';
         const parsed: any[] = typeof rawJson === 'string'
           ? JSON.parse(rawJson || '[]')
           : (Array.isArray(rawJson) ? rawJson : []);
 
+        if (parsed.length) this.taxRate = Number(parsed[0].taxRate ?? 0);
         this.lines = parsed.map((l: any) => ({
           itemId: l.itemId ?? null,
           itemCode: l.itemCode ?? '',
@@ -274,6 +278,7 @@ export class GrnFormComponent implements OnInit {
     const po = found.raw;
     this.supplierName = po.supplierName ?? '';
     this.supplierId = po.supplierId ?? po.SupplierId ?? null;
+    this.taxRate = Number(po.tax ?? po.gstPct ?? po.taxRate ?? po.taxPct ?? 0);
 
     const rawLines = po.poLines ?? po.PoLines ?? '[]';
     const parsedLines: any[] = typeof rawLines === 'string'
@@ -474,7 +479,7 @@ export class GrnFormComponent implements OnInit {
       this.svc.updateGRNFlagIssues({
         ID: grnId, POID: this.poId, ReceptionDate: this.receiptDate,
         OverReceiptTolerance: this.overReceiptTolerance ?? 0,
-        GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
+        GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), InvoiceNo: this.invoiceNo || null, isActive: true
       }).subscribe({
         next: () => {
           // Step 3b — run AFTER GRN JSON is saved so backend reads updated isPostInventory flags
@@ -511,6 +516,8 @@ export class GrnFormComponent implements OnInit {
       isPostInventory: l.isPosted,
       isFlagIssue: !!l.flagIssueId, flagIssueId: l.flagIssueId,
       isPartial: l.isPartial, initial: this.currentUsername,
+      invoiceNo: this.invoiceNo || null,
+      taxRate: this.taxRate,
       remarks: l.remarks
     }));
   }
@@ -582,6 +589,8 @@ export class GrnFormComponent implements OnInit {
       flagIssueId: l.flagIssueId,
       isPartial: l.isPartial,
       initial: this.currentUsername,
+      invoiceNo: this.invoiceNo || null,
+      taxRate: this.taxRate,
       remarks: l.remarks
     }));
 
@@ -591,6 +600,7 @@ export class GrnFormComponent implements OnInit {
       OverReceiptTolerance: this.overReceiptTolerance ?? 0,
       GrnNo: this.grnNo || 'GRN-PENDING',
       GRNJson: JSON.stringify(grnLinesData),
+      InvoiceNo: this.invoiceNo || null,
       isActive: true
     };
 
@@ -706,7 +716,7 @@ export class GrnFormComponent implements OnInit {
       this.svc.updateGRNFlagIssues({
         ID: this.id, POID: this.poId, ReceptionDate: this.receiptDate,
         OverReceiptTolerance: this.overReceiptTolerance ?? 0,
-        GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
+        GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), InvoiceNo: this.invoiceNo || null, isActive: true
       }).subscribe({
         next: () => {
           Swal.fire({ icon: 'warning', title: 'Flagged', text: 'Line flagged successfully.', confirmButtonColor: '#16a34a' })

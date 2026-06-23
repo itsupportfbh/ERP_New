@@ -1,4 +1,4 @@
-﻿import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -312,8 +312,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   private loadLinesWithPoFetch(grns: GrnHeader[]): void {
     if (!grns.length) { this.lines = []; return; }
-    // GRNs that have a PO link but no poLines loaded yet
-    const needFetch = grns.filter(g => g.poId > 0 && !this.safeJsonArray(g.poLines).length);
+    // Fetch PO when poLines are missing OR when taxRate is not yet set
+    const needFetch = grns.filter(g => g.poId > 0 && (!this.safeJsonArray(g.poLines).length || !this.taxRate));
     if (!needFetch.length) { this.loadLinesFromGrns(grns); return; }
 
     const uniquePoIds = [...new Set(needFetch.map(g => g.poId))];
@@ -326,7 +326,12 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const po = this.svc.unwrapOne(res);
         const poId = uniquePoIds[idx];
         const rawLines = po?.poLines ?? po?.PoLines ?? null;
-        if (rawLines) grns.filter(g => g.poId === poId).forEach(g => g.poLines = rawLines);
+        // Only overwrite poLines if not already populated
+        if (rawLines) grns.filter(g => g.poId === poId && !this.safeJsonArray(g.poLines).length).forEach(g => g.poLines = rawLines);
+        if (!this.taxRate) {
+          const poTax = Number(po?.tax ?? po?.gstPct ?? po?.taxRate ?? po?.taxPct ?? 0);
+          if (poTax > 0) this.taxRate = poTax;
+        }
       });
       this.loadLinesFromGrns(grns);
     });
@@ -340,6 +345,10 @@ export class SupplierInvoiceFormComponent implements OnInit {
     grns.forEach(g => {
       const grnItems = this.safeJsonArray(g.grnJson);
       const poItems = this.safeJsonArray(g.poLines);
+      if (!this.taxRate && grnItems.length) {
+        const grnTax = Number(grnItems[0].taxRate ?? 0);
+        if (grnTax > 0) this.taxRate = grnTax;
+      }
 
       grnItems.forEach((x: any) => {
         const itemId = x.itemId ?? null;
@@ -522,9 +531,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
   }
 
   submit(draft = false): void {
-    if (!this.invoiceNo.trim()) {
-      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter Invoice No.', confirmButtonColor: '#16a34a' }); return;
-    }
     if (!this.selectedGrnIds.length) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select at least one GRN.', confirmButtonColor: '#16a34a' }); return;
     }

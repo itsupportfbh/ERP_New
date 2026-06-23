@@ -21,7 +21,7 @@ export class ForgotPasswordComponent {
     if (!this.email.trim()) return;
 
     this.loading = true;
-    this.auth.forgotPassword({ email: this.email.trim() }).subscribe({
+    this.auth.forgotPassword({ email: this.email.trim(), mode: 'password' }).subscribe({
       next: () => {
         this.loading = false;
         Swal.fire({

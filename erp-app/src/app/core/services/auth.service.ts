@@ -131,7 +131,7 @@ export class AuthService {
     localStorage.removeItem(this.REMEMBER_KEY);
   }
 
-  forgotPassword(data: { email: string }): Observable<any> {
+  forgotPassword(data: { email: string; mode: string }): Observable<any> {
     return this.http.post<any>(`${environment.apiUrl}/user/forgotPassword`, data);
   }
 
