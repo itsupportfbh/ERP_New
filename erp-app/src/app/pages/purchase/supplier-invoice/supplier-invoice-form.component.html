@@ -1,4 +1,4 @@
-<div class="pin-page">
+﻿<div class="pin-page">
 
   <!-- Top bar -->
   <div class="page-header">
@@ -27,76 +27,70 @@
 
   <ng-container *ngIf="!loading">
 
-    <!-- ── GRN Selection ─────────────────────────────── -->
-    <div class="card section-card" *ngIf="!isGlPosted">
-      <div class="section-label">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12"/><path d="M6 3V1M10 3V1"/></svg>
-        Select GRN(s)
-      </div>
-
-      <!-- Combobox -->
-      <div class="grn-combobox">
-        <div class="grn-input-wrap">
-          <svg class="grn-search-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4"/><path d="m11 11 2.5 2.5"/></svg>
-          <input class="grn-input" type="text"
-            [value]="grnSearch"
-            (input)="onGrnSearch($event)"
-            (focus)="onGrnFocus()"
-            placeholder="Search GRN No, PO No, Supplier…"
-            [disabled]="isGlPosted" />
-          <button class="grn-caret" type="button" (click)="grnOpen = !grnOpen" tabindex="-1">
-            <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,1 5,5 9,1"/></svg>
-          </button>
-        </div>
-
-        <!-- Dropdown -->
-        <div class="grn-dropdown" *ngIf="grnOpen">
-          <div class="grn-drop-head">Select GRN(s) — same PO only for 3-way match</div>
-          <button type="button" class="grn-drop-item"
-            *ngFor="let g of grnFiltered"
-            (click)="toggleGrn(g)">
-            <div class="grn-drop-left">
-              <span class="grn-no">{{ g.grnNo }}</span>
-              <span class="grn-sep">·</span>
-              <span class="grn-po">PO: {{ g.poNo }}</span>
-              <span class="grn-sup">{{ g.supplierName }}</span>
-            </div>
-            <span class="grn-check" *ngIf="isGrnSelected(g.id)">
-              <svg viewBox="0 0 12 10" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,5 4.5,8.5 11,1"/></svg>
-            </span>
-          </button>
-          <div class="grn-drop-empty" *ngIf="!grnFiltered.length">No GRNs found</div>
-        </div>
-      </div>
-
-      <!-- Selected GRN badges -->
-      <div class="grn-badges" *ngIf="selectedGrnNos.length">
-        <span class="grn-badge" *ngFor="let n of selectedGrnNos">
-          {{ n }}
-          <button type="button" class="grn-badge-rm" (click)="removeGrnByNo(n)" [disabled]="isGlPosted">&#10005;</button>
-        </span>
-      </div>
-
-      <!-- 3-way match status bar -->
-      <div class="match-bar" *ngIf="lines.length">
-        <div class="match-bar-inner" [class.ok]="allMatchOk" [class.warn]="!allMatchOk">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0;">
-            <circle cx="8" cy="8" r="7"/>
-            <polyline *ngIf="allMatchOk" points="5,8 7,10 11,6"/>
-            <line *ngIf="!allMatchOk" x1="8" y1="5" x2="8" y2="9"/>
-            <circle *ngIf="!allMatchOk" cx="8" cy="11.5" r="0.5" fill="currentColor"/>
-          </svg>
-          <span *ngIf="allMatchOk">3-Way Match: All lines match (PO qty = GRN qty = Invoice qty)</span>
-          <span *ngIf="!allMatchOk">3-Way Match: {{ mismatchCount }} line(s) have qty mismatch — review before posting</span>
-        </div>
-      </div>
-    </div>
-
     <!-- ── Invoice Header ──────────────────────────── -->
     <div class="card section-card">
       <div class="section-label">Invoice Details</div>
-      <div class="form-row cols-3">
-        <erp-input label="Invoice No *" [(ngModel)]="invoiceNo" placeholder="Supplier invoice number" [disabled]="isGlPosted"></erp-input>
+
+      <!-- GRN Combobox -->
+      <div *ngIf="!isGlPosted">
+          <div class="grn-combobox">
+            <div class="grn-input-wrap">
+              <svg class="grn-search-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4"/><path d="m11 11 2.5 2.5"/></svg>
+              <input class="grn-input" type="text"
+                [value]="grnSearch"
+                (input)="onGrnSearch($event)"
+                (focus)="onGrnFocus()"
+                placeholder="Search GRN No, PO No, Supplier…"
+                [disabled]="isGlPosted" />
+              <button class="grn-caret" type="button" (click)="grnOpen = !grnOpen" tabindex="-1">
+                <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,1 5,5 9,1"/></svg>
+              </button>
+            </div>
+      
+            <!-- Dropdown -->
+            <div class="grn-dropdown" *ngIf="grnOpen">
+              <div class="grn-drop-head">Select GRN(s) — same PO only for 3-way match</div>
+              <button type="button" class="grn-drop-item"
+                *ngFor="let g of grnFiltered"
+                (click)="toggleGrn(g)">
+                <div class="grn-drop-left">
+                  <span class="grn-no">{{ g.grnNo }}</span>
+                  <span class="grn-sep">·</span>
+                  <span class="grn-po">PO: {{ g.poNo }}</span>
+                  <span class="grn-sup">{{ g.supplierName }}</span>
+                </div>
+                <span class="grn-check" *ngIf="isGrnSelected(g.id)">
+                  <svg viewBox="0 0 12 10" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,5 4.5,8.5 11,1"/></svg>
+                </span>
+              </button>
+              <div class="grn-drop-empty" *ngIf="!grnFiltered.length">No GRNs found</div>
+            </div>
+          </div>
+
+          <!-- Selected GRN badges -->
+          <div class="grn-badges" *ngIf="selectedGrnNos.length">
+            <span class="grn-badge" *ngFor="let n of selectedGrnNos">
+              {{ n }}
+              <button type="button" class="grn-badge-rm" (click)="removeGrnByNo(n)" [disabled]="isGlPosted">&#10005;</button>
+            </span>
+          </div>
+
+          <!-- 3-way match status bar -->
+          <div class="match-bar" *ngIf="lines.length">
+            <div class="match-bar-inner" [class.ok]="allMatchOk" [class.warn]="!allMatchOk">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0;">
+                <circle cx="8" cy="8" r="7"/>
+                <polyline *ngIf="allMatchOk" points="5,8 7,10 11,6"/>
+                <line *ngIf="!allMatchOk" x1="8" y1="5" x2="8" y2="9"/>
+                <circle *ngIf="!allMatchOk" cx="8" cy="11.5" r="0.5" fill="currentColor"/>
+              </svg>
+              <span *ngIf="allMatchOk">3-Way Match: All lines match (PO qty = GRN qty = Invoice qty)</span>
+              <span *ngIf="!allMatchOk">3-Way Match: {{ mismatchCount }} line(s) have qty mismatch — review before posting</span>
+            </div>
+          </div>
+      </div>
+
+      <div class="form-row cols-2 block-gap">
         <erp-input label="Invoice Date" type="date" [(ngModel)]="invoiceDate" [disabled]="isGlPosted"></erp-input>
         <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
       </div>
