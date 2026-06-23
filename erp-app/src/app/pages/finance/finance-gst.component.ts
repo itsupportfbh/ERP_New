@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
 
@@ -43,12 +44,14 @@ export class FinanceGstComponent implements OnInit {
   loading = false;
   error = '';
   message = '';
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
 
   private taxConfig    = FINANCE_PAGES.find(p => p.key === 'tax-gst')!;
   private returnConfig = FINANCE_PAGES.find(p => p.key === 'gst-return')!;
   private reportConfig = FINANCE_PAGES.find(p => p.key === 'gst-report')!;
 
-  constructor(private finance: FinanceService, private route: ActivatedRoute) {}
+  constructor(private finance: FinanceService, private route: ActivatedRoute, private permissionService: PermissionService) {}
 
   ngOnInit(): void {
     const path = this.route.snapshot.routeConfig?.path || '';
@@ -57,6 +60,9 @@ export class FinanceGstComponent implements OnInit {
     if (this.activeTab === 'returns') this.loadReturns();
     else if (this.activeTab === 'details') this.loadReport();
     else this.loadTaxCodes();
+    this.permissionService.getFunctionPermission(this.userId, 'tax').subscribe({
+      next: perm => { this.permission = perm; }
+    });
   }
 
   setTab(tab: GstTab): void {

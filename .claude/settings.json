@@ -10,7 +10,9 @@
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
-      "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\main\\financial\\AR\\ar-advance"
+      "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\main\\financial\\AR\\ar-advance",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\Controllers",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi"
     ]
   }
 }

@@ -153,7 +153,7 @@
   <div class="journal-footer">
     <button class="btn-cancel" type="button" (click)="cancel()">Cancel</button>
     <button class="btn-submit" type="button" (click)="submit()"
-      [disabled]="saving || !isBalanced || !hasValidLines">
+      [disabled]="saving || !isBalanced || !hasValidLines || !permission?.submit">
       {{ saving ? 'Saving...' : 'Submit Journal' }}
     </button>
   </div>

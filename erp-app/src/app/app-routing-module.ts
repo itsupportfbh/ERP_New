@@ -29,6 +29,7 @@ import { DebitNoteListComponent } from './pages/purchase/debit-note/debit-note-l
 import { DebitNoteFormComponent } from './pages/purchase/debit-note/debit-note-form.component';
 import { SupplierScorecardComponent } from './pages/purchase/supplier-scorecard/supplier-scorecard.component';
 import { ThreeWayMatchComponent } from './pages/purchase/three-way-match/three-way-match.component';
+import { PeriodCloseComponent } from './pages/purchase/period-close/period-close.component';
 
 // Master module components
 import { ApprovalLevelComponent } from './pages/master/approval-level/approval-level.component';
@@ -72,6 +73,7 @@ import { FinanceLedgerComponent } from './pages/finance/finance-ledger.component
 import { FinanceTrialBalanceComponent } from './pages/finance/finance-trial-balance.component';
 import { FinancePlComponent } from './pages/finance/finance-pl.component';
 import { FinanceBsComponent } from './pages/finance/finance-bs.component';
+import { FinanceOpeningBalanceComponent } from './pages/finance/finance-opening-balance.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
 // Sales
@@ -156,6 +158,9 @@ const routes: Routes = [
       { path: 'purchase/scorecard',            component: SupplierScorecardComponent },
       { path: 'purchase/three-way-match',      component: ThreeWayMatchComponent },
       { path: 'purchase/mobile-receiving',     component: MobileReceivingComponent },
+      { path: 'purchase/period-close',         component: PeriodCloseComponent },
+      { path: 'purchase/currency-conversion',  component: ExchangeRateComponent },
+      { path: 'purchase/uom-conversion',       component: UomConversionComponent },
       { path: 'purchase/Create-PurchaseRequest', component: PurchaseRequestFormComponent },
       { path: 'purchase/Edit-PurchaseRequest/:id', component: PurchaseRequestFormComponent },
       { path: 'purchase/list-PurchaseRequest', component: PurchaseRequestListComponent },
@@ -192,6 +197,7 @@ const routes: Routes = [
       { path: 'finance/gst-return',           component: FinanceGstComponent },
       { path: 'finance/gst-report',           component: FinanceGstComponent },
       { path: 'finance/create-journal',       component: FinanceJournalFormComponent },
+      { path: 'finance/opening-balance',      component: FinanceOpeningBalanceComponent },
       { path: 'finance/:section',             component: FinanceWorkspaceComponent },
       { path: 'financial/dashboard',           component: FinanceDashboardComponent },
       { path: 'financial/ChartOfAccount',      component: FinanceCoaComponent },
@@ -219,7 +225,7 @@ const routes: Routes = [
       { path: 'financial/finance-report',      component: FinanceWorkspaceComponent, data: { section: 'reports' } },
       { path: 'financial/daybook',             component: FinanceWorkspaceComponent, data: { section: 'daybook' } },
       { path: 'financial/forecast',            component: FinanceWorkspaceComponent, data: { section: 'collection-forecast' } },
-      { path: 'financial/opening-balance',     component: FinanceWorkspaceComponent, data: { section: 'opening-balance' } },
+      { path: 'financial/opening-balance',     component: FinanceOpeningBalanceComponent },
       { path: 'financial/year-close',          component: FinanceWorkspaceComponent, data: { section: 'year-end-close' } },
       { path: 'financial/bank-reconciliation', component: FinanceWorkspaceComponent, data: { section: 'bank-reconciliation' } },
        // Master routes

@@ -57,8 +57,13 @@ export class PurchaseRequestListComponent implements OnInit {
 
   prActionFilter = (action: string, row: any): boolean => {
     const s = this.prStatusNum(row);
-    if (action === 'edit' || action === 'delete') return s !== 2 && s !== 3;
-    return true;
+    switch (action) {
+      case 'edit':    return s !== 2 && s !== 3;
+      case 'delete':  return s !== 2 && s !== 3;
+      case 'approve': return s === 1;
+      case 'reject':  return s === 1;
+      default:        return true;
+    }
   };
 
   private prStatusNum(row: any): number {

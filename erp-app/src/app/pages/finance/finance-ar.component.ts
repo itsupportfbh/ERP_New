@@ -2,10 +2,26 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
 
-type ArTab = 'invoices' | 'receipts' | 'advances' | 'aging';
+type ArTab = 'invoices' | 'receipts' | 'advances' | 'aging' | 'create-invoice';
+
+interface AllocationRow {
+  invoiceId: number;
+  invoiceNo: string;
+  invoiceDate: string;
+  invoiceAmount: number;
+  fxRate: number;
+  currencyId: number;
+  currencyName: string;
+  advance: number;
+  paid: number;
+  balance: number;
+  selected: boolean;
+  allocatedAmount: number;
+}
 
 @Component({
   selector: 'erp-finance-ar',
@@ -23,19 +39,45 @@ export class FinanceArComponent implements OnInit {
   expandedCustomers: Set<string> = new Set();
   invoiceSummary = { total: 0, paid: 0, creditNote: 0, outstanding: 0 };
 
-  // Receipts
+  // Receipts list
   receipts: any[] = [];
   filteredReceipts: any[] = [];
   showReceiptForm = false;
-  receiptForm: any = { customerId: null, receiptDate: '', amount: null, paymentMode: 'BANK', remarks: '' };
   savingReceipt = false;
+
+  // Receipt create form
+  receiptForm: any = { customerId: null, receiptDate: '', paymentMode: 'BANK', bankId: null, amountReceived: null };
+  receiptInvoices: AllocationRow[] = [];
+  bankAccounts: any[] = [];
+  receiptCurrencies: any[] = [];
+  receiptFxRate = 1;
+  receiptCurrencyId: number | null = null;
+  receiptCurrencyName = '';
+  receiptBaseCurrencyId: number | null = null;
+  receiptAmountBase = 0;
+  receiptExchangeGainLoss = 0;
+  loadingInvoices = false;
 
   // Advances
   advances: any[] = [];
   advanceSummary = { total: 0, utilised: 0, balance: 0 };
   showAdvanceForm = false;
-  advanceForm: any = { customerId: null, customerName: '', advanceDate: '', amount: null, paymentMode: 'BANK', remarks: '' };
+  advanceForm: any = {
+    customerId: null, customerName: '', salesOrderId: null,
+    advanceDate: '', amount: null, bankAccountId: null,
+    paymentMode: 'BANK', remarks: ''
+  };
   savingAdvance = false;
+  isOrderSpecific = false;
+  orders: any[] = [];
+  loadingOrders = false;
+  openAdvancesForCustomer: any[] = [];
+  advFxRate = 1;
+  advCurrencyId: number | null = null;
+  advCurrencyName = '';
+  advBaseCurrencyId: number | null = null;
+  advAmountBase = 0;
+  advFxRateLoading = false;
   customers: any[] = [];
 
   // Aging
@@ -44,26 +86,366 @@ export class FinanceArComponent implements OnInit {
   agingFromDate = '';
   agingToDate = '';
 
+  // Create Invoice
+  invoiceForm: { customerId: number | null; invoiceDate: string; remarks: string } = { customerId: null, invoiceDate: '', remarks: '' };
+  invoiceLines: Array<{ itemName: string; uom: string; qty: number; unitPrice: number; discountPct: number; taxCodeId: number | null; gstPct: number; lineAmount: number; taxAmount: number; description: string }> = [];
+  taxCodes: Array<{ id: number; taxCode: string; taxName: string; taxRate: number }> = [];
+  savingInvoice = false;
+
   search = '';
   loading = false;
   error = '';
   message = '';
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
 
   private invoiceConfig = FINANCE_PAGES.find(p => p.key === 'ar-invoices')!;
   private receiptConfig  = FINANCE_PAGES.find(p => p.key === 'receipts')!;
   private advanceConfig  = FINANCE_PAGES.find(p => p.key === 'ar-advance')!;
   private agingConfig    = FINANCE_PAGES.find(p => p.key === 'ar-aging')!;
 
-  constructor(private finance: FinanceService, private route: ActivatedRoute) {}
+  constructor(private finance: FinanceService, private route: ActivatedRoute, private permissionService: PermissionService) {}
 
   ngOnInit(): void {
+    this.advBaseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
     this.loadCustomers();
+    this.loadTaxCodes();
+    this.loadBankAccounts();
+    this.loadReceiptCurrencies();
+    this.invoiceForm.invoiceDate = new Date().toISOString().slice(0, 10);
     const path = this.route.snapshot.routeConfig?.path || '';
     if (path.includes('receipts') || path.includes('AR-receipt')) this.setTab('receipts');
     else if (path.includes('ar-advance')) this.setTab('advances');
     else if (path.includes('ar-aging') || path.includes('aging')) this.setTab('aging');
+    else if (path.includes('AR-invoice-create')) this.setTab('create-invoice');
     else this.loadInvoices();
+    this.permissionService.getFunctionPermission(this.userId, 'ar').subscribe({
+      next: perm => { this.permission = perm; }
+    });
   }
+
+  // ── Bank Accounts ──────────────────────────────────────────────────────────
+
+  private loadBankAccounts(): void {
+    this.finance.list({ list: '/BankAccounts' }).subscribe({
+      next: res => { this.bankAccounts = this.finance.unwrap(res); },
+      error: () => { this.bankAccounts = []; }
+    });
+  }
+
+  // ── Currencies ─────────────────────────────────────────────────────────────
+
+  private loadReceiptCurrencies(): void {
+    this.finance.list({ list: '/Currency/GetCurrencies' }).subscribe({
+      next: res => {
+        this.receiptCurrencies = this.finance.unwrap(res);
+        if (this.receiptCurrencies.length && !this.receiptCurrencyId) {
+          const base = this.receiptCurrencies.find(c => c.isBase) ?? this.receiptCurrencies[0];
+          this.receiptCurrencyId = base.id ?? base.currencyId;
+          this.receiptCurrencyName = base.currencyCode ?? base.currencyName ?? '';
+          this.receiptBaseCurrencyId = this.receiptCurrencyId;
+        }
+      },
+      error: () => { this.receiptCurrencies = []; }
+    });
+  }
+
+  // ── Receipt Form ───────────────────────────────────────────────────────────
+
+  openReceiptForm(): void {
+    this.showReceiptForm = true;
+    this.message = '';
+    this.error = '';
+    this.receiptForm = {
+      customerId: null,
+      receiptDate: new Date().toISOString().slice(0, 10),
+      paymentMode: 'BANK',
+      bankId: null,
+      amountReceived: null
+    };
+    this.receiptInvoices = [];
+    this.receiptFxRate = 1;
+    this.receiptAmountBase = 0;
+    this.receiptExchangeGainLoss = 0;
+    const base = this.receiptCurrencies.find(c => c.isBase) ?? this.receiptCurrencies[0];
+    if (base) {
+      this.receiptCurrencyId = base.id ?? base.currencyId;
+      this.receiptCurrencyName = base.currencyCode ?? base.currencyName ?? '';
+    }
+  }
+
+  closeReceiptForm(): void {
+    this.showReceiptForm = false;
+    this.receiptInvoices = [];
+  }
+
+  onReceiptCustomerChange(): void {
+    this.receiptInvoices = [];
+    if (this.receiptForm.customerId) {
+      this.loadOpenInvoicesForReceipt(Number(this.receiptForm.customerId));
+    }
+  }
+
+  private loadOpenInvoicesForReceipt(customerId: number): void {
+    this.loadingInvoices = true;
+    this.finance.list({ list: `/ArReceipt/open-invoices/${customerId}` }).subscribe({
+      next: res => {
+        this.receiptInvoices = this.finance.unwrap(res).map((inv: any) => ({
+          invoiceId: inv.id ?? inv.Id ?? inv.invoiceId ?? inv.InvoiceId,
+          invoiceNo: inv.invoiceNo ?? inv.InvoiceNo ?? '',
+          invoiceDate: inv.invoiceDate ?? inv.InvoiceDate ?? '',
+          invoiceAmount: Number(inv.amount ?? inv.Amount ?? 0),
+          fxRate: Number(inv.fxRate ?? inv.FxRate ?? 1) || 1,
+          currencyId: Number(inv.currencyId ?? inv.CurrencyId ?? 0),
+          currencyName: inv.currencyName ?? inv.CurrencyName ?? '',
+          advance: Number(inv.advanceAmount ?? inv.AdvanceAmount ?? 0),
+          paid: Number(inv.paidAmount ?? inv.PaidAmount ?? 0),
+          balance: Number(inv.balance ?? inv.Balance ?? 0),
+          selected: false,
+          allocatedAmount: 0
+        }));
+        this.loadingInvoices = false;
+      },
+      error: () => { this.receiptInvoices = []; this.loadingInvoices = false; }
+    });
+  }
+
+  onReceiptCurrencyChange(): void {
+    const cur = this.receiptCurrencies.find(c => (c.id ?? c.currencyId) === Number(this.receiptCurrencyId));
+    this.receiptCurrencyName = cur?.currencyCode ?? cur?.currencyName ?? '';
+    if (this.receiptCurrencyId && this.receiptBaseCurrencyId && this.receiptCurrencyId !== this.receiptBaseCurrencyId) {
+      this.fetchReceiptFxRate();
+    } else {
+      this.receiptFxRate = 1;
+      this.recalcReceiptBase();
+      this.recalcReceiptAllocations();
+    }
+  }
+
+  private fetchReceiptFxRate(): void {
+    if (!this.receiptCurrencyId || !this.receiptBaseCurrencyId || !this.receiptForm.receiptDate) return;
+    this.finance.list(
+      { list: '/ExchangeRate/GetRate' },
+      { fromCurrencyId: this.receiptCurrencyId, toCurrencyId: this.receiptBaseCurrencyId, rateDate: this.receiptForm.receiptDate }
+    ).subscribe({
+      next: (res: any) => {
+        this.receiptFxRate = Number(res?.data?.rate ?? res?.rate ?? 1) || 1;
+        this.recalcReceiptBase();
+        this.recalcReceiptAllocations();
+      },
+      error: () => { this.receiptFxRate = 1; }
+    });
+  }
+
+  onReceiptFxRateChange(): void {
+    this.recalcReceiptBase();
+    this.recalcReceiptAllocations();
+  }
+
+  onReceiptAmountChange(): void {
+    this.recalcReceiptBase();
+    this.recalcReceiptAllocations();
+  }
+
+  private recalcReceiptBase(): void {
+    const amt = Number(this.receiptForm.amountReceived) || 0;
+    this.receiptAmountBase = parseFloat((amt * this.receiptFxRate).toFixed(2));
+  }
+
+  private recalcReceiptAllocations(): void {
+    let remaining = Number(this.receiptForm.amountReceived) || 0;
+    for (const row of this.receiptInvoices) {
+      if (!row.selected) { row.allocatedAmount = 0; continue; }
+      // balance is in invoice currency; convert to receipt currency via respective FX rates to base
+      const balanceInReceiptCcy = this.receiptFxRate > 0
+        ? (row.balance * (row.fxRate || 1)) / this.receiptFxRate
+        : row.balance;
+      const alloc = parseFloat(Math.min(balanceInReceiptCcy, remaining).toFixed(2));
+      row.allocatedAmount = alloc;
+      remaining = parseFloat((remaining - alloc).toFixed(2));
+      if (remaining <= 0) remaining = 0;
+    }
+    this.recalcExchangeGainLoss();
+  }
+
+  private recalcExchangeGainLoss(): void {
+    let gainLoss = 0;
+    for (const row of this.receiptInvoices) {
+      if (!row.selected || row.allocatedAmount <= 0) continue;
+      if (row.currencyId === this.receiptCurrencyId) {
+        gainLoss += row.allocatedAmount * this.receiptFxRate - row.allocatedAmount * (row.fxRate || 1);
+      }
+    }
+    this.receiptExchangeGainLoss = parseFloat(gainLoss.toFixed(2));
+  }
+
+  onReceiptRowCheckbox(row: AllocationRow): void {
+    this.recalcReceiptAllocations();
+  }
+
+  onReceiptHeaderCheckbox(checked: boolean): void {
+    this.receiptInvoices.forEach(r => r.selected = checked);
+    this.recalcReceiptAllocations();
+  }
+
+  onReceiptAllocateChange(row: AllocationRow): void {
+    this.recalcExchangeGainLoss();
+  }
+
+  receiptRowBalance(row: AllocationRow): number {
+    return this.receiptFxRate > 0
+      ? parseFloat(((row.balance * (row.fxRate || 1)) / this.receiptFxRate).toFixed(2))
+      : row.balance;
+  }
+
+  get receiptTotalAllocated(): number {
+    return parseFloat(this.receiptInvoices.filter(r => r.selected).reduce((s, r) => s + (r.allocatedAmount || 0), 0).toFixed(2));
+  }
+
+  get receiptUnallocated(): number {
+    return parseFloat(Math.max(0, (Number(this.receiptForm.amountReceived) || 0) - this.receiptTotalAllocated).toFixed(2));
+  }
+
+  get receiptAllChecked(): boolean {
+    return this.receiptInvoices.length > 0 && this.receiptInvoices.every(r => r.selected);
+  }
+
+  saveReceipt(): void {
+    if (!this.receiptForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
+    if (!this.receiptForm.receiptDate) { Swal.fire('Required', 'Receipt date is required.', 'warning'); return; }
+    if (!(Number(this.receiptForm.amountReceived) > 0)) { Swal.fire('Required', 'Amount received must be greater than 0.', 'warning'); return; }
+
+    this.savingReceipt = true;
+    this.error = '';
+
+    const payload = {
+      customerId: this.receiptForm.customerId,
+      receiptDate: this.receiptForm.receiptDate,
+      paymentMode: this.receiptForm.paymentMode,
+      bankId: this.receiptForm.paymentMode === 'BANK' ? this.receiptForm.bankId : null,
+      amountReceived: Number(this.receiptForm.amountReceived) || 0,
+      totalAllocated: this.receiptTotalAllocated,
+      fxRate: this.receiptFxRate,
+      amountBase: this.receiptAmountBase,
+      currencyId: this.receiptCurrencyId,
+      currencyName: this.receiptCurrencyName,
+      exchangeGainLoss: this.receiptExchangeGainLoss,
+      allocations: this.receiptInvoices
+        .filter(r => r.selected && r.allocatedAmount > 0)
+        .map(r => ({ invoiceId: r.invoiceId, invoiceNo: r.invoiceNo, allocatedAmount: r.allocatedAmount }))
+    };
+
+    this.finance.create(this.receiptConfig.endpoint, payload).subscribe({
+      next: () => {
+        this.savingReceipt = false;
+        this.showReceiptForm = false;
+        this.receiptInvoices = [];
+        this.message = 'Receipt saved successfully.';
+        this.loadReceipts();
+      },
+      error: err => {
+        this.savingReceipt = false;
+        this.error = err?.error?.message || 'Unable to save receipt.';
+      }
+    });
+  }
+
+  // ── Tax Codes ──────────────────────────────────────────────────────────────
+
+  private loadTaxCodes(): void {
+    this.finance.list({ list: '/TaxCode/getAll' }).subscribe({
+      next: res => {
+        this.taxCodes = this.finance.unwrap(res).map((t: any) => ({
+          id: t.id ?? t.iD ?? t.taxCodeId,
+          taxCode: t.taxCode ?? t.TaxCode,
+          taxName: t.taxName ?? t.TaxName,
+          taxRate: Number(t.taxRate ?? t.TaxRate ?? 0)
+        }));
+      },
+      error: () => { this.taxCodes = []; }
+    });
+  }
+
+  resetInvoiceForm(): void {
+    this.invoiceForm = { customerId: null, invoiceDate: new Date().toISOString().slice(0, 10), remarks: '' };
+    this.invoiceLines = [];
+    this.addInvoiceLine();
+  }
+
+  addInvoiceLine(): void {
+    this.invoiceLines.push({ itemName: '', uom: 'PCS', qty: 1, unitPrice: 0, discountPct: 0, taxCodeId: null, gstPct: 0, lineAmount: 0, taxAmount: 0, description: '' });
+  }
+
+  removeInvoiceLine(i: number): void {
+    if (this.invoiceLines.length > 1) this.invoiceLines.splice(i, 1);
+  }
+
+  onTaxCodeChange(line: any): void {
+    const tc = this.taxCodes.find(t => t.id === Number(line.taxCodeId));
+    line.gstPct = tc ? tc.taxRate : 0;
+    this.calcLine(line);
+  }
+
+  calcLine(line: any): void {
+    const qty = Number(line.qty) || 0;
+    const price = Number(line.unitPrice) || 0;
+    const disc = Number(line.discountPct) || 0;
+    const gst = Number(line.gstPct) || 0;
+    line.lineAmount = parseFloat((qty * price * (1 - disc / 100)).toFixed(2));
+    line.taxAmount  = parseFloat((line.lineAmount * gst / 100).toFixed(2));
+  }
+
+  get invoiceSubtotal(): number { return this.invoiceLines.reduce((s, l) => s + (l.lineAmount || 0), 0); }
+  get invoiceTaxTotal(): number { return this.invoiceLines.reduce((s, l) => s + (l.taxAmount  || 0), 0); }
+  get invoiceGrandTotal(): number { return this.invoiceSubtotal + this.invoiceTaxTotal; }
+
+  saveInvoice(): void {
+    if (!this.invoiceForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
+    if (!this.invoiceForm.invoiceDate) { Swal.fire('Required', 'Invoice date is required.', 'warning'); return; }
+    if (this.invoiceLines.every(l => !l.itemName.trim())) { Swal.fire('Required', 'Add at least one line item.', 'warning'); return; }
+
+    this.savingInvoice = true;
+    this.error = '';
+    const payload = {
+      customerId: this.invoiceForm.customerId,
+      sourceType: 0,
+      invoiceDate: this.invoiceForm.invoiceDate,
+      remarks: this.invoiceForm.remarks,
+      subtotal: this.invoiceSubtotal,
+      taxAmount: this.invoiceTaxTotal,
+      total: this.invoiceGrandTotal,
+      shippingCost: 0,
+      lines: this.invoiceLines
+        .filter(l => l.itemName.trim())
+        .map(l => ({
+          itemName: l.itemName,
+          uom: l.uom,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+          discountPct: l.discountPct,
+          gstPct: l.gstPct,
+          taxAmount: l.taxAmount,
+          lineAmount: l.lineAmount,
+          taxCodeId: l.taxCodeId,
+          description: l.description
+        }))
+    };
+
+    this.finance.create({ create: '/SalesInvoice/Create' }, payload).subscribe({
+      next: () => {
+        this.savingInvoice = false;
+        this.message = 'Invoice created successfully.';
+        this.resetInvoiceForm();
+        this.setTab('invoices');
+      },
+      error: err => {
+        this.savingInvoice = false;
+        this.error = err?.error?.message || 'Unable to create invoice.';
+      }
+    });
+  }
+
+  // ── Customers ──────────────────────────────────────────────────────────────
 
   private loadCustomers(): void {
     this.finance.getCustomers().subscribe({
@@ -80,16 +462,20 @@ export class FinanceArComponent implements OnInit {
   onCustomerSelect(): void {
     const cust = this.customers.find(c => Number(c.id) === Number(this.advanceForm.customerId));
     this.advanceForm.customerName = cust?.name ?? '';
+    // unused after advance form refactor — keep for compatibility
   }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
 
   setTab(tab: ArTab): void {
     this.activeTab = tab;
     this.error = '';
     this.message = '';
-    if (tab === 'invoices')  this.loadInvoices();
-    else if (tab === 'receipts')  this.loadReceipts();
-    else if (tab === 'advances')  this.loadAdvances();
-    else if (tab === 'aging')     this.loadAging();
+    if (tab === 'invoices')        this.loadInvoices();
+    else if (tab === 'receipts')   this.loadReceipts();
+    else if (tab === 'advances')   this.loadAdvances();
+    else if (tab === 'aging')      this.loadAging();
+    else if (tab === 'create-invoice') this.resetInvoiceForm();
   }
 
   private loadInvoices(): void {
@@ -161,26 +547,151 @@ export class FinanceArComponent implements OnInit {
   }
   isExpanded(c: string): boolean { return this.expandedCustomers.has(c); }
 
-  saveReceipt(): void {
-    if (!this.receiptForm.receiptDate || !this.receiptForm.amount) {
-      Swal.fire('Required', 'Date and amount are required.', 'warning');
-      return;
+  // ── Advance Form ───────────────────────────────────────────────────────────
+
+  openAdvanceForm(): void {
+    this.showAdvanceForm = true;
+    this.message = '';
+    this.error = '';
+    this.isOrderSpecific = false;
+    this.orders = [];
+    this.openAdvancesForCustomer = [];
+    this.advFxRate = 1;
+    this.advCurrencyId = null;
+    this.advCurrencyName = '';
+    this.advAmountBase = 0;
+    this.advanceForm = {
+      customerId: null, customerName: '', salesOrderId: null,
+      advanceDate: new Date().toISOString().slice(0, 10),
+      amount: null, bankAccountId: null, paymentMode: 'BANK', remarks: ''
+    };
+  }
+
+  closeAdvanceForm(): void { this.showAdvanceForm = false; }
+
+  onAdvanceCustomerChange(): void {
+    this.advanceForm.salesOrderId = null;
+    this.orders = [];
+    this.openAdvancesForCustomer = [];
+    this.advFxRate = 1;
+    this.advCurrencyId = null;
+    this.advCurrencyName = '';
+    this.advAmountBase = 0;
+    const cust = this.customers.find(c => Number(c.id) === Number(this.advanceForm.customerId));
+    this.advanceForm.customerName = cust?.name ?? '';
+    if (!this.advanceForm.customerId) return;
+    if (this.isOrderSpecific) this.loadOrdersForCustomer();
+    this.loadOpenAdvancesForCustomer();
+  }
+
+  onToggleOrderSpecific(): void {
+    this.advanceForm.salesOrderId = null;
+    this.orders = [];
+    this.advFxRate = 1;
+    this.advCurrencyId = null;
+    this.advCurrencyName = '';
+    this.advAmountBase = 0;
+    if (this.isOrderSpecific && this.advanceForm.customerId) {
+      this.loadOrdersForCustomer();
     }
-    this.savingReceipt = true;
-    this.finance.create(this.receiptConfig.endpoint, this.receiptForm).subscribe({
-      next: () => { this.savingReceipt = false; this.showReceiptForm = false; this.message = 'Receipt saved.'; this.loadReceipts(); },
-      error: err => { this.savingReceipt = false; this.error = err?.error?.message || 'Unable to save receipt.'; }
+  }
+
+  loadOrdersForCustomer(): void {
+    if (!this.advanceForm.customerId) return;
+    this.loadingOrders = true;
+    this.finance.list({ list: `/SalesOrder/customer-open/${this.advanceForm.customerId}` }).subscribe({
+      next: res => { this.orders = this.finance.unwrap(res); this.loadingOrders = false; },
+      error: () => { this.orders = []; this.loadingOrders = false; }
     });
   }
 
-  saveAdvance(): void {
-    if (!this.advanceForm.advanceDate || !this.advanceForm.amount) {
-      Swal.fire('Required', 'Date and amount are required.', 'warning');
-      return;
+  onAdvanceSalesOrderChange(): void {
+    this.loadOpenAdvancesForCustomer();
+    if (!this.advanceForm.salesOrderId) {
+      this.advFxRate = 1; this.advCurrencyId = null; this.advCurrencyName = ''; this.advAmountBase = 0; return;
     }
+    const so = this.orders.find(o => o.id === Number(this.advanceForm.salesOrderId));
+    if (so) {
+      this.advCurrencyId   = Number(so.currencyId   ?? so.CurrencyId   ?? 0) || null;
+      this.advCurrencyName = so.currencyName         ?? so.CurrencyName  ?? '';
+      this.advFxRate       = Number(so.fxRate        ?? so.FxRate        ?? 1) || 1;
+      if (this.advCurrencyId && this.advCurrencyId !== this.advBaseCurrencyId) {
+        if (this.advFxRate === 1) this.fetchAdvanceFxRate(this.advCurrencyId);
+        else this.calcAdvanceAmountBase();
+      }
+    }
+  }
+
+  fetchAdvanceFxRate(fromCurrencyId: number): void {
+    if (!fromCurrencyId || !this.advBaseCurrencyId) return;
+    this.advFxRateLoading = true;
+    const today = new Date().toISOString().slice(0, 10);
+    this.finance.list(
+      { list: '/ExchangeRate/GetRate' },
+      { fromCurrencyId, toCurrencyId: this.advBaseCurrencyId, rateDate: today }
+    ).subscribe({
+      next: (res: any) => {
+        this.advFxRate = Number(res?.data?.rate ?? res?.rate ?? 1) || 1;
+        this.advFxRateLoading = false;
+        this.calcAdvanceAmountBase();
+      },
+      error: () => { this.advFxRate = 1; this.advFxRateLoading = false; }
+    });
+  }
+
+  calcAdvanceAmountBase(): void {
+    this.advAmountBase = parseFloat(((Number(this.advanceForm.amount) || 0) * this.advFxRate).toFixed(2));
+  }
+
+  advIsForeignCurrency(): boolean {
+    return !!(this.advCurrencyId && this.advBaseCurrencyId && this.advCurrencyId !== this.advBaseCurrencyId && this.advCurrencyName);
+  }
+
+  loadOpenAdvancesForCustomer(): void {
+    if (!this.advanceForm.customerId) { this.openAdvancesForCustomer = []; return; }
+    const params: any = { customerId: this.advanceForm.customerId };
+    if (this.isOrderSpecific && this.advanceForm.salesOrderId) params.salesOrderId = this.advanceForm.salesOrderId;
+    this.finance.list({ list: '/ArInvoice/advance/open' }, params).subscribe({
+      next: res => { this.openAdvancesForCustomer = this.finance.unwrap(res); },
+      error: () => { this.openAdvancesForCustomer = []; }
+    });
+  }
+
+  onAdvancePaymentModeChange(): void {
+    if (this.advanceForm.paymentMode !== 'BANK') this.advanceForm.bankAccountId = null;
+  }
+
+  saveAdvance(): void {
+    if (!this.advanceForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
+    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+    if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
+    if (!this.isOrderSpecific) { Swal.fire('Required', 'Please tick "Link to Sales Order" and select an order.', 'warning'); return; }
+    if (this.isOrderSpecific && !this.advanceForm.salesOrderId) { Swal.fire('Required', 'Please select a Sales Order.', 'warning'); return; }
+    if (this.advanceForm.paymentMode === 'BANK' && !this.advanceForm.bankAccountId) { Swal.fire('Required', 'Please select a bank account.', 'warning'); return; }
+
     this.savingAdvance = true;
-    this.finance.create(this.advanceConfig.endpoint, this.advanceForm).subscribe({
-      next: () => { this.savingAdvance = false; this.showAdvanceForm = false; this.message = 'Advance saved.'; this.loadAdvances(); },
+    this.error = '';
+    const payload = {
+      customerId:    Number(this.advanceForm.customerId),
+      salesOrderId:  this.isOrderSpecific ? Number(this.advanceForm.salesOrderId) : null,
+      advanceDate:   this.advanceForm.advanceDate,
+      amount:        Number(this.advanceForm.amount) || 0,
+      bankAccountId: this.advanceForm.bankAccountId ?? null,
+      paymentMode:   this.advanceForm.paymentMode || 'BANK',
+      remarks:       this.advanceForm.remarks || '',
+      fxRate:        this.advFxRate || 1,
+      amountBase:    this.advAmountBase || Number(this.advanceForm.amount) || 0,
+      currencyId:    this.advCurrencyId ?? null,
+      currencyName:  this.advCurrencyName || ''
+    };
+
+    this.finance.create(this.advanceConfig.endpoint, payload).subscribe({
+      next: () => {
+        this.savingAdvance = false;
+        this.showAdvanceForm = false;
+        this.message = 'Advance saved successfully.';
+        this.loadAdvances();
+      },
       error: err => { this.savingAdvance = false; this.error = err?.error?.message || 'Unable to save advance.'; }
     });
   }

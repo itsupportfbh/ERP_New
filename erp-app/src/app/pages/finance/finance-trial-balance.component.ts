@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 
 @Component({
   selector: 'erp-finance-trial-balance',
@@ -24,9 +25,12 @@ export class FinanceTrialBalanceComponent implements OnInit {
 
   summary = { openDebit: 0, openCredit: 0, closeDebit: 0, closeCredit: 0 };
 
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
+
   private endpoint = { list: '/financereport/trial-balance', listMethod: 'POST' as const, listBody: {} };
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
 
   ngOnInit(): void {
     const today = new Date();
@@ -34,6 +38,9 @@ export class FinanceTrialBalanceComponent implements OnInit {
     this.fromDate = this.dateOnly(from);
     this.toDate = this.dateOnly(today);
     this.load();
+    this.permissionService.getFunctionPermission(this.userId, 'tb').subscribe({
+      next: perm => { this.permission = perm; }
+    });
   }
 
   load(): void {

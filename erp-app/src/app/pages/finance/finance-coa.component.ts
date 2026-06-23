@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -28,6 +29,9 @@ export class FinanceCoaComponent implements OnInit {
   form: any = { headCode: null, headName: '', headType: '', parentHead: null, isGl: false, isTransaction: false };
   accountTypes = ['Asset', 'Liability', 'Equity', 'Income', 'Expense'];
 
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
+
   private endpoint = {
     list:   '/ChartOfAccount/GetChartOfAccounts',
     get:    '/ChartOfAccount/GetChartOfAccountById/',
@@ -36,9 +40,14 @@ export class FinanceCoaComponent implements OnInit {
     delete: '/ChartOfAccount/DeleteChartOfAccountById/'
   };
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.load();
+    this.permissionService.getFunctionPermission(this.userId, 'coa').subscribe({
+      next: perm => { this.permission = perm; }
+    });
+  }
 
   load(): void {
     this.loading = true;
