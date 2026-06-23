@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-debit-note-list',
@@ -149,26 +150,74 @@ export class DebitNoteListComponent implements OnInit {
     const row = this.confirmRow;
     if (this.confirmAction === 'post') {
       this.svc.postDebitNote(row.id).subscribe({
-        next: () => { this.confirmLoading = false; this.closeConfirm(); this.load(); },
-        error: err => { this.confirmLoading = false; this.confirmError = err?.error?.message || 'Unable to post debit note.'; }
+        next: () => {
+          this.confirmLoading = false; this.closeConfirm(); this.load();
+          Swal.fire({ icon: 'success', title: 'Posted!', text: `Debit Note ${row.debitNoteNo} posted successfully.`, confirmButtonColor: '#1a9db8' });
+        },
+        error: err => {
+          this.confirmLoading = false; this.confirmError = err?.error?.message || 'Unable to post debit note.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to post debit note.', confirmButtonColor: '#1a9db8' });
+        }
       });
     } else if (this.confirmAction === 'delete') {
       this.svc.deleteDebitNote(row.id).subscribe({
-        next: () => { this.confirmLoading = false; this.closeConfirm(); this.load(); },
-        error: err => { this.confirmLoading = false; this.confirmError = err?.error?.message || 'Unable to delete debit note.'; }
+        next: () => {
+          this.confirmLoading = false; this.closeConfirm(); this.load();
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `Debit Note ${row.debitNoteNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        },
+        error: err => {
+          this.confirmLoading = false; this.confirmError = err?.error?.message || 'Unable to delete debit note.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete debit note.', confirmButtonColor: '#1a9db8' });
+        }
       });
     }
   }
 
-  postDebitNote(row: any): void {
+  async postDebitNote(row: any): Promise<void> {
     const st = String(row.status ?? '').toLowerCase();
     if (st === 'posted') return;
-    this.openConfirm(row, 'post');
+    const result = await Swal.fire({
+      title: 'Post Debit Note?',
+      text: `Post debit note ${row.debitNoteNo}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, post it!'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.postDebitNote(row.id).subscribe({
+      next: () => {
+        this.load();
+        Swal.fire({ icon: 'success', title: 'Posted!', text: `Debit Note ${row.debitNoteNo} posted successfully.`, confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to post debit note.', confirmButtonColor: '#1a9db8' });
+      }
+    });
   }
 
-  delete(row: any): void {
+  async delete(row: any): Promise<void> {
     if (String(row.status ?? '').toLowerCase() === 'posted') return;
-    this.openConfirm(row, 'delete');
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete debit note ${row.debitNoteNo}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.deleteDebitNote(row.id).subscribe({
+      next: () => {
+        this.load();
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `Debit Note ${row.debitNoteNo} deleted.`, confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete debit note.', confirmButtonColor: '#1a9db8' });
+      }
+    });
   }
 
   get pendingCount(): number { return this.rows.filter(r => !r.status || String(r.status).toLowerCase() === 'pending').length; }

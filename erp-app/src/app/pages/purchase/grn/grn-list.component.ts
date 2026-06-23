@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-grn-list',
@@ -41,9 +42,14 @@ export class GrnListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'edit',   label: 'Edit',   btnClass: 'default', icon: 'edit'   },
-    { key: 'delete', label: 'Delete', btnClass: 'danger',  icon: 'delete' },
+    { key: 'edit',   label: 'Edit',   icon: 'edit'   },
+    { key: 'delete', label: 'Delete', btnClass: 'danger', icon: 'delete' },
   ];
+
+  rowActionFilter = (action: string, row: any): boolean => {
+    if (action === 'edit') return row.statusLabel !== 'Posted' && row.statusLabel !== 'Closed';
+    return true;
+  };
 
   constructor(private svc: PurchaseService, private router: Router) {}
 
@@ -151,8 +157,26 @@ export class GrnListComponent implements OnInit {
   get flaggedCount(): number { return this.rows.filter(r => r.statusLabel === 'Flagged').length; }
   get closedCount():  number { return this.rows.filter(r => r.statusLabel === 'Closed').length; }
 
-  delete(row: any): void {
-    this.openActionConfirm(row, 'delete-grn');
+  async delete(row: any): Promise<void> {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete GRN ${row.grnNo}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.deleteGRN(row.id).subscribe({
+      next: () => {
+        this.load();
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `GRN ${row.grnNo} deleted.`, confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete GRN.', confirmButtonColor: '#1a9db8' });
+      }
+    });
   }
 
   openActionConfirm(row: any, type: string): void {
@@ -165,8 +189,14 @@ export class GrnListComponent implements OnInit {
     const row = this.actionRow;
     if (this.actionType === 'delete-grn') {
       this.svc.deleteGRN(row.id).subscribe({
-        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
-        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete GRN.'; }
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load();
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `GRN ${row.grnNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        },
+        error: err => {
+          this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete GRN.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete GRN.', confirmButtonColor: '#1a9db8' });
+        }
       });
     }
   }

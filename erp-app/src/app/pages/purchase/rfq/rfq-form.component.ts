@@ -263,9 +263,13 @@ export class RfqFormComponent implements OnInit {
           this.id = d.id; this.isEdit = true;
           this.rfqNumber = d.number ?? this.rfqNumber;
         }
-        Swal.fire('Saved', 'RFQ saved successfully.', 'success');
+        Swal.fire({ icon: 'success', title: 'Saved!', text: 'RFQ saved successfully.', confirmButtonColor: '#1a9db8' });
       },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
@@ -292,7 +296,7 @@ export class RfqFormComponent implements OnInit {
   private showDetailSwal(title: string, rows: [string, any][]): void {
     const html = rows.filter(([, v]) => v != null && v !== '')
       .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
-    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
+    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#1a9db8', width: 500, showCloseButton: true });
   }
 
   back(): void { this.router.navigate(['/app/purchase/rfq']); }

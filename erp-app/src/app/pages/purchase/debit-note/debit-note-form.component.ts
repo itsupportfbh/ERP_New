@@ -362,20 +362,24 @@ export class DebitNoteFormComponent implements OnInit {
           this.svc.postDebitNote(savedId).subscribe({
             next: () => {
               this.saving = false;
-              Swal.fire('Posted', 'Debit Note posted successfully.', 'success').then(() => this.back());
+              Swal.fire({ icon: 'success', title: 'Posted!', text: 'Debit Note posted successfully.', confirmButtonColor: '#1a9db8' }).then(() => this.back());
             },
             error: (err: any) => {
               this.saving = false;
-              // Saved as draft but post step failed
               this.error = err?.error?.message ?? 'Saved as draft. Post failed — try the Post button from the list.';
+              Swal.fire({ icon: 'error', title: 'Post Failed', text: err?.error?.message ?? 'Saved as draft. Post failed — try the Post button from the list.', confirmButtonColor: '#1a9db8' });
             }
           });
         } else {
           this.saving = false;
-          Swal.fire('Saved', 'Debit Note saved as draft.', 'success').then(() => this.back());
+          Swal.fire({ icon: 'success', title: 'Saved!', text: 'Debit Note saved as draft.', confirmButtonColor: '#1a9db8' }).then(() => this.back());
         }
       },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 

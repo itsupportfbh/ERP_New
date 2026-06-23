@@ -30,79 +30,32 @@
 
       <!-- Info chips -->
       <div class="grn-chips-row">
-        <div class="grn-chip"><span class="chip-key">GRN</span><span class="chip-val">{{ grnNo || '—' }}</span></div>
-        <div class="grn-chip"><span class="chip-key">PO</span><span class="chip-val">{{ poId }}</span></div>
-        <div class="grn-chip"><span class="chip-key">Supplier</span><span class="chip-val">{{ supplierName || '—' }}</span></div>
-        <div class="grn-chip"><span class="chip-key">Date</span><span class="chip-val">{{ receiptDate }}</span></div>
-        <div class="grn-chip accent"><span class="chip-key">Total Lines</span><span class="chip-val">{{ lines.length }}</span></div>
+        <div class="grn-chip accent"><span class="chip-key">GRN #</span><span class="chip-val">{{ grnNo || '—' }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Purchase Order</span><span class="chip-val">PO-{{ poId }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Supplier</span><span class="chip-val" title="{{ supplierName }}">{{ supplierName || '—' }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Receipt Date</span><span class="chip-val">{{ receiptDate }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Total Lines</span><span class="chip-val">{{ lines.length }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Total Value</span><span class="chip-val">{{ totalValue | number:'1.2-2' }}</span></div>
       </div>
 
       <!-- Lines summary card -->
-      <div class="card section-card lines-card">
-        <div class="section-label-row">
-          <div class="section-label">&#128229; Lines</div>
+      <div class="card" style="overflow:hidden">
+        <div class="section-label-row" style="padding:14px 16px 8px">
+          <div class="section-label" style="margin-bottom:0">&#128229; Lines</div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="summary-badge pending">Pending: {{ pendingLines.length }}</span>
             <span class="summary-badge posted">Posted: {{ postedLines.length }}</span>
           </div>
         </div>
-
-        <div class="lines-table-wrap">
-          <table class="lines-table summary-table">
-            <thead>
-              <tr>
-                <th class="col-item">Item</th>
-                <th class="col-supplier">Supplier</th>
-                <th class="col-batch">Batch / Serial</th>
-                <th class="col-qty">Qty</th>
-                <th class="col-price" style="text-align:right;min-width:90px">Unit Price</th>
-                <th class="col-total" style="text-align:right;min-width:90px">Line Total</th>
-                <th class="col-qc">Quality</th>
-                <th class="col-storage">Storage</th>
-                <th class="col-expiry">Expiry</th>
-                <th style="min-width:80px">Status</th>
-                <th style="min-width:140px">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngIf="!lines.length">
-                <td colspan="11" class="empty-lines">No lines found.</td>
-              </tr>
-              <tr *ngFor="let line of lines; let i = index" [class.posted-row]="line.isPosted">
-                <td class="col-item">
-                  <span class="item-code">{{ line.itemCode }}</span>
-                  <span class="item-name">{{ line.itemName || '—' }}</span>
-                </td>
-                <td class="col-supplier">{{ line.supplierName || '—' }}</td>
-                <td class="col-batch">{{ line.batchNo || '—' }}</td>
-                <td class="col-qty num-cell">{{ line.qtyReceived ?? '—' }}</td>
-                <td class="col-price" style="text-align:right">{{ line.unitPrice != null ? (line.unitPrice | number:'1.2-2') : '—' }}</td>
-                <td class="col-total" style="text-align:right">{{ lineTotal(line) | number:'1.2-2' }}</td>
-                <td class="col-qc">{{ line.qualityCheck || '—' }}</td>
-                <td class="col-storage">{{ line.storageType || '—' }}</td>
-                <td class="col-expiry">{{ line.expiryDate || '—' }}</td>
-                <td>
-                  <span class="line-status-badge" [class.posted]="line.isPosted">
-                    {{ line.isPosted ? 'Posted' : 'Pending' }}
-                  </span>
-                </td>
-                <td class="act-cell">
-                  <button class="summary-view-btn" (click)="viewLineDetail(line)" title="View details">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
-                  </button>
-                  <button class="summary-flag-btn" (click)="flagLine(line)" title="Set Flag Issue">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-                    Flag
-                  </button>
-                  <button class="summary-post-btn" *ngIf="!line.isPosted" (click)="postToInventory(line, i)" title="Post to Inventory">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                    Post
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <erp-table
+          [columns]="summaryColumns"
+          [data]="summaryRows"
+          [rowActions]="summaryActions"
+          [rowActionFilter]="summaryActionFilter"
+          [eyeFirst]="true"
+          [showControls]="false"
+          (actionClick)="onSummaryAction($event)">
+        </erp-table>
       </div>
 
     </ng-container>
@@ -140,7 +93,6 @@
     <div class="card section-card lines-card">
       <div class="section-label-row">
         <div class="section-label">&#128229; Receipt Lines</div>
-        <button class="btn btn-outline btn-xs" (click)="addLine()" [disabled]="isClosed">+ Add Line</button>
       </div>
 
       <div class="lines-table-wrap">

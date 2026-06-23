@@ -331,7 +331,7 @@ export class GrnFormComponent implements OnInit {
     Swal.fire({
       title: 'Post to Inventory?',
       html: `Post line ${i + 1} – <strong>${line.itemName}</strong>?<br><small>Qty: ${line.qtyReceived} → <em>ItemWarehouseStock</em> will be updated.</small>`,
-      icon: 'question', showCancelButton: true, confirmButtonText: 'Post', confirmButtonColor: '#0e7490'
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Post', confirmButtonColor: '#1a9db8'
     }).then(result => {
       if (!result.isConfirmed) return;
       this.svc.checkPeriodLock(this.receiptDate).subscribe({
@@ -550,18 +550,25 @@ export class GrnFormComponent implements OnInit {
         if (!this.isEdit) {
           // Navigate to the new GRN's summary page — it has Post + Flag buttons per line
           const newId = res?.data ?? res?.id ?? res;
-          if (typeof newId === 'number' && newId > 0) {
-            this.router.navigate(['/app/purchase/grn', newId]);
-          } else {
-            this.back();
-          }
+          Swal.fire({ icon: 'success', title: 'Saved!', text: 'GRN saved successfully.', confirmButtonColor: '#1a9db8' }).then(() => {
+            if (typeof newId === 'number' && newId > 0) {
+              this.router.navigate(['/app/purchase/grn', newId]);
+            } else {
+              this.back();
+            }
+          });
         } else {
           // After update: reload and show summary view (with Post + Flag buttons)
           this.viewMode = true;
           this.loadForEdit();
+          Swal.fire({ icon: 'success', title: 'Updated!', text: 'GRN updated successfully.', confirmButtonColor: '#1a9db8' });
         }
       },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
@@ -610,7 +617,7 @@ export class GrnFormComponent implements OnInit {
   private showDetailSwal(title: string, rows: [string, any][]): void {
     const html = rows.filter(([, v]) => v != null && v !== '')
       .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
-    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
+    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#1a9db8', width: 500, showCloseButton: true });
   }
 
   get pendingLines(): GRNLine[] { return this.lines.filter(l => !l.isPosted); }
@@ -646,10 +653,13 @@ export class GrnFormComponent implements OnInit {
         GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), isActive: true
       }).subscribe({
         next: () => {
-          Swal.fire('Flagged', 'Line flagged successfully.', 'warning')
+          Swal.fire({ icon: 'warning', title: 'Flagged', text: 'Line flagged successfully.', confirmButtonColor: '#1a9db8' })
             .then(() => this.router.navigate(['/app/purchase/grn']));
         },
-        error: err => { this.error = err?.error?.message ?? 'Flag save failed.'; }
+        error: err => {
+          this.error = err?.error?.message ?? 'Flag save failed.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Flag save failed.', confirmButtonColor: '#1a9db8' });
+        }
       });
     });
   }

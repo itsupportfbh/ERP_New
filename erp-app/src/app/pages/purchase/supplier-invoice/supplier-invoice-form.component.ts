@@ -501,7 +501,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       icon: this.mismatchCount > 0 ? 'warning' : 'question',
       showCancelButton: true,
       confirmButtonText: 'Post to A/P',
-      confirmButtonColor: '#0e7490'
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280'
     }).then(r => {
       if (!r.isConfirmed) return;
       this.posting = true;
@@ -510,11 +511,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
           this.posting = false;
           this.isGlPosted = true;
           this.status = 'Posted';
-          Swal.fire('Posted!', 'Supplier invoice posted to Accounts Payable.', 'success');
+          Swal.fire({ icon: 'success', title: 'Posted!', text: 'Supplier invoice posted to Accounts Payable.', confirmButtonColor: '#1a9db8' });
         },
         error: err => {
           this.posting = false;
-          Swal.fire('Error', err?.error?.message ?? 'GL posting failed.', 'error');
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'GL posting failed.', confirmButtonColor: '#1a9db8' });
         }
       });
     });
@@ -589,10 +590,14 @@ export class SupplierInvoiceFormComponent implements OnInit {
     obs$.subscribe({
       next: () => {
         this.saving = false;
-        Swal.fire('Saved', draft ? 'Invoice saved as draft.' : 'Invoice saved successfully.', 'success')
+        Swal.fire({ icon: 'success', title: 'Saved!', text: draft ? 'Invoice saved as draft.' : 'Invoice saved successfully.', confirmButtonColor: '#1a9db8' })
           .then(() => this.back());
       },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
