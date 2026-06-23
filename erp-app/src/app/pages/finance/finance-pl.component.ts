@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 
 @Component({
   selector: 'erp-finance-pl',
@@ -17,11 +18,19 @@ export class FinancePlComponent implements OnInit {
   fromDate = '';
   toDate = '';
 
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
+
   private endpoint = { list: '/FinanceReport/GetProfitLossDetails' };
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.load();
+    this.permissionService.getFunctionPermission(this.userId, 'reports').subscribe({
+      next: perm => { this.permission = perm; }
+    });
+  }
 
   load(): void {
     this.loading = true;

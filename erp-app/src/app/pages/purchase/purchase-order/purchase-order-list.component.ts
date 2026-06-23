@@ -67,12 +67,9 @@ export class PurchaseOrderListComponent implements OnInit {
   poActionFilter = (action: string, row: any): boolean => {
     const s = this.poStatusNum(row);
     switch (action) {
-      case 'view':
-      case 'email':
-      case 'print':   return true;
-      case 'approve':
+      case 'approve': return s === 1;
       case 'reject':  return s === 1;
-      case 'edit':
+      case 'edit':    return s !== 2 && s !== 3;
       case 'delete':  return s !== 2 && s !== 3;
       default:        return true;
     }

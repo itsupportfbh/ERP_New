@@ -38,6 +38,7 @@ import { DebitNoteListComponent } from './pages/purchase/debit-note/debit-note-l
 import { DebitNoteFormComponent } from './pages/purchase/debit-note/debit-note-form.component';
 import { SupplierScorecardComponent } from './pages/purchase/supplier-scorecard/supplier-scorecard.component';
 import { ThreeWayMatchComponent } from './pages/purchase/three-way-match/three-way-match.component';
+import { PeriodCloseComponent } from './pages/purchase/period-close/period-close.component';
 
 
 // Master module components
@@ -134,6 +135,7 @@ import { BatchProductionFormComponent } from './pages/recipe/batch-production/ba
     DebitNoteFormComponent,
     SupplierScorecardComponent,
     ThreeWayMatchComponent,
+    PeriodCloseComponent,
     ApprovalLevelComponent,
     BankComponent,
     BinComponent,

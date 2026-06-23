@@ -43,6 +43,16 @@ export class DebitNoteListComponent implements OnInit {
     { key: 'delete', label: 'Delete', btnClass: 'danger',  icon: 'delete' },
   ];
 
+  dnActionFilter = (action: string, row: any): boolean => {
+    const isPosted = (row.status ?? '').toLowerCase() === 'posted';
+    switch (action) {
+      case 'edit':   return !isPosted;
+      case 'post':   return !isPosted;
+      case 'delete': return !isPosted;
+      default:       return true;
+    }
+  };
+
   constructor(private svc: PurchaseService, private router: Router) {}
 
   ngOnInit(): void { this.load(); }

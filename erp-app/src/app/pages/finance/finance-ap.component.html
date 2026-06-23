@@ -211,54 +211,130 @@
   <ng-container *ngIf="activeTab === 'payments'">
 
     <!-- New Payment Form -->
-    <div class="ap-card adv-form-card" *ngIf="showPaymentForm">
+    <div class="ap-card payment-form-card" *ngIf="showPaymentForm">
       <div class="ap-card-head">
         <strong class="ap-card-title">New Supplier Payment</strong>
-        <button class="ap-btn ap-btn-outline" type="button" (click)="showPaymentForm = false">&#215; Close</button>
+        <button class="ap-btn ap-btn-outline" type="button" (click)="closePaymentForm()">&#215; Close</button>
       </div>
-      <div class="adv-form-grid">
-        <label class="adv-field">
+
+      <!-- Header Fields -->
+      <div class="pmt-header-grid">
+
+        <!-- Supplier -->
+        <label class="pmt-field">
           <span>Supplier <span class="req">*</span></span>
-          <select [(ngModel)]="paymentForm.supplierId">
-            <option value="">— Select Supplier —</option>
+          <select [(ngModel)]="paymentForm.supplierId" (change)="onPaymentSupplierChange()">
+            <option [ngValue]="null">— Select Supplier —</option>
             <option *ngFor="let s of suppliers" [ngValue]="s.id">{{ s.name }}</option>
           </select>
         </label>
-        <label class="adv-field">
-          <span>Invoice ID</span>
-          <input type="number" [(ngModel)]="paymentForm.invoiceId" placeholder="Invoice ID (optional)">
+
+        <!-- Invoice -->
+        <label class="pmt-field">
+          <span>Invoice <span class="req">*</span></span>
+          <select [(ngModel)]="paymentForm.supplierInvoiceId" (change)="onPaymentInvoiceSelect()"
+                  [disabled]="!paymentForm.supplierId || loadingPaymentInvoices">
+            <option [ngValue]="null">
+              {{ loadingPaymentInvoices ? 'Loading invoices...' : (paymentForm.supplierId ? (paymentFilteredInvoices.length ? '— Select Invoice —' : 'No open invoices') : '— Select supplier first —') }}
+            </option>
+            <option *ngFor="let inv of paymentFilteredInvoices" [ngValue]="inv.id">
+              {{ inv.invoiceNo }} — Balance: {{ inv.balance | number:'1.2-2' }}
+            </option>
+          </select>
         </label>
-        <label class="adv-field">
+
+        <!-- Payment Date -->
+        <label class="pmt-field">
           <span>Payment Date <span class="req">*</span></span>
           <input type="date" [(ngModel)]="paymentForm.paymentDate">
         </label>
-        <label class="adv-field">
-          <span>Amount <span class="req">*</span></span>
-          <input type="number" min="0" [(ngModel)]="paymentForm.amount" placeholder="0.00">
-        </label>
-        <label class="adv-field">
-          <span>Payment Mode</span>
-          <select [(ngModel)]="paymentForm.paymentMode">
-            <option>Bank Transfer</option>
-            <option>Cheque</option>
-            <option>Cash</option>
-            <option>GIRO</option>
-            <option>PayNow</option>
+
+        <!-- Payment Method -->
+        <label class="pmt-field">
+          <span>Payment Method <span class="req">*</span></span>
+          <select [(ngModel)]="paymentForm.paymentMethodId">
+            <option [ngValue]="1">Cash</option>
+            <option [ngValue]="2">Bank Transfer</option>
+            <option [ngValue]="3">Cheque</option>
           </select>
         </label>
-        <label class="adv-field">
+
+        <!-- Bank Account (only when method = 2) -->
+        <label class="pmt-field" *ngIf="paymentForm.paymentMethodId === 2">
+          <span>Bank Account</span>
+          <select [(ngModel)]="paymentForm.bankId">
+            <option [ngValue]="null">— Select Bank —</option>
+            <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
+              {{ b.bankName ?? b.name ?? b.accountName }}
+            </option>
+          </select>
+        </label>
+
+        <!-- Amount -->
+        <label class="pmt-field">
+          <span>Amount <span class="req">*</span></span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="paymentForm.amount"
+                 (ngModelChange)="onPaymentAmountChange()" placeholder="0.00">
+        </label>
+
+        <!-- Currency -->
+        <label class="pmt-field">
+          <span>Currency</span>
+          <select [(ngModel)]="paymentCurrencyId" (change)="onPaymentCurrencyChange()">
+            <option *ngFor="let c of paymentCurrencies" [ngValue]="c.id ?? c.currencyId">
+              {{ c.currencyCode ?? c.currencyName }}
+            </option>
+          </select>
+        </label>
+
+        <!-- FX Rate -->
+        <label class="pmt-field">
+          <span>FX Rate</span>
+          <input type="number" min="0" step="0.000001" [(ngModel)]="paymentFxRate"
+                 (ngModelChange)="onPaymentFxRateChange()" placeholder="1.000000">
+        </label>
+
+        <!-- Reference No -->
+        <label class="pmt-field">
           <span>Reference No</span>
           <input type="text" [(ngModel)]="paymentForm.referenceNo" placeholder="Cheque / Transfer No">
         </label>
-        <label class="adv-field adv-field-wide">
+
+        <!-- Notes (wide) -->
+        <label class="pmt-field pmt-field-wide">
           <span>Notes</span>
           <textarea rows="2" [(ngModel)]="paymentForm.notes"></textarea>
         </label>
       </div>
+
+      <!-- Totals Bar -->
+      <div class="pmt-totals-bar">
+        <div class="pmt-total-item">
+          <span class="pmt-total-label">Amount</span>
+          <span class="pmt-total-val">{{ (paymentForm.amount || 0) | number:'1.2-2' }} {{ paymentCurrencyName }}</span>
+        </div>
+        <div class="pmt-total-item">
+          <span class="pmt-total-label">Base Amount</span>
+          <span class="pmt-total-val">{{ paymentAmountBase | number:'1.2-2' }}</span>
+        </div>
+        <div class="pmt-total-item" *ngIf="paymentExchangeGainLoss !== 0">
+          <span class="pmt-total-label">Exchange Gain / Loss</span>
+          <span class="pmt-total-val" [class.text-success]="paymentExchangeGainLoss > 0" [class.text-danger]="paymentExchangeGainLoss < 0">
+            {{ paymentExchangeGainLoss | number:'1.2-2' }}
+          </span>
+        </div>
+        <ng-container *ngIf="getSelectedPaymentInvoice() as inv">
+          <div class="pmt-total-item">
+            <span class="pmt-total-label">Invoice Balance</span>
+            <span class="pmt-total-val teal">{{ inv.balance | number:'1.2-2' }}</span>
+          </div>
+        </ng-container>
+      </div>
+
       <div class="adv-form-footer">
-        <button class="ap-btn ap-btn-outline" type="button" (click)="showPaymentForm = false">Cancel</button>
+        <button class="ap-btn ap-btn-outline" type="button" (click)="closePaymentForm()">Cancel</button>
         <button class="ap-btn ap-btn-primary" type="button" (click)="savePayment()" [disabled]="savingPayment">
-          {{ savingPayment ? 'Saving...' : 'Save Payment' }}
+          {{ savingPayment ? 'Saving...' : 'Post Payment' }}
         </button>
       </div>
     </div>
@@ -267,7 +343,7 @@
     <div class="ap-card">
       <div class="ap-card-head">
         <strong class="ap-card-title">Supplier Payments</strong>
-        <button class="ap-btn ap-btn-primary" type="button" (click)="showPaymentForm = true; message = ''; error = ''">
+        <button class="ap-btn ap-btn-primary" type="button" (click)="openPaymentForm()" *ngIf="permission?.create">
           + New Payment
         </button>
       </div>
@@ -432,35 +508,88 @@
     <div class="ap-card adv-form-card" *ngIf="showAdvanceForm">
       <div class="ap-card-head">
         <strong class="ap-card-title">New Supplier Advance</strong>
-        <button class="ap-btn ap-btn-outline" type="button" (click)="showAdvanceForm = false">&#215; Close</button>
+        <button class="ap-btn ap-btn-outline" type="button" (click)="closeApAdvanceForm()">&#215; Close</button>
       </div>
       <div class="adv-form-grid">
+
+        <!-- Supplier -->
         <label class="adv-field">
           <span>Supplier <span class="req">*</span></span>
           <select [(ngModel)]="advanceForm.supplierId" (change)="onSupplierSelect()">
-            <option value="">— Select Supplier —</option>
+            <option [ngValue]="null">— Select Supplier —</option>
             <option *ngFor="let s of suppliers" [ngValue]="s.id">{{ s.name }}</option>
           </select>
         </label>
+
+        <!-- Advance Date -->
         <label class="adv-field">
           <span>Advance Date <span class="req">*</span></span>
           <input type="date" [(ngModel)]="advanceForm.advanceDate">
         </label>
+
+        <!-- Amount -->
         <label class="adv-field">
           <span>Amount <span class="req">*</span></span>
-          <input type="number" min="0" [(ngModel)]="advanceForm.amount" placeholder="0.00">
+          <input type="number" min="0" step="0.01" [(ngModel)]="advanceForm.amount"
+                 (ngModelChange)="onApAdvAmountChange()" placeholder="0.00">
         </label>
+
+        <!-- Payment Method -->
+        <label class="adv-field">
+          <span>Payment Method <span class="req">*</span></span>
+          <select [(ngModel)]="apAdvMethodId" (change)="onApAdvMethodChange()">
+            <option [ngValue]="1">Cash</option>
+            <option [ngValue]="2">Bank Transfer</option>
+            <option [ngValue]="3">Cheque</option>
+          </select>
+        </label>
+
+        <!-- Bank Account (when method = 2 or 3) -->
+        <label class="adv-field" *ngIf="apAdvMethodId === 2 || apAdvMethodId === 3">
+          <span>Bank Account <span class="req">*</span></span>
+          <select [(ngModel)]="apAdvBankHeadId">
+            <option [ngValue]="null">— Select Bank —</option>
+            <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
+              {{ b.headName ?? b.bankName ?? b.accountName ?? b.name }}
+            </option>
+          </select>
+        </label>
+
+        <!-- GRN Reference (optional) -->
+        <label class="adv-field">
+          <span>GRN Reference</span>
+          <input type="text" [(ngModel)]="apAdvGrnNo" placeholder="e.g. GRN-2024-001 (optional)">
+        </label>
+
+        <!-- FX Rate -->
+        <label class="adv-field">
+          <span>FX Rate</span>
+          <input type="number" min="0" step="0.000001" [(ngModel)]="apAdvFxRate"
+                 (ngModelChange)="onApAdvAmountChange()" placeholder="1.000000">
+        </label>
+
+        <!-- Base Amount (readonly) -->
+        <label class="adv-field">
+          <span>Base Amount</span>
+          <input type="text" [value]="apAdvAmountBase | number:'1.2-2'" readonly
+                 style="background:#f8f9fa;font-weight:600;color:#2E5F73;">
+        </label>
+
+        <!-- Reference No -->
         <label class="adv-field">
           <span>Reference No</span>
-          <input type="text" [(ngModel)]="advanceForm.referenceNo">
+          <input type="text" [(ngModel)]="advanceForm.referenceNo" placeholder="Cheque / Transfer No">
         </label>
+
+        <!-- Notes (wide) -->
         <label class="adv-field adv-field-wide">
           <span>Notes</span>
           <textarea rows="2" [(ngModel)]="advanceForm.notes"></textarea>
         </label>
+
       </div>
       <div class="adv-form-footer">
-        <button class="ap-btn ap-btn-outline" type="button" (click)="showAdvanceForm = false">Cancel</button>
+        <button class="ap-btn ap-btn-outline" type="button" (click)="closeApAdvanceForm()">Cancel</button>
         <button class="ap-btn ap-btn-primary" type="button" (click)="saveAdvance()" [disabled]="savingAdvance">
           {{ savingAdvance ? 'Saving...' : 'Save Advance' }}
         </button>
@@ -471,7 +600,7 @@
     <div class="ap-card">
       <div class="ap-card-head">
         <strong class="ap-card-title">AP Advances</strong>
-        <button class="ap-btn ap-btn-primary" type="button" (click)="showAdvanceForm = true; message = ''; error = ''">
+        <button class="ap-btn ap-btn-primary" type="button" (click)="openApAdvanceForm()" *ngIf="permission?.create">
           + New Advance
         </button>
       </div>
@@ -483,8 +612,10 @@
               <th>Advance No</th>
               <th>Supplier</th>
               <th>Date</th>
+              <th>Method</th>
               <th class="right">Amount</th>
-              <th class="right">Utilised</th>
+              <th class="right">Base</th>
+              <th class="right success-hdr">Utilised</th>
               <th class="right teal-hdr">Balance</th>
               <th>Status</th>
             </tr>
@@ -494,13 +625,17 @@
               <td class="mono">{{ adv.advanceNo || '—' }}</td>
               <td>{{ adv.supplierName || '—' }}</td>
               <td>{{ adv.advanceDate | date:'dd-MMM-yyyy' }}</td>
-              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}</td>
+              <td class="muted">{{ paymentMethodLabel(adv.methodId ?? adv.paymentMethodId) }}</td>
+              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}
+                <span *ngIf="adv.currencyName" class="currency">{{ adv.currencyName }}</span>
+              </td>
+              <td class="right muted">{{ (adv.amountBase || 0) | number:'1.2-2' }}</td>
               <td class="right success-text">{{ (adv.utilised || 0) | number:'1.2-2' }}</td>
               <td class="right teal-bold">{{ (adv.balance || 0) | number:'1.2-2' }}</td>
               <td><span class="status-badge" [ngClass]="statusClass(adv.status)">{{ adv.status || 'Open' }}</span></td>
             </tr>
             <tr *ngIf="advances.length === 0 && !loading">
-              <td colspan="7" class="ap-empty">No advances found.</td>
+              <td colspan="9" class="ap-empty">No advances found.</td>
             </tr>
           </tbody>
         </table>

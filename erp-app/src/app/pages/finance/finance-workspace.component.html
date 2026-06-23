@@ -148,7 +148,7 @@
         </select>
       </label>
 
-      <div class="pc-toggle-wrap">
+      <div class="pc-toggle-wrap" *ngIf="permission?.post">
         <label class="pc-toggle">
           <input type="checkbox" [(ngModel)]="lockPeriod" (change)="onLockToggle()">
           <span class="pc-slider"></span>
@@ -257,7 +257,7 @@
         <input type="date" [(ngModel)]="closeDate">
       </label>
       <button class="fw-btn fw-btn-outline" type="button" (click)="previewYearEnd()" [disabled]="saving">Preview</button>
-      <button class="fw-btn fw-btn-primary" type="button" (click)="runYearEndClose()" [disabled]="saving">Run Close</button>
+      <button class="fw-btn fw-btn-primary" type="button" (click)="runYearEndClose()" [disabled]="saving || !permission?.post">Run Close</button>
     </div>
     <div class="year-status-row" *ngIf="rows.length">
       <div class="year-status" *ngFor="let row of rows | slice:0:4">

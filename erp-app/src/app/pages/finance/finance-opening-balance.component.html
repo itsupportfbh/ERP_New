@@ -1,0 +1,84 @@
+<div class="ob-page">
+
+  <!-- Page Header -->
+  <div class="ob-page-head">
+    <div>
+      <h2>Opening Balance</h2>
+      <p>Set opening balances per ledger account</p>
+    </div>
+    <div class="ob-head-right">
+      <input class="ob-search" type="text" placeholder="Search account or amount..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+      <button class="ob-btn ob-btn-outline" type="button" (click)="loadAll()">&#8635; Refresh</button>
+      <button class="ob-btn ob-btn-primary" type="button" (click)="openCreate()" *ngIf="permission?.create">+ New Entry</button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="ob-alert ob-success" *ngIf="message">{{ message }}</div>
+  <div class="ob-alert ob-danger"  *ngIf="error">{{ error }}</div>
+
+  <!-- Form Card -->
+  <div class="ob-card ob-form-card" *ngIf="showForm">
+    <div class="ob-card-head">
+      <strong class="ob-card-title">{{ editMode ? 'Edit Opening Balance' : 'New Opening Balance' }}</strong>
+      <button class="ob-btn ob-btn-outline" type="button" (click)="cancelForm()">&#215; Close</button>
+    </div>
+    <div class="ob-form-grid">
+      <label class="ob-field ob-field-wide">
+        <span>Ledger Account <span class="req">*</span></span>
+        <select [(ngModel)]="form.budgetLineId">
+          <option [ngValue]="null">— Select Ledger Account —</option>
+          <option *ngFor="let c of coaList" [ngValue]="c.id">{{ c.label }}</option>
+        </select>
+      </label>
+      <label class="ob-field">
+        <span>Opening Balance Amount <span class="req">*</span></span>
+        <input type="number" min="0" step="0.01" [(ngModel)]="form.openingBalanceAmount" placeholder="0.00">
+      </label>
+    </div>
+    <div class="ob-form-footer">
+      <button class="ob-btn ob-btn-outline" type="button" (click)="cancelForm()">Cancel</button>
+      <button class="ob-btn ob-btn-primary" type="button" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Saving...' : (editMode ? 'Update' : 'Save') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- List Card -->
+  <div class="ob-card">
+    <div class="ob-loading" *ngIf="loading">Loading...</div>
+    <div class="ob-table-wrap" *ngIf="!loading">
+      <table class="ob-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ledger Account</th>
+            <th class="right">Opening Balance</th>
+            <th class="center">Status</th>
+            <th class="center" *ngIf="permission?.edit || permission?.delete">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredBalances; let i = index">
+            <td class="muted">{{ i + 1 }}</td>
+            <td class="account-cell">{{ getAccountLabel(item.budgetLineId) }}</td>
+            <td class="right teal-bold">{{ (item.openingBalanceAmount || 0) | number:'1.2-2' }}</td>
+            <td class="center">
+              <span class="status-badge" [ngClass]="item.isActive !== false ? 'badge-success' : 'badge-default'">
+                {{ item.isActive !== false ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="center action-cell" *ngIf="permission?.edit || permission?.delete">
+              <button class="edit-btn" type="button" (click)="openEdit(item)" *ngIf="permission?.edit">Edit</button>
+              <button class="del-btn" type="button" (click)="delete(item)" *ngIf="permission?.delete">Delete</button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredBalances.length === 0 && !loading">
+            <td colspan="5" class="ob-empty">No opening balance entries found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

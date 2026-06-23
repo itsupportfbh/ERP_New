@@ -156,6 +156,10 @@ export class FinanceService {
     return this.http.get(this.url('/GstReturns/details'), { params: this.params(params) });
   }
 
+  putBody(endpoint: string, payload: any): Observable<any> {
+    return this.http.put(this.url(endpoint), payload);
+  }
+
   private url(endpoint: string, id?: number | string): string {
     const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     if (id !== undefined && id !== null && (clean.includes(':id') || clean.includes('{id}'))) {
@@ -269,7 +273,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'accounts-payable',
     title: 'Accounts Payable',
     subtitle: 'Supplier invoices, payment status and AP posting',
-    endpoint: { list: '/finance/ap/invoices', pay: '/finance/ap/payments/create' },
+    endpoint: { list: '/SupplierInvoicePin/GetAll' },
     columns: [
       { key: 'supplierName', header: 'Supplier' },
       { key: 'invoiceNo', header: 'Invoice' },
@@ -286,7 +290,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'ap-advance',
     title: 'AP Advance',
     subtitle: 'Supplier advance payments and GRN adjustment',
-    endpoint: { list: '/finance/ap/getsupplier-advances', create: '/finance/ap/createsupplier-advance' },
+    endpoint: { list: '/AccountsPayable/getsupplier-advances', create: '/AccountsPayable/createsupplier-advance' },
     columns: [
       { key: 'supplierName', header: 'Supplier' },
       { key: 'advanceNo', header: 'Advance No' },
@@ -325,7 +329,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'ar-invoices',
     title: 'AR Invoices',
     subtitle: 'Create and maintain customer invoices',
-    endpoint: { list: '/ArInvoice/list', create: '/ArInvoice/advance' },
+    endpoint: { list: '/ArInvoice/list', create: '/SalesInvoice/Create' },
     columns: [
       { key: 'invoiceNo', header: 'Invoice' },
       { key: 'customerName', header: 'Customer' },
@@ -642,7 +646,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'invoice-email',
     title: 'Invoice Email',
     subtitle: 'Invoice email queue and resend actions',
-    endpoint: { list: '/invoiceemail/invoices', email: '/invoiceemail/sales/' },
+    endpoint: { list: '/invoiceemail/invoices?docType=SI', email: '/invoiceemail/sales/' },
     columns: [
       { key: 'invoiceNo', header: 'Invoice' },
       { key: 'customerName', header: 'Customer' },

@@ -69,7 +69,7 @@
     <div class="gst-card">
       <div class="gst-card-head">
         <input class="gst-search" type="text" placeholder="Search code, description..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
-        <button class="gst-btn gst-btn-primary" type="button" (click)="showTaxForm = true; editingTax = null; message = ''; error = ''">+ New Tax Code</button>
+        <button class="gst-btn gst-btn-primary" type="button" (click)="showTaxForm = true; editingTax = null; message = ''; error = ''" *ngIf="permission?.create">+ New Tax Code</button>
       </div>
       <div class="gst-loading" *ngIf="loading">Loading...</div>
       <div class="gst-table-wrap" *ngIf="!loading">
@@ -96,7 +96,7 @@
                 </span>
               </td>
               <td class="center">
-                <button class="edit-btn" type="button" (click)="editTax(tc)">Edit</button>
+                <button class="edit-btn" type="button" (click)="editTax(tc)" *ngIf="permission?.edit">Edit</button>
               </td>
             </tr>
             <tr *ngIf="filteredTaxCodes.length === 0 && !loading">
@@ -178,10 +178,10 @@
                 </span>
               </td>
               <td class="center action-cell">
-                <button class="edit-btn" type="button" (click)="postReturn(r)">Post</button>
-                <button class="edit-btn" type="button" (click)="fileReturn(r)">File</button>
-                <button class="edit-btn" type="button" (click)="reopenReturn(r)">Reopen</button>
-                <button class="edit-btn" type="button" (click)="exportReturn(r)">Export</button>
+                <button class="edit-btn" type="button" (click)="postReturn(r)" *ngIf="permission?.post">Post</button>
+                <button class="edit-btn" type="button" (click)="fileReturn(r)" *ngIf="permission?.submit">File</button>
+                <button class="edit-btn" type="button" (click)="reopenReturn(r)" *ngIf="permission?.edit">Reopen</button>
+                <button class="edit-btn" type="button" (click)="exportReturn(r)" *ngIf="permission?.export">Export</button>
               </td>
             </tr>
             <tr *ngIf="gstReturns.length === 0 && !loading">

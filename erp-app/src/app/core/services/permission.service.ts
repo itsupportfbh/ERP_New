@@ -18,12 +18,21 @@ interface PermFlags {
   Post: boolean;
 }
 
+const LS_KEY = 'userPermissions';
+
 @Injectable({ providedIn: 'root' })
 export class PermissionService {
   private permMap = new Map<string, PermFlags>();
   private loaded = false;
 
   constructor(private http: HttpClient) {
+    // Try to restore from localStorage on startup (for page refreshes)
+    try {
+      const cached = localStorage.getItem(LS_KEY);
+      if (cached) {
+        this.parsePermissions(JSON.parse(cached));
+      }
+    } catch {}
     window.addEventListener('menu-permission-updated', () => this.load());
   }
 
@@ -37,8 +46,21 @@ export class PermissionService {
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
         this.parsePermissions(res);
+        // Cache to localStorage so page-refreshes don't lose permissions
+        try {
+          const arr = this.extractArray(res);
+          if (arr.length) localStorage.setItem(LS_KEY, JSON.stringify(arr));
+        } catch {}
         this.loaded = true;
       });
+  }
+
+  /** Load directly from a permissions array (e.g., from login response or stored JSON) */
+  loadFromJson(data: any[]): void {
+    if (!Array.isArray(data) || !data.length) return;
+    this.parsePermissions(data);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+    this.loaded = true;
   }
 
   private isMaster(): boolean {
@@ -89,11 +111,32 @@ export class PermissionService {
     return this.flags(functionId)?.Approve ?? false;
   }
 
+  canReject(functionId: string): boolean {
+    if (this.isMaster()) return true;
+    if (!this.loaded || !functionId) return true;
+    if (!this.hasData()) return true;
+    return this.flags(functionId)?.Reject ?? false;
+  }
+
   canExport(functionId: string): boolean {
     if (this.isMaster()) return true;
     if (!this.loaded || !functionId) return true;
     if (!this.hasData()) return true;
     return this.flags(functionId)?.Export ?? false;
+  }
+
+  canPrint(functionId: string): boolean {
+    if (this.isMaster()) return true;
+    if (!this.loaded || !functionId) return true;
+    if (!this.hasData()) return true;
+    return this.flags(functionId)?.Print ?? false;
+  }
+
+  canPost(functionId: string): boolean {
+    if (this.isMaster()) return true;
+    if (!this.loaded || !functionId) return true;
+    if (!this.hasData()) return true;
+    return this.flags(functionId)?.Post ?? false;
   }
 
   private parsePermissions(res: any): void {

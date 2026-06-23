@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FinanceActionKey, FinancePageConfig, FinanceService, FINANCE_PAGES } from './finance.service';
 import { RowAction, TableColumn } from '../../shared/components/data-table/data-table.component';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 
 @Component({
   selector: 'erp-finance-workspace',
@@ -35,6 +36,9 @@ export class FinanceWorkspaceComponent implements OnInit {
   // Year End Close
   fyStartYear = this.currentFiscalYear();
   closeDate = `${this.currentFiscalYear() + 1}-03-31`;
+
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
   yearEndPreviewRows: any[] = [];
 
   get sortedPeriods(): any[] {
@@ -85,7 +89,22 @@ export class FinanceWorkspaceComponent implements OnInit {
     { id: 'invoice-email', reportName: 'Invoice Email', description: 'Invoice email queue and resend', module: 'Accounts Receivable', route: '/app/finance/invoice-email' }
   ];
 
-  constructor(private route: ActivatedRoute, private router: Router, private finance: FinanceService) {}
+  private readonly permFnMap: Record<string, string> = {
+    'period-close': 'period',
+    'year-end-close': 'year-end',
+    'journal': 'journal',
+    'chart-of-accounts': 'coa',
+    'opening-balance': 'ledger',
+    'bank-reconciliation': 'ledger',
+    'gst-return': 'tax',
+    'gst-report': 'tax',
+    'invoice-email': 'ar',
+    'collection-forecast': 'ar',
+    'daybook': 'ledger',
+    'reports': 'reports'
+  };
+
+  constructor(private route: ActivatedRoute, private router: Router, private finance: FinanceService, private permissionService: PermissionService) {}
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -101,6 +120,10 @@ export class FinanceWorkspaceComponent implements OnInit {
         const id = params.get('id');
         if (id) this.loadEdit(id);
       }
+      const fnId = this.permFnMap[key] ?? key;
+      this.permissionService.getFunctionPermission(this.userId, fnId).subscribe({
+        next: perm => { this.permission = perm; }
+      });
     });
   }
 

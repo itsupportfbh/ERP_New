@@ -102,27 +102,25 @@
   <!-- ══ TAB 2: RECEIPTS ══ -->
   <ng-container *ngIf="activeTab === 'receipts'">
 
-    <!-- Receipt Form -->
-    <div class="ar-card form-card" *ngIf="showReceiptForm">
+    <!-- Receipt Create Form -->
+    <div class="ar-card form-card receipt-create-card" *ngIf="showReceiptForm">
       <div class="ar-card-head">
         <strong class="ar-card-title">New Receipt</strong>
-        <button class="ar-btn ar-btn-outline" type="button" (click)="showReceiptForm = false">&#215; Close</button>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="closeReceiptForm()">&#215; Close</button>
       </div>
-      <div class="form-grid">
+
+      <!-- Header Fields -->
+      <div class="form-grid rcp-header-grid">
         <label class="form-field">
           <span>Customer <span class="req">*</span></span>
-          <select [(ngModel)]="receiptForm.customerId">
-            <option value="">— Select Customer —</option>
+          <select [(ngModel)]="receiptForm.customerId" (ngModelChange)="onReceiptCustomerChange()">
+            <option [ngValue]="null">— Select Customer —</option>
             <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
           </select>
         </label>
         <label class="form-field">
           <span>Receipt Date <span class="req">*</span></span>
           <input type="date" [(ngModel)]="receiptForm.receiptDate">
-        </label>
-        <label class="form-field">
-          <span>Amount <span class="req">*</span></span>
-          <input type="number" min="0" [(ngModel)]="receiptForm.amount" placeholder="0.00">
         </label>
         <label class="form-field">
           <span>Payment Mode</span>
@@ -133,13 +131,113 @@
             <option value="UPI">UPI</option>
           </select>
         </label>
-        <label class="form-field form-field-wide">
-          <span>Remarks</span>
-          <textarea rows="2" [(ngModel)]="receiptForm.remarks"></textarea>
+        <label class="form-field" *ngIf="receiptForm.paymentMode === 'BANK'">
+          <span>Bank Account</span>
+          <select [(ngModel)]="receiptForm.bankId">
+            <option [ngValue]="null">— Select Bank —</option>
+            <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
+              {{ b.bankName ?? b.accountName ?? b.name }} {{ b.accountNo ? '(' + b.accountNo + ')' : '' }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Amount Received <span class="req">*</span></span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="receiptForm.amountReceived" (ngModelChange)="onReceiptAmountChange()" placeholder="0.00">
+        </label>
+        <label class="form-field">
+          <span>Currency</span>
+          <select [(ngModel)]="receiptCurrencyId" (ngModelChange)="onReceiptCurrencyChange()">
+            <option *ngFor="let c of receiptCurrencies" [ngValue]="c.id ?? c.currencyId">
+              {{ c.currencyCode ?? c.currencyName }}
+            </option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>FX Rate</span>
+          <input type="number" min="0" step="0.000001" [(ngModel)]="receiptFxRate" (ngModelChange)="onReceiptFxRateChange()" placeholder="1.000000">
         </label>
       </div>
+
+      <!-- Totals Bar -->
+      <div class="rcp-totals-bar">
+        <div class="rcp-total-item">
+          <span class="rcp-total-label">Amount Received</span>
+          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | number:'1.2-2' }} {{ receiptCurrencyName }}</strong>
+        </div>
+        <div class="rcp-total-item">
+          <span class="rcp-total-label">Base Amount</span>
+          <strong class="rcp-total-val">{{ receiptAmountBase | number:'1.2-2' }}</strong>
+        </div>
+        <div class="rcp-total-item">
+          <span class="rcp-total-label">Total Allocated</span>
+          <strong class="rcp-total-val teal">{{ receiptTotalAllocated | number:'1.2-2' }}</strong>
+        </div>
+        <div class="rcp-total-item">
+          <span class="rcp-total-label">Unallocated</span>
+          <strong class="rcp-total-val" [class.danger-text]="receiptUnallocated > 0">{{ receiptUnallocated | number:'1.2-2' }}</strong>
+        </div>
+        <div class="rcp-total-item" *ngIf="receiptExchangeGainLoss !== 0">
+          <span class="rcp-total-label">FX Gain/Loss</span>
+          <strong class="rcp-total-val" [class.success-text]="receiptExchangeGainLoss > 0" [class.danger-text]="receiptExchangeGainLoss < 0">
+            {{ receiptExchangeGainLoss | number:'1.2-2' }}
+          </strong>
+        </div>
+      </div>
+
+      <!-- Invoice Allocation Grid -->
+      <div class="rcp-alloc-section">
+        <div class="rcp-alloc-head">
+          <strong>Open Invoices — Select to Allocate</strong>
+        </div>
+        <div class="ar-loading" *ngIf="loadingInvoices">Loading invoices...</div>
+        <div class="ar-table-wrap" *ngIf="!loadingInvoices">
+          <table class="ar-table rcp-alloc-table">
+            <thead>
+              <tr>
+                <th style="width:36px" class="center">
+                  <input type="checkbox" [checked]="receiptAllChecked" (change)="onReceiptHeaderCheckbox($any($event.target).checked)">
+                </th>
+                <th>Invoice No</th>
+                <th>Date</th>
+                <th class="right">Invoice Amt</th>
+                <th class="right">Currency</th>
+                <th class="right">Advance</th>
+                <th class="right">Paid</th>
+                <th class="right teal-hdr">Balance</th>
+                <th class="right">Allocate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of receiptInvoices" [class.alloc-selected]="row.selected">
+                <td class="center">
+                  <input type="checkbox" [(ngModel)]="row.selected" (ngModelChange)="onReceiptRowCheckbox(row)">
+                </td>
+                <td class="mono">{{ row.invoiceNo || '—' }}</td>
+                <td>{{ row.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                <td class="right">{{ row.invoiceAmount | number:'1.2-2' }}</td>
+                <td class="center">{{ row.currencyName }}</td>
+                <td class="right muted">{{ row.advance | number:'1.2-2' }}</td>
+                <td class="right success-text">{{ row.paid | number:'1.2-2' }}</td>
+                <td class="right teal-bold">{{ receiptRowBalance(row) | number:'1.2-2' }}</td>
+                <td class="right">
+                  <input *ngIf="row.selected" class="alloc-input" type="number" min="0" step="0.01"
+                    [(ngModel)]="row.allocatedAmount" (ngModelChange)="onReceiptAllocateChange(row)" placeholder="0.00">
+                  <span *ngIf="!row.selected" class="muted">—</span>
+                </td>
+              </tr>
+              <tr *ngIf="receiptInvoices.length === 0 && !loadingInvoices">
+                <td colspan="9" class="ar-empty">
+                  {{ receiptForm.customerId ? 'No open invoices for this customer.' : 'Select a customer to load open invoices.' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
       <div class="form-footer">
-        <button class="ar-btn ar-btn-outline" type="button" (click)="showReceiptForm = false">Cancel</button>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="closeReceiptForm()">Cancel</button>
         <button class="ar-btn ar-btn-primary" type="button" (click)="saveReceipt()" [disabled]="savingReceipt">
           {{ savingReceipt ? 'Saving...' : 'Post Receipt' }}
         </button>
@@ -149,7 +247,7 @@
     <div class="ar-card">
       <div class="ar-card-head">
         <strong class="ar-card-title">Customer Receipts</strong>
-        <button class="ar-btn ar-btn-primary" type="button" (click)="showReceiptForm = true; message = ''; error = ''">+ New Receipt</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="openReceiptForm()" *ngIf="permission?.create">+ New Receipt</button>
       </div>
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">
@@ -202,52 +300,155 @@
     </div>
 
     <!-- Advance Form -->
-    <div class="ar-card form-card" *ngIf="showAdvanceForm">
+    <div class="ar-card form-card adv-create-card" *ngIf="showAdvanceForm">
       <div class="ar-card-head">
         <strong class="ar-card-title">New Customer Advance</strong>
-        <button class="ar-btn ar-btn-outline" type="button" (click)="showAdvanceForm = false">&#215; Close</button>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="closeAdvanceForm()">&#215; Close</button>
       </div>
-      <div class="form-grid">
-        <label class="form-field">
+
+      <div class="adv-form-grid">
+
+        <!-- Customer -->
+        <label class="adv-form-field">
           <span>Customer <span class="req">*</span></span>
-          <select [(ngModel)]="advanceForm.customerId" (change)="onCustomerSelect()">
-            <option value="">— Select Customer —</option>
+          <select [(ngModel)]="advanceForm.customerId" (change)="onAdvanceCustomerChange()">
+            <option [ngValue]="null">— Select Customer —</option>
             <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
           </select>
         </label>
-        <label class="form-field">
+
+        <!-- Link to Sales Order toggle -->
+        <label class="adv-form-field adv-checkbox-field">
+          <span>&nbsp;</span>
+          <label class="adv-check-label">
+            <input type="checkbox" [(ngModel)]="isOrderSpecific" (change)="onToggleOrderSpecific()">
+            <span>Link to Sales Order</span>
+          </label>
+        </label>
+
+        <!-- Sales Order (only when isOrderSpecific) -->
+        <label class="adv-form-field" *ngIf="isOrderSpecific">
+          <span>Sales Order <span class="req">*</span></span>
+          <select [(ngModel)]="advanceForm.salesOrderId" (change)="onAdvanceSalesOrderChange()"
+                  [disabled]="!advanceForm.customerId || loadingOrders">
+            <option [ngValue]="null">
+              {{ loadingOrders ? 'Loading...' : (advanceForm.customerId ? (orders.length ? '— Select Order —' : 'No open orders') : '— Select customer first —') }}
+            </option>
+            <option *ngFor="let o of orders" [ngValue]="o.id">
+              {{ o.salesOrderNo ?? o.soNo ?? o.orderNo ?? ('SO-' + o.id) }}
+            </option>
+          </select>
+        </label>
+
+        <!-- Advance Date -->
+        <label class="adv-form-field">
           <span>Advance Date <span class="req">*</span></span>
           <input type="date" [(ngModel)]="advanceForm.advanceDate">
         </label>
-        <label class="form-field">
-          <span>Amount <span class="req">*</span></span>
-          <input type="number" min="0" [(ngModel)]="advanceForm.amount" placeholder="0.00">
+
+        <!-- Amount -->
+        <label class="adv-form-field">
+          <span>Amount <span class="req">*</span>
+            <em *ngIf="advCurrencyName" class="adv-ccy-hint">({{ advCurrencyName }})</em>
+          </span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="advanceForm.amount"
+                 (ngModelChange)="calcAdvanceAmountBase()" placeholder="0.00">
         </label>
-        <label class="form-field">
+
+        <!-- Payment Mode -->
+        <label class="adv-form-field">
           <span>Payment Mode</span>
-          <select [(ngModel)]="advanceForm.paymentMode">
+          <select [(ngModel)]="advanceForm.paymentMode" (change)="onAdvancePaymentModeChange()">
             <option value="BANK">Bank Transfer</option>
             <option value="CASH">Cash</option>
             <option value="UPI">UPI</option>
           </select>
         </label>
-        <label class="form-field form-field-wide">
+
+        <!-- Bank Account (only when BANK) -->
+        <label class="adv-form-field" *ngIf="advanceForm.paymentMode === 'BANK'">
+          <span>Bank Account</span>
+          <select [(ngModel)]="advanceForm.bankAccountId">
+            <option [ngValue]="null">— Select Bank —</option>
+            <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
+              {{ b.headName ?? b.bankName ?? b.accountName ?? b.name }}
+            </option>
+          </select>
+        </label>
+
+        <!-- FX section (only when foreign currency from SO) -->
+        <ng-container *ngIf="advIsForeignCurrency()">
+
+          <!-- Currency (readonly from SO) -->
+          <label class="adv-form-field">
+            <span>Currency</span>
+            <input type="text" [value]="advCurrencyName" readonly class="adv-readonly">
+          </label>
+
+          <!-- FX Rate -->
+          <label class="adv-form-field">
+            <span>FX Rate <em *ngIf="advFxRateLoading" class="adv-loading-hint">⏳</em></span>
+            <input type="number" min="0" step="0.000001" [(ngModel)]="advFxRate"
+                   (ngModelChange)="calcAdvanceAmountBase()" placeholder="1.000000">
+          </label>
+
+          <!-- Base Amount (readonly) -->
+          <label class="adv-form-field">
+            <span>Base Amount</span>
+            <input type="text" [value]="advAmountBase | number:'1.2-2'" readonly class="adv-readonly adv-readonly-teal">
+          </label>
+
+        </ng-container>
+
+        <!-- Remarks (full width) -->
+        <label class="adv-form-field adv-form-field-wide">
           <span>Remarks</span>
           <textarea rows="2" [(ngModel)]="advanceForm.remarks"></textarea>
         </label>
+
       </div>
+
       <div class="form-footer">
-        <button class="ar-btn ar-btn-outline" type="button" (click)="showAdvanceForm = false">Cancel</button>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="closeAdvanceForm()">Cancel</button>
         <button class="ar-btn ar-btn-primary" type="button" (click)="saveAdvance()" [disabled]="savingAdvance">
           {{ savingAdvance ? 'Saving...' : 'Save Advance' }}
         </button>
+      </div>
+
+      <!-- Open Advances for this customer (reference) -->
+      <div class="adv-open-list" *ngIf="openAdvancesForCustomer.length">
+        <div class="adv-open-head">Open Advances for Customer</div>
+        <table class="adv-open-table">
+          <thead>
+            <tr>
+              <th>Advance No</th>
+              <th>Date</th>
+              <th>Order</th>
+              <th class="right">Amount</th>
+              <th class="right">Base</th>
+              <th class="right teal-hdr">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of openAdvancesForCustomer">
+              <td class="mono">{{ a.advanceNo || '—' }}</td>
+              <td>{{ a.advanceDate | date:'dd-MMM-yyyy' }}</td>
+              <td class="muted">{{ a.orderNo || '—' }}</td>
+              <td class="right">{{ (a.amount || 0) | number:'1.2-2' }}
+                <span *ngIf="a.currencyName" class="ccy-tag">{{ a.currencyName }}</span>
+              </td>
+              <td class="right">{{ (a.amountBase || (a.amount * (a.fxRate || 1))) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (a.balanceAmount || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <div class="ar-card">
       <div class="ar-card-head">
         <strong class="ar-card-title">AR Advances</strong>
-        <button class="ar-btn ar-btn-primary" type="button" (click)="showAdvanceForm = true; message = ''; error = ''">+ New Advance</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="openAdvanceForm()" *ngIf="permission?.create">+ New Advance</button>
       </div>
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">
@@ -257,8 +458,10 @@
               <th>Advance No</th>
               <th>Customer</th>
               <th>Date</th>
+              <th>Sales Order</th>
               <th>Mode</th>
               <th class="right">Amount</th>
+              <th class="right">Base</th>
               <th class="right success-hdr">Utilised</th>
               <th class="right teal-hdr">Balance</th>
             </tr>
@@ -268,18 +471,136 @@
               <td class="mono">{{ adv.advanceNo || '—' }}</td>
               <td>{{ adv.customerName || '—' }}</td>
               <td>{{ adv.advanceDate | date:'dd-MMM-yyyy' }}</td>
+              <td class="muted">{{ adv.orderNo || '—' }}</td>
               <td>{{ adv.paymentMode || '—' }}</td>
-              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}</td>
-              <td class="right success-text">{{ (adv.utilised || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (adv.balance || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}
+                <span *ngIf="adv.currencyName" class="ccy-tag">{{ adv.currencyName }}</span>
+              </td>
+              <td class="right muted">{{ (adv.amountBase || 0) | number:'1.2-2' }}</td>
+              <td class="right success-text">{{ (adv.utilised || adv.utilisedAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (adv.balance || adv.balanceAmount || 0) | number:'1.2-2' }}</td>
             </tr>
             <tr *ngIf="advances.length === 0 && !loading">
-              <td colspan="7" class="ar-empty">No advances found.</td>
+              <td colspan="9" class="ar-empty">No advances found.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+  </ng-container>
+
+  <!-- ══ TAB: CREATE INVOICE ══ -->
+  <ng-container *ngIf="activeTab === 'create-invoice'">
+
+    <div class="ar-card inv-create-card">
+      <div class="ar-card-head">
+        <strong class="ar-card-title">New Sales Invoice</strong>
+        <button class="ar-btn ar-btn-outline" type="button" (click)="setTab('invoices')">&#8592; Back to Invoices</button>
+      </div>
+
+      <!-- Invoice Header -->
+      <div class="form-grid inv-header-grid">
+        <label class="form-field">
+          <span>Customer <span class="req">*</span></span>
+          <select [(ngModel)]="invoiceForm.customerId">
+            <option [ngValue]="null">— Select Customer —</option>
+            <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Invoice Date <span class="req">*</span></span>
+          <input type="date" [(ngModel)]="invoiceForm.invoiceDate">
+        </label>
+        <label class="form-field form-field-wide">
+          <span>Remarks</span>
+          <textarea rows="2" [(ngModel)]="invoiceForm.remarks"></textarea>
+        </label>
+      </div>
+
+      <!-- Line Items -->
+      <div class="inv-lines-section">
+        <div class="inv-lines-head">
+          <strong>Line Items</strong>
+          <button class="ar-btn ar-btn-outline" type="button" (click)="addInvoiceLine()">+ Add Line</button>
+        </div>
+        <div class="inv-lines-wrap">
+          <table class="inv-lines-table">
+            <thead>
+              <tr>
+                <th style="width:24px">#</th>
+                <th>Item / Description</th>
+                <th style="width:70px">UOM</th>
+                <th style="width:70px" class="right">Qty</th>
+                <th style="width:90px" class="right">Unit Price</th>
+                <th style="width:70px" class="right">Disc %</th>
+                <th style="width:140px">Tax Code</th>
+                <th style="width:60px" class="right">GST %</th>
+                <th style="width:90px" class="right">Amount</th>
+                <th style="width:90px" class="right">Tax Amt</th>
+                <th style="width:28px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of invoiceLines; let i = index">
+                <td class="inv-line-no">{{ i + 1 }}</td>
+                <td>
+                  <input class="inv-cell-input" type="text" [(ngModel)]="line.itemName" placeholder="Item name">
+                </td>
+                <td>
+                  <input class="inv-cell-input" type="text" [(ngModel)]="line.uom" placeholder="PCS">
+                </td>
+                <td>
+                  <input class="inv-cell-input right" type="number" min="0" [(ngModel)]="line.qty" (ngModelChange)="calcLine(line)">
+                </td>
+                <td>
+                  <input class="inv-cell-input right" type="number" min="0" [(ngModel)]="line.unitPrice" (ngModelChange)="calcLine(line)">
+                </td>
+                <td>
+                  <input class="inv-cell-input right" type="number" min="0" max="100" [(ngModel)]="line.discountPct" (ngModelChange)="calcLine(line)">
+                </td>
+                <td>
+                  <select class="inv-cell-input" [(ngModel)]="line.taxCodeId" (ngModelChange)="onTaxCodeChange(line)">
+                    <option [ngValue]="null">— None —</option>
+                    <option *ngFor="let tc of taxCodes" [ngValue]="tc.id">{{ tc.taxCode }} – {{ tc.taxName }}</option>
+                  </select>
+                </td>
+                <td class="right inv-gst-pct">{{ line.gstPct | number:'1.1-2' }}%</td>
+                <td class="right inv-amount">{{ line.lineAmount | number:'1.2-2' }}</td>
+                <td class="right inv-tax">{{ line.taxAmount | number:'1.2-2' }}</td>
+                <td>
+                  <button class="inv-remove-btn" type="button" (click)="removeInvoiceLine(i)" [disabled]="invoiceLines.length === 1" title="Remove line">&#215;</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="inv-totals">
+          <div class="inv-total-row">
+            <span>Subtotal</span>
+            <strong>{{ invoiceSubtotal | number:'1.2-2' }}</strong>
+          </div>
+          <div class="inv-total-row">
+            <span>GST / Tax</span>
+            <strong>{{ invoiceTaxTotal | number:'1.2-2' }}</strong>
+          </div>
+          <div class="inv-total-row inv-grand-total">
+            <span>Grand Total</span>
+            <strong>{{ invoiceGrandTotal | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="form-footer">
+        <button class="ar-btn ar-btn-outline" type="button" (click)="setTab('invoices')">Cancel</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="saveInvoice()" [disabled]="savingInvoice">
+          {{ savingInvoice ? 'Saving...' : 'Save Invoice' }}
+        </button>
+      </div>
+    </div>
+
   </ng-container>
 
   <!-- ══ TAB 4: AR AGING ══ -->

@@ -1,0 +1,195 @@
+<div class="pc-page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="pc-title-block">
+      <div class="pc-title-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <h2>Period Close</h2>
+        <p class="pc-sub">Lock periods and run FX revaluation for purchase module</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error / success alerts -->
+  <div class="alert-error" *ngIf="error">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    {{ error }}
+  </div>
+  <div class="alert-success" *ngIf="successMsg">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><polyline points="6,10 9,13 14,7"/></svg>
+    {{ successMsg }}
+  </div>
+
+  <div class="loading-row" *ngIf="loading"><div class="spinner-sm"></div> Loading periods…</div>
+
+  <ng-container *ngIf="!loading">
+
+    <!-- ── Period Selection & Lock ─────────────────────── -->
+    <div class="card section-card">
+      <div class="section-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12"/><path d="M6 3V1M10 3V1"/></svg>
+        Period Selection
+      </div>
+
+      <div class="form-row cols-2" style="align-items:flex-end;">
+
+        <!-- Period dropdown -->
+        <div class="form-field">
+          <label class="field-label">Select Period</label>
+          <select class="erp-select" [(ngModel)]="selectedPeriodId" (ngModelChange)="onPeriodChange($event)">
+            <option [ngValue]="null">-- Select Period --</option>
+            <option *ngFor="let p of periods" [ngValue]="p.id">{{ p.label }}</option>
+          </select>
+          <div class="no-periods-hint" *ngIf="!periods.length">No periods found. Please set up accounting periods first.</div>
+        </div>
+
+        <!-- Status + Lock toggle -->
+        <div class="form-field" *ngIf="selectedPeriodId">
+          <label class="field-label">Period Status</label>
+          <div class="lock-row">
+            <span class="period-status-badge" [class.locked]="isLocked" [class.open]="!isLocked">
+              <svg *ngIf="isLocked" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-right:4px;"><rect x="3" y="7" width="10" height="8" rx="1"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>
+              <svg *ngIf="!isLocked" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-right:4px;"><rect x="3" y="7" width="10" height="8" rx="1"/><path d="M5 7V5a3 3 0 0 1 5.83-1"/></svg>
+              {{ isLocked ? 'Locked' : 'Open' }}
+            </span>
+            <button class="btn btn-sm"
+              [class.btn-danger]="!isLocked"
+              [class.btn-outline]="isLocked"
+              [disabled]="isLocking"
+              (click)="onToggleLock()">
+              <span class="btn-spinner" *ngIf="isLocking"></span>
+              {{ isLocking ? 'Processing…' : (isLocked ? '&#128275; Unlock Period' : '&#128274; Lock Period') }}
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Period info bar -->
+      <div class="period-info-bar" *ngIf="status">
+        <div class="pib-item">
+          <span class="pib-label">Period</span>
+          <span class="pib-val">{{ status.periodLabel || selectedPeriodLabel }}</span>
+        </div>
+        <div class="pib-item" *ngIf="status.periodEndDate">
+          <span class="pib-label">End Date</span>
+          <span class="pib-val">{{ status.periodEndDate | date:'dd MMM yyyy' }}</span>
+        </div>
+        <div class="pib-item">
+          <span class="pib-label">Status</span>
+          <span class="pib-val" [style.color]="isLocked ? '#dc2626' : '#16a34a'">
+            {{ isLocked ? 'Closed (Locked)' : 'Open' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FX Revaluation ─────────────────────────────── -->
+    <div class="card section-card">
+      <div class="section-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"><path d="M5 8h6M12 5l3 3-3 3"/><path d="M11 8H5M4 5l-3 3 3 3"/></svg>
+        FX Revaluation
+      </div>
+
+      <div class="form-row cols-3" style="align-items:flex-end;">
+        <div class="form-field">
+          <label class="field-label">FX Revaluation Date</label>
+          <input type="date" class="erp-input" [(ngModel)]="fxRevalDate" [disabled]="isRunningFx" />
+        </div>
+        <div class="form-field">
+          <button class="btn btn-primary btn-sm fx-run-btn"
+            [disabled]="isRunningFx || !selectedPeriodId || !fxRevalDate"
+            (click)="runFxRevaluation()">
+            <span class="btn-spinner" *ngIf="isRunningFx"></span>
+            <svg *ngIf="!isRunningFx" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;"><path d="M14 2a1 1 0 0 0-1 1v.5C11.4 2 9 2.5 7 4s-3 3.5-3 6a6 6 0 0 0 12 0c0-1.5-.5-3-1.3-4H16V4.5A1 1 0 0 0 15 3.5"/><polyline points="9,7 12,10 15,7"/></svg>
+            {{ isRunningFx ? 'Running…' : 'Run FX Revaluation' }}
+          </button>
+        </div>
+      </div>
+
+      <p class="fx-desc">
+        Revalues all open AR/AP foreign-currency balances as of the selected date,
+        calculates unrealized FX gain/loss, and posts a GL journal automatically.
+      </p>
+
+      <!-- Last run result -->
+      <div class="fx-result-bar" *ngIf="lastRunResult" [class.gain]="lastRunResult.net >= 0" [class.loss]="lastRunResult.net < 0">
+        <div class="fxr-item">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0;"><circle cx="8" cy="8" r="7"/><polyline points="5,8 7,10 11,6"/></svg>
+          <strong>FXR-{{ fxDateCompact(lastRunResult.fxDate) }}-{{ lastRunResult.runId }}</strong> posted
+        </div>
+        <div class="fxr-sep"></div>
+        <div class="fxr-item" *ngIf="lastRunResult.totalGain > 0" style="color:#16a34a;">
+          FX Gain: <strong>{{ lastRunResult.totalGain | number:'1.2-2' }}</strong>
+        </div>
+        <div class="fxr-item" *ngIf="lastRunResult.totalLoss > 0" style="color:#dc2626;">
+          FX Loss: <strong>{{ lastRunResult.totalLoss | number:'1.2-2' }}</strong>
+        </div>
+        <div class="fxr-sep" *ngIf="lastRunResult.totalGain > 0 || lastRunResult.totalLoss > 0"></div>
+        <div class="fxr-item">
+          Net:
+          <strong [style.color]="lastRunResult.net >= 0 ? '#16a34a' : '#dc2626'">
+            {{ lastRunResult.net >= 0 ? '+' : '' }}{{ lastRunResult.net | number:'1.2-2' }}
+          </strong>
+        </div>
+        <div class="fxr-date">{{ lastRunResult.fxDate }}</div>
+      </div>
+
+      <div class="fx-no-change" *ngIf="lastRunResult && lastRunResult.totalGain === 0 && lastRunResult.totalLoss === 0">
+        No FX differences found. No GL journal was posted.
+      </div>
+    </div>
+
+    <!-- ── Info Cards ─────────────────────────────────── -->
+    <div class="pc-info-grid">
+
+      <div class="pc-info-card">
+        <div class="pci-head">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px;"><path d="M2 12l2-2 2 2 2-2 2 2 2-2 2 2"/><path d="M4 6h8M4 9h8"/></svg>
+          Pre-Close Checklist
+        </div>
+        <ul class="pci-list">
+          <li>All GRNs received and posted</li>
+          <li>Supplier invoices matched (3-way)</li>
+          <li>Debit notes issued and approved</li>
+          <li>AP balances reconciled</li>
+          <li>Foreign-currency AP revalued</li>
+        </ul>
+      </div>
+
+      <div class="pc-info-card">
+        <div class="pci-head">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px;"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M5 6h6M5 9h4"/></svg>
+          What Locking Does
+        </div>
+        <ul class="pci-list">
+          <li>Prevents new Purchase Orders in period</li>
+          <li>Blocks GRN / Supplier Invoice creation</li>
+          <li>Blocks Debit Note posting</li>
+          <li>Only Post-permission users can lock/unlock</li>
+        </ul>
+      </div>
+
+      <div class="pc-info-card">
+        <div class="pci-head">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:6px;"><path d="M5 8h6M12 5l3 3-3 3"/><path d="M11 8H5M4 5l-3 3 3 3"/></svg>
+          FX Revaluation Notes
+        </div>
+        <ul class="pci-list">
+          <li>Run once per period at period-end date</li>
+          <li>Affects all open foreign-currency AP</li>
+          <li>Posts to Unrealized FX Gain/Loss ledger</li>
+          <li>Reversed automatically on next open period</li>
+        </ul>
+      </div>
+
+    </div>
+
+  </ng-container>
+</div>

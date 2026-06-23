@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FinanceService } from './finance.service';
+import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 
 interface JournalLine {
@@ -36,13 +37,18 @@ export class FinanceJournalFormComponent implements OnInit {
 
   saving = false;
   error = '';
+  permission: FunctionPermission | null = null;
+  private readonly userId = Number(localStorage.getItem('id'));
 
-  constructor(private finance: FinanceService, private router: Router) {}
+  constructor(private finance: FinanceService, private router: Router, private permissionService: PermissionService) {}
 
   ngOnInit(): void {
     this.addLine();
     this.addLine();
     this.loadAccounts();
+    this.permissionService.getFunctionPermission(this.userId, 'journal').subscribe({
+      next: perm => { this.permission = perm; }
+    });
   }
 
   private loadAccounts(): void {
