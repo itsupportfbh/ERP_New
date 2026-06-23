@@ -97,3 +97,41 @@
     </div>
   </div>
 </div>
+
+<!-- ACTION CONFIRM MODAL -->
+<div *ngIf="showConfirm" (click)="closeConfirm()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1060;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:420px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;"
+         [style.background]="confirmAction === 'delete' ? '#dc2626' : '#0e7490'">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h3 style="margin:0;font-size:17px;font-weight:700;color:#fff;">
+          {{ confirmAction === 'post' ? 'Post Debit Note' : 'Delete Debit Note' }}
+        </h3>
+      </div>
+      <button (click)="closeConfirm()" style="border:0;background:rgba(255,255,255,.2);color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#215;</button>
+    </div>
+    <div style="padding:20px 24px;">
+      <p style="margin:0 0 6px;font-size:14px;color:#374151;">
+        <ng-container *ngIf="confirmAction === 'post'">
+          Post <strong style="color:#111827;">{{ confirmRow?.debitNoteNo }}</strong>? Once posted it cannot be edited.
+        </ng-container>
+        <ng-container *ngIf="confirmAction === 'delete'">
+          Delete <strong style="color:#111827;">{{ confirmRow?.debitNoteNo }}</strong>? This cannot be undone.
+        </ng-container>
+      </p>
+      <div *ngIf="confirmError" style="margin-top:12px;padding:10px 14px;background:#fee2e2;border-radius:8px;color:#b91c1c;font-size:13px;">{{ confirmError }}</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 20px;border-top:1px solid #f1f5f9;">
+      <button (click)="closeConfirm()" [disabled]="confirmLoading"
+        style="background:#f1f5f9;color:#374151;border:0;border-radius:8px;padding:8px 18px;font-weight:600;cursor:pointer;font-size:13px;">Cancel</button>
+      <button (click)="doConfirm()" [disabled]="confirmLoading"
+        style="border:0;border-radius:8px;padding:8px 20px;font-weight:700;cursor:pointer;font-size:13px;color:#fff;display:flex;align-items:center;gap:6px;"
+        [style.background]="confirmAction === 'delete' ? '#dc2626' : '#0e7490'">
+        <span *ngIf="confirmLoading" class="btn-spinner"></span>
+        {{ confirmLoading ? 'Processing…' : (confirmAction === 'post' ? 'Post' : 'Delete') }}
+      </button>
+    </div>
+  </div>
+</div>

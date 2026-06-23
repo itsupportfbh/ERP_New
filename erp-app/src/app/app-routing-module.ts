@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
+import { PurchaseGuard } from './core/guards/purchase.guard';
 import { LoginComponent } from './pages/login/login.component';
 import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './pages/auth/reset-password/reset-password.component';
@@ -74,6 +75,7 @@ import { FinanceTrialBalanceComponent } from './pages/finance/finance-trial-bala
 import { FinancePlComponent } from './pages/finance/finance-pl.component';
 import { FinanceBsComponent } from './pages/finance/finance-bs.component';
 import { FinanceOpeningBalanceComponent } from './pages/finance/finance-opening-balance.component';
+import { FinanceYearEndCloseComponent } from './pages/finance/finance-year-end-close.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
 // Sales
@@ -131,53 +133,61 @@ const routes: Routes = [
       { path: 'demo',                          component: DemoComponent       },
 
       // ── Purchase ────────────────────────────────────────
-      { path: 'purchase/requests',             component: PurchaseRequestListComponent },
-      { path: 'purchase/requests/new',         component: PurchaseRequestFormComponent },
-      { path: 'purchase/requests/:id',         component: PurchaseRequestFormComponent },
+      {
+        path: 'purchase',
+        canActivate: [PurchaseGuard],
+        children: [
+          { path: 'requests',                  component: PurchaseRequestListComponent },
+          { path: 'requests/new',              component: PurchaseRequestFormComponent },
+          { path: 'requests/:id',              component: PurchaseRequestFormComponent },
 
-      { path: 'purchase/orders',               component: PurchaseOrderListComponent },
-      { path: 'purchase/orders/new',           component: PurchaseOrderFormComponent },
-      { path: 'purchase/orders/:id',           component: PurchaseOrderFormComponent },
+          { path: 'orders',                    component: PurchaseOrderListComponent },
+          { path: 'orders/new',                component: PurchaseOrderFormComponent },
+          { path: 'orders/:id',                component: PurchaseOrderFormComponent },
 
-      { path: 'purchase/rfq',                  component: RfqListComponent },
-      { path: 'purchase/rfq/new',              component: RfqFormComponent },
-      { path: 'purchase/rfq/:id',              component: RfqFormComponent },
+          { path: 'rfq',                       component: RfqListComponent },
+          { path: 'rfq/new',                   component: RfqFormComponent },
+          { path: 'rfq/:id',                   component: RfqFormComponent },
 
-      { path: 'purchase/grn',                  component: GrnListComponent },
-      { path: 'purchase/grn/new',              component: GrnFormComponent },
-      { path: 'purchase/grn/:id',              component: GrnFormComponent },
+          { path: 'grn',                       component: GrnListComponent },
+          { path: 'grn/new',                   component: GrnFormComponent },
+          { path: 'grn/:id',                   component: GrnFormComponent },
 
-      { path: 'purchase/supplier-invoice',     component: SupplierInvoiceListComponent },
-      { path: 'purchase/supplier-invoice/new', component: SupplierInvoiceFormComponent },
-      { path: 'purchase/supplier-invoice/:id', component: SupplierInvoiceFormComponent },
+          { path: 'supplier-invoice',          component: SupplierInvoiceListComponent },
+          { path: 'supplier-invoice/new',      component: SupplierInvoiceFormComponent },
+          { path: 'supplier-invoice/:id',      component: SupplierInvoiceFormComponent },
 
-      { path: 'purchase/debit-note',           component: DebitNoteListComponent },
-      { path: 'purchase/debit-note/new',       component: DebitNoteFormComponent },
-      { path: 'purchase/debit-note/:id',       component: DebitNoteFormComponent },
+          { path: 'debit-note',                component: DebitNoteListComponent },
+          { path: 'debit-note/new',            component: DebitNoteFormComponent },
+          { path: 'debit-note/:id',            component: DebitNoteFormComponent },
 
-      { path: 'purchase/scorecard',            component: SupplierScorecardComponent },
-      { path: 'purchase/three-way-match',      component: ThreeWayMatchComponent },
-      { path: 'purchase/mobile-receiving',     component: MobileReceivingComponent },
-      { path: 'purchase/period-close',         component: PeriodCloseComponent },
-      { path: 'purchase/currency-conversion',  component: ExchangeRateComponent },
-      { path: 'purchase/uom-conversion',       component: UomConversionComponent },
-      { path: 'purchase/Create-PurchaseRequest', component: PurchaseRequestFormComponent },
-      { path: 'purchase/Edit-PurchaseRequest/:id', component: PurchaseRequestFormComponent },
-      { path: 'purchase/list-PurchaseRequest', component: PurchaseRequestListComponent },
-      { path: 'purchase/list-Purchasegoodreceipt', component: GrnListComponent },
-      { path: 'purchase/createpurchasegoodreceipt', component: GrnFormComponent },
-      { path: 'purchase/edit-purchasegoodreceipt/:id', component: GrnFormComponent },
-      { path: 'purchase/list-purchaseorder', component: PurchaseOrderListComponent },
-      { path: 'purchase/create-purchaseorder', component: PurchaseOrderFormComponent },
-      { path: 'purchase/edit-purchaseorder/:id', component: PurchaseOrderFormComponent },
-      { path: 'purchase/Create-SupplierInvoice', component: SupplierInvoiceFormComponent },
-      { path: 'purchase/Edit-SupplierInvoice/:id', component: SupplierInvoiceFormComponent },
-      { path: 'purchase/list-SupplierInvoice', component: SupplierInvoiceListComponent },
-      { path: 'purchase/mobilereceiving', component: MobileReceivingComponent },
-      { path: 'purchase/supplier-scorecard', component: SupplierScorecardComponent },
-      { path: 'purchase/list-debitnote', component: DebitNoteListComponent },
-      { path: 'purchase/create-debitnote', component: DebitNoteFormComponent },
-      { path: 'purchase/edit-debitnote/:id', component: DebitNoteFormComponent },
+          { path: 'scorecard',                 component: SupplierScorecardComponent },
+          { path: 'three-way-match',           component: ThreeWayMatchComponent },
+          { path: 'mobile-receiving',          component: MobileReceivingComponent },
+          { path: 'period-close',              component: PeriodCloseComponent },
+          { path: 'currency-conversion',       component: ExchangeRateComponent },
+          { path: 'uom-conversion',            component: UomConversionComponent },
+
+          // Legacy paths
+          { path: 'Create-PurchaseRequest',         component: PurchaseRequestFormComponent },
+          { path: 'Edit-PurchaseRequest/:id',       component: PurchaseRequestFormComponent },
+          { path: 'list-PurchaseRequest',           component: PurchaseRequestListComponent },
+          { path: 'list-Purchasegoodreceipt',       component: GrnListComponent },
+          { path: 'createpurchasegoodreceipt',      component: GrnFormComponent },
+          { path: 'edit-purchasegoodreceipt/:id',   component: GrnFormComponent },
+          { path: 'list-purchaseorder',             component: PurchaseOrderListComponent },
+          { path: 'create-purchaseorder',           component: PurchaseOrderFormComponent },
+          { path: 'edit-purchaseorder/:id',         component: PurchaseOrderFormComponent },
+          { path: 'Create-SupplierInvoice',         component: SupplierInvoiceFormComponent },
+          { path: 'Edit-SupplierInvoice/:id',       component: SupplierInvoiceFormComponent },
+          { path: 'list-SupplierInvoice',           component: SupplierInvoiceListComponent },
+          { path: 'mobilereceiving',                component: MobileReceivingComponent },
+          { path: 'supplier-scorecard',             component: SupplierScorecardComponent },
+          { path: 'list-debitnote',                 component: DebitNoteListComponent },
+          { path: 'create-debitnote',               component: DebitNoteFormComponent },
+          { path: 'edit-debitnote/:id',             component: DebitNoteFormComponent },
+        ]
+      },
       { path: 'finance',                        component: FinanceDashboardComponent },
       // ── Dedicated finance components (must be before catch-all finance/:section) ──
       { path: 'finance/chart-of-accounts',    component: FinanceCoaComponent },
@@ -198,6 +208,7 @@ const routes: Routes = [
       { path: 'finance/gst-report',           component: FinanceGstComponent },
       { path: 'finance/create-journal',       component: FinanceJournalFormComponent },
       { path: 'finance/opening-balance',      component: FinanceOpeningBalanceComponent },
+      { path: 'finance/year-end-close',       component: FinanceYearEndCloseComponent },
       { path: 'finance/:section',             component: FinanceWorkspaceComponent },
       { path: 'financial/dashboard',           component: FinanceDashboardComponent },
       { path: 'financial/ChartOfAccount',      component: FinanceCoaComponent },
@@ -226,7 +237,7 @@ const routes: Routes = [
       { path: 'financial/daybook',             component: FinanceWorkspaceComponent, data: { section: 'daybook' } },
       { path: 'financial/forecast',            component: FinanceWorkspaceComponent, data: { section: 'collection-forecast' } },
       { path: 'financial/opening-balance',     component: FinanceOpeningBalanceComponent },
-      { path: 'financial/year-close',          component: FinanceWorkspaceComponent, data: { section: 'year-end-close' } },
+      { path: 'financial/year-close',          component: FinanceYearEndCloseComponent },
       { path: 'financial/bank-reconciliation', component: FinanceWorkspaceComponent, data: { section: 'bank-reconciliation' } },
        // Master routes
       { path: 'master/approval-level',  component: ApprovalLevelComponent  },

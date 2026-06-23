@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
-import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'Draft' };
 
@@ -27,6 +26,7 @@ export class PurchaseRequestListComponent implements OnInit {
 
   // Lines detail modal
   showLinesModal = false;
+  modalRow: any = null;
   modalLines: any[] = [];
   modalTotalQty = 0;
   modalPrNo = '';
@@ -55,14 +55,36 @@ export class PurchaseRequestListComponent implements OnInit {
     { key: 'delete', label: 'Delete', btnClass: 'danger',  icon: 'delete' },
   ];
 
+  // Approval confirm modal
+  showConfirm = false;
+  confirmRow: any = null;
+  confirmStatus: 2 | 3 = 2;
+  confirmLoading = false;
+  confirmError = '';
+
+  // Action confirm modal (delete / draft actions)
+  showActionConfirm = false;
+  actionRow: any = null;
+  actionType = '';
+  actionLoading = false;
+  actionError = '';
+
+  // Success toast
+  toastMsg = '';
+  toastColor = '#16a34a';
+  private toastTimer: any;
+  showToast(msg: string, color = '#16a34a'): void {
+    clearTimeout(this.toastTimer);
+    this.toastMsg = msg; this.toastColor = color;
+    this.toastTimer = setTimeout(() => { this.toastMsg = ''; }, 3500);
+  }
+
   prActionFilter = (action: string, row: any): boolean => {
     const s = this.prStatusNum(row);
     switch (action) {
-      case 'edit':    return s !== 2 && s !== 3;
-      case 'delete':  return s !== 2 && s !== 3;
-      case 'approve': return s === 1;
-      case 'reject':  return s === 1;
-      default:        return true;
+      case 'edit':   return s !== 2 && s !== 3;
+      case 'delete': return s !== 2 && s !== 3;
+      default:       return true;
     }
   };
 
@@ -120,12 +142,13 @@ export class PurchaseRequestListComponent implements OnInit {
   create(): void { this.router.navigate(['/app/purchase/requests/new']); }
 
   onRowClick(row: any): void {
-    this.router.navigate(['/app/purchase/requests', row.id]);
+    this.openLinesModal(row);
   }
 
   openLinesModal(row: any): void {
     const raw = row?.pRLines ?? row?.prLines ?? row?.PRLines ?? '[]';
     const lines: any[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw || '[]'); } catch { return []; } })();
+    this.modalRow = row;
     this.modalLines = lines;
     this.modalTotalQty = lines.reduce((s: number, l: any) => s + (Number(l?.qty ?? l?.quantity) || 0), 0);
     this.modalPrNo = row.purchaseRequestNo ?? '';
@@ -146,20 +169,88 @@ export class PurchaseRequestListComponent implements OnInit {
     this.showLinesModal = true;
   }
 
-  closeLinesModal(): void { this.showLinesModal = false; }
+  closeLinesModal(): void { this.showLinesModal = false; this.modalRow = null; }
+
+  approveFromModal(status: 2 | 3): void {
+    const row = this.modalRow;
+    this.closeLinesModal();
+    if (row) this.openConfirm(row, status);
+  }
 
   onAction(e: { action: string; row: any }): void {
-    if (e.action === 'view')   this.openLinesModal(e.row);
-    if (e.action === 'edit')   this.router.navigate(['/app/purchase/requests', e.row.id]);
-    if (e.action === 'delete') this.delete(e.row);
+    if (e.action === 'view')    this.openLinesModal(e.row);
+    if (e.action === 'edit')    this.router.navigate(['/app/purchase/requests', e.row.id]);
+    if (e.action === 'approve') this.openConfirm(e.row, 2);
+    if (e.action === 'reject')  this.openConfirm(e.row, 3);
+    if (e.action === 'delete')  this.delete(e.row);
+  }
+
+  openConfirm(row: any, status: 2 | 3): void {
+    this.confirmRow = row;
+    this.confirmStatus = status;
+    this.confirmError = '';
+    this.showConfirm = true;
+  }
+
+  closeConfirm(): void { this.showConfirm = false; this.confirmRow = null; this.confirmError = ''; }
+
+  doConfirm(): void {
+    if (!this.confirmRow) return;
+    this.confirmLoading = true;
+    this.confirmError = '';
+    const row = this.confirmRow;
+    const status = this.confirmStatus;
+    const amount = Number(row.netTotal ?? row.totalAmount ?? row.amount ?? 0);
+    const request$ = status === 2
+      ? this.svc.approvePurchaseRequest(row.id, amount)
+      : this.svc.rejectPurchaseRequest(row.id, amount);
+    request$.subscribe({
+      next: () => {
+        this.confirmLoading = false; this.closeConfirm(); this.load(); this.loadPendingApprovals();
+        this.showToast(status === 2 ? `PR ${row.purchaseRequestNo} approved successfully.` : `PR ${row.purchaseRequestNo} rejected.`, status === 2 ? '#16a34a' : '#dc2626');
+      },
+      error: err => { this.confirmLoading = false; this.confirmError = err?.error?.message || 'Action failed. Please try again.'; }
+    });
   }
 
   convertToPO(row: any): void {
-    if (!this.isApproved(row)) {
-      Swal.fire('Not Allowed', 'Only approved purchase requests can be converted to a purchase order.', 'warning');
-      return;
-    }
+    if (!this.isApproved(row)) return;
     this.router.navigate(['/app/purchase/orders/new'], { queryParams: { fromPR: row.id } });
+  }
+
+  openActionConfirm(row: any, type: string): void {
+    this.actionRow = row; this.actionType = type; this.actionError = ''; this.showActionConfirm = true;
+  }
+  closeActionConfirm(): void { this.showActionConfirm = false; this.actionRow = null; this.actionError = ''; }
+  doActionConfirm(): void {
+    if (!this.actionRow) return;
+    this.actionLoading = true; this.actionError = '';
+    const row = this.actionRow;
+    if (this.actionType === 'delete-pr') {
+      this.svc.deletePurchaseRequest(row.id).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load();
+          this.showToast(`PR ${row.purchaseRequestNo} deleted.`);
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.'; }
+      });
+    } else if (this.actionType === 'promote-draft') {
+      this.svc.promotePurchaseRequestDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load(); this.loadDrafts();
+          this.showToast('Draft promoted to purchase request.');
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to promote draft.'; }
+      });
+    } else if (this.actionType === 'delete-draft') {
+      this.svc.deletePurchaseRequestDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.loadDrafts();
+          this.showToast('Draft deleted.');
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete draft.'; }
+      });
+    }
   }
 
   isApproved(row: any): boolean {
@@ -169,36 +260,13 @@ export class PurchaseRequestListComponent implements OnInit {
   }
 
   approveReject(row: any, status: 2 | 3): void {
-    if (this.isFinal(row)) {
-      Swal.fire('Not Allowed', 'This purchase request is already final.', 'warning');
-      return;
-    }
-    const action = status === 2 ? 'approve' : 'reject';
-    Swal.fire({ title: 'Are you sure?', text: `${action.charAt(0).toUpperCase() + action.slice(1)} PR ${row.purchaseRequestNo}?`, icon: 'question', showCancelButton: true, confirmButtonText: status === 2 ? 'Approve' : 'Reject', confirmButtonColor: status === 2 ? '#22c55e' : '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        const amount = Number(row.netTotal ?? row.totalAmount ?? row.amount ?? 0);
-        const request$ = status === 2
-          ? this.svc.approvePurchaseRequest(row.id, amount)
-          : this.svc.rejectPurchaseRequest(row.id, amount);
-        request$.subscribe({
-          next: () => { Swal.fire('Success', `Purchase request ${action}d.`, 'success'); this.load(); this.loadPendingApprovals(); },
-          error: err => Swal.fire('Error', err?.error?.message || `Unable to ${action} purchase request.`, 'error')
-        });
-      });
+    if (this.isFinal(row)) return;
+    this.openConfirm(row, status);
   }
 
   delete(row: any): void {
-    if (this.isFinal(row)) {
-      Swal.fire('Not Allowed', 'Approved/rejected purchase requests cannot be deleted.', 'warning');
-      return;
-    }
-    Swal.fire({ title: 'Delete PR?', text: `Delete PR ${row.purchaseRequestNo}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deletePurchaseRequest(row.id).subscribe({
-          next: () => { Swal.fire('Deleted', 'Purchase request deleted.', 'success'); this.load(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete purchase request.', 'error')
-        });
-      });
+    if (this.isFinal(row)) return;
+    this.openActionConfirm(row, 'delete-pr');
   }
 
   loadAlerts(): void {
@@ -234,26 +302,12 @@ export class PurchaseRequestListComponent implements OnInit {
 
   promoteDraft(draft: any, e: Event): void {
     e.stopPropagation();
-    const id = draft.id ?? draft.iD;
-    Swal.fire({ title: 'Promote Draft?', text: 'Convert this draft into a purchase request?', icon: 'question', showCancelButton: true, confirmButtonText: 'Promote', confirmButtonColor: '#0e7490' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.promotePurchaseRequestDraft(id, this.currentUserId()).subscribe({
-          next: () => { Swal.fire('Success', 'Draft promoted to purchase request.', 'success'); this.load(); this.loadDrafts(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to promote purchase request draft.', 'error')
-        });
-      });
+    this.openActionConfirm(draft, 'promote-draft');
   }
 
   deleteDraft(draft: any, e: Event): void {
     e.stopPropagation();
-    const id = draft.id ?? draft.iD;
-    Swal.fire({ title: 'Delete Draft?', text: 'Delete this purchase request draft? This cannot be undone.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deletePurchaseRequestDraft(id, this.currentUserId()).subscribe({
-          next: () => { Swal.fire('Deleted', 'Draft deleted.', 'success'); this.loadDrafts(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete purchase request draft.', 'error')
-        });
-      });
+    this.openActionConfirm(draft, 'delete-draft');
   }
 
   loadPendingApprovals(): void {

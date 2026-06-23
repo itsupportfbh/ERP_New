@@ -1,0 +1,161 @@
+<div class="yec-page">
+
+  <div class="yec-card">
+
+    <!-- Header -->
+    <div class="yec-header">
+      <svg class="yec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <polyline points="9 16 11 18 15 14"/>
+      </svg>
+      <h3>Year End Close</h3>
+    </div>
+
+    <!-- Controls -->
+    <div class="yec-controls">
+      <label class="yec-field">
+        <span>Financial Year</span>
+        <select [(ngModel)]="fyStartYear" (ngModelChange)="onFySelect($event)">
+          <option [ngValue]="null">-- Select Financial Year --</option>
+          <option *ngFor="let y of fyYears" [ngValue]="y.startYear">{{ y.label }}</option>
+        </select>
+      </label>
+
+      <label class="yec-field">
+        <span>Close Date</span>
+        <input type="date" [(ngModel)]="closeDate" [disabled]="!fyStartYear">
+      </label>
+
+      <div class="yec-actions">
+        <button class="yec-btn yec-btn-outline" type="button"
+                (click)="loadPreview()"
+                [disabled]="!fyStartYear || !closeDate || previewLoading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          {{ previewLoading ? 'Loading...' : 'Preview P&L' }}
+        </button>
+
+        <button class="yec-btn yec-btn-primary" type="button"
+                (click)="runYearEndClose()"
+                [disabled]="running || !fyStartYear || !closeDate || status?.isClosed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          {{ running ? 'Running...' : 'Run Year End Close' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Status loading -->
+    <div class="yec-status-loading" *ngIf="statusLoading">Checking status...</div>
+
+    <!-- Already closed banner -->
+    <div class="yec-banner yec-banner-success" *ngIf="!statusLoading && status?.isClosed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>
+        <strong>FY {{ status?.fyStartYear }}-{{ status?.fyEndYear }}</strong> already closed.
+        Journal: <strong>{{ status?.journalNo || '—' }}</strong> |
+        Net P&amp;L: <strong>{{ status?.netProfitLoss | number:'1.2-2' }}</strong>
+      </span>
+    </div>
+
+    <!-- Not yet closed warning -->
+    <div class="yec-banner yec-banner-warning" *ngIf="!statusLoading && fyStartYear && !status?.isClosed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>FY {{ fyStartYear }}-{{ fyEndYear }} is <strong>not yet closed.</strong></span>
+    </div>
+
+    <!-- Preview section -->
+    <div class="yec-preview" *ngIf="showPreview">
+
+      <div class="yec-preview-loading" *ngIf="previewLoading">Loading preview...</div>
+
+      <ng-container *ngIf="!previewLoading && previewRows.length > 0">
+
+        <div class="yec-preview-grid">
+          <!-- Income -->
+          <div class="yec-preview-table-card">
+            <div class="yec-preview-th income-hdr">Income Accounts</div>
+            <table class="yec-preview-table">
+              <thead><tr><th>Account</th><th class="right">Net Balance</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let r of incomeRows">
+                  <td>{{ r.headName }}</td>
+                  <td class="right text-success">{{ r.netBalance | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="fw-bold">
+                  <td>Total Income</td>
+                  <td class="right text-success">{{ totalIncome | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Expense -->
+          <div class="yec-preview-table-card">
+            <div class="yec-preview-th expense-hdr">Expense Accounts</div>
+            <table class="yec-preview-table">
+              <thead><tr><th>Account</th><th class="right">Net Balance</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let r of expenseRows">
+                  <td>{{ r.headName }}</td>
+                  <td class="right text-danger">{{ r.netBalance | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="fw-bold">
+                  <td>Total Expense</td>
+                  <td class="right text-danger">{{ totalExpense | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Net P&L -->
+        <div class="yec-net-pl">
+          <span class="yec-net-label">Net Profit / Loss</span>
+          <span class="yec-net-val" [class.text-success]="netPL >= 0" [class.text-danger]="netPL < 0">
+            {{ netPL | number:'1.2-2' }}
+            <span class="yec-pl-tag">{{ netPL >= 0 ? '(Profit)' : '(Loss)' }}</span>
+          </span>
+          <span class="yec-net-note">Will be transferred to <strong>Retained Earnings</strong></span>
+        </div>
+
+      </ng-container>
+
+      <!-- No entries -->
+      <div class="yec-banner yec-banner-info" *ngIf="!previewLoading && previewRows.length === 0">
+        No Income/Expense entries found for this period.
+      </div>
+    </div>
+
+    <!-- Result after run -->
+    <div class="yec-banner yec-banner-success" *ngIf="result">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>
+        <strong>Year End Close Completed!</strong>
+        Journal: <strong>{{ result.journalNo }}</strong> |
+        Income: {{ result.totalIncome | number:'1.2-2' }} |
+        Expense: {{ result.totalExpense | number:'1.2-2' }} |
+        Net P&amp;L: <strong>{{ result.netProfitLoss | number:'1.2-2' }}</strong>
+      </span>
+    </div>
+
+  </div>
+</div>

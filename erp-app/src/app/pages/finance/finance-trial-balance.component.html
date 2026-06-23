@@ -15,38 +15,57 @@
   <div class="sum-grid">
     <div class="sum-card sum-c1">
       <span class="sum-label">Opening Debit</span>
-      <strong class="sum-val">{{ summary.openDebit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalOpeningDebit | number:'1.2-2' }}</strong>
     </div>
     <div class="sum-card sum-c2">
       <span class="sum-label">Opening Credit</span>
-      <strong class="sum-val">{{ summary.openCredit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalOpeningCredit | number:'1.2-2' }}</strong>
     </div>
     <div class="sum-card sum-c3">
       <span class="sum-label">Closing Debit</span>
-      <strong class="sum-val">{{ summary.closeDebit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalClosingDebit | number:'1.2-2' }}</strong>
     </div>
     <div class="sum-card sum-c4">
       <span class="sum-label">Closing Credit</span>
-      <strong class="sum-val">{{ summary.closeCredit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalClosingCredit | number:'1.2-2' }}</strong>
     </div>
   </div>
 
   <!-- Filters -->
   <div class="rpt-filter-bar">
     <label class="filter-lbl">
-      <span>From Date</span>
+      <span>FROM DATE</span>
       <input type="date" [(ngModel)]="fromDate">
     </label>
     <label class="filter-lbl">
-      <span>To Date</span>
+      <span>TO DATE</span>
       <input type="date" [(ngModel)]="toDate">
     </label>
-    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()">Run TB</button>
+    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Running…' : 'Run TB' }}
+    </button>
     <div class="spacer"></div>
-    <input class="rpt-search" type="text" placeholder="Search account..." [(ngModel)]="search">
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="expandAll()">+ All</button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="collapseAll()">− All</button>
+    <input class="rpt-search" type="text" placeholder="Search account..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
   </div>
 
   <div class="rpt-alert rpt-danger" *ngIf="error">{{ error }}</div>
+
+  <!-- Show entries row -->
+  <div class="tb-controls" *ngIf="displayRows.length">
+    <label class="show-lbl">
+      Show
+      <select [(ngModel)]="pageSize" (ngModelChange)="currentPage=1; rebuildDisplayRows()">
+        <option [ngValue]="10">10</option>
+        <option [ngValue]="25">25</option>
+        <option [ngValue]="50">50</option>
+        <option [ngValue]="100">100</option>
+      </select>
+      entries
+    </label>
+    <span class="tb-count">{{ startIndex }}–{{ endIndex }} of {{ totalRows }}</span>
+  </div>
 
   <!-- Table -->
   <div class="rpt-card">
@@ -55,47 +74,106 @@
       <table class="rpt-table">
         <thead>
           <tr>
-            <th style="width:36px"></th>
-            <th>Code</th>
-            <th>Account</th>
-            <th class="right">Opening Debit</th>
-            <th class="right">Opening Credit</th>
-            <th class="right teal-hdr">Closing Debit</th>
-            <th class="right teal-hdr">Closing Credit</th>
+            <th>ACCOUNT</th>
+            <th class="right">OPENING DEBIT</th>
+            <th class="right">OPENING CREDIT</th>
+            <th class="right teal-hdr">CLOSING DEBIT</th>
+            <th class="right teal-hdr">CLOSING CREDIT</th>
           </tr>
         </thead>
         <tbody>
-          <ng-container *ngFor="let row of filteredRows">
-            <tr class="tb-row" [class.tb-parent]="row._hasChildren" (click)="row._hasChildren && toggle(row)">
-              <td class="expand-cell">
-                <button *ngIf="row._hasChildren" class="expand-btn" type="button" (click)="$event.stopPropagation(); toggle(row)">
-                  {{ expanded.has(row._id) ? '−' : '+' }}
+          <ng-container *ngFor="let row of displayRows">
+
+            <!-- Main row -->
+            <tr class="tb-row"
+                [class.tb-parent-row]="!row.isLeaf"
+                [class.tb-leaf-row]="row.isLeaf"
+                (click)="row.isLeaf ? onRowClick(row) : null">
+
+              <!-- Account column with indent + chevron -->
+              <td class="tb-account-col">
+                <span [style.paddingLeft]="indentPx(row)"></span>
+
+                <!-- chevron for parent rows -->
+                <button *ngIf="!row.isLeaf" class="chevron-btn" type="button"
+                        (click)="toggleNode(row, $event)">
+                  <span class="chevron" [class.chevron-down]="row.expanded">&#9654;</span>
                 </button>
-                <span *ngIf="!row._hasChildren" class="leaf-dot">·</span>
+                <span *ngIf="row.isLeaf" class="leaf-dot">·</span>
+
+                <span [class.fw-bold]="!row.isLeaf">
+                  {{ row.headCode }} — {{ row.headName }}
+                </span>
               </td>
-              <td class="mono" [style.paddingLeft]="indentPx(row)">{{ row.accountCode || '—' }}</td>
-              <td [class.fw-bold]="row._hasChildren">{{ row.accountName }}</td>
-              <td class="right debit-val">{{ (row.openingBalance ?? row.debit ?? 0) | number:'1.2-2' }}</td>
-              <td class="right credit-val">{{ (row.credit ?? 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ Math.max(row.closingBalance ?? 0, 0) | number:'1.2-2' }}</td>
-              <td class="right muted">{{ Math.abs(Math.min(row.closingBalance ?? 0, 0)) | number:'1.2-2' }}</td>
+
+              <td class="right debit-val">{{ openingDebit(row) | number:'1.2-2' }}</td>
+              <td class="right credit-val">{{ openingCredit(row) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ closingDebit(row) | number:'1.2-2' }}</td>
+              <td class="right muted">{{ closingCredit(row) | number:'1.2-2' }}</td>
             </tr>
+
+            <!-- Detail transactions (inline, leaf click) -->
+            <tr *ngIf="row.isLeaf && row.detailOpen">
+              <td colspan="5" class="detail-cell">
+                <div class="detail-head">
+                  Transactions: {{ row.headCode }} — {{ row.headName }}
+                  <button class="rpt-btn rpt-btn-outline" style="float:right;margin-top:-2px" type="button" (click)="row.detailOpen=false">✕ Close</button>
+                </div>
+                <div *ngIf="row.detailLoading" class="detail-loading">Loading...</div>
+                <table *ngIf="!row.detailLoading" class="detail-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Source</th>
+                      <th>No</th>
+                      <th>Description</th>
+                      <th class="right">Debit</th>
+                      <th class="right">Credit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let d of row.detailRows">
+                      <td>{{ d.transDate | date:'dd-MM-yyyy' }}</td>
+                      <td>{{ d.sourceType }}</td>
+                      <td>{{ d.sourceNo }}</td>
+                      <td>{{ d.description }}</td>
+                      <td class="right debit-val">{{ d.debit | number:'1.2-2' }}</td>
+                      <td class="right credit-val">{{ d.credit | number:'1.2-2' }}</td>
+                    </tr>
+                    <tr *ngIf="!row.detailRows?.length">
+                      <td colspan="6" class="rpt-empty">No transactions.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+
           </ng-container>
-          <tr *ngIf="filteredRows.length === 0 && !loading">
-            <td colspan="7" class="rpt-empty">No trial balance data. Run with date range.</td>
+
+          <tr *ngIf="displayRows.length === 0 && !loading">
+            <td colspan="5" class="rpt-empty">Set date range and click Run TB.</td>
           </tr>
         </tbody>
-        <tfoot *ngIf="filteredRows.length > 0">
+        <tfoot *ngIf="displayRows.length > 0">
           <tr class="foot-row">
-            <td colspan="3"><strong>Total</strong></td>
-            <td class="right debit-val fw-bold">{{ totalOpenDebit | number:'1.2-2' }}</td>
-            <td class="right credit-val fw-bold">{{ totalOpenCredit | number:'1.2-2' }}</td>
-            <td class="right teal-bold fw-bold">{{ totalCloseDebit | number:'1.2-2' }}</td>
-            <td class="right muted fw-bold">{{ totalCloseCredit | number:'1.2-2' }}</td>
+            <td><strong>Total</strong></td>
+            <td class="right debit-val fw-bold">{{ totalOpeningDebit | number:'1.2-2' }}</td>
+            <td class="right credit-val fw-bold">{{ totalOpeningCredit | number:'1.2-2' }}</td>
+            <td class="right teal-bold fw-bold">{{ totalClosingDebit | number:'1.2-2' }}</td>
+            <td class="right muted fw-bold">{{ totalClosingCredit | number:'1.2-2' }}</td>
           </tr>
         </tfoot>
       </table>
     </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="tb-pagination" *ngIf="totalPages > 1">
+    <button class="pg-btn" [disabled]="currentPage === 1" (click)="changePage(1)">«</button>
+    <button class="pg-btn" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">‹</button>
+    <button class="pg-btn" *ngFor="let p of pages" [class.pg-active]="currentPage === p" (click)="changePage(p)">{{ p }}</button>
+    <button class="pg-btn" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">›</button>
+    <button class="pg-btn" [disabled]="currentPage === totalPages" (click)="changePage(totalPages)">»</button>
   </div>
 
 </div>

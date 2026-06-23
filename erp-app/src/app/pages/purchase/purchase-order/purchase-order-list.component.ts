@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
-import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected' };
 
@@ -32,8 +31,33 @@ export class PurchaseOrderListComponent implements OnInit {
   showDrafts = false;
   draftsLoading = false;
 
+  // Approval confirm modal
+  showConfirm = false;
+  confirmRow: any = null;
+  confirmStatus: 2 | 3 = 2;
+  confirmLoading = false;
+  confirmError = '';
+
+  // Action confirm modal (email / delete / draft actions)
+  showActionConfirm = false;
+  actionRow: any = null;
+  actionType = '';
+  actionLoading = false;
+  actionError = '';
+
+  // Success toast
+  toastMsg = '';
+  toastColor = '#16a34a';
+  private toastTimer: any;
+  showToast(msg: string, color = '#16a34a'): void {
+    clearTimeout(this.toastTimer);
+    this.toastMsg = msg; this.toastColor = color;
+    this.toastTimer = setTimeout(() => { this.toastMsg = ''; }, 3500);
+  }
+
   // Lines detail modal
   showLinesModal = false;
+  modalRow: any = null;
   modalLines: any[] = [];
   modalPoNo = '';
   modalSupplier = '';
@@ -56,12 +80,12 @@ export class PurchaseOrderListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'approve', label: 'Approve',        btnClass: 'success', icon: 'approve' },
-    { key: 'reject',  label: 'Reject',         btnClass: 'warning', icon: 'reject'  },
-    { key: 'email',   label: 'Email Supplier', btnClass: 'default', icon: 'email'   },
-    { key: 'print',   label: 'Print',          btnClass: 'default', icon: 'print'   },
-    { key: 'edit',    label: 'Edit',           btnClass: 'default', icon: 'edit'    },
-    { key: 'delete',  label: 'Delete',         btnClass: 'danger',  icon: 'delete'  },
+    { key: 'approve', label: 'Approve',       btnClass: 'success', icon: 'approve' },
+    { key: 'reject',  label: 'Reject',        btnClass: 'danger',  icon: 'reject'  },
+    { key: 'email',   label: 'Email Supplier', btnClass: 'default', icon: 'email'  },
+    { key: 'print',   label: 'Print',          btnClass: 'default', icon: 'print'  },
+    { key: 'edit',    label: 'Edit',           btnClass: 'default', icon: 'edit'   },
+    { key: 'delete',  label: 'Delete',         btnClass: 'danger',  icon: 'delete' },
   ];
 
   poActionFilter = (action: string, row: any): boolean => {
@@ -166,26 +190,12 @@ export class PurchaseOrderListComponent implements OnInit {
 
   promoteDraft(draft: any, e: Event): void {
     e.stopPropagation();
-    const id = draft.id ?? draft.iD;
-    Swal.fire({ title: 'Promote Draft?', text: 'Convert this draft into a purchase order?', icon: 'question', showCancelButton: true, confirmButtonText: 'Promote', confirmButtonColor: '#0e7490' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.promotePurchaseOrderDraft(id, this.currentUserId()).subscribe({
-          next: () => { Swal.fire('Success', 'Draft promoted to purchase order.', 'success'); this.load(); this.loadDrafts(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to promote purchase order draft.', 'error')
-        });
-      });
+    this.openActionConfirm(draft, 'promote-draft');
   }
 
   deleteDraft(draft: any, e: Event): void {
     e.stopPropagation();
-    const id = draft.id ?? draft.iD;
-    Swal.fire({ title: 'Delete Draft?', text: 'Delete this purchase order draft? This cannot be undone.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deletePurchaseOrderDraft(id).subscribe({
-          next: () => { Swal.fire('Deleted', 'Draft deleted.', 'success'); this.loadDrafts(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete purchase order draft.', 'error')
-        });
-      });
+    this.openActionConfirm(draft, 'delete-draft');
   }
 
   applyFilter(): void {
@@ -201,12 +211,13 @@ export class PurchaseOrderListComponent implements OnInit {
   create(): void { this.router.navigate(['/app/purchase/orders/new']); }
 
   onRowClick(row: any): void {
-    this.router.navigate(['/app/purchase/orders', row.id]);
+    this.openLinesModal(row);
   }
 
   openLinesModal(row: any): void {
     const raw = row?.poLines ?? row?.PoLines ?? row?.POLines ?? '[]';
     const lines: any[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw || '[]'); } catch { return []; } })();
+    this.modalRow = row;
     this.modalLines = lines;
     this.modalPoNo = row.purchaseOrderNo ?? '';
     this.modalSupplier = row.supplierName ?? '';
@@ -224,11 +235,17 @@ export class PurchaseOrderListComponent implements OnInit {
     this.showLinesModal = true;
   }
 
-  closeLinesModal(): void { this.showLinesModal = false; }
+  closeLinesModal(): void { this.showLinesModal = false; this.modalRow = null; }
+
+  approveFromModal(status: 2 | 3): void {
+    const row = this.modalRow;
+    this.closeLinesModal();
+    if (row) this.openConfirm(row, status);
+  }
 
   onAction(e: { action: string; row: any }): void {
     if (e.action === 'view')    this.openLinesModal(e.row);
-    if (e.action === 'edit')    this.onRowClick(e.row);
+    if (e.action === 'edit')    this.router.navigate(['/app/purchase/orders', e.row.id]);
     if (e.action === 'approve') this.approveReject(e.row, 2);
     if (e.action === 'reject')  this.approveReject(e.row, 3);
     if (e.action === 'email')   this.emailSupplier(e.row);
@@ -244,13 +261,13 @@ export class PurchaseOrderListComponent implements OnInit {
         try { lines = Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); } catch { lines = []; }
         const html = this.buildPoPrintHtml(po, lines, row);
         const w = window.open('', '_blank', 'width=1050,height=800');
-        if (!w) { Swal.fire('Blocked', 'Please allow popups in your browser to print.', 'warning'); return; }
+        if (!w) return;
         w.document.write(html);
         w.document.close();
         w.focus();
         setTimeout(() => { w.print(); }, 700);
       },
-      error: () => Swal.fire('Error', 'Unable to load PO details.', 'error')
+      error: () => {}
     });
   }
 
@@ -404,53 +421,100 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
 </body></html>`;
   }
 
-  approveReject(row: any, status: 2 | 3): void {
-    if (this.isFinal(row)) {
-      Swal.fire('Not Allowed', 'This purchase order is already final.', 'warning');
-      return;
-    }
-    const action = status === 2 ? 'approve' : 'reject';
-    Swal.fire({ title: 'Are you sure?', text: `${action.charAt(0).toUpperCase() + action.slice(1)} PO ${row.purchaseOrderNo}?`, icon: 'question', showCancelButton: true, confirmButtonText: status === 2 ? 'Approve' : 'Reject', confirmButtonColor: status === 2 ? '#22c55e' : '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        const amount = Number(row.netTotal ?? row.totalAmount ?? row.amount ?? 0);
-        const request$ = status === 2
-          ? this.svc.approvePurchaseOrder(row.id, amount)
-          : this.svc.rejectPurchaseOrder(row.id, amount);
-        request$.subscribe({
-          next: () => { Swal.fire('Success', `Purchase order ${action}d.`, 'success'); this.load(); },
-          error: () => {
-            this.svc.updatePurchaseOrderApprovalStatus(row.id, status).subscribe({
-              next: () => { Swal.fire('Success', `Purchase order ${action}d.`, 'success'); this.load(); },
-              error: err => Swal.fire('Error', err?.error?.message || `Unable to ${action} purchase order.`, 'error')
-            });
-          }
+  openConfirm(row: any, status: 2 | 3): void {
+    this.confirmRow = row;
+    this.confirmStatus = status;
+    this.confirmError = '';
+    this.showConfirm = true;
+  }
+
+  closeConfirm(): void { this.showConfirm = false; this.confirmRow = null; this.confirmError = ''; }
+
+  doConfirm(): void {
+    if (!this.confirmRow) return;
+    this.confirmLoading = true;
+    this.confirmError = '';
+    const row = this.confirmRow;
+    const status = this.confirmStatus;
+    const amount = Number(row.netTotal ?? row.totalAmount ?? row.amount ?? 0);
+    const request$ = status === 2
+      ? this.svc.approvePurchaseOrder(row.id, amount)
+      : this.svc.rejectPurchaseOrder(row.id, amount);
+    request$.subscribe({
+      next: () => {
+        this.confirmLoading = false; this.closeConfirm(); this.load();
+        this.showToast(status === 2 ? `PO ${row.purchaseOrderNo} approved successfully.` : `PO ${row.purchaseOrderNo} rejected.`, status === 2 ? '#16a34a' : '#dc2626');
+        this.syncLinkedPrStatus(row.id, status);
+      },
+      error: () => {
+        this.svc.updatePurchaseOrderApprovalStatus(row.id, status).subscribe({
+          next: () => {
+            this.confirmLoading = false; this.closeConfirm(); this.load();
+            this.showToast(status === 2 ? `PO ${row.purchaseOrderNo} approved successfully.` : `PO ${row.purchaseOrderNo} rejected.`, status === 2 ? '#16a34a' : '#dc2626');
+            this.syncLinkedPrStatus(row.id, status);
+          },
+          error: err => { this.confirmLoading = false; this.confirmError = err?.error?.message || 'Action failed. Please try again.'; }
         });
-      });
+      }
+    });
+  }
+
+  approveReject(row: any, status: 2 | 3): void {
+    if (this.isFinal(row)) return;
+    this.showApprovals = false;
+    this.openConfirm(row, status);
   }
 
   emailSupplier(row: any): void {
-    Swal.fire({ title: 'Email Supplier?', text: `Email PO ${row.purchaseOrderNo} to supplier ${row.supplierName || ''}?`, icon: 'question', showCancelButton: true, confirmButtonText: 'Send Email', confirmButtonColor: '#0e7490' })
-      .then(r => {
-        if (!r.isConfirmed) return;
-        this.svc.emailSupplierPo(row.id).subscribe({
-          next: () => Swal.fire('Sent!', `Purchase order ${row.purchaseOrderNo} has been emailed to the supplier.`, 'success'),
-          error: err => Swal.fire('Error', err?.error?.message || err?.message || 'Unable to send email. Please check SMTP settings on the server.', 'error')
-        });
-      });
+    this.openActionConfirm(row, 'email-supplier');
   }
 
   delete(row: any): void {
-    if (this.isFinal(row)) {
-      Swal.fire('Not Allowed', 'Approved/rejected purchase orders cannot be deleted.', 'warning');
-      return;
-    }
-    Swal.fire({ title: 'Delete PO?', text: `Delete PO ${row.purchaseOrderNo}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deletePurchaseOrder(row.id).subscribe({
-          next: () => { Swal.fire('Deleted', 'Purchase order deleted.', 'success'); this.load(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete purchase order.', 'error')
-        });
+    if (this.isFinal(row)) return;
+    this.openActionConfirm(row, 'delete-po');
+  }
+
+  openActionConfirm(row: any, type: string): void {
+    this.actionRow = row; this.actionType = type; this.actionError = ''; this.showActionConfirm = true;
+  }
+  closeActionConfirm(): void { this.showActionConfirm = false; this.actionRow = null; this.actionError = ''; }
+  doActionConfirm(): void {
+    if (!this.actionRow) return;
+    this.actionLoading = true; this.actionError = '';
+    const row = this.actionRow;
+    if (this.actionType === 'delete-po') {
+      this.svc.deletePurchaseOrder(row.id).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load();
+          this.showToast(`PO ${row.purchaseOrderNo} deleted.`);
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.'; }
       });
+    } else if (this.actionType === 'email-supplier') {
+      this.svc.emailSupplierPo(row.id).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm();
+          this.showToast(`PO ${row.purchaseOrderNo} emailed to supplier.`);
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to send email.'; }
+      });
+    } else if (this.actionType === 'promote-draft') {
+      this.svc.promotePurchaseOrderDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load(); this.loadDrafts();
+          this.showToast('Draft promoted to purchase order.');
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to promote draft.'; }
+      });
+    } else if (this.actionType === 'delete-draft') {
+      this.svc.deletePurchaseOrderDraft(row.id ?? row.iD).subscribe({
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.loadDrafts();
+          this.showToast('Draft deleted.');
+        },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete draft.'; }
+      });
+    }
   }
 
   get draftCount(): number { return this.drafts.length; }
@@ -469,5 +533,22 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
 
   currentUserId(): string {
     return localStorage.getItem('userId') || localStorage.getItem('userid') || '0';
+  }
+
+  private syncLinkedPrStatus(poId: number | string, status: 2 | 3): void {
+    this.svc.getPurchaseOrderById(poId).subscribe({
+      next: res => {
+        const po = this.svc.unwrapOne(res);
+        let lines: any[] = [];
+        try { lines = Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); } catch { lines = []; }
+        const prIds = [...new Set(lines.map((l: any) => l.prId ?? l.PrId).filter((id: any) => id != null && id !== 0))];
+        prIds.forEach((prId: any) => {
+          const req$ = status === 2
+            ? this.svc.approvePurchaseRequest(prId)
+            : this.svc.rejectPurchaseRequest(prId);
+          req$.subscribe({ error: () => {} });
+        });
+      }
+    });
   }
 }

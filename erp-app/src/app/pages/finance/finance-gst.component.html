@@ -97,6 +97,7 @@
               </td>
               <td class="center">
                 <button class="edit-btn" type="button" (click)="editTax(tc)" *ngIf="permission?.edit">Edit</button>
+                <button class="del-btn" type="button" (click)="deleteTax(tc)" *ngIf="permission?.delete">Delete</button>
               </td>
             </tr>
             <tr *ngIf="filteredTaxCodes.length === 0 && !loading">
@@ -111,86 +112,293 @@
   <!-- ══ TAB 2: GST F5 RETURNS ══ -->
   <ng-container *ngIf="activeTab === 'returns'">
 
-    <!-- Summary Cards -->
-    <div class="sum-grid">
-      <div class="sum-card sum-c1">
-        <span class="sum-label">Total Output Tax</span>
-        <strong class="sum-val">{{ returnSummary.totalOutput | number:'1.2-2' }}</strong>
+    <!-- Period Lock Banner -->
+    <div class="f5-lock-banner" *ngIf="isPeriodLocked">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Period <strong>{{ periodName }}</strong> is locked.
+    </div>
+
+    <!-- Main card -->
+    <div class="gst-card f5-card">
+
+      <!-- Card Header -->
+      <div class="f5-header">
+        <div class="f5-title-row">
+          <svg class="f5-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <strong class="f5-title">GST F5 Summary vs Return</strong>
+        </div>
+
+        <!-- Selectors row -->
+        <div class="f5-selectors">
+          <label class="f5-field">
+            <span>Financial Year</span>
+            <select [(ngModel)]="selectedGstYear" (ngModelChange)="onGstYearChange($event)">
+              <option [ngValue]="null">— Select Year —</option>
+              <option *ngFor="let y of gstYears" [ngValue]="y.fyStartYear">{{ yearLabel(y) }}</option>
+            </select>
+          </label>
+          <label class="f5-field">
+            <span>Quarter / Period</span>
+            <select [(ngModel)]="selectedGstPeriod" (ngModelChange)="onGstPeriodChange($event)" [disabled]="!gstPeriods.length">
+              <option [ngValue]="null">— Select Period —</option>
+              <option *ngFor="let p of gstPeriods" [ngValue]="p.id">{{ periodLabel(p) }}</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- F5 Fields -->
+        <div class="f5-fields-row" *ngIf="gstModel">
+          <label class="f5-field">
+            <span>Output Tax (F5)</span>
+            <input type="number" class="f5-input" [(ngModel)]="gstModel.box6OutputTax" [disabled]="isLocked" placeholder="0.00">
+          </label>
+          <label class="f5-field">
+            <span>Input Tax (F5)</span>
+            <input type="number" class="f5-input" [(ngModel)]="gstModel.box7InputTax" [disabled]="isLocked" placeholder="0.00">
+          </label>
+          <label class="f5-field">
+            <span>Net Payable</span>
+            <input type="number" class="f5-input f5-net" [ngModel]="f5Net" [disabled]="true" placeholder="0.00">
+          </label>
+        </div>
       </div>
-      <div class="sum-card sum-c2">
-        <span class="sum-label">Total Input Tax</span>
-        <strong class="sum-val">{{ returnSummary.totalInput | number:'1.2-2' }}</strong>
+
+      <!-- Loading -->
+      <div class="gst-loading" *ngIf="gstLoading">Loading...</div>
+
+      <!-- Body: System Summary + Match card -->
+      <ng-container *ngIf="!gstLoading && gstModel">
+        <div class="f5-body-grid">
+
+          <!-- System Summary Card -->
+          <div class="f5-summary-card">
+            <div class="f5-summary-hdr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+              System Summary
+            </div>
+            <div class="f5-summary-period">{{ gstModel.systemSummary?.periodLabel || '—' }}</div>
+            <div class="f5-summary-row">
+              <span>Collected on Sales</span>
+              <strong>{{ (gstModel.systemSummary?.collectedOnSales || 0) | number:'1.2-2' }}</strong>
+            </div>
+            <div class="f5-summary-row">
+              <span>Paid on Purchases</span>
+              <strong>{{ (gstModel.systemSummary?.paidOnPurchases || 0) | number:'1.2-2' }}</strong>
+            </div>
+            <div class="f5-summary-row f5-summary-due">
+              <span>Amount Due</span>
+              <strong>{{ (gstModel.systemSummary?.amountDue || 0) | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <!-- Match card -->
+          <div class="f5-match-card" [class.matched]="isMatched" [class.unmatched]="!isMatched">
+            <div class="f5-match-icon">
+              <svg *ngIf="isMatched" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <svg *ngIf="!isMatched" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <div class="f5-match-text">
+              <strong>{{ isMatched ? 'Matched' : 'Not Matched' }}</strong>
+              <span *ngIf="!isMatched">Diff: {{ diff | number:'1.2-2' }}</span>
+            </div>
+            <div class="f5-match-btns">
+              <button class="f5-action-btn" type="button" (click)="matchWithSystem()" [disabled]="isLocked">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                  <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                </svg>
+                Match with F5
+              </button>
+              <button class="f5-action-btn" type="button" (click)="openAdjustments()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                </svg>
+                Open Adjustments
+              </button>
+              <button class="f5-action-btn" type="button" (click)="exportGstExcel()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Excel
+              </button>
+              <button class="f5-action-btn" type="button" (click)="printGstReturn()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                  <rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                Print
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /f5-body-grid -->
+
+        <!-- Status badge row -->
+        <div class="f5-status-row">
+          <span class="f5-status-badge"
+            [class.f5-open]="statusNo === 0"
+            [class.f5-locked]="statusNo === 1"
+            [class.f5-filed]="statusNo === 2"
+            [class.f5-posted]="statusNo === 3">
+            {{ statusNo === 0 ? 'OPEN' : statusNo === 1 ? 'LOCKED' : statusNo === 2 ? 'FILED' : 'GL POSTED' }}
+          </span>
+          <span class="f5-filing-no" *ngIf="gstModel.filingNo">Filing No: <strong>{{ gstModel.filingNo }}</strong></span>
+        </div>
+
+        <!-- Footer buttons -->
+        <div class="f5-footer">
+          <button class="f5-footer-btn f5-btn-primary" type="button"
+                  *ngIf="canShowApplyLock"
+                  (click)="applyAndLock()" [disabled]="gstSaving">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            {{ gstSaving ? 'Saving...' : 'Apply &amp; Lock' }}
+          </button>
+
+          <button class="f5-footer-btn f5-btn-outline" type="button"
+                  *ngIf="statusNo === 1 && permission?.post"
+                  (click)="markAsFiled()" [disabled]="gstSaving">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            Mark as Filed
+          </button>
+
+          <button class="f5-footer-btn f5-btn-outline" type="button"
+                  *ngIf="statusNo === 2 && permission?.post"
+                  (click)="postToGl()" [disabled]="gstSaving">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+              <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 5 5 12"/>
+            </svg>
+            Post to GL
+          </button>
+
+          <button class="f5-footer-btn f5-btn-danger-outline" type="button"
+                  *ngIf="statusNo >= 1 && statusNo < 3 && permission?.edit"
+                  (click)="reopenGstReturn()" [disabled]="gstSaving">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+            </svg>
+            Reopen
+          </button>
+        </div>
+
+      </ng-container><!-- /gstModel -->
+
+      <!-- No period selected -->
+      <div class="gst-empty" *ngIf="!gstLoading && !gstModel && selectedGstPeriod">
+        No GST return data found for this period.
       </div>
-      <div class="sum-card sum-c3">
-        <span class="sum-label">Net GST Payable</span>
-        <strong class="sum-val">{{ returnSummary.netPayable | number:'1.2-2' }}</strong>
+      <div class="gst-empty" *ngIf="!gstLoading && !selectedGstPeriod">
+        Select a Financial Year and Period to view the GST F5 Return.
+      </div>
+
+    </div><!-- /f5-card -->
+
+    <!-- ── Adjustments Modal ── -->
+    <div class="f5-modal-overlay" *ngIf="showAdjModal" (click)="closeAdjustments()">
+      <div class="f5-modal" (click)="$event.stopPropagation()">
+        <div class="f5-modal-header">
+          <strong>GST Adjustments</strong>
+          <button class="f5-modal-close" type="button" (click)="closeAdjustments()">&#215;</button>
+        </div>
+
+        <div class="f5-modal-body">
+
+          <!-- New Adjustment form -->
+          <div class="f5-adj-form" *ngIf="editAdj && !isLocked">
+            <select [(ngModel)]="editAdj.lineType" class="f5-adj-sel">
+              <option [ngValue]="1">Increase Output Tax</option>
+              <option [ngValue]="2">Decrease Output Tax</option>
+              <option [ngValue]="3">Increase Input Tax</option>
+              <option [ngValue]="4">Decrease Input Tax</option>
+            </select>
+            <input type="number" class="f5-adj-inp" placeholder="Amount" [(ngModel)]="editAdj.amount" min="0.01" step="0.01">
+            <input type="text"   class="f5-adj-inp" placeholder="Description" [(ngModel)]="editAdj.description" style="flex:2;">
+            <button class="f5-adj-save" type="button" (click)="saveAdjustment()">Save</button>
+            <button class="f5-adj-cancel" type="button" (click)="editAdj = null">Cancel</button>
+          </div>
+
+          <!-- Adjustments table -->
+          <table class="f5-adj-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th class="right">Amount</th>
+                <th>Description</th>
+                <th *ngIf="!isLocked" class="center">Del</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of adjustments">
+                <td class="mono">{{ getAdjTypeText(a.lineType) }}</td>
+                <td class="right">{{ a.amount | number:'1.2-2' }}</td>
+                <td>{{ a.description || '—' }}</td>
+                <td *ngIf="!isLocked" class="center">
+                  <button class="f5-adj-del" type="button" (click)="deleteAdjustment(a)">&#215;</button>
+                </td>
+              </tr>
+              <tr *ngIf="!adjustments.length">
+                <td [attr.colspan]="isLocked ? 3 : 4" class="gst-empty">No adjustments.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Docs tabs -->
+          <div class="f5-docs-tabs" *ngIf="salesDocs.length || supplierDocs.length">
+            <button [class.active]="docsTab === 'SALES'" type="button" (click)="docsTab = 'SALES'">Sales ({{ salesDocs.length }})</button>
+            <button [class.active]="docsTab === 'SUPPLIER'" type="button" (click)="docsTab = 'SUPPLIER'">Supplier ({{ supplierDocs.length }})</button>
+          </div>
+          <table class="f5-adj-table" *ngIf="salesDocs.length || supplierDocs.length">
+            <thead><tr><th>Doc No</th><th>Date</th><th>Party</th><th class="right">Tax Amt</th></tr></thead>
+            <tbody>
+              <ng-container *ngIf="docsTab === 'SALES'">
+                <tr *ngFor="let d of salesDocs">
+                  <td class="mono">{{ d.docNo }}</td>
+                  <td>{{ d.docDate | date:'dd-MMM-yy' }}</td>
+                  <td>{{ d.partyName || '—' }}</td>
+                  <td class="right">{{ (d.taxAmount || 0) | number:'1.2-2' }}</td>
+                </tr>
+              </ng-container>
+              <ng-container *ngIf="docsTab === 'SUPPLIER'">
+                <tr *ngFor="let d of supplierDocs">
+                  <td class="mono">{{ d.docNo }}</td>
+                  <td>{{ d.docDate | date:'dd-MMM-yy' }}</td>
+                  <td>{{ d.partyName || '—' }}</td>
+                  <td class="right">{{ (d.taxAmount || 0) | number:'1.2-2' }}</td>
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="f5-modal-footer">
+          <button class="f5-footer-btn f5-btn-outline" type="button"
+                  *ngIf="!isLocked"
+                  (click)="newAdjustment()">+ Add Adjustment</button>
+          <button class="f5-footer-btn f5-btn-primary" type="button"
+                  (click)="closeAdjustments()">Done</button>
+        </div>
       </div>
     </div>
 
-    <!-- Year Filter -->
-    <div class="gst-filter-bar">
-      <label class="filter-lbl">
-        <span>Period / Year</span>
-        <select [(ngModel)]="selectedYear" (ngModelChange)="selectedPeriodId = ''; loadPeriodsForYear()">
-          <option value="">— Select Year —</option>
-          <option *ngFor="let y of returnYears" [ngValue]="yearValue(y)">{{ yearLabel(y) }}</option>
-        </select>
-      </label>
-      <label class="filter-lbl">
-        <span>GST Period</span>
-        <select [(ngModel)]="selectedPeriodId" (ngModelChange)="loadReturnForYear()">
-          <option value="">Select Period</option>
-          <option *ngFor="let p of returnPeriods" [ngValue]="periodValue(p)">{{ periodLabel(p) }}</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="gst-card">
-      <div class="gst-card-head">
-        <strong class="gst-card-title">GST F5 Return — {{ selectedYear || 'All Periods' }}</strong>
-      </div>
-      <div class="gst-loading" *ngIf="loading">Loading...</div>
-      <div class="gst-table-wrap" *ngIf="!loading">
-        <table class="gst-table">
-          <thead>
-            <tr>
-              <th>Period</th>
-              <th>Box 1 – Total Sales</th>
-              <th>Box 5 – Taxable Purchases</th>
-              <th class="right teal-hdr">Box 6 – Output Tax</th>
-              <th class="right">Box 7 – Input Tax</th>
-              <th class="right teal-hdr">Net GST Payable</th>
-              <th class="center">Status</th>
-              <th class="center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let r of gstReturns">
-              <td class="mono">{{ r.period || r.quarter || r.year || '—' }}</td>
-              <td class="right">{{ (r.totalSales || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (r.taxablePurchases || r.totalPurchases || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (r.outputTax || 0) | number:'1.2-2' }}</td>
-              <td class="right success-text">{{ (r.inputTax || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (r.netTax || 0) | number:'1.2-2' }}</td>
-              <td class="center">
-                <span class="status-badge" [ngClass]="r.status === 'Filed' ? 'badge-success' : r.status === 'Overdue' ? 'badge-danger' : 'badge-warning'">
-                  {{ r.status || 'Draft' }}
-                </span>
-              </td>
-              <td class="center action-cell">
-                <button class="edit-btn" type="button" (click)="postReturn(r)" *ngIf="permission?.post">Post</button>
-                <button class="edit-btn" type="button" (click)="fileReturn(r)" *ngIf="permission?.submit">File</button>
-                <button class="edit-btn" type="button" (click)="reopenReturn(r)" *ngIf="permission?.edit">Reopen</button>
-                <button class="edit-btn" type="button" (click)="exportReturn(r)" *ngIf="permission?.export">Export</button>
-              </td>
-            </tr>
-            <tr *ngIf="gstReturns.length === 0 && !loading">
-              <td colspan="8" class="gst-empty">No GST return data. Select a year.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </ng-container>
 
   <!-- ══ TAB 3: GST DETAILS ══ -->

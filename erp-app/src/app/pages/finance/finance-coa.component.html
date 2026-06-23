@@ -47,7 +47,7 @@
         <span>Parent Account</span>
         <select [(ngModel)]="form.parentHead">
           <option [ngValue]="null">— None (Top Level) —</option>
-          <option *ngFor="let p of rows" [ngValue]="p.id">{{ p.headCode }} – {{ p.headName }}</option>
+          <option *ngFor="let p of rows" [ngValue]="p.headCode">{{ p.headCode }} – {{ p.headName }}</option>
         </select>
       </label>
     </div>
@@ -91,6 +91,7 @@
           <tr>
             <th class="th-code">HEAD CODE</th>
             <th class="th-name">HEAD NAME</th>
+            <th class="th-type">TYPE</th>
             <th class="th-action">ACTION</th>
           </tr>
         </thead>
@@ -110,6 +111,7 @@
                 </span>
               </div>
             </td>
+            <td class="td-type">{{ row.headType || '—' }}</td>
             <td class="td-action">
               <button class="icon-btn edit-icon" type="button" (click)="openEdit(row)" title="Edit" *ngIf="permission?.edit">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

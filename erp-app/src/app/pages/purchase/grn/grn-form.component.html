@@ -107,6 +107,17 @@
     <!-- ═══ EDIT FORM (new GRN or edit mode) ═══════════════ -->
     <ng-container *ngIf="!isEdit || !viewMode">
 
+    <!-- Auto-warehouse banner -->
+    <div class="grn-auto-wh-banner" *ngIf="defaultWarehouseId">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>Warehouse auto-set from your outlet:</span>
+      <strong>{{ warehouseOptions[0]?.label || 'Default Warehouse' }}</strong>
+      <span class="grn-wh-note">(locationId: {{ locationId || '—' }})</span>
+    </div>
+
     <!-- Receipt Header -->
     <div class="card section-card">
       <div class="section-label">&#128230; Receipt Header</div>

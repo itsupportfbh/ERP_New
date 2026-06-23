@@ -263,8 +263,7 @@ export class RfqFormComponent implements OnInit {
           this.id = d.id; this.isEdit = true;
           this.rfqNumber = d.number ?? this.rfqNumber;
         }
-        this.successMsg = 'RFQ saved successfully.';
-        setTimeout(() => this.successMsg = '', 3000);
+        Swal.fire('Saved', 'RFQ saved successfully.', 'success');
       },
       error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
     });

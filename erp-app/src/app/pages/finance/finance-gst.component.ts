@@ -1,12 +1,39 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
-import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
+import Swal from 'sweetalert2';
+import { environment } from '../../../environments/environment';
 
 type GstTab = 'taxcodes' | 'returns' | 'details';
+
+interface GstReturnModel {
+  id: number;
+  periodId: number;
+  box6OutputTax: number;
+  box7InputTax: number;
+  box8NetPayable: number;
+  status: string;
+  glPosted?: boolean;
+  filingNo?: string;
+  systemSummary: {
+    periodLabel: string;
+    collectedOnSales: number;
+    paidOnPurchases: number;
+    amountDue: number;
+  };
+}
+
+interface GstAdj {
+  id: number;
+  periodId: number;
+  lineType: number;
+  amount: number;
+  description: string;
+}
 
 @Component({
   selector: 'erp-finance-gst',
@@ -18,7 +45,7 @@ type GstTab = 'taxcodes' | 'returns' | 'details';
 export class FinanceGstComponent implements OnInit {
   activeTab: GstTab = 'taxcodes';
 
-  // Tax Codes
+  // ── Tax Codes ──────────────────────────────────────────────
   taxCodes: any[] = [];
   filteredTaxCodes: any[] = [];
   showTaxForm = false;
@@ -26,59 +53,79 @@ export class FinanceGstComponent implements OnInit {
   savingTax = false;
   editingTax: any = null;
 
-  // GST F5 Returns
-  gstReturns: any[] = [];
-  returnYears: any[] = [];
-  returnPeriods: any[] = [];
-  selectedYear: any = '';
-  selectedPeriodId: any = '';
-  returnSummary = { totalOutput: 0, totalInput: 0, netPayable: 0 };
+  // ── GST F5 Returns (Unity_ERP style) ───────────────────────
+  gstYears:          any[] = [];
+  selectedGstYear:   number | null = null;
+  gstPeriods:        any[] = [];
+  selectedGstPeriod: number | null = null;
+  gstModel:          GstReturnModel | null = null;
+  gstLoading        = false;
+  gstSaving         = false;
+  isPeriodLocked    = false;
+  periodName        = '';
 
-  // GST Details / Report
-  gstReport: any[] = [];
+  // Adjustments modal
+  showAdjModal  = false;
+  adjustments:  GstAdj[] = [];
+  editAdj:      GstAdj | null = null;
+  salesDocs:    any[] = [];
+  supplierDocs: any[] = [];
+  docsTab: 'SALES' | 'SUPPLIER' = 'SALES';
+
+  // ── GST Details ─────────────────────────────────────────────
+  gstReport:     any[] = [];
   reportFromDate = '';
-  reportToDate = '';
-  reportSummary = { outputTax: 0, inputTax: 0, netGST: 0, totalSales: 0, totalPurchases: 0 };
+  reportToDate   = '';
+  reportSummary  = { outputTax: 0, inputTax: 0, netGST: 0, totalSales: 0, totalPurchases: 0 };
 
-  search = '';
+  search  = '';
   loading = false;
-  error = '';
+  error   = '';
   message = '';
+
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
 
   private taxConfig    = FINANCE_PAGES.find(p => p.key === 'tax-gst')!;
-  private returnConfig = FINANCE_PAGES.find(p => p.key === 'gst-return')!;
   private reportConfig = FINANCE_PAGES.find(p => p.key === 'gst-report')!;
+  private readonly base = environment.apiUrl;
 
-  constructor(private finance: FinanceService, private route: ActivatedRoute, private permissionService: PermissionService) {}
+  constructor(
+    private finance: FinanceService,
+    private http: HttpClient,
+    private route: ActivatedRoute,
+    private permSvc: PermissionService
+  ) {}
 
   ngOnInit(): void {
-    const path = this.route.snapshot.routeConfig?.path || '';
+    const path = (this.route.snapshot.routeConfig?.path || '').toLowerCase();
     if (path.includes('gst-return')) this.activeTab = 'returns';
-    else if (path.includes('gst-report')) this.activeTab = 'details';
-    if (this.activeTab === 'returns') this.loadReturns();
+    else if (path.includes('gst-report') || path.includes('gst-detail')) this.activeTab = 'details';
+
+    if (this.activeTab === 'returns') this.loadGstYears();
     else if (this.activeTab === 'details') this.loadReport();
     else this.loadTaxCodes();
-    this.permissionService.getFunctionPermission(this.userId, 'tax').subscribe({
-      next: perm => { this.permission = perm; }
+
+    this.permSvc.getFunctionPermission(this.userId, 'tax').subscribe({
+      next: p => { this.permission = p; }
     });
   }
 
   setTab(tab: GstTab): void {
     this.activeTab = tab;
-    this.error = '';
-    this.message = '';
+    this.error = ''; this.message = '';
     if (tab === 'taxcodes') this.loadTaxCodes();
-    else if (tab === 'returns') this.loadReturns();
+    else if (tab === 'returns') this.loadGstYears();
     else if (tab === 'details') this.loadReport();
   }
+
+  // ═══════════════════ TAX CODES ═══════════════════════════
 
   private loadTaxCodes(): void {
     this.loading = true;
     this.finance.list(this.taxConfig.endpoint).subscribe({
       next: res => {
-        this.taxCodes = this.finance.unwrap(res).map(row => this.normalizeTax(row));
+        this.taxCodes = this.finance.unwrap(res).map(r => this.normalizeTax(r));
         this.applyFilter();
         this.loading = false;
       },
@@ -86,78 +133,22 @@ export class FinanceGstComponent implements OnInit {
     });
   }
 
-  private loadReturns(): void {
-    this.loading = true;
-    this.finance.gstYears().subscribe({
-      next: res => {
-        this.returnYears = this.finance.unwrap(res);
-        if (this.returnYears.length && !this.selectedYear) {
-          this.selectedYear = this.yearValue(this.returnYears[0]);
-        }
-        this.loadPeriodsForYear();
-      },
-      error: () => { this.returnYears = []; this.gstReturns = []; this.loading = false; this.error = 'GST returns unavailable.'; }
-    });
-  }
-
-  loadPeriodsForYear(): void {
-    if (!this.selectedYear) { this.loading = false; return; }
-    this.loading = true;
-    this.finance.gstPeriods(this.selectedYear).subscribe({
-      next: res => {
-        this.returnPeriods = this.finance.unwrap(res);
-        if (this.returnPeriods.length && !this.selectedPeriodId) {
-          this.selectedPeriodId = this.periodValue(this.returnPeriods[0]);
-        }
-        this.loadReturnForYear();
-      },
-      error: () => { this.returnPeriods = []; this.gstReturns = []; this.loading = false; this.error = 'GST periods unavailable.'; }
-    });
-  }
-
-  loadReturnForYear(): void {
-    if (!this.selectedPeriodId) { this.loading = false; return; }
-    this.loading = true;
-    this.finance.gstReturnForPeriod(this.selectedPeriodId).subscribe({
-      next: res => {
-        const list = this.finance.unwrap(res);
-        this.gstReturns = (list.length ? list : [this.finance.unwrapOne(res)].filter(x => x && Object.keys(x).length)).map(row => this.normalizeReturn(row));
-        this.calcReturnSummary();
-        this.loading = false;
-      },
-      error: () => { this.gstReturns = []; this.loading = false; this.error = 'GST return data unavailable.'; }
-    });
-  }
-
-  private loadReport(): void {
-    this.loading = true;
-    this.finance.gstDetails({ startDate: this.reportFromDate, endDate: this.reportToDate }).subscribe({
-      next: res => {
-        this.gstReport = this.finance.unwrap(res).map(row => this.normalizeDetail(row));
-        this.calcReportSummary();
-        this.loading = false;
-      },
-      error: () => { this.gstReport = []; this.loading = false; this.error = 'GST report unavailable.'; }
-    });
-  }
-
   applyFilter(): void {
-    const q = this.search.toLowerCase();
+    const q = (this.search || '').toLowerCase();
     this.filteredTaxCodes = q
-      ? this.taxCodes.filter(r => ['code', 'description', 'type', 'name'].some(k => String(r[k] ?? '').toLowerCase().includes(q)))
+      ? this.taxCodes.filter(r => (r.code || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q))
       : [...this.taxCodes];
   }
 
   saveTax(): void {
     if (!this.taxForm.code || this.taxForm.rate === null) {
-      Swal.fire('Required', 'Code and rate are required.', 'warning');
-      return;
+      Swal.fire('Required', 'Code and rate are required.', 'warning'); return;
     }
     this.savingTax = true;
     const payload = {
       id: this.editingTax?.id,
       taxCode: this.taxForm.code,
-      taxName: this.taxForm.description || this.taxForm.name || this.taxForm.code,
+      taxName: this.taxForm.description || this.taxForm.code,
       taxRate: Number(this.taxForm.rate || 0),
       taxType: this.taxForm.type,
       description: this.taxForm.description,
@@ -166,153 +157,283 @@ export class FinanceGstComponent implements OnInit {
     const obs = this.editingTax
       ? this.finance.update(this.taxConfig.endpoint, this.editingTax.id, payload)
       : this.finance.create(this.taxConfig.endpoint, payload);
-
     obs.subscribe({
-      next: () => {
-        this.savingTax = false;
-        this.showTaxForm = false;
-        this.editingTax = null;
-        this.message = 'Tax code saved.';
-        this.loadTaxCodes();
-      },
+      next: () => { this.savingTax = false; this.showTaxForm = false; this.editingTax = null; this.message = 'Tax code saved.'; this.loadTaxCodes(); },
       error: err => { this.savingTax = false; this.error = err?.error?.message || 'Unable to save tax code.'; }
     });
   }
 
   editTax(row: any): void {
     this.editingTax = row;
-    this.taxForm = {
-      code: row.code ?? row.taxCode,
-      name: row.name ?? row.taxName,
-      description: row.description ?? row.taxName,
-      rate: row.rate ?? row.taxRate,
-      type: row.type ?? row.taxType ?? 'GST',
-      isActive: row.isActive !== false
-    };
-    this.showTaxForm = true;
-    this.message = '';
-    this.error = '';
+    this.taxForm = { code: row.code ?? row.taxCode, name: row.name ?? row.taxName, description: row.description ?? row.taxName, rate: row.rate ?? row.taxRate, type: row.type ?? row.taxType ?? 'GST', isActive: row.isActive !== false };
+    this.showTaxForm = true; this.message = ''; this.error = '';
   }
 
   cancelTaxForm(): void {
-    this.showTaxForm = false;
-    this.editingTax = null;
+    this.showTaxForm = false; this.editingTax = null;
     this.taxForm = { code: '', description: '', rate: null, type: 'GST', isActive: true };
+  }
+
+  deleteTax(row: any): void {
+    Swal.fire({ title: 'Delete Tax Code?', text: `${row.code} – ${row.description || ''}`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#e74c3c', confirmButtonText: 'Delete' })
+      .then(r => {
+        if (r.isConfirmed) {
+          this.finance.delete(this.taxConfig.endpoint, row.id).subscribe({
+            next: () => { this.message = 'Tax code deleted.'; this.loadTaxCodes(); },
+            error: err => { this.error = err?.error?.message || 'Unable to delete tax code.'; }
+          });
+        }
+      });
+  }
+
+  private normalizeTax(row: any): any {
+    return { ...row, id: row.id ?? row.iD, code: row.code ?? row.taxCode, name: row.name ?? row.taxName, description: row.description ?? row.taxName, rate: Number(row.rate ?? row.taxRate ?? 0), type: row.type ?? row.taxType ?? 'GST', isActive: row.isActive ?? true };
+  }
+
+  // ═══════════════════ GST F5 RETURNS ══════════════════════
+
+  loadGstYears(): void {
+    this.gstLoading = true;
+    this.http.get<any[]>(`${this.base}/GstReturns/years`).subscribe({
+      next: res => {
+        this.gstYears = res || [];
+        if (this.gstYears.length) {
+          const today = new Date();
+          const curFy = (today.getMonth() + 1) >= 4 ? today.getFullYear() : today.getFullYear() - 1;
+          const found = this.gstYears.find(y => y.fyStartYear === curFy) || this.gstYears[0];
+          this.selectedGstYear = found.fyStartYear;
+          this.loadGstPeriods(found.fyStartYear);
+        } else { this.gstLoading = false; }
+      },
+      error: () => { this.gstYears = []; this.gstLoading = false; }
+    });
+  }
+
+  onGstYearChange(fyStartYear: number | null): void {
+    if (!fyStartYear) { this.selectedGstYear = null; this.gstPeriods = []; this.selectedGstPeriod = null; this.gstModel = null; return; }
+    this.selectedGstYear = fyStartYear;
+    this.loadGstPeriods(fyStartYear);
+  }
+
+  private loadGstPeriods(fyStartYear: number): void {
+    this.gstLoading = true; this.gstPeriods = []; this.selectedGstPeriod = null; this.gstModel = null;
+    this.http.get<any[]>(`${this.base}/GstReturns/periods/${fyStartYear}`).subscribe({
+      next: res => {
+        this.gstPeriods = res || [];
+        if (this.gstPeriods.length) {
+          const today = new Date();
+          const cur = this.gstPeriods.find(p => { const s = new Date(p.startDate); const e = new Date(p.endDate); return s <= today && today <= e; });
+          const sel = cur || this.gstPeriods[0];
+          this.selectedGstPeriod = sel.id;
+          this.loadGstReturn(sel.id);
+          this.checkPeriodLock(sel);
+        } else { this.gstLoading = false; }
+      },
+      error: () => { this.gstPeriods = []; this.gstLoading = false; }
+    });
+  }
+
+  onGstPeriodChange(periodId: number | null): void {
+    if (!periodId) { this.selectedGstPeriod = null; this.gstModel = null; return; }
+    this.selectedGstPeriod = periodId;
+    this.loadGstReturn(periodId);
+    const period = this.gstPeriods.find(p => p.id === periodId);
+    if (period) this.checkPeriodLock(period);
+  }
+
+  private loadGstReturn(periodId: number): void {
+    this.gstLoading = true; this.gstModel = null;
+    this.http.get<GstReturnModel>(`${this.base}/GstReturns/return/${periodId}`).subscribe({
+      next: res => { this.gstModel = res || null; this.gstLoading = false; },
+      error: () => { this.gstModel = null; this.gstLoading = false; }
+    });
+  }
+
+  private checkPeriodLock(period: any): void {
+    if (!period?.startDate) return;
+    this.http.get<any>(`${this.base}/PeriodClose/status-for-date?date=${period.startDate}`).subscribe({
+      next: s => { this.isPeriodLocked = !!s?.isLocked; this.periodName = s?.periodName || ''; },
+      error: () => { this.isPeriodLocked = false; this.periodName = ''; }
+    });
+  }
+
+  // Status helpers
+  get statusNo(): number {
+    if (this.gstModel?.glPosted) return 3;
+    const s = String((this.gstModel as any)?.status ?? '').trim().toUpperCase();
+    if (s === 'GLPOSTED') return 3;
+    if (s === 'FILED') return 2;
+    if (s === 'LOCKED') return 1;
+    return 0;
+  }
+  get isLocked():        boolean { return this.statusNo >= 1; }
+  get isStatusLocked():  boolean { return this.statusNo === 1; }
+  get isStatusFiled():   boolean { return this.statusNo === 2; }
+  get isStatusGlPosted():boolean { return this.statusNo === 3; }
+  get canShowApplyLock():boolean { return !!this.gstModel && this.statusNo === 0 && !!this.permission?.post; }
+
+  get f5Net(): number {
+    if (!this.gstModel) return 0;
+    return this.round(Number(this.gstModel.box6OutputTax || 0) - Number(this.gstModel.box7InputTax || 0));
+  }
+  get systemAmountDue(): number { return this.round(Number(this.gstModel?.systemSummary?.amountDue || 0)); }
+  get isMatched():  boolean { return this.round(this.f5Net) === this.round(this.systemAmountDue); }
+  get diff():       number  { return this.round(this.f5Net - this.systemAmountDue); }
+
+  matchWithSystem(): void {
+    if (!this.gstModel || this.isLocked) return;
+    const sys = this.gstModel.systemSummary;
+    this.gstModel.box6OutputTax = this.round(Number(sys.collectedOnSales || 0));
+    this.gstModel.box7InputTax  = this.round(Number(sys.paidOnPurchases || 0));
+    this.gstModel.box8NetPayable = this.f5Net;
+  }
+
+  applyAndLock(): void {
+    if (!this.gstModel || this.isLocked || !this.permission?.post) return;
+    this.gstSaving = true;
+    const payload = { periodId: this.gstModel.periodId, box6OutputTax: this.round(Number(this.gstModel.box6OutputTax || 0)), box7InputTax: this.round(Number(this.gstModel.box7InputTax || 0)) };
+    this.http.post<GstReturnModel>(`${this.base}/GstReturns/apply-lock`, payload).subscribe({
+      next: updated => { this.gstModel = updated || this.gstModel; if (this.gstModel) (this.gstModel as any).status = 'LOCKED'; this.gstSaving = false; },
+      error: err => { this.gstSaving = false; Swal.fire('Error', err?.error?.message || 'Unable to lock.', 'error'); }
+    });
+  }
+
+  reopenGstReturn(): void {
+    if (!this.gstModel || !this.isLocked || !this.permission?.post) return;
+    this.gstSaving = true;
+    this.http.post<GstReturnModel>(`${this.base}/GstReturns/reopen/${this.gstModel.id}`, {}).subscribe({
+      next: updated => { this.gstModel = updated || this.gstModel; if (this.gstModel) (this.gstModel as any).status = 'OPEN'; this.gstSaving = false; },
+      error: err => { this.gstSaving = false; Swal.fire('Error', err?.error?.message || 'Unable to reopen.', 'error'); }
+    });
+  }
+
+  markAsFiled(): void {
+    if (!this.gstModel || this.statusNo !== 1 || !this.permission?.post) return;
+    Swal.fire({ title: 'Confirm GST Filing', input: 'text', inputLabel: 'IRAS Submission / Acknowledgement No', inputPlaceholder: 'GST-F5-2026-Q1-0001', showCancelButton: true, confirmButtonText: 'Confirm Filed', confirmButtonColor: '#2e5f73', inputValidator: v => (!v?.trim() ? 'Submission no is required' : null) })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.gstSaving = true;
+        this.http.post<GstReturnModel>(`${this.base}/GstReturns/mark-filed/${this.gstModel!.id}`, { filingNo: r.value }).subscribe({
+          next: updated => { this.gstModel = updated || this.gstModel; if (this.gstModel) (this.gstModel as any).status = 'FILED'; this.gstSaving = false; Swal.fire('Filed', 'GST return marked as filed.', 'success'); },
+          error: err => { this.gstSaving = false; Swal.fire('Error', err?.error?.message || 'Unable to mark filed.', 'error'); }
+        });
+      });
+  }
+
+  postToGl(): void {
+    if (!this.gstModel || this.statusNo !== 2 || !this.permission?.post) return;
+    Swal.fire({ title: 'Post GST to GL?', text: 'This will create a GST journal entry.', icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, Post', confirmButtonColor: '#2e5f73' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.gstSaving = true;
+        this.http.post<GstReturnModel>(`${this.base}/GstReturns/${this.gstModel!.id}/post-to-gl`, {}).subscribe({
+          next: updated => { this.gstModel = updated || this.gstModel; this.gstSaving = false; Swal.fire('Posted', 'GST return posted to GL.', 'success'); },
+          error: err => { this.gstSaving = false; Swal.fire('Error', err?.error?.message || 'Unable to post to GL.', 'error'); }
+        });
+      });
+  }
+
+  // ── Adjustments ──────────────────────────────────────────
+  openAdjustments(): void {
+    if (!this.selectedGstPeriod) return;
+    this.showAdjModal = true; this.adjustments = []; this.editAdj = null; this.salesDocs = []; this.supplierDocs = []; this.docsTab = 'SALES';
+    this.http.get<GstAdj[]>(`${this.base}/GstReturns/adjustments/${this.selectedGstPeriod}`).subscribe({ next: res => { this.adjustments = res || []; }, error: () => {} });
+    this.http.get<any[]>(`${this.base}/GstReturns/${this.selectedGstPeriod}/docs`).subscribe({
+      next: docs => { const rows = docs || []; this.salesDocs = rows.filter(d => d.docType === 'SI'); this.supplierDocs = rows.filter(d => d.docType === 'PIN'); },
+      error: () => {}
+    });
+  }
+
+  closeAdjustments(): void {
+    this.showAdjModal = false; this.editAdj = null;
+    if (this.selectedGstPeriod) this.loadGstReturn(this.selectedGstPeriod);
+  }
+
+  newAdjustment(): void {
+    if (!this.selectedGstPeriod || this.isLocked) return;
+    this.editAdj = { id: 0, periodId: this.selectedGstPeriod, lineType: 1, amount: 0, description: '' };
+  }
+
+  saveAdjustment(): void {
+    if (!this.editAdj || !this.selectedGstPeriod || this.isLocked) return;
+    if (!this.editAdj.amount || Number(this.editAdj.amount) <= 0) return;
+    this.editAdj.periodId = this.selectedGstPeriod;
+    this.editAdj.amount = this.round(Number(this.editAdj.amount));
+    this.http.post<GstAdj>(`${this.base}/GstReturns/adjustments`, this.editAdj).subscribe({
+      next: saved => {
+        const idx = this.adjustments.findIndex(a => a.id === saved.id);
+        if (idx >= 0) this.adjustments[idx] = saved; else this.adjustments.push(saved);
+        this.editAdj = null;
+        this.http.get<GstAdj[]>(`${this.base}/GstReturns/adjustments/${this.selectedGstPeriod}`).subscribe({ next: res => this.adjustments = res || [] });
+        this.loadGstReturn(this.selectedGstPeriod!);
+      },
+      error: err => Swal.fire('Error', err?.error?.message || 'Unable to save adjustment.', 'error')
+    });
+  }
+
+  deleteAdjustment(adj: GstAdj): void {
+    if (!adj.id || this.isLocked) return;
+    this.http.delete(`${this.base}/GstReturns/adjustments/${adj.id}`).subscribe({
+      next: () => {
+        this.adjustments = this.adjustments.filter(a => a.id !== adj.id);
+        if (this.editAdj?.id === adj.id) this.editAdj = null;
+        this.loadGstReturn(this.selectedGstPeriod!);
+      },
+      error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete adjustment.', 'error')
+    });
+  }
+
+  getAdjTypeText(lineType: number): string {
+    switch (lineType) {
+      case 1: return 'Increase Output'; case 2: return 'Decrease Output';
+      case 3: return 'Increase Input';  case 4: return 'Decrease Input';
+      default: return '-';
+    }
+  }
+
+  exportGstExcel(): void {
+    if (!this.selectedGstPeriod) return;
+    this.http.get(`${this.base}/GstReturns/export-excel/${this.selectedGstPeriod}`, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `GST-F5-${this.selectedGstPeriod}.xlsx`; a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: err => Swal.fire('Error', err?.error?.message || 'Unable to export.', 'error')
+    });
+  }
+
+  printGstReturn(): void { window.print(); }
+
+  private round(v: number): number { return Math.round((Number(v) || 0) * 100) / 100; }
+
+  // ═══════════════════ GST DETAILS ═════════════════════════
+
+  loadReport(): void {
+    this.loading = true;
+    this.finance.list(this.reportConfig.endpoint, { fromDate: this.reportFromDate, toDate: this.reportToDate }).subscribe({
+      next: res => { this.gstReport = this.finance.unwrap(res).map(r => this.normalizeDetail(r)); this.calcReportSummary(); this.loading = false; },
+      error: () => { this.gstReport = []; this.loading = false; this.error = 'GST detail report unavailable.'; }
+    });
   }
 
   runReport(): void { this.loadReport(); }
 
-  fileReturn(row: any): void {
-    this.finance.run(this.returnConfig.endpoint, 'file', { id: row.id, filingNo: row.filingNo || `GST-${row.periodId || row.id}` }).subscribe({
-      next: () => { this.message = 'GST return marked as filed.'; this.loadReturnForYear(); },
-      error: err => { this.error = err?.error?.message || 'Unable to file GST return.'; }
-    });
-  }
-
-  reopenReturn(row: any): void {
-    this.finance.run(this.returnConfig.endpoint, 'reopen', { id: row.id }).subscribe({
-      next: () => { this.message = 'GST return reopened.'; this.loadReturnForYear(); },
-      error: err => { this.error = err?.error?.message || 'Unable to reopen GST return.'; }
-    });
-  }
-
-  postReturn(row: any): void {
-    this.finance.run(this.returnConfig.endpoint, 'post', { id: row.id }).subscribe({
-      next: () => { this.message = 'GST return posted to GL.'; this.loadReturnForYear(); },
-      error: err => { this.error = err?.error?.message || 'Unable to post GST return.'; }
-    });
-  }
-
-  exportReturn(row: any): void {
-    this.finance.run(this.returnConfig.endpoint, 'export', { id: row.periodId || row.id }).subscribe({
-      next: (blob: Blob) => this.downloadBlob(blob, `GST-${row.period || row.periodName || row.id}.xlsx`),
-      error: err => { this.error = err?.error?.message || 'Unable to export GST return.'; }
-    });
-  }
-
-  private calcReturnSummary(): void {
-    this.returnSummary.totalOutput = this.gstReturns.reduce((s, r) => s + (r.outputTax || 0), 0);
-    this.returnSummary.totalInput  = this.gstReturns.reduce((s, r) => s + (r.inputTax || 0), 0);
-    this.returnSummary.netPayable  = this.returnSummary.totalOutput - this.returnSummary.totalInput;
-  }
-
   private calcReportSummary(): void {
-    this.reportSummary.totalSales     = this.gstReport.reduce((s, r) => s + (r.type === 'OUTPUT' ? (r.taxableAmount || 0) : 0), 0);
-    this.reportSummary.totalPurchases = this.gstReport.reduce((s, r) => s + (r.type === 'INPUT' ? (r.taxableAmount || 0) : 0), 0);
     this.reportSummary.outputTax      = this.gstReport.reduce((s, r) => s + (r.type === 'OUTPUT' ? (r.taxAmount || 0) : 0), 0);
-    this.reportSummary.inputTax       = this.gstReport.reduce((s, r) => s + (r.type === 'INPUT' ? (r.taxAmount || 0) : 0), 0);
+    this.reportSummary.inputTax       = this.gstReport.reduce((s, r) => s + (r.type === 'INPUT'  ? (r.taxAmount || 0) : 0), 0);
+    this.reportSummary.totalSales     = this.gstReport.reduce((s, r) => s + (r.type === 'OUTPUT' ? (r.taxableAmount || 0) : 0), 0);
+    this.reportSummary.totalPurchases = this.gstReport.reduce((s, r) => s + (r.type === 'INPUT'  ? (r.taxableAmount || 0) : 0), 0);
     this.reportSummary.netGST         = this.reportSummary.outputTax - this.reportSummary.inputTax;
   }
 
-  yearValue(year: any): any {
-    return year?.fyStartYear ?? year?.year ?? year?.value ?? year;
-  }
-
-  yearLabel(year: any): string {
-    return String(year?.label ?? year?.financialYear ?? year?.yearName ?? this.yearValue(year));
-  }
-
-  periodValue(period: any): any {
-    return period?.periodId ?? period?.id ?? period?.value ?? period;
-  }
-
-  periodLabel(period: any): string {
-    return String(period?.periodName ?? period?.name ?? period?.label ?? this.periodValue(period));
-  }
-
-  private normalizeTax(row: any): any {
-    return {
-      ...row,
-      id: row.id ?? row.iD ?? row.ID,
-      code: row.code ?? row.taxCode ?? row.TaxCode,
-      name: row.name ?? row.taxName ?? row.TaxName,
-      description: row.description ?? row.Description ?? row.taxName ?? row.TaxName,
-      rate: Number(row.rate ?? row.taxRate ?? row.TaxRate ?? 0),
-      type: row.type ?? row.taxType ?? row.TaxType ?? 'GST',
-      isActive: row.isActive ?? row.IsActive ?? true
-    };
-  }
-
-  private normalizeReturn(row: any): any {
-    const outputTax = Number(row.outputTax ?? row.OutputTax ?? row.gstCollected ?? row.GstCollected ?? 0);
-    const inputTax = Number(row.inputTax ?? row.InputTax ?? row.gstPaid ?? row.GstPaid ?? 0);
-    return {
-      ...row,
-      id: row.id ?? row.returnId ?? row.gstReturnId ?? row.periodId ?? row.PeriodId,
-      periodId: row.periodId ?? row.PeriodId ?? row.id,
-      period: row.period ?? row.periodName ?? row.PeriodName ?? row.quarter ?? row.year,
-      totalSales: Number(row.totalSales ?? row.TotalSales ?? row.box1TotalSales ?? row.Box1TotalSales ?? 0),
-      taxablePurchases: Number(row.taxablePurchases ?? row.TaxablePurchases ?? row.totalPurchases ?? row.TotalPurchases ?? 0),
-      outputTax,
-      inputTax,
-      netTax: Number(row.netTax ?? row.NetTax ?? outputTax - inputTax),
-      status: row.status ?? row.Status ?? 'Draft',
-      filingNo: row.filingNo ?? row.FilingNo
-    };
-  }
-
   private normalizeDetail(row: any): any {
-    const type = String(row.type ?? row.TaxType ?? row.docType ?? row.DocType ?? '').toUpperCase();
-    const taxAmount = Number(row.gstAmount ?? row.GstAmount ?? row.taxAmount ?? row.TaxAmount ?? 0);
-    return {
-      ...row,
-      date: row.date ?? row.postingDate ?? row.PostingDate ?? row.docDate ?? row.DocDate,
-      documentNo: row.documentNo ?? row.DocumentNo ?? row.invoiceNo ?? row.InvoiceNo ?? row.docNo ?? row.DocNo,
-      description: row.description ?? row.Description ?? row.partyName ?? row.PartyName,
-      type: type.includes('OUT') || type.includes('SALE') ? 'OUTPUT' : 'INPUT',
-      taxCode: row.taxCode ?? row.TaxCode,
-      taxableAmount: Number(row.taxableAmount ?? row.TaxableAmount ?? row.amount ?? row.Amount ?? 0),
-      taxAmount,
-      gstAmount: taxAmount
-    };
+    const type = String(row.type ?? row.TaxType ?? row.docType ?? '').toUpperCase();
+    const taxAmount = Number(row.gstAmount ?? row.taxAmount ?? 0);
+    return { ...row, date: row.date ?? row.postingDate ?? row.docDate, documentNo: row.documentNo ?? row.invoiceNo ?? row.docNo, description: row.description ?? row.partyName, type: type.includes('OUT') || type.includes('SALE') ? 'OUTPUT' : 'INPUT', taxCode: row.taxCode, taxableAmount: Number(row.taxableAmount ?? row.amount ?? 0), taxAmount, gstAmount: taxAmount };
   }
 
-  private downloadBlob(blob: Blob, fileName: string): void {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
+  // ── misc helpers still referenced in HTML ─────────────────
+  yearLabel(y: any):   string { return String(y?.fyLabel ?? y?.label ?? y?.fyStartYear ?? y); }
+  periodLabel(p: any): string { return String(p?.label ?? p?.periodName ?? p?.id ?? p); }
 }

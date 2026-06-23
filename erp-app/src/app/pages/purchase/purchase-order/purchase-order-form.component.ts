@@ -81,9 +81,12 @@ export class PurchaseOrderFormComponent implements OnInit {
   currencyOptions: any[] = [];
   incotermOptions: any[] = [];
   itemOptions: any[] = [];
-  uomOptions: any[] = [];
   locationOptions: any[] = [];
-  taxCodeOptions: any[] = [];
+  taxModeOptions = [
+    { label: 'Exclusive', value: 'Exclusive' },
+    { label: 'Inclusive', value: 'Inclusive' },
+    { label: 'Zero Rated', value: 'ZeroRated' },
+  ];
   budgetOptions: any[] = [];
   availablePROptions: any[] = [];
 
@@ -163,10 +166,6 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.itemOptions = this.svc.unwrap(r).map((i: any) => ({
         label: `${i.itemCode ?? ''} - ${i.itemName ?? i.name}`, value: i.id, raw: i
       })));
-    this.svc.getUOMs().subscribe(r =>
-      this.uomOptions = this.svc.unwrap(r).map((u: any) => ({
-        label: u.uomName ?? u.name, value: u.id
-      })));
     this.svc.getLocations().subscribe(r => {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id, raw: l
@@ -180,14 +179,6 @@ export class PurchaseOrderFormComponent implements OnInit {
         this._locationNameFromPR = '';
       }
     });
-    this.svc.getTaxCodes().subscribe(r =>
-      this.taxCodeOptions = this.svc.unwrap(r).map((t: any) => {
-        const code = t.taxCode ?? t.code ?? t.taxName ?? t.name ?? '';
-        const rate = Number(t.taxRate ?? t.rate ?? t.percentage ?? 0);
-        const mode = t.taxMode ?? t.mode ?? t.taxType ?? 'Exclusive';
-        const modeLabel = mode === 'Inclusive' ? 'Incl' : (mode === 'ZeroRated' || mode === 'Zero Rated') ? 'Zero' : 'Excl';
-        return { label: `${code} (${rate}% ${modeLabel})`, value: t.id ?? t.iD, raw: t };
-      }));
     this.svc.getChartOfAccounts().subscribe(r =>
       this.budgetOptions = this.svc.unwrap(r).map((a: any) => ({
         label: a.headName ?? a.accountName ?? a.name ?? '', value: a.id
@@ -485,14 +476,8 @@ export class PurchaseOrderFormComponent implements OnInit {
     }
   }
 
-  onModalTaxChange(): void {
-    const found = this.taxCodeOptions.find(o => o.value === this.modalLine.taxCodeId);
-    if (found?.raw) {
-      this.modalLine.taxRate = Number(found.raw.taxRate ?? found.raw.rate ?? found.raw.percentage ?? 0);
-      const raw = found.raw.taxMode ?? found.raw.mode ?? found.raw.taxType ?? 'Exclusive';
-      this.modalLine.taxMode = (raw === 'Zero Rated' || raw === 'ZeroRated') ? 'ZeroRated'
-        : raw === 'Inclusive' ? 'Inclusive' : 'Exclusive';
-    }
+  onTaxModeChange(): void {
+    if (this.modalLine.taxMode === 'ZeroRated') this.modalLine.taxRate = 0;
     this.recalcLine(this.modalLine);
   }
 
@@ -541,10 +526,10 @@ export class PurchaseOrderFormComponent implements OnInit {
       ['Item', line.itemName],
       ['Description', line.description],
       ['Qty', line.quantity],
-      ['UOM', this.getLabel(this.uomOptions, line.uomId)],
       ['Unit Price', line.unitPrice],
       ['Discount %', line.discountPct],
-      ['Tax Code', this.getLabel(this.taxCodeOptions, line.taxCodeId)],
+      ['Tax Mode', line.taxMode],
+      ['Tax Rate %', line.taxRate ? `${line.taxRate}%` : null],
       ['Tax Amt', line.taxAmt?.toFixed(2)],
       ['Line Total', line.lineTotal?.toFixed(2)],
       ['Budget', line.budget],
@@ -712,10 +697,12 @@ export class PurchaseOrderFormComponent implements OnInit {
       ? this.svc.updatePurchaseOrder({ Id: this.id, ...payload })
       : this.svc.createPurchaseOrder(payload);
     obs$.subscribe({
-      next: () => {
+      next: (res: any) => {
         this.saving = false;
         this.markClean();
         if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
+        const savedId = this.id ?? this.svc.unwrapOne(res)?.id ?? this.svc.unwrapOne(res)?.iD ?? null;
+        if (savedId) this.svc.updateSoProcurementByPO(Number(savedId), 3).subscribe({ error: () => {} });
         Swal.fire('Submitted!', this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', 'success')
           .then(() => this.goToList());
       },

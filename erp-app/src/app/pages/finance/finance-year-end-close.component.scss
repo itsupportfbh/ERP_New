@@ -1,0 +1,196 @@
+:host { display: block; }
+
+$teal:    #2e5f73;
+$border:  #e7e9ee;
+$muted:   #6c757d;
+$success: #1a8754;
+$danger:  #b91c1c;
+
+.yec-page {
+  padding: 16px;
+  background: #f8f9fa;
+  min-height: 100%;
+}
+
+.yec-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 960px;
+}
+
+/* ── Header ── */
+.yec-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid $border;
+}
+.yec-icon {
+  width: 22px; height: 22px;
+  color: $teal;
+}
+h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: $teal;
+}
+
+/* ── Controls row ── */
+.yec-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.yec-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+
+  select, input[type="date"] {
+    height: 38px;
+    border: 1px solid $border;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #1a2e38;
+    min-width: 220px;
+    background: #fff;
+    &:disabled { background: #f5f5f5; color: $muted; cursor: not-allowed; }
+  }
+}
+.yec-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+/* ── Buttons ── */
+.yec-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid $teal;
+  transition: all .15s;
+  svg { width: 15px; height: 15px; flex-shrink: 0; }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+.yec-btn-outline {
+  color: $teal;
+  background: transparent;
+  &:hover:not(:disabled) { background: #e8f4f8; }
+}
+.yec-btn-primary {
+  color: #fff;
+  background: $teal;
+  &:hover:not(:disabled) { background: #245168; }
+}
+
+/* ── Status banner ── */
+.yec-status-loading {
+  font-size: 12px;
+  color: $muted;
+  padding: 6px 0;
+}
+.yec-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+}
+.yec-banner-success {
+  background: #edfdf5;
+  border: 1px solid #a7f3d0;
+  color: $success;
+  svg { color: $success; }
+}
+.yec-banner-warning {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  svg { color: #d97706; }
+}
+.yec-banner-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+/* ── Preview ── */
+.yec-preview { display: flex; flex-direction: column; gap: 12px; }
+.yec-preview-loading { font-size: 12px; color: $muted; padding: 6px 0; }
+.yec-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.yec-preview-table-card {
+  border: 1px solid $border;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.yec-preview-th {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.income-hdr  { background: $teal; }
+.expense-hdr { background: #c0392b; }
+
+.yec-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  max-height: 280px;
+  display: block;
+  overflow-y: auto;
+  th { background: #f7fbfd; padding: 6px 14px; text-align: left; font-size: 11px; color: $muted; text-transform: uppercase; }
+  td { padding: 6px 14px; border-bottom: 1px solid $border; }
+  tfoot td { background: #f7fbfd; font-weight: 700; border-top: 2px solid $border; }
+}
+
+/* ── Net P&L ── */
+.yec-net-pl {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  background: #f7fbfd;
+  flex-wrap: wrap;
+}
+.yec-net-label { font-size: 13px; font-weight: 700; color: #1a2e38; }
+.yec-net-val   { font-size: 18px; font-weight: 700; }
+.yec-pl-tag    { font-size: 12px; font-weight: 400; margin-left: 4px; }
+.yec-net-note  { font-size: 11px; color: $muted; margin-left: auto; }
+
+.text-success { color: $success; }
+.text-danger  { color: $danger; }
+.right        { text-align: right; }
+.fw-bold      { font-weight: 700; }
+
+@media (max-width: 700px) {
+  .yec-preview-grid { grid-template-columns: 1fr; }
+  .yec-controls     { flex-direction: column; align-items: stretch; }
+  .yec-actions      { flex-wrap: wrap; }
+}

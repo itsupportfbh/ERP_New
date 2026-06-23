@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
-import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-supplier-invoice-list',
@@ -50,8 +49,17 @@ export class SupplierInvoiceListComponent implements OnInit {
   showMatchModal = false;
   threeWay: any = null;
   matchLoading = false;
+  matchError = '';
+  postError = '';
   currentRow: any = null;
   isPosting = false;
+
+  // Action confirm modal (delete)
+  showActionConfirm = false;
+  actionRow: any = null;
+  actionType = '';
+  actionLoading = false;
+  actionError = '';
 
   // OCR
   showOcrModal = false;
@@ -255,16 +263,10 @@ export class SupplierInvoiceListComponent implements OnInit {
     this.ocrLoading = true;
     this.ocrError   = '';
     this.svc.createSupplierInvoice(payload).subscribe({
-      next: () => {
-        this.ocrLoading = false;
-        this.closeOcrModal();
-        Swal.fire('Created!', 'Supplier invoice created successfully from scan.', 'success');
-        this.load();
-      },
+      next: () => { this.ocrLoading = false; this.closeOcrModal(); this.load(); },
       error: (err: any) => {
         this.ocrLoading = false;
-        const msg = err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.';
-        Swal.fire('Error', msg, 'error');
+        this.ocrError = err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.';
       }
     });
   }
@@ -329,7 +331,7 @@ export class SupplierInvoiceListComponent implements OnInit {
       next: res => { this.threeWay = this.svc.unwrapOne(res) ?? res; this.matchLoading = false; },
       error: err => {
         this.matchLoading = false;
-        Swal.fire('Error', err?.error?.message || 'Unable to load 3-way match data.', 'error');
+        this.matchError = err?.error?.message || 'Unable to load 3-way match data.';
       }
     });
   }
@@ -338,7 +340,7 @@ export class SupplierInvoiceListComponent implements OnInit {
 
   approveAndPostToAp(): void {
     if (!this.currentRow) return;
-    if (this.isPosted(this.currentRow)) { Swal.fire('Already Posted', 'This invoice is already posted to A/P.', 'info'); return; }
+    if (this.isPosted(this.currentRow)) return;
     const row = this.currentRow;
     this.isPosting = true;
     const amount = Number(row.amount ?? 0);
@@ -350,27 +352,29 @@ export class SupplierInvoiceListComponent implements OnInit {
 
   private doPostToAp(row: any): void {
     this.svc.postPinToAP(row.id).subscribe({
-      next: () => {
-        this.isPosting = false;
-        Swal.fire('Posted!', `Invoice ${row.invoiceNo} approved and posted to A/P.`, 'success');
-        this.closeMatchModal();
-        this.load();
-      },
-      error: err => {
-        this.isPosting = false;
-        Swal.fire('Error', err?.error?.message || 'Unable to post to A/P.', 'error');
-      }
+      next: () => { this.isPosting = false; this.closeMatchModal(); this.load(); },
+      error: err => { this.isPosting = false; this.postError = err?.error?.message || 'Unable to post to A/P.'; }
     });
   }
 
   delete(row: any): void {
-    if (this.isPosted(row)) { Swal.fire('Cannot Delete', 'Posted invoices cannot be deleted.', 'warning'); return; }
-    Swal.fire({ title: 'Delete Invoice?', text: `Delete ${row.invoiceNo}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deleteSupplierInvoice(row.id).subscribe({
-          next: () => { Swal.fire('Deleted', 'Invoice deleted.', 'success'); this.load(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete.', 'error')
-        });
+    if (this.isPosted(row)) return;
+    this.openActionConfirm(row, 'delete-invoice');
+  }
+
+  openActionConfirm(row: any, type: string): void {
+    this.actionRow = row; this.actionType = type; this.actionError = ''; this.showActionConfirm = true;
+  }
+  closeActionConfirm(): void { this.showActionConfirm = false; this.actionRow = null; this.actionError = ''; }
+  doActionConfirm(): void {
+    if (!this.actionRow) return;
+    this.actionLoading = true; this.actionError = '';
+    const row = this.actionRow;
+    if (this.actionType === 'delete-invoice') {
+      this.svc.deleteSupplierInvoice(row.id).subscribe({
+        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
+        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.'; }
       });
+    }
   }
 }

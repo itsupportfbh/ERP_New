@@ -7,6 +7,20 @@
     <span class="status-badge" *ngIf="isEdit">{{ status }}</span>
   </div>
 
+  <!-- Source origin banner -->
+  <div class="source-banner" *ngIf="isAutoSource">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+    <span>Auto PR from <strong>{{ sourceTypeLabel }}</strong>:</span>
+    <span class="source-ref">{{ sourceName }}</span>
+    <span class="source-ids">
+      SourceId: <code>{{ sourceId }}</code>
+      <ng-container *ngIf="sourceReferenceId"> &nbsp;|&nbsp; SourceReferenceId: <code>{{ sourceReferenceId }}</code></ng-container>
+    </span>
+  </div>
+
   <!-- Step bar -->
   <div class="step-bar">
     <ng-container *ngFor="let s of prSteps; let i = index">
@@ -111,6 +125,24 @@
         <div class="review-row"><span class="review-key">Department</span><span class="review-val">{{ departmentName || getLabel(departmentOptions, departmentId) }}</span></div>
         <div class="review-row"><span class="review-key">Delivery Date</span><span class="review-val">{{ deliveryDate || '—' }}</span></div>
         <div class="review-row"><span class="review-key">Description</span><span class="review-val">{{ description || '—' }}</span></div>
+        <ng-container *ngIf="isAutoSource">
+          <div class="review-row source-row">
+            <span class="review-key">Source Type</span>
+            <span class="review-val source-type-tag">{{ sourceTypeLabel }}</span>
+          </div>
+          <div class="review-row">
+            <span class="review-key">Source ID</span>
+            <span class="review-val"><code class="src-code">{{ sourceId }}</code></span>
+          </div>
+          <div class="review-row" *ngIf="sourceReferenceId">
+            <span class="review-key">Source Ref ID</span>
+            <span class="review-val"><code class="src-code">{{ sourceReferenceId }}</code></span>
+          </div>
+          <div class="review-row">
+            <span class="review-key">Origin</span>
+            <span class="review-val review-origin">{{ sourceName }}</span>
+          </div>
+        </ng-container>
       </div>
     </div>
 

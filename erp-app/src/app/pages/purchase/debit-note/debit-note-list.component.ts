@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
-import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-debit-note-list',
@@ -15,6 +14,13 @@ export class DebitNoteListComponent implements OnInit {
   rows: any[] = [];
   filtered: any[] = [];
   search = '';
+
+  // Action confirm modal
+  showConfirm = false;
+  confirmRow: any = null;
+  confirmAction = '';
+  confirmLoading = false;
+  confirmError = '';
 
   showLinesModal = false;
   modalLines: any[] = [];
@@ -92,7 +98,7 @@ export class DebitNoteListComponent implements OnInit {
   create(): void { this.router.navigate(['/app/purchase/debit-note/new']); }
 
   onRowClick(row: any): void {
-    this.router.navigate(['/app/purchase/debit-note', row.id]);
+    this.openLinesModal(row);
   }
 
   openLinesModal(row: any): void {
@@ -127,28 +133,42 @@ export class DebitNoteListComponent implements OnInit {
     if (e.action === 'delete') this.delete(e.row);
   }
 
+  openConfirm(row: any, action: string): void {
+    this.confirmRow = row;
+    this.confirmAction = action;
+    this.confirmError = '';
+    this.showConfirm = true;
+  }
+
+  closeConfirm(): void { this.showConfirm = false; this.confirmRow = null; this.confirmError = ''; }
+
+  doConfirm(): void {
+    if (!this.confirmRow) return;
+    this.confirmLoading = true;
+    this.confirmError = '';
+    const row = this.confirmRow;
+    if (this.confirmAction === 'post') {
+      this.svc.postDebitNote(row.id).subscribe({
+        next: () => { this.confirmLoading = false; this.closeConfirm(); this.load(); },
+        error: err => { this.confirmLoading = false; this.confirmError = err?.error?.message || 'Unable to post debit note.'; }
+      });
+    } else if (this.confirmAction === 'delete') {
+      this.svc.deleteDebitNote(row.id).subscribe({
+        next: () => { this.confirmLoading = false; this.closeConfirm(); this.load(); },
+        error: err => { this.confirmLoading = false; this.confirmError = err?.error?.message || 'Unable to delete debit note.'; }
+      });
+    }
+  }
+
   postDebitNote(row: any): void {
     const st = String(row.status ?? '').toLowerCase();
-    if (st === 'posted') { Swal.fire('Already Posted', 'This debit note is already posted.', 'info'); return; }
-    Swal.fire({ title: 'Post Debit Note?', text: `Post ${row.debitNoteNo}? Once posted it cannot be edited.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Post', confirmButtonColor: '#0e7490' })
-      .then(r => {
-        if (!r.isConfirmed) return;
-        this.svc.postDebitNote(row.id).subscribe({
-          next: () => { Swal.fire('Posted', 'Debit note posted successfully.', 'success'); this.load(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to post debit note.', 'error')
-        });
-      });
+    if (st === 'posted') return;
+    this.openConfirm(row, 'post');
   }
 
   delete(row: any): void {
-    if (String(row.status ?? '').toLowerCase() === 'posted') { Swal.fire('Cannot Delete', 'Posted debit notes cannot be deleted.', 'warning'); return; }
-    Swal.fire({ title: 'Delete Debit Note?', text: `Delete ${row.debitNoteNo}? This cannot be undone.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#ef4444' })
-      .then(r => { if (!r.isConfirmed) return;
-        this.svc.deleteDebitNote(row.id).subscribe({
-          next: () => { Swal.fire('Deleted', 'Debit note deleted.', 'success'); this.load(); },
-          error: err => Swal.fire('Error', err?.error?.message || 'Unable to delete debit note.', 'error')
-        });
-      });
+    if (String(row.status ?? '').toLowerCase() === 'posted') return;
+    this.openConfirm(row, 'delete');
   }
 
   get pendingCount(): number { return this.rows.filter(r => !r.status || String(r.status).toLowerCase() === 'pending').length; }
