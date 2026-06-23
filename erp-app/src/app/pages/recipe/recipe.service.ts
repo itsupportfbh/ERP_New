@@ -70,6 +70,10 @@ export class RecipeService {
   updatePlanStatus(id: number | string, data: { status: number; updatedBy: any }): Observable<any> {
     return this.http.put(`${this.api}/ProductionPlan/${id}/status`, data);
   }
+  /** Shortage GRNs that have been received against a RECIPE_SHORTAGE PR — drives the PP alert bell. */
+  getShortageGrnAlerts(): Observable<any> {
+    return this.http.get(`${this.api}/ProductionPlan/shortage-grn-alerts`);
+  }
 
   // ── Batch Production ─────────────────────────────────
   getBatches(top = 200): Observable<any> {
@@ -87,7 +91,8 @@ export class RecipeService {
   deleteBatch(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/BatchProduction/${id}`);
   }
-  postBatch(data: { batchId: number | string; postedBy: string }): Observable<any> {
+  /** Combined create + post-to-inventory (backend PostAndSaveAsync). */
+  postBatch(data: any): Observable<any> {
     return this.http.post(`${this.api}/BatchProduction/post`, data);
   }
   getIngredientExplosion(recipeId: number | string, warehouseId: number | string, outputQty: number | string): Observable<any> {

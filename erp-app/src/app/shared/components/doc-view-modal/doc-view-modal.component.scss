@@ -40,6 +40,11 @@
   }
   tbody td { padding: 5px 8px; border-bottom: 1px solid var(--border); color: var(--text); }
   tfoot td { padding: 6px 8px; border-top: 2px solid var(--border); font-weight: 700; color: var(--text); }
+  /* Force header AND body cells to share the same alignment, so values
+     always sit directly under their column header (header defaults to
+     center, which would otherwise drift away from right-aligned values). */
+  thead th.ta-right, tbody td.ta-right, tfoot td.ta-right { text-align: right !important; }
+  thead th.ta-center, tbody td.ta-center, tfoot td.ta-center { text-align: center !important; }
   .ta-right { text-align: right; }
   .ta-center { text-align: center; }
   .dv-empty { text-align: center; color: var(--text-muted); padding: 20px; }
