@@ -28,3 +28,5 @@
 /* extra action-icon colors (edit/del come from global dt-icon-btn) */
 .dt-icon-btn.view  { svg { stroke: #0ea5e9; } &:hover { background: #e0f2fe; } }
 .dt-icon-btn.print { svg { stroke: #2E5F73; } &:hover { background: #eef6f8; } }
+
+.dt-icon-btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }

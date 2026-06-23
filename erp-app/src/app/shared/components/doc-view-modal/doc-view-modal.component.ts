@@ -21,7 +21,7 @@ export class DocViewModalComponent {
   @Input() lines: any[] = [];
   @Input() totals: PrintField[] = [];
   @Input() loading = false;
-  @Input() showPrint = true;
+  @Input() showPrint = false;
 
   @Output() close = new EventEmitter<void>();
   @Output() print = new EventEmitter<void>();

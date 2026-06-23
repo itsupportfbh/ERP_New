@@ -45,9 +45,9 @@
 .loc-col    { min-width: 120px; }
 .ledger-col { min-width: 140px; }
 .remarks-col{ min-width: 120px; }
-.del-col    { width: 34px; text-align: center; }
+.del-col    { width: 64px; text-align: center; white-space: nowrap; }
 .empty-lines { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
-.btn-icon { width: 28px; height: 28px; border: none; border-radius: 6px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; &.danger:hover { background: rgba(239,68,68,0.1); color: var(--danger); } svg { width: 14px; height: 14px; } }
+.btn-icon { width: 28px; height: 28px; border: none; border-radius: 6px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; &.edit { color: var(--primary-light); &:hover { background: var(--primary-pale); } } &.danger:hover { background: rgba(239,68,68,0.1); color: var(--danger); } svg { width: 14px; height: 14px; } }
 
 /* Totals */
 .totals-row { display: flex; align-items: center; gap: 20px; justify-content: flex-end; padding: 12px 4px 4px; border-top: 1px solid var(--border); margin-top: 8px; }
@@ -55,7 +55,7 @@
 .total-sep { width: 1px; height: 40px; background: var(--border); }
 
 /* Review */
-.review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
 .review-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); &:last-child { border-bottom: none; } }
 .review-key { font-size: 12px; font-weight: 600; color: var(--text-muted); min-width: 110px; }
 .review-val { font-size: 13px; color: var(--text); }
@@ -63,3 +63,42 @@
   th { padding: 6px 8px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); background: var(--surface); border-bottom: 1px solid var(--border); }
   td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
 }
+
+/* read-only ingredient table alignment */
+.lines-table th.ta-right, .lines-table td.ta-right { text-align: right; }
+
+/* Add Recipe Line modal */
+.rl-overlay {
+  position: fixed; inset: 0; z-index: 1050;
+  background: rgba(15, 23, 42, .45);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.rl-modal {
+  background: #fff; border-radius: 12px; width: 100%; max-width: 760px;
+  max-height: 90vh; display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .25); overflow: hidden;
+}
+.rl-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  h3 { margin: 0; font-size: 16px; color: var(--primary); }
+}
+.rl-x { border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: var(--text-muted); }
+.rl-x:hover { color: var(--text); }
+.rl-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.rl-label { display: block; font-size: 12px; color: var(--text); margin-bottom: 4px; font-weight: 500; }
+.rl-textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px 12px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 80px;
+  &:focus { outline: none; border-color: var(--accent); }
+}
+.rl-err { color: var(--danger); font-size: 12.5px; }
+.rl-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px; border-top: 1px solid var(--border);
+}
+
+/* ingredient table footer total */
+.lines-table tfoot .lines-tfoot td { border-top: 2px solid var(--border); padding-top: 10px; }
+.lines-table .tfoot-label { font-weight: 600; color: var(--text-muted); }
+.lines-table .tfoot-val { font-weight: 700; color: var(--primary); font-size: 14px; }

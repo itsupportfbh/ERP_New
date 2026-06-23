@@ -1,10 +1,19 @@
-<div class="wizard-page">
-  <div class="page-header">
+<div class="pp-page">
+
+  <!-- Header -->
+  <div class="pp-head">
     <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
-    <h2>{{ title }}</h2>
-    <span class="status-badge status-{{ statusClass }}">{{ statusLabel }}</span>
-    <div class="header-actions" *ngIf="isEdit && status === 0">
-      <button class="btn btn-success btn-sm" (click)="setStatus(1)" [disabled]="saving">&#10003; Mark Pending</button>
+    <div class="pp-title">
+      <h2>Production Planning</h2>
+      <div class="pp-sub">Create plan + check ingredient shortage quickly</div>
+    </div>
+    <div class="pp-head-actions">
+      <button class="btn btn-outline btn-sm" (click)="refresh()" [disabled]="loading || !salesOrderId || !warehouseId">Refresh</button>
+      <button class="btn btn-primary btn-sm" *ngIf="!isEdit"
+        [disabled]="saving || !salesOrderId || !warehouseId" (click)="save()">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : 'Save Plan' }}
+      </button>
     </div>
   </div>
 
@@ -15,100 +24,138 @@
   </div>
   <div class="alert-success" *ngIf="success">&#10003; {{ success }}</div>
 
-  <!-- Header card -->
-  <div class="card section-card">
-    <div class="section-label">Sales Order &amp; Warehouse</div>
-    <div class="form-row cols-2">
+  <!-- Top: selectors + KPI cards -->
+  <div class="pp-top">
+    <div class="pp-field">
       <erp-dropdown label="Sales Order" [required]="true" [options]="salesOrderOptions"
         [disabled]="isEdit" [(ngModel)]="salesOrderId" (ngModelChange)="onSelectionChange()"
         placeholder="Select sales order"></erp-dropdown>
+    </div>
+    <div class="pp-field">
       <erp-dropdown label="Production Warehouse" [required]="true" [options]="warehouseOptions"
         [disabled]="isEdit" [(ngModel)]="warehouseId" (ngModelChange)="onSelectionChange()"
         placeholder="Select warehouse"></erp-dropdown>
     </div>
+    <div class="pp-kpi">
+      <div class="k">Recipes</div>
+      <div class="v">{{ planRows.length }}</div>
+    </div>
+    <div class="pp-kpi">
+      <div class="k">Ingredients</div>
+      <div class="v">{{ ingredients.length }}</div>
+    </div>
+    <div class="pp-kpi" [class.danger]="shortageCount > 0">
+      <div class="k">Shortage</div>
+      <div class="v">{{ shortageCount }}</div>
+    </div>
   </div>
 
   <!-- Hint when nothing selected -->
-  <div class="card section-card hint-card" *ngIf="!loading && (!salesOrderId || !warehouseId)">
+  <div class="card pp-hint" *ngIf="!loading && (!salesOrderId || !warehouseId)">
     Select a Sales Order and a Production Warehouse to preview the plan.
   </div>
 
-  <!-- Plan Rows -->
-  <div class="card section-card" *ngIf="!loading && salesOrderId && warehouseId">
-    <div class="section-label">Plan Rows ({{ planRows.length }})</div>
-    <div class="lines-table-wrap">
-      <table class="lines-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Recipe</th>
-            <th>Finished Item</th>
-            <th>Planned Qty</th>
-            <th>Expected Output</th>
-            <th>Batch Qty</th>
-            <th>Yield %</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let r of planRows; let i = index">
-            <td class="row-num">{{ i + 1 }}</td>
-            <td>{{ r.recipeName ?? r.finishedItemName ?? '' }}</td>
-            <td>{{ r.finishedItemName ?? r.recipeName ?? '' }}</td>
-            <td>{{ r.plannedQty | number:'1.0-3' }}</td>
-            <td>{{ r.expectedOutput | number:'1.0-3' }}</td>
-            <td>{{ r.batchQty | number:'1.0-3' }}</td>
-            <td>{{ r.headerYieldPct | number:'1.0-2' }}%</td>
-          </tr>
-          <tr *ngIf="!planRows.length">
-            <td colspan="7" class="empty-lines">No plan rows found for this sales order.</td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- Two-column area -->
+  <div class="pp-grid" *ngIf="!loading && salesOrderId && warehouseId">
+
+    <!-- Plan -->
+    <div class="card pp-col">
+      <div class="pp-col-head">
+        <div>
+          <h3>Plan</h3>
+          <div class="pp-col-sub">Recipes from selected Sales Order</div>
+        </div>
+      </div>
+      <div class="pp-table-wrap">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th>Recipe</th>
+              <th class="ta-right">Planned Qty</th>
+              <th class="ta-right">Expected Output</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of planRows">
+              <td class="pp-strong">{{ r.recipeName || r.finishedItemName || '—' }}</td>
+              <td class="ta-right">
+                <input type="number" class="pp-cell-input" [(ngModel)]="r.plannedQty" min="0" />
+              </td>
+              <td class="ta-right">
+                <input type="number" class="pp-cell-input" [(ngModel)]="r.expectedOutput" min="0" />
+              </td>
+            </tr>
+            <tr *ngIf="!planRows.length">
+              <td colspan="3" class="empty-lines">No plan rows found for this sales order.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- Ingredient Explosion -->
+    <div class="card pp-col">
+      <div class="pp-col-head">
+        <div>
+          <h3>Ingredient Explosion</h3>
+          <div class="pp-col-sub">Required vs Available stock</div>
+        </div>
+        <button class="pp-pr-btn" (click)="createPr()" [disabled]="prBusy">
+          <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:middle;margin-right:5px;"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v3M13 2v3M3 8h14"/></svg>
+          {{ prBusy ? 'Creating…' : 'Create PR' }}
+        </button>
+      </div>
+      <div class="pp-table-wrap">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th>Ingredient</th>
+              <th class="ta-right">Required</th>
+              <th class="ta-right">Available</th>
+              <th class="ta-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let g of ingredients">
+              <td>
+                <div class="pp-strong">{{ g.itemName }}</div>
+                <div class="pp-muted">{{ g.uom }}</div>
+              </td>
+              <td class="ta-right pp-strong">{{ g.requiredQty | number:'1.0-3' }}{{ g.baseUomName }}</td>
+              <td class="ta-right pp-strong">{{ g.availableQty | number:'1.0-3' }}{{ g.baseUomName }}</td>
+              <td class="ta-center">
+                <span class="pp-pill" [class.ok]="g.status === 'OK'" [class.short]="g.status !== 'OK'">
+                  <span class="dot"></span>{{ g.status === 'OK' ? 'OK' : 'Shortage' }}
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="!ingredients.length">
+              <td colspan="4" class="empty-lines">No ingredients found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pp-tip" *ngIf="ingredients.length">Tip: create PR only for items with <b>Shortage</b>.</div>
+    </div>
+
   </div>
 
-  <!-- Ingredients -->
-  <div class="card section-card" *ngIf="!loading && salesOrderId && warehouseId">
-    <div class="section-label">Ingredients ({{ ingredients.length }})</div>
-    <div class="lines-table-wrap">
-      <table class="lines-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Item</th>
-            <th>UOM</th>
-            <th>Required Qty</th>
-            <th>Available Qty</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let g of ingredients; let i = index">
-            <td class="row-num">{{ i + 1 }}</td>
-            <td>{{ g.itemName }}</td>
-            <td>{{ g.uom }}</td>
-            <td>{{ g.requiredQty | number:'1.0-3' }}</td>
-            <td>{{ g.availableQty | number:'1.0-3' }}</td>
-            <td>
-              <span class="status-badge" [class.status-approved]="g.status === 'OK'" [class.status-rejected]="g.status !== 'OK'">
-                {{ g.status === 'OK' ? 'OK' : 'Shortage' }}
-              </span>
-            </td>
-          </tr>
-          <tr *ngIf="!ingredients.length">
-            <td colspan="6" class="empty-lines">No ingredients found.</td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- Create PR confirm popup -->
+  <div class="pp-confirm-overlay" *ngIf="showPrConfirm" (click)="cancelPrConfirm()">
+    <div class="pp-confirm" (click)="$event.stopPropagation()">
+      <h3>Create PR?</h3>
+      <p>This will save the Production Plan if needed and create a Purchase Request for the shortage items (an alert is sent to Purchase / PO).</p>
+      <div class="pp-confirm-info">
+        <div><span>Sales Order</span><b>{{ getLabel(salesOrderOptions, salesOrderId) }}</b></div>
+        <div><span>Warehouse</span><b>{{ getLabel(warehouseOptions, warehouseId) }}</b></div>
+        <div><span>Shortage Items</span><b>{{ shortageCount }}</b></div>
+      </div>
+      <div class="pp-confirm-actions">
+        <button class="btn btn-outline btn-sm" type="button" (click)="cancelPrConfirm()">Cancel</button>
+        <button class="btn btn-primary btn-sm" type="button" [disabled]="prBusy" (click)="confirmCreatePr()">
+          {{ prBusy ? 'Creating…' : 'Yes, Create' }}
+        </button>
+      </div>
     </div>
-  </div>
-
-  <div class="wizard-footer">
-    <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
-    <button class="btn btn-primary btn-sm" *ngIf="!isEdit"
-      [disabled]="saving || !salesOrderId || !warehouseId" (click)="save()">
-      <span class="btn-spinner" *ngIf="saving"></span>
-      {{ saving ? 'Saving…' : 'Save Plan' }}
-    </button>
   </div>
 </div>

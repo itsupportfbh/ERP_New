@@ -34,9 +34,9 @@ export class ProductionPlanningListComponent implements OnInit {
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
     { header: 'UOM', key: 'uomName', align: 'center' },
-    { header: 'Planned Qty', key: 'plannedQty', align: 'right', type: 'qty' },
-    { header: 'Available', key: 'availableQty', align: 'right', type: 'qty' },
-    { header: 'Shortage', key: 'shortageQty', align: 'right', type: 'qty' },
+    { header: 'Planned Qty', key: 'plannedQtyDisp', align: 'right' },
+    { header: 'Available', key: 'availableQtyDisp', align: 'right' },
+    { header: 'Shortage', key: 'shortageQtyDisp', align: 'right' },
   ];
 
   constructor(private svc: RecipeService, private router: Router, private printSvc: DocumentPrintService) {}
@@ -133,38 +133,76 @@ export class ProductionPlanningListComponent implements OnInit {
       next: res => {
         const d = this.svc.unwrapOne(res) ?? {};
         const h = d.header ?? d.Header ?? d;
+        const planDate = h.planDate ?? h.PlanDate ?? h.createdDate ?? h.CreatedDate ?? row.planDate ?? null;
+        const soId = h.salesOrderId ?? h.SalesOrderId ?? null;
+        const whId = h.warehouseId ?? h.WarehouseId ?? null;
+
+        const finalize = () => {
+          const totalPlanned = this.viewLines.reduce((s, l) => s + (+l.plannedQty || 0), 0);
+          const totalShortage = this.viewLines.reduce((s, l) => s + (+l.shortageQty || 0), 0);
+          this.viewInfo = [
+            { label: 'Plan No', value: row.productionPlanNo },
+            { label: 'SO No', value: row.salesOrderNo || '—' },
+            { label: 'Plan Date', value: this.fmtDate(planDate) },
+            { label: 'Status', value: row.statusLabel },
+          ];
+          this.viewTotals = [
+            { label: 'Total Planned', value: totalPlanned.toFixed(2) },
+            { label: 'Total Shortage', value: totalShortage.toFixed(2) },
+          ];
+          this.viewTitle = `Production Plan — ${row.productionPlanNo}`;
+          this.viewSubtitle = `SO No: ${row.salesOrderNo || '—'} · Status: ${row.statusLabel}`;
+          this.viewLoading = false;
+          cb();
+        };
+
         const rawIngredients = d.ingredients ?? d.Ingredients ?? [];
-        this.viewLines = (Array.isArray(rawIngredients) ? rawIngredients : []).map((l: any) => {
-          const required = +(l.requiredQty ?? l.RequiredQty ?? 0) || 0;
-          const available = +(l.availableQty ?? l.AvailableQty ?? 0) || 0;
-          const shortage = Math.max(0, required - available);
-          return {
-            itemName: l.itemName ?? l.ItemName ?? '',
-            uomName: l.uom ?? l.uomName ?? l.Uom ?? '',
-            plannedQty: required,
-            availableQty: available,
-            shortageQty: shortage,
-          };
-        });
-        const totalPlanned = this.viewLines.reduce((s, l) => s + (+l.plannedQty || 0), 0);
-        const totalShortage = this.viewLines.reduce((s, l) => s + (+l.shortageQty || 0), 0);
-        this.viewInfo = [
-          { label: 'Plan No', value: row.productionPlanNo },
-          { label: 'SO No', value: row.salesOrderNo || '—' },
-          { label: 'Plan Date', value: this.fmtDate(row.planDate) },
-          { label: 'Status', value: row.statusLabel },
-        ];
-        this.viewTotals = [
-          { label: 'Total Planned', value: totalPlanned.toFixed(2) },
-          { label: 'Total Shortage', value: totalShortage.toFixed(2) },
-        ];
-        this.viewTitle = `Production Plan — ${row.productionPlanNo}`;
-        this.viewSubtitle = `SO No: ${row.salesOrderNo || '—'} · Status: ${row.statusLabel}`;
-        this.viewLoading = false;
-        cb();
+        if (Array.isArray(rawIngredients) && rawIngredients.length) {
+          this.viewLines = rawIngredients.map((l: any) => this.mapViewLine(l));
+          finalize();
+          return;
+        }
+
+        // Detail has no ingredient lines → compute them from the plan's SO + warehouse.
+        if (soId && whId) {
+          this.svc.getPlanBySo(soId, whId).subscribe({
+            next: r2 => {
+              const d2 = this.svc.unwrapOne(r2) ?? {};
+              const ing = d2.ingredients ?? d2.Ingredients ?? [];
+              this.viewLines = (Array.isArray(ing) ? ing : []).map((l: any) => this.mapViewLine(l));
+              finalize();
+            },
+            error: () => { this.viewLines = []; finalize(); }
+          });
+        } else {
+          finalize();
+        }
       },
       error: () => { this.viewLoading = false; cb(); }
     });
+  }
+
+  private mapViewLine(l: any): any {
+    const required = +(l.requiredQty ?? l.RequiredQty ?? l.plannedQty ?? 0) || 0;
+    const available = +(l.availableQty ?? l.AvailableQty ?? 0) || 0;
+    const shortage = Math.max(0, required - available);
+    const uom = l.uom ?? l.uomName ?? l.Uom ?? '';
+    const qtyUom = l.baseUomName ?? l.BaseUomName ?? l.baseUom ?? uom ?? '';
+    const suffix = qtyUom ? ' ' + qtyUom : '';
+    return {
+      itemName: l.itemName ?? l.ItemName ?? '',
+      uomName: uom || qtyUom,
+      plannedQty: required,
+      availableQty: available,
+      shortageQty: shortage,
+      plannedQtyDisp: this.fmtNum(required) + suffix,
+      availableQtyDisp: this.fmtNum(available) + suffix,
+      shortageQtyDisp: this.fmtNum(shortage) + suffix,
+    };
+  }
+
+  private fmtNum(n: number): string {
+    return (Math.round((+n || 0) * 1000) / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 });
   }
 
   view(row: any): void { this.showView = true; this.buildDetail(row, () => {}); }
