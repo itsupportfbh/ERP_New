@@ -94,7 +94,7 @@ export class PeriodCloseComponent implements OnInit {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: target ? 'Lock' : 'Unlock',
-      confirmButtonColor: '#0e4a60'
+      confirmButtonColor: '#1a9db8'
     }).then(result => {
       if (!result.isConfirmed) return;
       this.isLocking = true;
@@ -103,11 +103,12 @@ export class PeriodCloseComponent implements OnInit {
         next: s => {
           this.status = s;
           this.isLocking = false;
-          Swal.fire('Success', `Period ${target ? 'locked' : 'unlocked'} successfully.`, 'success');
+          Swal.fire({ icon: 'success', title: 'Success', text: `Period ${target ? 'locked' : 'unlocked'} successfully.`, confirmButtonColor: '#1a9db8' });
         },
         error: err => {
           this.isLocking = false;
           this.error = err?.error?.message || 'Failed to change lock status.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Failed to change lock status.', confirmButtonColor: '#1a9db8' });
         }
       });
     });
@@ -124,7 +125,7 @@ export class PeriodCloseComponent implements OnInit {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Run',
-      confirmButtonColor: '#0e4a60'
+      confirmButtonColor: '#1a9db8'
     }).then(result => {
       if (!result.isConfirmed) return;
       this.isRunningFx = true;
@@ -142,11 +143,12 @@ export class PeriodCloseComponent implements OnInit {
             totalLoss,
             net: totalGain - totalLoss
           };
-          Swal.fire('Success', 'FX Revaluation completed successfully.', 'success');
+          Swal.fire({ icon: 'success', title: 'Success', text: 'FX Revaluation completed successfully.', confirmButtonColor: '#1a9db8' });
         },
         error: err => {
           this.isRunningFx = false;
           this.error = err?.error?.message || 'FX Revaluation failed.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'FX Revaluation failed.', confirmButtonColor: '#1a9db8' });
         }
       });
     });

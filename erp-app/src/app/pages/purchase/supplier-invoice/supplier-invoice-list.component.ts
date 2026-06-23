@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-supplier-invoice-list',
@@ -263,10 +264,14 @@ export class SupplierInvoiceListComponent implements OnInit {
     this.ocrLoading = true;
     this.ocrError   = '';
     this.svc.createSupplierInvoice(payload).subscribe({
-      next: () => { this.ocrLoading = false; this.closeOcrModal(); this.load(); },
+      next: () => {
+        this.ocrLoading = false; this.closeOcrModal(); this.load();
+        Swal.fire({ icon: 'success', title: 'Invoice Created!', text: 'Supplier invoice created successfully from OCR.', confirmButtonColor: '#1a9db8' });
+      },
       error: (err: any) => {
         this.ocrLoading = false;
         this.ocrError = err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.', confirmButtonColor: '#1a9db8' });
       }
     });
   }
@@ -352,14 +357,38 @@ export class SupplierInvoiceListComponent implements OnInit {
 
   private doPostToAp(row: any): void {
     this.svc.postPinToAP(row.id).subscribe({
-      next: () => { this.isPosting = false; this.closeMatchModal(); this.load(); },
-      error: err => { this.isPosting = false; this.postError = err?.error?.message || 'Unable to post to A/P.'; }
+      next: () => {
+        this.isPosting = false; this.closeMatchModal(); this.load();
+        Swal.fire({ icon: 'success', title: 'Posted!', text: 'Invoice posted to Accounts Payable successfully.', confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        this.isPosting = false; this.postError = err?.error?.message || 'Unable to post to A/P.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to post to A/P.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
-  delete(row: any): void {
+  async delete(row: any): Promise<void> {
     if (this.isPosted(row)) return;
-    this.openActionConfirm(row, 'delete-invoice');
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete invoice ${row.invoiceNo}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.deleteSupplierInvoice(row.id).subscribe({
+      next: () => {
+        this.load();
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `Invoice ${row.invoiceNo} deleted.`, confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+      }
+    });
   }
 
   openActionConfirm(row: any, type: string): void {
@@ -372,8 +401,14 @@ export class SupplierInvoiceListComponent implements OnInit {
     const row = this.actionRow;
     if (this.actionType === 'delete-invoice') {
       this.svc.deleteSupplierInvoice(row.id).subscribe({
-        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
-        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.'; }
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load();
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `Invoice ${row.invoiceNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        },
+        error: err => {
+          this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+        }
       });
     }
   }

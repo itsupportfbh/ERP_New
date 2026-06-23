@@ -125,10 +125,11 @@
             <span>{{ isOverseas ? 'Yes' : 'No' }}</span>
           </label>
         </div>
+        <erp-input label="GST %" type="number" [(ngModel)]="gstPct"
+          (ngModelChange)="onGstPctChange()" placeholder="0"></erp-input>
         <ng-container *ngIf="isOverseas">
           <erp-input label="Shipping Cost" type="number" [(ngModel)]="shipping" placeholder="0.00"></erp-input>
           <erp-input label="Header Discount" type="number" [(ngModel)]="discount" placeholder="0.00"></erp-input>
-          <erp-input label="GST %" type="number" [(ngModel)]="gstPct" placeholder="0"></erp-input>
         </ng-container>
       </div>
     </div>
@@ -432,15 +433,10 @@
           (ngModelChange)="recalcModal()" placeholder="0"></erp-input>
       </div>
 
-      <!-- Row 4: Tax Mode, Tax Rate %, Tax Amt (readonly), Line Total (readonly) -->
-      <div class="form-row cols-4 block-gap">
-        <erp-dropdown label="Tax Mode" [options]="taxModeOptions"
-          [(ngModel)]="modalLine.taxMode" (ngModelChange)="onTaxModeChange()"></erp-dropdown>
-        <erp-input label="Tax Rate %" type="number"
-          [(ngModel)]="modalLine.taxRate" (ngModelChange)="recalcModal()"
-          placeholder="0"></erp-input>
-        <div class="readonly-field">
-          <label class="field-label">Tax Amount</label>
+      <!-- Row 4: Tax Amt (readonly), Line Total (readonly) — aligned under cols-3 above -->
+      <div class="form-row cols-3 block-gap">
+        <div class="readonly-field" style="grid-column: span 2">
+          <label class="field-label">Tax Amount <span style="font-weight:400;color:#6b7280">(GST {{ gstPct }}%)</span></label>
           <div class="readonly-val">{{ modalLine.taxAmt | number:'1.4-4' }}</div>
         </div>
         <div class="readonly-field">
@@ -449,11 +445,8 @@
         </div>
       </div>
 
-      <!-- Row 5: Budget, Remarks -->
-      <div class="form-row cols-2 block-gap">
-        <erp-dropdown label="Budget (COA)" [options]="budgetOptions"
-          [(ngModel)]="modalLine.budgetId" (ngModelChange)="onModalBudgetChange()"
-          placeholder="Select budget account…"></erp-dropdown>
+      <!-- Row 5: Remarks -->
+      <div class="form-row cols-1 block-gap">
         <erp-input label="Remarks" [(ngModel)]="modalLine.remarks" placeholder="Optional remarks"></erp-input>
       </div>
     </div>

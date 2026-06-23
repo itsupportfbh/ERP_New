@@ -130,12 +130,15 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.loadFromDraft();
     } else if (fromPR) {
       this.fromPrId = Number(fromPR);
+      if (!this.sourceType) { this.sourceType = 'PR'; this.sourceRefId = this.fromPrId; }
       this.loadFromPR(this.fromPrId);
     } else if (fromReorder) {
       this.fromReorderPrId = Number(fromReorder);
+      if (!this.sourceType) { this.sourceType = 'PR'; this.sourceRefId = this.fromReorderPrId; }
       this.loadFromPR(this.fromReorderPrId);
     } else if (fromAlert) {
       this.fromAlertPrId = Number(fromAlert);
+      if (!this.sourceType) { this.sourceType = 'PR'; this.sourceRefId = this.fromAlertPrId; }
       this.loadFromPR(this.fromAlertPrId);
     } else {
       this.tryApplyRfqDraft();
@@ -556,7 +559,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     ];
     const html = rows.filter(([, v]) => v != null && v !== '' && v !== '—')
       .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
-    Swal.fire({ title: line.itemName || 'Line Detail', html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
+    Swal.fire({ title: line.itemName || 'Line Detail', html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#1a9db8', width: 500, showCloseButton: true });
   }
 
   // ── Tax recalc ────────────────────────────────────────
@@ -689,9 +692,13 @@ export class PurchaseOrderFormComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.markClean();
-        Swal.fire('Saved', 'Purchase order saved as draft.', 'success').then(() => this.goToList());
+        Swal.fire({ icon: 'success', title: 'Saved!', text: 'Purchase order saved as draft.', confirmButtonColor: '#1a9db8' }).then(() => this.goToList());
       },
-      error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Draft save failed.'; }
+      error: (err: any) => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Draft save failed.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Draft save failed.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
@@ -724,10 +731,14 @@ export class PurchaseOrderFormComponent implements OnInit {
         if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
         const savedId = this.id ?? this.svc.unwrapOne(res)?.id ?? this.svc.unwrapOne(res)?.iD ?? null;
         if (savedId) this.svc.updateSoProcurementByPO(Number(savedId), 3).subscribe({ error: () => {} });
-        Swal.fire('Submitted!', this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', 'success')
+        Swal.fire({ icon: 'success', title: 'Submitted!', text: this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', confirmButtonColor: '#1a9db8' })
           .then(() => this.goToList());
       },
-      error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Save failed. Please try again.'; }
+      error: (err: any) => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed. Please try again.';
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed. Please try again.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
@@ -735,10 +746,10 @@ export class PurchaseOrderFormComponent implements OnInit {
   approve(status: 2 | 3): void {
     if (!this.id) return;
     const action = status === 2 ? 'Approve' : 'Reject';
-    const color = status === 2 ? '#22c55e' : '#ef4444';
     Swal.fire({
       title: `${action} PO?`, text: `${action} purchase order ${this.purchaseOrderNo}?`,
-      icon: 'question', showCancelButton: true, confirmButtonText: action, confirmButtonColor: color
+      icon: 'question', showCancelButton: true, confirmButtonText: action,
+      confirmButtonColor: '#1a9db8', cancelButtonColor: '#6b7280'
     }).then(r => {
       if (!r.isConfirmed) return;
       this.saving = true; this.error = '';
@@ -748,10 +759,13 @@ export class PurchaseOrderFormComponent implements OnInit {
       req$.subscribe({
         next: () => {
           this.saving = false; this.approvalStatus = status;
-          Swal.fire(status === 2 ? 'Approved!' : 'Rejected',
-            `PO ${status === 2 ? 'approved' : 'rejected'} successfully.`, status === 2 ? 'success' : 'info');
+          Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: `PO ${status === 2 ? 'approved' : 'rejected'} successfully.`, confirmButtonColor: '#1a9db8' });
         },
-        error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? `${action} failed.`; }
+        error: (err: any) => {
+          this.saving = false;
+          this.error = err?.error?.message ?? `${action} failed.`;
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? `${action} failed.`, confirmButtonColor: '#1a9db8' });
+        }
       });
     });
   }
@@ -764,7 +778,7 @@ export class PurchaseOrderFormComponent implements OnInit {
         text: 'You have unsaved changes. Save as draft before leaving?',
         showCancelButton: true, showDenyButton: true,
         confirmButtonText: 'Save as Draft', denyButtonText: 'Discard', cancelButtonText: 'Stay',
-        confirmButtonColor: '#0e7490'
+        confirmButtonColor: '#1a9db8'
       });
       if (result.isConfirmed) { this.saveDraft(); return; }
       if (result.isDenied) { this.goToList(); }

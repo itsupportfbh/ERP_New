@@ -204,6 +204,9 @@ export class PurchaseService {
   applyGrnToSo(grnId: number | string, updatedBy: number): Observable<any> {
     return this.http.post(`${this.api}/PurchaseGoodReceipt/apply-grn-to-so/${grnId}?updatedBy=${updatedBy}`, null);
   }
+  applyGrnUpdateSalesOrder(req: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseGoodReceipt/apply-grn-update-salesorder`, req);
+  }
   applyGrnToInventory(req: any): Observable<any> {
     return this.http.post(`${this.api}/ItemMaster/ApplyGrn`, req);
   }
@@ -309,6 +312,9 @@ export class PurchaseService {
   // ── Shared Lookups ───────────────────────────────────
   getSuppliers(): Observable<any> {
     return this.http.get(`${this.api}/Suppliers/getAllSupplier`);
+  }
+  getCountryById(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/Country/get/${id}`);
   }
   getDepartments(): Observable<any> {
     return this.http.get(`${this.api}/Department/getAll`);

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-rfq-list',
@@ -112,9 +113,49 @@ export class RfqListComponent implements OnInit {
     if (e.action === 'delete') this.delete(e.row);
   }
 
-  send(row: any): void { this.openActionConfirm(row, 'send-rfq'); }
+  async send(row: any): Promise<void> {
+    const result = await Swal.fire({
+      title: 'Send RFQ?',
+      text: `Send RFQ ${row.number} to supplier?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, send it!'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.sendRfq({ ...row, status: 'Sent' }).subscribe({
+      next: () => {
+        this.load();
+        Swal.fire({ icon: 'success', title: 'Sent!', text: `RFQ ${row.number} sent to supplier.`, confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send RFQ.', confirmButtonColor: '#1a9db8' });
+      }
+    });
+  }
 
-  delete(row: any): void { this.openActionConfirm(row, 'delete-rfq'); }
+  async delete(row: any): Promise<void> {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Delete RFQ ${row.number}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.deleteRfq(row.id).subscribe({
+      next: () => {
+        this.load();
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `RFQ ${row.number} deleted.`, confirmButtonColor: '#1a9db8' });
+      },
+      error: err => {
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete RFQ.', confirmButtonColor: '#1a9db8' });
+      }
+    });
+  }
 
   openActionConfirm(row: any, type: string): void {
     this.actionRow = row; this.actionType = type; this.actionError = ''; this.showActionConfirm = true;
@@ -126,13 +167,25 @@ export class RfqListComponent implements OnInit {
     const row = this.actionRow;
     if (this.actionType === 'send-rfq') {
       this.svc.sendRfq({ ...row, status: 'Sent' }).subscribe({
-        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
-        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to send RFQ.'; }
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load();
+          Swal.fire({ icon: 'success', title: 'Sent!', text: `RFQ ${row.number} sent to supplier.`, confirmButtonColor: '#1a9db8' });
+        },
+        error: err => {
+          this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to send RFQ.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send RFQ.', confirmButtonColor: '#1a9db8' });
+        }
       });
     } else if (this.actionType === 'delete-rfq') {
       this.svc.deleteRfq(row.id).subscribe({
-        next: () => { this.actionLoading = false; this.closeActionConfirm(); this.load(); },
-        error: err => { this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete RFQ.'; }
+        next: () => {
+          this.actionLoading = false; this.closeActionConfirm(); this.load();
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `RFQ ${row.number} deleted.`, confirmButtonColor: '#1a9db8' });
+        },
+        error: err => {
+          this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete RFQ.';
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete RFQ.', confirmButtonColor: '#1a9db8' });
+        }
       });
     }
   }

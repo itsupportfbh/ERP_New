@@ -74,6 +74,11 @@ export class SalesService {
       {}
     );
   }
+  getAvailability(locationId: number, itemId: number, supplyMethodId: number): Observable<any> {
+    return this.http.get(
+      `${this.api}/SalesOrder/availability?locationId=${locationId}&itemId=${itemId}&supplyMethodId=${supplyMethodId}`
+    );
+  }
 
   // ── Picking / Packing ────────────────────────────────
   getPackings(): Observable<any> {

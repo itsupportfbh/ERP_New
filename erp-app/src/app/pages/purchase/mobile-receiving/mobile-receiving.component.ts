@@ -1,5 +1,6 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { PurchaseService } from '../purchase.service';
+import Swal from 'sweetalert2';
 
 type ScanRow = {
   ts: Date;
@@ -119,15 +120,30 @@ export class MobileReceivingComponent implements OnInit {
         this.mrRows = [];
         localStorage.removeItem(this.offlineKey());
         this.loadPo();
+        Swal.fire({ icon: 'success', title: 'Sync Complete!', text: 'All scans synced. Desktop GRN updated.', confirmButtonColor: '#1a9db8' });
       },
-      error: (err: any) => { this.isSyncing = false; this.error = err?.error?.message ?? 'Sync failed.'; }
+      error: (err: any) => {
+        this.isSyncing = false;
+        this.error = err?.error?.message ?? 'Sync failed.';
+        Swal.fire({ icon: 'error', title: 'Sync Failed', text: err?.error?.message ?? 'Sync failed. Please try again.', confirmButtonColor: '#1a9db8' });
+      }
     });
   }
 
   removeScan(i: number): void { this.mrRows.splice(i, 1); this.saveOffline(); }
 
-  clearQueue(): void {
-    if (!this.mrRows.length || !confirm('Clear all queued scans?')) return;
+  async clearQueue(): Promise<void> {
+    if (!this.mrRows.length) return;
+    const result = await Swal.fire({
+      title: 'Clear Queue?',
+      text: 'Clear all queued scans? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#1a9db8',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, clear all!'
+    });
+    if (!result.isConfirmed) return;
     this.mrRows = [];
     this.saveOffline();
     this.focusBarcode();

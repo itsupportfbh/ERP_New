@@ -61,6 +61,9 @@ type UiLine = {
   isSellable?: boolean;
   isConsumable?: boolean;
   allowManualFulfillment?: boolean;
+
+  availability?: number;
+  shortageQty?: number;
 };
 
 const STATUS_MAP: Record<number, string> = {
@@ -202,6 +205,8 @@ export class SalesOrderFormComponent implements OnInit {
   private lastAutoRemarks: string | null = null;
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+  private locationId = Number(localStorage.getItem('locationId') || 0);
+  private availabilityCache = new Map<string, number>();
 
   @ViewChild('customerBox') customerBox!: ElementRef<HTMLElement>;
   @ViewChild('currencyBox') currencyBox!: ElementRef<HTMLElement>;
@@ -1131,6 +1136,7 @@ export class SalesOrderFormComponent implements OnInit {
     this.lines.push(payload);
     this.computeTotals();
     this.loadFlagsForLines([payload]);
+    this.fetchAvailabilityForLine(payload);
     this.closeModal();
   }
 
@@ -1140,6 +1146,60 @@ export class SalesOrderFormComponent implements OnInit {
     if (l.isSetHeader && l.itemSetId) { this.removeItemSet(l.itemSetId); return; }
     this.lines.splice(i, 1);
     this.computeTotals();
+  }
+
+  // ── Availability (Direct DO stock check) ─────────────
+  private fetchAvailabilityForLine(ln: UiLine, done?: () => void): void {
+    const locId = this.locationId;
+    const itemId = Number(ln.itemId || 0);
+    const sm = Number(ln.fulfillmentMode || 0);
+
+    if (sm !== 2 || itemId <= 0 || locId <= 0) {
+      ln.availability = undefined;
+      ln.shortageQty = 0;
+      done?.();
+      return;
+    }
+
+    const key = `${itemId}|${sm}`;
+    if (this.availabilityCache.has(key)) {
+      ln.availability = this.availabilityCache.get(key)!;
+      ln.shortageQty = Math.max((Number(ln.qty) || 0) - ln.availability, 0);
+      done?.();
+      return;
+    }
+
+    this.svc.getAvailability(locId, itemId, sm).subscribe({
+      next: (res: any) => {
+        const rows: any[] = res?.data ?? res ?? [];
+        const avl = Number(rows[0]?.available ?? 0) || 0;
+        this.availabilityCache.set(key, avl);
+        ln.availability = avl;
+        ln.shortageQty = Math.max((Number(ln.qty) || 0) - avl, 0);
+        done?.();
+      },
+      error: () => { ln.availability = 0; ln.shortageQty = 0; done?.(); }
+    });
+  }
+
+  private async ensureAvailabilityBeforeSave(): Promise<void> {
+    const promises: Promise<void>[] = [];
+    for (const ln of this.lines) {
+      if (ln.isSetHeader || ln.fulfillmentMode !== 2) continue;
+      if (ln.availability !== undefined && ln.availability !== null) continue;
+      promises.push(new Promise<void>(resolve => this.fetchAvailabilityForLine(ln, resolve)));
+    }
+    if (promises.length) await Promise.all(promises);
+  }
+
+  private getDirectDoShortageLines(): UiLine[] {
+    return this.lines.filter(ln => {
+      if (ln.isSetHeader || ln.fulfillmentMode !== 2) return false;
+      const req = Number(ln.qty || 0);
+      const avl = Number(ln.availability ?? 0);
+      ln.shortageQty = req > 0 ? Math.max(req - avl, 0) : 0;
+      return req > 0 && ln.shortageQty > 0;
+    });
   }
 
   // ── Save ─────────────────────────────────────────────
@@ -1221,14 +1281,39 @@ export class SalesOrderFormComponent implements OnInit {
     };
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     for (const l of this.lines) {
       if (l.isSetHeader) continue;
       this.applyAutoFulfillmentIfEmpty(l);
     }
     if (!this.validateBeforeSave()) return;
-    this.saving = true;
 
+    // Step 1: fetch availability for any Direct DO lines missing it
+    await this.ensureAvailabilityBeforeSave();
+
+    // Step 2: check shortage — only Direct DO lines with insufficient stock
+    const shortageLines = this.getDirectDoShortageLines();
+
+    if (shortageLines.length) {
+      const txt = shortageLines
+        .map(l => `${l.itemName || this.getItemName(l.itemId)} | Req: ${l.qty} | Avl: ${l.availability ?? 0}`)
+        .join('\n');
+
+      const confirm = await Swal.fire({
+        icon: 'warning',
+        title: 'Stock Not Available',
+        text: `Some Direct DO items do not have enough stock.\n\n${txt}\n\nPR will be auto-created. Continue?`,
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Continue',
+        cancelButtonText: 'No',
+        confirmButtonColor: '#0e3a4c'
+      });
+
+      if (!confirm.isConfirmed) return;
+    }
+
+    // Step 3: save the SO
+    this.saving = true;
     const payload = this.buildPayload();
     const obs$ = this.isEdit
       ? this.svc.updateSalesOrder({ Id: this.id, ...payload })
@@ -1238,43 +1323,27 @@ export class SalesOrderFormComponent implements OnInit {
       next: (res: any) => {
         this.saving = false;
         const soId = this.isEdit ? this.id! : (res?.data ?? res?.id ?? res);
-        const hasDirectDo = this.lines.some(l => !l.isSetHeader && l.fulfillmentMode === 2);
-        if (!hasDirectDo || this.isEdit) {
+
+        // Step 4: if shortage → auto-create PR, else navigate back
+        if (!shortageLines.length) {
           void Swal.fire('Success', 'Sales Order saved successfully.', 'success').then(() => this.back());
           return;
         }
-        void Swal.fire({
-          icon: 'question',
-          title: 'Stock Shortage Check',
-          text: 'Do you want to auto-create a Purchase Requisition for Direct DO shortage items?',
-          showCancelButton: true,
-          confirmButtonText: 'Yes, Create PR',
-          cancelButtonText: 'Skip',
-          confirmButtonColor: '#0066cc'
-        }).then(result => {
-          if (!result.isConfirmed) {
-            void Swal.fire('Success', 'Sales Order saved.', 'success').then(() => this.back());
-            return;
+
+        this.svc.triggerAutoPr(Number(soId), Number(this.loginUserId) || 1, this.locationId).subscribe({
+          next: (prRes: any) => {
+            const data = prRes?.data ?? prRes;
+            const created = data?.created ?? data?.Created ?? false;
+            const prNo = data?.purchaseRequestNo ?? data?.PurchaseRequestNo ?? '';
+            let html = 'Sales Order saved successfully.';
+            if (created) html += `<br/><br/><b>PR Auto Created</b>${prNo ? '<br/>PR No: ' + prNo : ''}`;
+            void Swal.fire({ icon: 'success', title: 'Success', html, confirmButtonColor: '#0e3a4c' })
+              .then(() => { if (created) this.router.navigate(['/app/purchase/requests']); else this.back(); });
+          },
+          error: () => {
+            void Swal.fire('Success', 'Sales Order saved. PR creation failed — please create manually.', 'warning')
+              .then(() => this.back());
           }
-          const userId = Number(localStorage.getItem('id')) || 1;
-          const locationId = Number(localStorage.getItem('locationId')) || 0;
-          this.svc.triggerAutoPr(Number(soId), userId, locationId).subscribe({
-            next: (prRes: any) => {
-              const data = prRes?.data ?? prRes;
-              const created = data?.created ?? data?.Created ?? false;
-              if (created) {
-                const prNo = data?.purchaseRequestNo ?? data?.PurchaseRequestNo ?? '';
-                void Swal.fire('PR Created', `Purchase Requisition ${prNo} created successfully.`, 'success')
-                  .then(() => this.router.navigate(['/app/purchase/requests']));
-              } else {
-                const msg = data?.message ?? data?.Message ?? 'No stock shortage detected.';
-                void Swal.fire('No Shortage', msg, 'info').then(() => this.back());
-              }
-            },
-            error: () => {
-              void Swal.fire('Error', 'Failed to create PR. Please create manually.', 'error').then(() => this.back());
-            }
-          });
         });
       },
       error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed. Please try again.', 'error'); }
