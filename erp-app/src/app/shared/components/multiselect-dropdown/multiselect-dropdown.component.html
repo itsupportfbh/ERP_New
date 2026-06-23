@@ -26,7 +26,7 @@
     <div class="dd-list">
       <div class="dd-item"
            *ngFor="let opt of filteredOptions"
-           (click)="toggleOption(opt)">
+           (mousedown)="toggleOption(opt, $event)">
         <span class="dd-checkbox" [class.checked]="isSelected(opt.value)">
           <span *ngIf="isSelected(opt.value)">&#x2714;</span>
         </span>

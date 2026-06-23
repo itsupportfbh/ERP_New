@@ -1,11 +1,8 @@
 <div class="page-container">
   <div class="page-header">
-    <div class="btn-group">
-      <button class="btn btn-outline btn-sm" (click)="load()">Refresh</button>
-      <button class="btn btn-outline btn-sm" *ngIf="canEdit()" [disabled]="selectedRows.length !== 1" (click)="edit()">Edit</button>
-      <button class="btn btn-danger btn-sm" *ngIf="canDelete()" [disabled]="selectedRows.length !== 1" (click)="deleteSelected()">Delete</button>
-      <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="create()">+ New {{ activeTab === 'customers' ? 'Customer' : activeTab === 'suppliers' ? 'Supplier' : 'User' }}</button>
-    </div>
+    <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="create()">
+      + New {{ activeTab === 'customers' ? 'Customer' : activeTab === 'suppliers' ? 'Supplier' : 'User' }}
+    </button>
   </div>
 
   <div class="card filter-bar">
@@ -25,13 +22,11 @@
       [columns]="columns"
       [data]="tableData"
       [loading]="loading"
-      [selectable]="true"
       [rowKey]="rowKey"
       [rowActions]="rowActions"
       rowActionsHeader="Action"
       (rowClick)="onRowClick($event)"
       (actionClick)="onActionClick($event)"
-      (selectionChange)="onSelection($event)"
       (sortChange)="onSort($event)">
     </erp-table>
     <erp-pager

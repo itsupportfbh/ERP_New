@@ -42,7 +42,10 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
           <div class="mf-group"><label class="mf-label">Warehouse Name</label><input class="mf-input" type="text" [(ngModel)]="form.name" name="name" placeholder="Warehouse Name"/></div>
           <div class="mf-group"><label class="mf-label">Phone</label><input class="mf-input" type="text" [(ngModel)]="form.phone" name="phone" placeholder="Phone"/></div>
-          <div class="mf-group"><label class="mf-label">Location <span style="color:red">*</span></label><select class="mf-select" [(ngModel)]="form.locationId" name="locationId" (ngModelChange)="onLocationChange()"><option [ngValue]="null">-- Select Location --</option><option *ngFor="let item of locations" [ngValue]="item.id">{{ item.name || item.locationName }}</option></select></div>
+          <div class="mf-group"><label class="mf-label">Location <span style="color:red">*</span></label><erp-dropdown name="locationId" [(ngModel)]="form.locationId"
+            [items]="locations" bindLabel="name" bindValue="id"
+            placeholder="-- Select Location --" (ngModelChange)="onLocationChange()">
+          </erp-dropdown></div>
           <div class="mf-group"><label class="mf-label">Description</label><input class="mf-input" type="text" [(ngModel)]="form.description" name="description" placeholder="Description"/></div>
           <div class="mf-group" style="grid-column:1/-1"><label class="mf-label">Address</label><input class="mf-input" type="text" [(ngModel)]="form.address" name="address" placeholder="Address"/></div>
           <div class="mf-group" style="grid-column:1/-1">

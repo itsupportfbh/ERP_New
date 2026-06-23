@@ -41,11 +41,7 @@ export class ItemMasterListComponent implements OnInit {
     { key: 'uomName', header: 'UOM', sortable: true }
   ];
 
-  rowActions: RowAction[] = [
-    { key: 'view', label: 'View', icon: 'view', btnClass: 'view-action' },
-    { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'warning' },
-    { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' }
-  ];
+  rowActions: RowAction[] = [];
 
   // paging + search
   pageSizes = [10, 25, 50, 100];
@@ -66,7 +62,8 @@ export class ItemMasterListComponent implements OnInit {
   selectedAudit: any | null = null;
   userId: number = 0;
   functionId = 'im-list';
-  
+  userCompanyId: number = 0;
+
     permission: FunctionPermission;
     isPermissionLoaded = false;
     isPageLoading = false;
@@ -74,10 +71,20 @@ export class ItemMasterListComponent implements OnInit {
     private router: Router, private permissionService: PermissionService)
      {
        this.userId = Number(localStorage.getItem('id') || 0);
+       this.userCompanyId = Number(localStorage.getItem('companyId') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
      }
 
+  get isRootCompany(): boolean { return this.userCompanyId === 1; }
+
   ngOnInit(): void {
+    this.rowActions = [
+      { key: 'view', label: 'View', icon: 'view', btnClass: 'view-action' },
+      ...(this.isRootCompany ? [
+        { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'warning' } as RowAction,
+        { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' } as RowAction
+      ] : [])
+    ];
     this.loadPermission();
   }
 
@@ -195,15 +202,15 @@ export class ItemMasterListComponent implements OnInit {
     }
   
     canCreate(): boolean {
-      return this.permissionService.hasCreate(this.permission);
+      return this.isRootCompany && this.permissionService.hasCreate(this.permission);
     }
-  
+
     canEdit(): boolean {
-      return this.permissionService.hasEdit(this.permission);
+      return this.isRootCompany && this.permissionService.hasEdit(this.permission);
     }
-  
+
     canDelete(): boolean {
-      return this.permissionService.hasDelete(this.permission);
+      return this.isRootCompany && this.permissionService.hasDelete(this.permission);
     }
   /** Search filter across common fields */
   applyFilter(): void {

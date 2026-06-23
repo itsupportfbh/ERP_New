@@ -1,6 +1,8 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 interface DoLine {
   soLineId: number | null;
@@ -29,8 +31,6 @@ export class DeliveryOrderFormComponent implements OnInit {
   id: number | null = null;
   loading = false;
   saving = false;
-  error = '';
-  success = '';
   status = 0;
   isPosted = false;
 
@@ -72,10 +72,12 @@ export class DeliveryOrderFormComponent implements OnInit {
 
   loginUserId = Number(localStorage.getItem('id')) || null;
 
+  readonly fnId = 'do-list2';
   constructor(
     private svc: SalesService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    public perm: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -130,7 +132,6 @@ export class DeliveryOrderFormComponent implements OnInit {
     const sid = Number(this.soId);
     if (!sid || sid <= 0) { this.resetSo(); return; }
     this.loading = true;
-    this.error = '';
     this.svc.getSalesOrderById(sid).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
@@ -159,9 +160,26 @@ export class DeliveryOrderFormComponent implements OnInit {
             supplierId: (l.supplierId ?? l.SupplierId) != null ? Number(l.supplierId ?? l.SupplierId) : null
           } as DoLine;
         });
+
+        const soStatus = Number(d.status ?? d.Status ?? 0);
+        const hasDirectDoShortage = arr.some((l: any) => {
+          const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
+          const sq = Number(l.shortageQty ?? l.ShortageQty ?? 0);
+          return sm === 2 && sq > 0;
+        });
+        if (soStatus === 1 || hasDirectDoShortage) {
+          void Swal.fire({
+            icon: 'warning',
+            title: 'Stock Not Yet Received',
+            text: 'This Sales Order has Direct DO items where stock has not been fully received yet. Delivery may be incomplete.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#e67e22'
+          }).then(() => this.clear());
+        }
+
         this.loading = false;
       },
-      error: () => { this.loading = false; this.error = 'Unable to load sales order lines.'; }
+      error: () => { this.loading = false; void Swal.fire('Error', 'Unable to load sales order lines.', 'error'); }
     });
   }
 
@@ -286,13 +304,11 @@ export class DeliveryOrderFormComponent implements OnInit {
 
   // ── Save ──────────────────────────────────────────────
   submit(): void {
-    if (this.isPosted) { this.error = 'This delivery order is already posted.'; return; }
-    if (!this.soId) { this.error = 'Please select a Sales Order.'; return; }
+    if (this.isPosted) { void Swal.fire('Validation', 'This delivery order is already posted.', 'warning'); return; }
+    if (!this.soId) { void Swal.fire('Validation', 'Please select a Sales Order.', 'warning'); return; }
     const anyQty = this.lines.some(l => (Number(l.deliverQty) || 0) > 0);
-    if (!anyQty) { this.error = 'Enter at least one deliver quantity.'; return; }
+    if (!anyQty) { void Swal.fire('Validation', 'Enter at least one deliver quantity.', 'warning'); return; }
     this.saving = true;
-    this.error = '';
-    this.success = '';
 
     if (this.isEdit) {
       const header: any = {
@@ -308,7 +324,7 @@ export class DeliveryOrderFormComponent implements OnInit {
       };
       this.svc.updateDeliveryOrderHeader(this.id!, header).subscribe({
         next: () => { this.saving = false; this.back(); },
-        error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+        error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed.', 'error'); }
       });
       return;
     }
@@ -344,7 +360,7 @@ export class DeliveryOrderFormComponent implements OnInit {
 
     this.svc.createDeliveryOrder(payload).subscribe({
       next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Failed to create delivery order.'; }
+      error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Failed to create delivery order.', 'error'); }
     });
   }
 
@@ -357,7 +373,6 @@ export class DeliveryOrderFormComponent implements OnInit {
     this.driverMobileNo = '';
     this.receivedPersonName = this.receivedPersonMobileNo = '';
     this.receivedSignature = null;
-    this.error = this.success = '';
   }
 
   // ── Helpers ───────────────────────────────────────────

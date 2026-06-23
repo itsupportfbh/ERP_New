@@ -12,18 +12,16 @@
   </div>
 
   <div class="loading-row" *ngIf="loading">Loading…</div>
-  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
-  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
 
   <!-- Sales Order + codes -->
   <div class="card pk-card">
     <div class="pk-grid3">
       <div class="mf-group">
         <label class="mf-label">Sales Order <span class="req">*</span></label>
-        <select class="mf-select" [(ngModel)]="soId" name="soId" (change)="onSoChange()" [disabled]="isEdit">
-          <option [ngValue]="null">Select sales order…</option>
-          <option *ngFor="let so of soOptions" [ngValue]="so.id">{{ so.label }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="soId" name="soId"
+          [items]="soOptions" bindLabel="label" bindValue="id"
+          placeholder="Select sales order…"
+          [disabled]="isEdit" (ngModelChange)="onSoChange()"></erp-dropdown>
       </div>
       <div class="mf-group">
         <label class="mf-label">SO Date</label>
@@ -91,10 +89,9 @@
             <input type="number" class="mf-input pk-qty" [(ngModel)]="r.qty" name="qty{{i}}" min="0" />
           </td>
           <td>
-            <select class="mf-select pk-carton" [(ngModel)]="r.cartonId" name="carton{{i}}">
-              <option [ngValue]="null">Select carton…</option>
-              <option *ngFor="let c of cartonOptions" [ngValue]="c.id">{{ c.name }}</option>
-            </select>
+            <erp-dropdown [(ngModel)]="r.cartonId"
+              [items]="cartonOptions" bindLabel="name" bindValue="id"
+              placeholder="Select carton…"></erp-dropdown>
           </td>
         </tr>
         <tr *ngIf="!rows.length">
@@ -114,7 +111,7 @@
   <!-- Footer -->
   <div class="pk-foot">
     <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
-    <button class="btn btn-primary" type="button" [disabled]="saving || !rows.length" (click)="submit()">
+    <button *ngIf="(isEdit && perm.canEdit(fnId)) || (!isEdit && perm.canCreate(fnId))" class="btn btn-primary" type="button" [disabled]="saving || !rows.length" (click)="submit()">
       {{ saving ? 'Saving…' : (isEdit ? 'Update Picking' : 'Save Picking') }}
     </button>
   </div>

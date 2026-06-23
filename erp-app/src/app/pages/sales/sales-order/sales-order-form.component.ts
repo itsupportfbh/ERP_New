@@ -8,6 +8,8 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 type LineTaxMode = 'Standard-Rated' | 'Zero-Rated' | 'Exempt';
 type LineSourceId = 1 | 2 | 3;
@@ -78,8 +80,6 @@ export class SalesOrderFormComponent implements OnInit {
   id: number | null = null;
   loading = false;
   saving = false;
-  error = '';
-  success = '';
 
   number = '';
   minDate = '';
@@ -156,6 +156,7 @@ export class SalesOrderFormComponent implements OnInit {
   itemSetDdOpen = false;
   filteredItemSets: ItemSetHeaderRow[] = [];
   selectedItemSets: ItemSetHeaderRow[] = [];
+  selectedPackageIds: number[] = [];
 
   // ── Lines ────────────────────────────────────────────
   lines: UiLine[] = [];
@@ -183,6 +184,17 @@ export class SalesOrderFormComponent implements OnInit {
     filteredItems: [] as SimpleItem[]
   };
 
+  lineSourceOptions = [
+    { value: 1, label: 'Items / Custom Selection' },
+    { value: 2, label: 'Bundle Packages' }
+  ];
+
+  fulfillmentOptions: { value: number | null; label: string }[] = [
+    { value: null, label: 'Select' },
+    { value: 1, label: 'PP' },
+    { value: 2, label: 'Direct DO' }
+  ];
+
   // ── internal trackers ───────────────────────────────
   private loadedItemSetIds = new Set<number>();
   private uomNameToId = new Map<string, number>();
@@ -197,10 +209,12 @@ export class SalesOrderFormComponent implements OnInit {
   @ViewChild('itemSetBox') itemSetBox!: ElementRef<HTMLElement>;
   @ViewChild('modalItemBox') modalItemBox!: ElementRef<HTMLElement>;
 
+  readonly fnId = 'so-list';
   constructor(
     private svc: SalesService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    public perm: PermissionService
   ) {}
 
   // ── Lifecycle ────────────────────────────────────────
@@ -314,6 +328,14 @@ export class SalesOrderFormComponent implements OnInit {
     const gst = +this.header.taxPct || 0;
     if (gst === 9) return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
     return ['Zero-Rated'];
+  }
+
+  get taxModeItems(): { value: LineTaxMode; label: string }[] {
+    return this.taxModesForCurrentGst.map(m => ({ value: m, label: m }));
+  }
+
+  get packageOptions(): { label: string; value: any }[] {
+    return (this.itemSets || []).map(s => ({ label: s.setName, value: s.id }));
   }
 
   // ── Date helpers ─────────────────────────────────────
@@ -473,7 +495,7 @@ export class SalesOrderFormComponent implements OnInit {
         this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
         this.loading = false;
       },
-      error: () => { this.loading = false; this.error = 'Unable to load quotation details.'; }
+      error: () => { this.loading = false; void Swal.fire('Error', 'Unable to load quotation details.', 'error'); }
     });
   }
 
@@ -500,6 +522,12 @@ export class SalesOrderFormComponent implements OnInit {
     }
     if (dto.deliveryDate ?? dto.DeliveryDate) this.header.deliveryDate = this.toDateInputValue(dto.deliveryDate ?? dto.DeliveryDate);
     if (dto.remarks ?? dto.Remarks) this.header.remarks = String(dto.remarks ?? dto.Remarks);
+    if (dto.deliveryTo ?? dto.DeliveryTo) this.header.deliveryTo = String(dto.deliveryTo ?? dto.DeliveryTo);
+    if (dto.orderTime ?? dto.OrderTime) this.header.orderTime = String(dto.orderTime ?? dto.OrderTime);
+    const taxPct = dto.taxPct ?? dto.TaxPct ?? dto.gstPct ?? dto.GstPct ?? dto.taxPercent ?? dto.TaxPercent;
+    if (taxPct != null) this.header.taxPct = Number(taxPct);
+    const srcId = dto.lineSourceId ?? dto.LineSourceId;
+    if (srcId != null) this.header.lineSourceId = Number(srcId) as LineSourceId;
   }
 
   // ── Item flags ───────────────────────────────────────
@@ -531,15 +559,12 @@ export class SalesOrderFormComponent implements OnInit {
 
   private applyAutoFulfillmentIfEmpty(l: UiLine): void {
     if (l.isSetHeader) return;
-    if (l.fulfillmentMode !== null && l.fulfillmentMode !== undefined && (l.fulfillmentMode as any) !== '') {
-      l.fulfillmentMode = Number(l.fulfillmentMode);
-      return;
-    }
+    if (l.fulfillmentMode === 1 || l.fulfillmentMode === 2) return;
     const isSellable = !!l.isSellable;
     const isConsumable = !!l.isConsumable;
     if (isSellable && !isConsumable) l.fulfillmentMode = 2;
     else if (!isSellable && isConsumable) l.fulfillmentMode = 1;
-    else l.fulfillmentMode = null;
+    else l.fulfillmentMode = 2;
   }
 
   onFulfillmentChanged(l: UiLine, i: number): void {
@@ -653,18 +678,18 @@ export class SalesOrderFormComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        this.error = 'Unable to load sales order for edit.';
+        void Swal.fire('Error', 'Unable to load sales order for edit.', 'error');
       }
     });
   }
 
   private getRawFulfillment(src: any): number | null {
-    const raw = src?.fulfillmentMode ?? src?.FulfillmentMode ??
+    const raw = src?.supplyMethod ?? src?.SupplyMethod ??
       src?.supplyMethodId ?? src?.SupplyMethodId ??
-      src?.supplyMethod ?? src?.SupplyMethod ?? null;
+      src?.fulfillmentMode ?? src?.FulfillmentMode ?? null;
     if (raw === null || raw === undefined || raw === '') return null;
     const n = Number(raw);
-    return Number.isNaN(n) ? null : n;
+    return (n === 1 || n === 2) ? n : null;
   }
 
   private makeSetHeader(itemSetId: number, setName: string): UiLine {
@@ -683,6 +708,7 @@ export class SalesOrderFormComponent implements OnInit {
 
     if (src === 1) {
       this.selectedItemSets = [];
+      this.selectedPackageIds = [];
       this.itemSetSearch = '';
       this.lines = this.lines.filter(l => !l.isFromSet && !l.isSetHeader);
       this.loadedItemSetIds.clear();
@@ -851,9 +877,23 @@ export class SalesOrderFormComponent implements OnInit {
   }
   removeItemSet(setId: number): void {
     this.selectedItemSets = this.selectedItemSets.filter(s => s.id !== setId);
+    this.selectedPackageIds = this.selectedPackageIds.filter(id => id !== setId);
     this.lines = this.lines.filter(l => l.itemSetId !== setId);
     this.loadedItemSetIds.delete(setId);
     this.computeTotals();
+  }
+
+  onPackageSelectionChange(newIds: number[]): void {
+    const oldIds = this.selectedItemSets.map(s => s.id);
+    const added = newIds.filter(id => !oldIds.includes(id));
+    for (const id of added) {
+      const set = this.itemSets.find(s => s.id === id);
+      if (set) this.addItemSetDirect(set);
+    }
+    const removed = oldIds.filter(id => !newIds.includes(id));
+    for (const id of removed) {
+      this.removeItemSet(id);
+    }
   }
 
   private loadItemSetItemsAndAppend(itemSetId: number, setName: string): void {
@@ -1048,6 +1088,12 @@ export class SalesOrderFormComponent implements OnInit {
     this.modal.dropdownOpen = false;
     this.previewLineTotals();
   }
+
+  onModalItemSelect(id: number | null): void {
+    const row = id ? this.itemsList.find(x => x.id === id) : null;
+    this.modal.uomId = row ? ((row.uomId ?? null) as any) : null;
+    this.previewLineTotals();
+  }
   previewLineTotals(): void {
     const qty = +(this.modal.qty ?? 0);
     const price = +(this.modal.unitPrice ?? 0);
@@ -1062,12 +1108,11 @@ export class SalesOrderFormComponent implements OnInit {
     this.modalPreview = (qty > 0 || price > 0 || discPct > 0) ? { net, tax, total } : null;
   }
   addLineFromModal(): void {
-    if (!this.modal.itemId) { this.error = 'Item is required.'; return; }
+    if (!this.modal.itemId) { void Swal.fire('Validation', 'Item is required.', 'warning'); return; }
     if (this.modal.fulfillmentMode === null || this.modal.fulfillmentMode === undefined) {
-      this.error = 'Please select a Fulfillment Mode.';
+      void Swal.fire('Validation', 'Please select a Fulfillment Mode.', 'warning');
       return;
     }
-    this.error = '';
     const payload: UiLine = {
       itemId: this.modal.itemId,
       itemName: this.modal.itemSearch,
@@ -1100,19 +1145,19 @@ export class SalesOrderFormComponent implements OnInit {
   // ── Save ─────────────────────────────────────────────
   private validateBeforeSave(): boolean {
     if (!this.header.customerId && !this.header.isCashSales) {
-      this.error = 'Please select a Customer.'; return false;
+      void Swal.fire('Validation', 'Please select a Customer.', 'warning'); return false;
     }
-    if (!this.header.deliveryDate) { this.error = 'Please set a Delivery Date.'; return false; }
+    if (!this.header.deliveryDate) { void Swal.fire('Validation', 'Please set a Delivery Date.', 'warning'); return false; }
     const itemRows = this.lines.filter(l => !l.isSetHeader);
-    if (!itemRows.length) { this.error = 'Please add at least one line.'; return false; }
+    if (!itemRows.length) { void Swal.fire('Validation', 'Please add at least one line.', 'warning'); return false; }
     for (let idx = 0; idx < itemRows.length; idx++) {
       const l = itemRows[idx];
       const q = l.qty == null ? 0 : +l.qty;
       const p = l.unitPrice == null ? 0 : +l.unitPrice;
       const name = l.itemName || this.getItemName(l.itemId) || `Line ${idx + 1}`;
-      if (q <= 0 || p <= 0) { this.error = `Please enter Qty & Unit Price for ${name}.`; return false; }
+      if (q <= 0 || p <= 0) { void Swal.fire('Validation', `Please enter Qty & Unit Price for ${name}.`, 'warning'); return false; }
       if (l.fulfillmentMode === null || l.fulfillmentMode === undefined || l.fulfillmentMode === 0) {
-        this.error = `Please select Fulfillment (PP / Direct DO) for ${name}.`; return false;
+        void Swal.fire('Validation', `Please select Fulfillment (PP / Direct DO) for ${name}.`, 'warning'); return false;
       }
     }
     return true;
@@ -1177,15 +1222,12 @@ export class SalesOrderFormComponent implements OnInit {
   }
 
   submit(): void {
-    if (!this.validateBeforeSave()) return;
-    this.saving = true;
-    this.error = '';
-    this.success = '';
-
     for (const l of this.lines) {
       if (l.isSetHeader) continue;
       this.applyAutoFulfillmentIfEmpty(l);
     }
+    if (!this.validateBeforeSave()) return;
+    this.saving = true;
 
     const payload = this.buildPayload();
     const obs$ = this.isEdit
@@ -1193,16 +1235,55 @@ export class SalesOrderFormComponent implements OnInit {
       : this.svc.createSalesOrder(payload);
 
     obs$.subscribe({
-      next: () => { this.saving = false; this.success = 'Sales Order saved successfully.'; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed. Please try again.'; }
+      next: (res: any) => {
+        this.saving = false;
+        const soId = this.isEdit ? this.id! : (res?.data ?? res?.id ?? res);
+        const hasDirectDo = this.lines.some(l => !l.isSetHeader && l.fulfillmentMode === 2);
+        if (!hasDirectDo || this.isEdit) {
+          void Swal.fire('Success', 'Sales Order saved successfully.', 'success').then(() => this.back());
+          return;
+        }
+        void Swal.fire({
+          icon: 'question',
+          title: 'Stock Shortage Check',
+          text: 'Do you want to auto-create a Purchase Requisition for Direct DO shortage items?',
+          showCancelButton: true,
+          confirmButtonText: 'Yes, Create PR',
+          cancelButtonText: 'Skip',
+          confirmButtonColor: '#0066cc'
+        }).then(result => {
+          if (!result.isConfirmed) {
+            void Swal.fire('Success', 'Sales Order saved.', 'success').then(() => this.back());
+            return;
+          }
+          const userId = Number(localStorage.getItem('id')) || 1;
+          const locationId = Number(localStorage.getItem('locationId')) || 0;
+          this.svc.triggerAutoPr(Number(soId), userId, locationId).subscribe({
+            next: (prRes: any) => {
+              const data = prRes?.data ?? prRes;
+              const created = data?.created ?? data?.Created ?? false;
+              if (created) {
+                const prNo = data?.purchaseRequestNo ?? data?.PurchaseRequestNo ?? '';
+                void Swal.fire('PR Created', `Purchase Requisition ${prNo} created successfully.`, 'success')
+                  .then(() => this.router.navigate(['/app/purchase/requests']));
+              } else {
+                const msg = data?.message ?? data?.Message ?? 'No stock shortage detected.';
+                void Swal.fire('No Shortage', msg, 'info').then(() => this.back());
+              }
+            },
+            error: () => {
+              void Swal.fire('Error', 'Failed to create PR. Please create manually.', 'error').then(() => this.back());
+            }
+          });
+        });
+      },
+      error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed. Please try again.', 'error'); }
     });
   }
 
   approve(status: number): void {
     if (!this.id) return;
     this.saving = true;
-    this.error = '';
-    this.success = '';
     const obs$ = status === 2
       ? this.svc.approveSalesOrder(this.id)
       : this.svc.rejectSalesOrder(this.id);
@@ -1210,9 +1291,9 @@ export class SalesOrderFormComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.header.status = status;
-        this.success = status === 2 ? 'Sales Order approved.' : 'Sales Order rejected.';
+        void Swal.fire('Success', status === 2 ? 'Sales Order approved.' : 'Sales Order rejected.', 'success');
       },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Update failed.'; }
+      error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Update failed.', 'error'); }
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { Component, Input, forwardRef, HostListener, ElementRef, ViewChild, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface DropdownOption { label: string; value: any; }
@@ -14,10 +14,13 @@ export interface DropdownOption { label: string; value: any; }
     multi: true
   }]
 })
-export class DropdownComponent implements ControlValueAccessor {
+export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestroy {
   @Input() label = '';
   @Input() placeholder = 'Select...';
   @Input() options: DropdownOption[] = [];
+  @Input() items: any[] = [];
+  @Input() bindLabel = 'label';
+  @Input() bindValue = 'value';
   @Input() required = false;
   @Input() disabled = false;
   @Input() errorMsg = '';
@@ -33,16 +36,40 @@ export class DropdownComponent implements ControlValueAccessor {
   onChange = (_: any) => {};
   onTouched = () => {};
 
-  constructor(private el: ElementRef) {}
+  constructor(private el: ElementRef, private ngZone: NgZone) {}
+
+  private readonly closeOnDocMousedown = (e: MouseEvent) => {
+    if (!this.el.nativeElement.contains(e.target as Node)) {
+      this.ngZone.run(() => { this.open = false; });
+    }
+  };
+
+  ngOnInit(): void {
+    document.addEventListener('mousedown', this.closeOnDocMousedown, true);
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('mousedown', this.closeOnDocMousedown, true);
+  }
+
+  get resolvedOptions(): DropdownOption[] {
+    if (this.items.length) {
+      return this.items.map(item => ({
+        label: String(item[this.bindLabel] ?? ''),
+        value: item[this.bindValue] ?? null
+      }));
+    }
+    return this.options;
+  }
 
   get selectedLabel(): string {
-    return this.options.find(o => this.sameValue(o.value, this.value))?.label ?? '';
+    return this.resolvedOptions.find(o => this.sameValue(o.value, this.value))?.label ?? '';
   }
 
   get filteredOptions(): DropdownOption[] {
     const q = this.searchText.trim().toLowerCase();
-    if (!q) return this.options;
-    return this.options.filter(o => o.label.toLowerCase().includes(q));
+    if (!q) return this.resolvedOptions;
+    return this.resolvedOptions.filter(o => o.label.toLowerCase().includes(q));
   }
 
   toggle(): void {
@@ -77,7 +104,8 @@ export class DropdownComponent implements ControlValueAccessor {
     };
   }
 
-  select(opt: DropdownOption): void {
+  select(opt: DropdownOption, e?: MouseEvent): void {
+    e?.preventDefault();
     this.value = opt.value;
     this.onChange(opt.value);
     this.open = false;
@@ -87,11 +115,6 @@ export class DropdownComponent implements ControlValueAccessor {
     e.stopPropagation();
     this.value = null;
     this.onChange(null);
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocClick(e: Event): void {
-    if (!this.el.nativeElement.contains(e.target)) this.open = false;
   }
 
   @HostListener('window:scroll')

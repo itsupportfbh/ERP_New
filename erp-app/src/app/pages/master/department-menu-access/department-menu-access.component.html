@@ -81,18 +81,12 @@
 
       <div class="mf-group dma-department-field">
         <label class="mf-label" for="departmentId">Department</label>
-        <select
-          id="departmentId"
-          class="mf-select"
-          [(ngModel)]="selectedDepartmentId"
-          (change)="onDepartmentChange()"
-          [disabled]="isEditMode"
-        >
-          <option [ngValue]="null">-- Select Department --</option>
-          <option *ngFor="let department of departments" [ngValue]="department.id">
-            {{ department.departmentName }}
-          </option>
-        </select>
+        <erp-dropdown name="departmentId" [(ngModel)]="selectedDepartmentId"
+          [items]="departments" bindLabel="departmentName" bindValue="id"
+          placeholder="-- Select Department --"
+          (ngModelChange)="onDepartmentChange()"
+          [disabled]="isEditMode">
+        </erp-dropdown>
       </div>
 
       <div class="dma-inline-note muted" *ngIf="!selectedDepartmentId && !loading">

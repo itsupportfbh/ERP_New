@@ -3,9 +3,9 @@
   <div class="page-header">
     <h2>{{ stockReorderId ? 'Edit Stock Reorder Planning' : 'Create Stock Reorder Planning' }}</h2>
     <div class="btn-group">
-      <button class="btn btn-outline btn-sm" type="button" (click)="onCancel()">Cancel</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="saveDraft(1)" [disabled]="isBusy">Save Draft</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="onSuggestPO()" [disabled]="isBusy">Suggest PO</button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="onCancel()">← Back</button>
     </div>
   </div>
 
@@ -17,25 +17,18 @@
       <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
         <div style="width:200px;flex-shrink:0">
           <label class="fc-label">Warehouse</label>
-          <ng-select class="fc-ng" [items]="warehouses" bindLabel="name" bindValue="id"
-            [(ngModel)]="warehouseTypeId" placeholder="Select warehouse"
-            [clearable]="false" (change)="onWarehouseChange()" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="warehouseTypeId" name="warehouseTypeId"
+            [items]="warehouses" bindLabel="name" bindValue="id"
+            placeholder="Select warehouse" (ngModelChange)="onWarehouseChange()">
+          </erp-dropdown>
         </div>
         <div style="flex:1;min-width:200px">
           <label class="fc-label">Add Item</label>
-          <ng-select class="fc-ng" [items]="availableItems" bindLabel="itemName" bindValue="id"
-            [clearable]="true" [(ngModel)]="selectedItemId"
+          <erp-dropdown [(ngModel)]="selectedItemId" name="selectedItemId"
+            [items]="availableItems" bindLabel="itemName" bindValue="id"
             [disabled]="!warehouseTypeId"
-            [placeholder]="warehouseTypeId ? 'Select item to add' : 'Choose warehouse first'"
-            appendTo="body">
-            <ng-template ng-option-tmp let-i="item">
-              <div style="font-size:12px;font-weight:600;color:var(--text)">{{ i.itemName }}</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:1px">
-                SKU: {{ i.sku }} &bull; OnHand: {{ i.onHand ?? 0 }}
-              </div>
-            </ng-template>
-          </ng-select>
+            [placeholder]="warehouseTypeId ? 'Select item to add' : 'Choose warehouse first'">
+          </erp-dropdown>
         </div>
         <button class="btn btn-primary btn-sm rp-action-btn" type="button"
           [disabled]="!warehouseTypeId || !selectedItemId"
@@ -48,10 +41,10 @@
       <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:14px">
         <div style="width:200px;flex-shrink:0">
           <label class="fc-label">Method</label>
-          <ng-select class="fc-ng" [items]="methodOptions" bindLabel="label" bindValue="id"
-            placeholder="Select method" [clearable]="true" [(ngModel)]="methodId"
-            (change)="reloadCalculationsOnly()" appendTo="body">
-          </ng-select>
+          <erp-dropdown [(ngModel)]="methodId" name="methodId"
+            [items]="methodOptions" bindLabel="label" bindValue="id"
+            placeholder="Select method" (ngModelChange)="reloadCalculationsOnly()">
+          </erp-dropdown>
         </div>
         <div style="width:140px;flex-shrink:0">
           <label class="fc-label">Horizon (days)</label>
@@ -141,10 +134,10 @@
                   style="text-align:right;width:100%" />
               </td>
               <td>
-                <ng-select class="fc-ng-sm" [items]="locationList" bindLabel="name" bindValue="name"
-                  [(ngModel)]="r.location" (change)="onLocationChange(r)"
-                  [clearable]="true" placeholder="Location" appendTo="body">
-                </ng-select>
+                <erp-dropdown [(ngModel)]="r.location" [name]="'location_' + r.itemId"
+                  [items]="locationList" bindLabel="name" bindValue="name"
+                  placeholder="Location" (ngModelChange)="onLocationChange(r)">
+                </erp-dropdown>
               </td>
               <td>
                 <input class="fc-tbl-input" type="date" #dateInput [min]="minDate"

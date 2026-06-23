@@ -47,24 +47,25 @@
         </div>
         <div class="mf-group">
           <label class="mf-label">Select Country <span style="color:red">*</span></label>
-          <select class="mf-select" [(ngModel)]="form.countryId" name="countryId" (change)="onCountryChange(form.countryId)">
-            <option [ngValue]="null">-- Select Country --</option>
-            <option *ngFor="let c of countries" [ngValue]="c.id">{{ c.countryName || c.name }}</option>
-          </select>
+          <erp-dropdown name="countryId" [(ngModel)]="form.countryId"
+            [items]="countries" bindLabel="countryName" bindValue="id"
+            placeholder="-- Select Country --" (ngModelChange)="onCountryChange($event)">
+          </erp-dropdown>
         </div>
         <div class="mf-group">
           <label class="mf-label">Select State <span style="color:red">*</span></label>
-          <select class="mf-select" [(ngModel)]="form.stateId" name="stateId" (change)="onStateChange(form.stateId)" [disabled]="!form.countryId">
-            <option [ngValue]="null">-- Select State --</option>
-            <option *ngFor="let s of filteredStates" [ngValue]="s.id">{{ s.stateName || s.name }}</option>
-          </select>
+          <erp-dropdown name="stateId" [(ngModel)]="form.stateId"
+            [items]="filteredStates" bindLabel="stateName" bindValue="id"
+            placeholder="-- Select State --" [disabled]="!form.countryId"
+            (ngModelChange)="onStateChange($event)">
+          </erp-dropdown>
         </div>
         <div class="mf-group">
           <label class="mf-label">Select City <span style="color:red">*</span></label>
-          <select class="mf-select" [(ngModel)]="form.cityId" name="cityId" [disabled]="!form.stateId">
-            <option [ngValue]="null">-- Select City --</option>
-            <option *ngFor="let c of filteredCities" [ngValue]="c.id">{{ c.cityName || c.name }}</option>
-          </select>
+          <erp-dropdown name="cityId" [(ngModel)]="form.cityId"
+            [items]="filteredCities" bindLabel="cityName" bindValue="id"
+            placeholder="-- Select City --" [disabled]="!form.stateId">
+          </erp-dropdown>
         </div>
         <div class="mf-group">
           <label class="mf-label">Contact Number</label>

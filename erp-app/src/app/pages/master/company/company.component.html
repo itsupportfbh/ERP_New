@@ -91,22 +91,52 @@
     <h2 class="cmp-setup-title">{{ isEditMode ? 'Edit' : 'Add' }} Company</h2>
     <p class="cmp-breadcrumb">Master → Company Setup</p>
 
-    <!-- Tabs -->
-    <div class="cmp-tabs">
-      <button class="cmp-tab" [class.active]="activeTab==='general'" (click)="setTab('general')">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>General
-      </button>
-      <button class="cmp-tab" [class.active]="activeTab==='financeTax'" (click)="setTab('financeTax')">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>Finance &amp; Tax
-      </button>
-      <button class="cmp-tab" [class.active]="activeTab==='defaults'" (click)="setTab('defaults')">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M4 6h12M4 10h8M4 14h10"/></svg>Defaults
-      </button>
-      <button class="cmp-tab" [class.active]="activeTab==='numberSeries'" (click)="setTab('numberSeries')"># Number Series</button>
-      <button class="cmp-tab" [class.active]="activeTab==='adminUser'" (click)="setTab('adminUser')">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Initial Admin User
-      </button>
-      <button class="cmp-tab" [class.active]="activeTab==='audit'" (click)="setTab('audit')">Audit</button>
+    <!-- Stepper -->
+    <div class="cmp-stepper">
+      <div class="cstep" [class.cstep-active]="activeTab==='general'" [class.cstep-done]="activeTabIndex > 0" (click)="setTab('general')">
+        <div class="cstep-circle">
+          <svg *ngIf="activeTabIndex > 0" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+          <span *ngIf="activeTabIndex <= 0">1</span>
+        </div>
+        <span class="cstep-label">General</span>
+      </div>
+      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 0"></div>
+      <div class="cstep" [class.cstep-active]="activeTab==='financeTax'" [class.cstep-done]="activeTabIndex > 1" (click)="setTab('financeTax')">
+        <div class="cstep-circle">
+          <svg *ngIf="activeTabIndex > 1" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+          <span *ngIf="activeTabIndex <= 1">2</span>
+        </div>
+        <span class="cstep-label">Finance &amp; Tax</span>
+      </div>
+      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 1"></div>
+      <div class="cstep" [class.cstep-active]="activeTab==='defaults'" [class.cstep-done]="activeTabIndex > 2" (click)="setTab('defaults')">
+        <div class="cstep-circle">
+          <svg *ngIf="activeTabIndex > 2" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+          <span *ngIf="activeTabIndex <= 2">3</span>
+        </div>
+        <span class="cstep-label">Defaults</span>
+      </div>
+      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 2"></div>
+      <div class="cstep" [class.cstep-active]="activeTab==='numberSeries'" [class.cstep-done]="activeTabIndex > 3" (click)="setTab('numberSeries')">
+        <div class="cstep-circle">
+          <svg *ngIf="activeTabIndex > 3" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+          <span *ngIf="activeTabIndex <= 3">4</span>
+        </div>
+        <span class="cstep-label">Number Series</span>
+      </div>
+      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 3"></div>
+      <div class="cstep" [class.cstep-active]="activeTab==='adminUser'" [class.cstep-done]="activeTabIndex > 4" (click)="setTab('adminUser')">
+        <div class="cstep-circle">
+          <svg *ngIf="activeTabIndex > 4" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
+          <span *ngIf="activeTabIndex <= 4">5</span>
+        </div>
+        <span class="cstep-label">Admin User</span>
+      </div>
+      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 4"></div>
+      <div class="cstep" [class.cstep-active]="activeTab==='audit'" (click)="setTab('audit')">
+        <div class="cstep-circle"><span>6</span></div>
+        <span class="cstep-label">Audit</span>
+      </div>
     </div>
 
     <!-- ── GENERAL TAB -->
@@ -124,12 +154,12 @@
             <input type="radio" [checked]="!isNewOrganization" (change)="onOrgModeChange(false)"/> Existing Organization
           </label>
         </div>
-        <div class="mf-group" *ngIf="!isNewOrganization">
+        <div class="mf-group" *ngIf="!isNewOrganization" style="max-width:300px">
           <label class="mf-label">Select Organization</label>
-          <select class="mf-select" [(ngModel)]="selectedOrganizationId" name="orgId" (change)="onOrgSelected(selectedOrganizationId)">
-            <option [ngValue]="0">-- Select Organization --</option>
-            <option *ngFor="let o of organizations" [ngValue]="o.id">{{ o.orgName }} ({{ o.orgCode }})</option>
-          </select>
+          <erp-dropdown name="orgId" [(ngModel)]="selectedOrganizationId"
+            [items]="organizations" bindLabel="orgName" bindValue="id"
+            placeholder="-- Select Organization --" (ngModelChange)="onOrgSelected($event)">
+          </erp-dropdown>
         </div>
       </div>
 
@@ -163,10 +193,10 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Status</label>
-            <select class="mf-select" [(ngModel)]="general.status" name="status">
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+            <erp-dropdown name="status" [(ngModel)]="general.status"
+              [options]="[{label:'Active',value:'Active'},{label:'Inactive',value:'Inactive'}]"
+              placeholder="Select Status">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Registration No</label>
@@ -193,10 +223,6 @@
             <input class="mf-input" type="text" [(ngModel)]="general.country" name="country" placeholder="Country"/>
           </div>
           <div class="mf-group">
-            <label class="mf-label">Tax Registration No</label>
-            <input class="mf-input" type="text" [(ngModel)]="general.taxRegistrationNo" name="taxReg" placeholder="GST/VAT No"/>
-          </div>
-          <div class="mf-group">
             <label class="mf-label">Contact Person</label>
             <input class="mf-input" type="text" [(ngModel)]="general.contactPerson" name="contactPerson" placeholder="Contact Person"/>
           </div>
@@ -204,10 +230,10 @@
             <label class="mf-label">Contact Mobile</label>
             <input class="mf-input" type="text" [(ngModel)]="general.contactMobileNo" name="contactMobile" placeholder="+65 0000 0000"/>
           </div>
-        </div>
-        <div class="mf-group">
-          <label class="mf-label">Contact Email</label>
-          <input class="mf-input" type="email" [(ngModel)]="general.contactEmail" name="contactEmail" placeholder="contact@company.com"/>
+          <div class="mf-group">
+            <label class="mf-label">Contact Email</label>
+            <input class="mf-input" type="email" [(ngModel)]="general.contactEmail" name="contactEmail" placeholder="contact@company.com"/>
+          </div>
         </div>
         <div class="dt-form-grid">
           <div class="mf-group"><label class="mf-label">Address 1</label><input class="mf-input" [(ngModel)]="general.address1" name="addr1" placeholder="Address Line 1"/></div>
@@ -227,24 +253,24 @@
         <div class="dt-form-grid">
           <div class="mf-group">
             <label class="mf-label">Base Currency <span style="color:red">*</span></label>
-            <select class="mf-select" [(ngModel)]="financeTax.currencyId" name="currencyId">
-              <option [ngValue]="null">-- Select Currency --</option>
-              <option *ngFor="let c of currencies" [ngValue]="c.id">{{ c.currencyName || c.name }}</option>
-            </select>
+            <erp-dropdown name="currencyId" [(ngModel)]="financeTax.currencyId"
+              [items]="currencies" bindLabel="currencyName" bindValue="id"
+              placeholder="-- Select Currency --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Country</label>
-            <select class="mf-select" [(ngModel)]="financeTax.countryId" name="financeCountryId">
-              <option [ngValue]="null">-- Select Country --</option>
-              <option *ngFor="let c of countries" [ngValue]="c.id">{{ c.countryName || c.name }}</option>
-            </select>
+            <erp-dropdown name="financeCountryId" [(ngModel)]="financeTax.countryId"
+              [items]="countries" bindLabel="countryName" bindValue="id"
+              placeholder="-- Select Country --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Tax Mode</label>
-            <select class="mf-select" [(ngModel)]="financeTax.taxMode" name="taxMode">
-              <option value="Exclusive">Exclusive</option>
-              <option value="Inclusive">Inclusive</option>
-            </select>
+            <erp-dropdown name="taxMode" [(ngModel)]="financeTax.taxMode"
+              [options]="[{label:'Exclusive',value:'Exclusive'},{label:'Inclusive',value:'Inclusive'}]"
+              placeholder="Select Tax Mode">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">GST / VAT No</label>
@@ -252,28 +278,24 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Filing Frequency</label>
-            <select class="mf-select" [(ngModel)]="financeTax.filingFrequency" name="filingFreq">
-              <option value="Monthly">Monthly</option>
-              <option value="Quarterly">Quarterly</option>
-              <option value="Yearly">Yearly</option>
-            </select>
+            <erp-dropdown name="filingFreq" [(ngModel)]="financeTax.filingFrequency"
+              [options]="[{label:'Monthly',value:'Monthly'},{label:'Quarterly',value:'Quarterly'},{label:'Yearly',value:'Yearly'}]"
+              placeholder="Select Frequency">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Decimal Places</label>
-            <select class="mf-select" [(ngModel)]="financeTax.decimalPlaces" name="decimalPlaces">
-              <option [ngValue]="0">0</option>
-              <option [ngValue]="2">2</option>
-              <option [ngValue]="3">3</option>
-              <option [ngValue]="4">4</option>
-            </select>
+            <erp-dropdown name="decimalPlaces" [(ngModel)]="financeTax.decimalPlaces"
+              [options]="[{label:'0',value:0},{label:'2',value:2},{label:'3',value:3},{label:'4',value:4}]"
+              placeholder="Select Decimal Places">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Rounding Rule</label>
-            <select class="mf-select" [(ngModel)]="financeTax.roundingRule" name="roundingRule">
-              <option value="Round half up">Round half up</option>
-              <option value="Round down">Round down</option>
-              <option value="Round up">Round up</option>
-            </select>
+            <erp-dropdown name="roundingRule" [(ngModel)]="financeTax.roundingRule"
+              [options]="[{label:'Round half up',value:'Round half up'},{label:'Round down',value:'Round down'},{label:'Round up',value:'Round up'}]"
+              placeholder="Select Rounding Rule">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Default Output Tax Code</label>
@@ -298,21 +320,17 @@
           <div class="mf-group"><label class="mf-label">Default Bin</label><input class="mf-input" [(ngModel)]="defaults.defaultBin" name="bin" placeholder="MAIN"/></div>
           <div class="mf-group">
             <label class="mf-label">Language</label>
-            <select class="mf-select" [(ngModel)]="defaults.defaultLanguage" name="language">
-              <option value="EN">English</option>
-              <option value="TA">Tamil</option>
-              <option value="ZH">Chinese</option>
-              <option value="MS">Malay</option>
-            </select>
+            <erp-dropdown name="language" [(ngModel)]="defaults.defaultLanguage"
+              [options]="[{label:'English',value:'EN'},{label:'Tamil',value:'TA'},{label:'Chinese',value:'ZH'},{label:'Malay',value:'MS'}]"
+              placeholder="Select Language">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Timezone</label>
-            <select class="mf-select" [(ngModel)]="defaults.timeZone" name="timezone">
-              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-              <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
-              <option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur (MYT)</option>
-              <option value="UTC">UTC</option>
-            </select>
+            <erp-dropdown name="timezone" [(ngModel)]="defaults.timeZone"
+              [options]="[{label:'Asia/Kolkata (IST)',value:'Asia/Kolkata'},{label:'Asia/Singapore (SGT)',value:'Asia/Singapore'},{label:'Asia/Kuala_Lumpur (MYT)',value:'Asia/Kuala_Lumpur'},{label:'UTC',value:'UTC'}]"
+              placeholder="Select Timezone">
+            </erp-dropdown>
           </div>
         </div>
       </div>
@@ -358,12 +376,11 @@
             <div style="position:relative">
               <input class="mf-input" [type]="showPassword?'text':'password'" [(ngModel)]="adminUser.password" name="adminPassword" placeholder="Min 6 characters" style="padding-right:40px"/>
               <button type="button" (click)="showPassword=!showPassword" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><ellipse cx="10" cy="10" rx="8" ry="5"/><circle cx="10" cy="10" r="2"/></svg>
+                <svg *ngIf="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg *ngIf="showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
               </button>
             </div>
           </div>
-          <div class="mf-group"><label class="mf-label">Department ID</label><input class="mf-input" type="number" [(ngModel)]="adminUser.departmentId" name="deptId" placeholder="1"/></div>
-          <div class="mf-group"><label class="mf-label">Location ID</label><input class="mf-input" type="number" [(ngModel)]="adminUser.locationId" name="locId" placeholder="1"/></div>
         </div>
       </div>
     </ng-container>

@@ -80,10 +80,17 @@ export class CompanyComponent implements OnInit {
     const isSuperAdmin = approvalRoles.some(x => (x || '').trim().toLowerCase() === 'super admin');
     const approvalLevelName = isSuperAdmin ? 'Super Admin' : '';
     const orgGuid = localStorage.getItem('orgGuid') || '';
+    const userCompanyId = Number(localStorage.getItem('companyId') || 0);
 
     this.masterSvc.getOrganizationCompanyList(approvalLevelName, orgGuid).subscribe({
       next: (res: any) => {
-        this.orgs = Array.isArray(res) ? res : (res?.data || []);
+        let all: any[] = Array.isArray(res) ? res : (res?.data || []);
+        // companyId > 1 means sub-company admin — show only their own company
+        if (!isSuperAdmin && userCompanyId > 1) {
+          all = all.map(org => ({ ...org, companies: (org.companies || []).filter((c: any) => c.id === userCompanyId) }))
+                   .filter(org => org.companies.length > 0);
+        }
+        this.orgs = all;
         this.filteredOrgs = [...this.orgs];
         this.updateCounts();
         this.loading = false;
@@ -199,11 +206,12 @@ export class CompanyComponent implements OnInit {
 
   cancel(): void { this.isFormVisible = false; this.message = ''; }
 
+  get activeTabIndex(): number { return this.tabsOrder.indexOf(this.activeTab); }
   setTab(tab: CompanyTab): void { this.activeTab = tab; }
-  isFirstTab(): boolean { return this.tabsOrder.indexOf(this.activeTab) === 0; }
-  isLastTab(): boolean { return this.tabsOrder.indexOf(this.activeTab) === this.tabsOrder.length - 1; }
-  goPrev(): void { const i = this.tabsOrder.indexOf(this.activeTab); if (i > 0) this.setTab(this.tabsOrder[i - 1]); }
-  goNext(): void { const i = this.tabsOrder.indexOf(this.activeTab); if (i < this.tabsOrder.length - 1) this.setTab(this.tabsOrder[i + 1]); }
+  isFirstTab(): boolean { return this.activeTabIndex === 0; }
+  isLastTab(): boolean { return this.activeTabIndex === this.tabsOrder.length - 1; }
+  goPrev(): void { const i = this.activeTabIndex; if (i > 0) this.setTab(this.tabsOrder[i - 1]); }
+  goNext(): void { const i = this.activeTabIndex; if (i < this.tabsOrder.length - 1) this.setTab(this.tabsOrder[i + 1]); }
 
   onLogoPicked(evt: Event): void {
     const file = (evt.target as HTMLInputElement).files?.[0];

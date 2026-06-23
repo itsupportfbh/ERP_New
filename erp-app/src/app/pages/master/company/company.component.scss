@@ -1,4 +1,79 @@
 :host { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+
+.cmp-stepper {
+  display: flex;
+  align-items: center;
+  padding: 16px 0 8px;
+  flex-shrink: 0;
+}
+
+.cstep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &.cstep-active .cstep-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 3px var(--primary-pale);
+  }
+
+  &.cstep-active .cstep-label {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  &.cstep-done .cstep-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+
+  &.cstep-done .cstep-label {
+    color: var(--primary);
+  }
+}
+
+.cstep-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: #fff;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s;
+
+  svg { width: 16px; height: 16px; }
+}
+
+.cstep-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.cstep-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin-bottom: 22px;
+  margin-left: 4px;
+  margin-right: 4px;
+  transition: background 0.2s;
+
+  &.cstep-line-done { background: var(--primary); }
+}
 .master-list { flex:1; overflow-y:auto; }
 .list-item { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border); }
 .list-item:hover { background:var(--bg); }

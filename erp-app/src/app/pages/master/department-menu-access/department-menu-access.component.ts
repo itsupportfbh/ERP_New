@@ -49,6 +49,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
   permission: FunctionPermission;
   isPermissionLoaded = false;
   userId: number = 0;
+  companyId: number = 0;
   functionId = 'department-menu-access';
 
   canCreate(): boolean { return this.permissionService.hasCreate(this.permission); }
@@ -57,6 +58,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
 
   constructor(private service: DepartmentMenuAccessService, private permissionService: PermissionService) {
     this.userId = Number(localStorage.getItem('id') || 0);
+    this.companyId = Number(localStorage.getItem('companyId') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
   }
 
@@ -86,7 +88,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
 
   loadList(): void {
     this.loading = true;
-    this.service.getAllDepartmentMenuAccess().subscribe({
+    this.service.getAllDepartmentMenuAccess(this.companyId).subscribe({
       next: (res) => {
         const items = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
         this.rows = items.map((row: any) => this.normalizeRow(row));
@@ -100,7 +102,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
   }
 
   loadDepartments(): void {
-    this.service.getDepartments().subscribe({
+    this.service.getDepartments(this.companyId).subscribe({
       next: (res: ApiResponse<DepartmentDto[]>) => {
         const raw = Array.isArray(res)
           ? res
@@ -169,7 +171,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
 
   patchAccess(departmentId: number): void {
     this.loading = true;
-    this.service.getByDepartmentId(departmentId).subscribe({
+    this.service.getByDepartmentId(departmentId, this.companyId).subscribe({
       next: (res: any) => {
         const ids = this.extractMenuIds(res);
         const allowed = new Set(this.modules.map(module => module.id));

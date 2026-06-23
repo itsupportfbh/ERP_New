@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 interface SiLine {
   sourceLineId: number | null;
@@ -30,8 +32,6 @@ export class SalesInvoiceFormComponent implements OnInit {
   id: number | null = null;
   loading = false;
   saving = false;
-  error = '';
-  success = '';
 
   // Header
   invoiceNo = '';
@@ -64,10 +64,12 @@ export class SalesInvoiceFormComponent implements OnInit {
   private soList: any[] = [];
   private doList: any[] = [];
 
+  readonly fnId = 'si-list';
   constructor(
     private svc: SalesService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    public perm: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -223,8 +225,7 @@ export class SalesInvoiceFormComponent implements OnInit {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    this.success = `Selected "${file.name}". OCR extraction isn't wired to the backend yet.`;
-    setTimeout(() => this.success = '', 4000);
+    void Swal.fire('Info', `Selected "${file.name}". OCR extraction isn't wired to the backend yet.`, 'info');
   }
 
   // ── Edit ──────────────────────────────────────────────
@@ -272,22 +273,21 @@ export class SalesInvoiceFormComponent implements OnInit {
 
   // ── Save ──────────────────────────────────────────────
   submit(): void {
-    this.error = '';
-    if (!this.invoiceDate) { this.error = 'Invoice Date is required.'; return; }
+    if (!this.invoiceDate) { void Swal.fire('Validation', 'Invoice Date is required.', 'warning'); return; }
 
     this.saving = true;
 
     if (this.isEdit) {
       this.svc.updateSalesInvoiceHeader(this.id!, { invoiceDate: this.invoiceDate }).subscribe({
-        next: () => { this.saving = false; this.success = 'Invoice updated.'; this.back(); },
-        error: err => { this.saving = false; this.error = err?.error?.message ?? 'Update failed.'; }
+        next: () => { this.saving = false; void Swal.fire('Success', 'Invoice updated.', 'success').then(() => this.back()); },
+        error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Update failed.', 'error'); }
       });
       return;
     }
 
     if (!this.sourceId || !this.lines.length) {
       this.saving = false;
-      this.error = 'Select a source document and load at least one line.';
+      void Swal.fire('Validation', 'Select a source document and load at least one line.', 'warning');
       return;
     }
 
@@ -322,7 +322,7 @@ export class SalesInvoiceFormComponent implements OnInit {
 
     this.svc.createSalesInvoice(payload).subscribe({
       next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed.', 'error'); }
     });
   }
 

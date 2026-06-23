@@ -5,8 +5,16 @@
       <img class="logo-img" src="assets/images/catering-logo.png" alt="Catering Solutions">
       <span class="logo-text" *ngIf="sidebarOpen">Unity ERP</span>
     </div>
+    <div class="sidebar-search" *ngIf="sidebarOpen">
+      <svg class="sidebar-search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6.5" cy="6.5" r="4"/><line x1="10" y1="10" x2="14" y2="14"/>
+      </svg>
+      <input class="sidebar-search-input" type="text" [(ngModel)]="menuSearch" placeholder="Search menu..." autocomplete="off" />
+      <button class="sidebar-search-clear" *ngIf="menuSearch" (click)="menuSearch=''" type="button">&#x2715;</button>
+    </div>
+
     <nav class="sidebar-nav">
-      <ng-container *ngFor="let m of filteredMenus">
+      <ng-container *ngFor="let m of searchedMenus">
 
         <!-- Parent menu (has children) -->
         <ng-container *ngIf="hasChildren(m)">
@@ -17,14 +25,15 @@
             [class.open]="isOpen(m)"
             (click)="toggleMenu(m)">
             <span class="nav-icon" [ngSwitch]="m.icon">
-              <span *ngSwitchCase="'home'">&#8962;</span>
-              <span *ngSwitchCase="'partners'">&#128101;</span>
-              <span *ngSwitchCase="'purchase'">&#128230;</span>
-              <span *ngSwitchCase="'sales'">&#128722;</span>
-              <span *ngSwitchCase="'inventory'">&#128091;</span>
-              <span *ngSwitchCase="'components'">&#129513;</span>
-              <span *ngSwitchCase="'master'">&#9881;</span>
-               <span *ngSwitchCase="'finance'">$</span>
+              <svg *ngSwitchCase="'home'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8L8 2l7 6v6H1z"/><path d="M5 14V9h6v5"/></svg>
+              <svg *ngSwitchCase="'partners'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5"/><circle cx="11" cy="5" r="2"/><path d="M11 9c2.21 0 4 1.79 4 4"/></svg>
+              <svg *ngSwitchCase="'purchase'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h8l1 9H3z"/><path d="M6 3a2 2 0 0 1 4 0"/></svg>
+              <svg *ngSwitchCase="'sales'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 2h2l2.5 8h6l2-6H5"/><circle cx="7" cy="13.5" r="1.2"/><circle cx="12" cy="13.5" r="1.2"/></svg>
+              <svg *ngSwitchCase="'inventory'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L14 5v6L8 14 2 11V5z"/><polyline points="2 5 8 8 14 5"/><line x1="8" y1="8" x2="8" y2="14"/></svg>
+              <svg *ngSwitchCase="'components'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+              <svg *ngSwitchCase="'master'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"/></svg>
+              <svg *ngSwitchCase="'finance'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v8"/><path d="M10 5.5a2 2 0 0 0-4 0c0 1.5 4 1.5 4 3a2 2 0 0 1-4 0"/></svg>
+              <svg *ngSwitchCase="'recipe'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h12c0 3.31-2.69 6-6 6S2 11.31 2 8z"/><line x1="8" y1="2" x2="8" y2="8"/><line x1="5" y1="4" x2="8" y2="8"/><line x1="11" y1="4" x2="8" y2="8"/></svg>
               <span *ngSwitchDefault>&#9679;</span>
             </span>
             <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>
@@ -49,7 +58,11 @@
                     *ngFor="let grandchild of child.children"
                     [routerLink]="grandchild.route"
                     [class.active]="isChildActive(grandchild)">
-                    <span class="submenu-dot">&#9679;</span>
+                    <span class="submenu-dot" [ngSwitch]="grandchild.icon">
+                      <svg *ngSwitchCase="'inv-mr'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="13" rx="1"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="8" y1="4" x2="8" y2="8"/><line x1="5" y1="10" x2="11" y2="10"/><line x1="5" y1="12" x2="9" y2="12"/></svg>
+                      <svg *ngSwitchCase="'inv-transfer'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="6" x2="14" y2="6"/><polyline points="11 3 14 6 11 9"/><line x1="14" y1="10" x2="2" y2="10"/><polyline points="5 7 2 10 5 13"/></svg>
+                      <span *ngSwitchDefault>&#9679;</span>
+                    </span>
                     <span>{{ grandchild.label }}</span>
                   </a>
                 </div>
@@ -63,18 +76,18 @@
                   [class.active]="isChildActive(child)">
                   <span class="submenu-dot" [ngSwitch]="child.icon">
                     <!-- Business Partners -->
-                    <span *ngSwitchCase="'customer'">&#128100;</span>
-                    <span *ngSwitchCase="'supplier'">&#128666;</span>
-                    <span *ngSwitchCase="'users'">&#128101;</span>
+                    <svg *ngSwitchCase="'customer'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5" r="2.5"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>
+                    <svg *ngSwitchCase="'supplier'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="9" height="7"/><path d="M10 8h4l1 4H10"/><circle cx="4" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/></svg>
+                    <svg *ngSwitchCase="'users'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5"/><circle cx="11" cy="5" r="2"/><path d="M11 9c2.21 0 4 1.79 4 4"/></svg>
                     <!-- Purchase -->
-                    <span *ngSwitchCase="'pr'">&#128203;</span>
-                    <span *ngSwitchCase="'po'">&#128230;</span>
-                    <span *ngSwitchCase="'rfq'">&#128172;</span>
-                    <span *ngSwitchCase="'grn'">&#128229;</span>
-                    <span *ngSwitchCase="'invoice'">&#129518;</span>
-                    <span *ngSwitchCase="'debit'">&#128196;</span>
-                    <span *ngSwitchCase="'match'">&#9878;</span>
-                    <span *ngSwitchCase="'scorecard'">&#11088;</span>
+                    <svg *ngSwitchCase="'pr'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="12" rx="1"/><path d="M6 3a2 2 0 0 1 4 0"/><line x1="5" y1="7" x2="11" y2="7"/><line x1="5" y1="10" x2="9" y2="10"/></svg>
+                    <svg *ngSwitchCase="'po'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 2h2l2 8h7l2-5H5"/><circle cx="7" cy="13" r="1"/><circle cx="12" cy="13" r="1"/></svg>
+                    <svg *ngSwitchCase="'rfq'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5H2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h9l3 2V6a1 1 0 0 0-1-1z"/><circle cx="6" cy="9" r="0.8" fill="currentColor"/><circle cx="8" cy="9" r="0.8" fill="currentColor"/><circle cx="10" cy="9" r="0.8" fill="currentColor"/></svg>
+                    <svg *ngSwitchCase="'grn'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 11v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2"/><polyline points="5 7 8 10 11 7"/><line x1="8" y1="2" x2="8" y2="10"/></svg>
+                    <svg *ngSwitchCase="'invoice'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h10v11l-2-1-2 1-2-1-2 1-2-1z"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+                    <svg *ngSwitchCase="'debit'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="13" rx="1"/><line x1="5" y1="7" x2="11" y2="7"/><line x1="5" y1="10" x2="8" y2="10"/><polyline points="9 10 11 12 9 14"/></svg>
+                    <svg *ngSwitchCase="'match'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2" x2="8" y2="14"/><path d="M3 5h10"/><path d="M3 5l-2 4a3 3 0 0 0 4 0L3 5"/><path d="M13 5l-2 4a3 3 0 0 0 4 0L13 5"/></svg>
+                    <svg *ngSwitchCase="'scorecard'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="8 2 9.8 6.3 14.5 6.7 11 9.8 12.1 14.4 8 11.9 3.9 14.4 5 9.8 1.5 6.7 6.2 6.3"/></svg>
                     <!-- Master — unique SVG icons -->
                     <!-- Approval Level: shield + check -->
                     <svg *ngSwitchCase="'m-approval'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L3 4v4c0 3 2.5 5 5 6 2.5-1 5-3 5-6V4z"/><polyline points="5.5 8 7.5 10.5 11 6"/></svg>
@@ -136,15 +149,35 @@
                     <svg *ngSwitchCase="'m-vehicle'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="9" height="7"/><path d="M10 8h4l1 4H10"/><circle cx="4" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/></svg>
                     <!-- Warehouse: warehouse building -->
                     <svg *ngSwitchCase="'m-warehouse'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8L8 2l7 6v6H1z"/><rect x="5" y="9" width="3" height="5"/><rect x="9" y="9" width="2" height="3"/></svg>
-                     <span *ngSwitchCase="'circle'">&#9675;</span>
-              <span *ngSwitchCase="'ledger'">&#9675;</span>
-              <span *ngSwitchCase="'journal'">&#9675;</span>
-              <span *ngSwitchCase="'ap'">&#9675;</span>
-              <span *ngSwitchCase="'ar'">&#9675;</span>
-              <span *ngSwitchCase="'tax'">&#9675;</span>
-              <span *ngSwitchCase="'close'">&#9675;</span>
-              <span *ngSwitchCase="'report'">&#9675;</span>
-               <span *ngSwitchDefault>&#9679;</span>
+                    <!-- Sales -->
+                    <svg *ngSwitchCase="'quote'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="13" rx="1"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="11" y2="9"/><line x1="5" y1="12" x2="8" y2="12"/></svg>
+                    <svg *ngSwitchCase="'so'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="13" rx="1"/><polyline points="5.5 8 7.5 10.5 11 6"/></svg>
+                    <svg *ngSwitchCase="'pick'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2"/><rect x="6" y="1" width="4" height="4" rx="0.5"/><polyline points="5.5 9.5 7.5 11.5 11 8"/></svg>
+                    <svg *ngSwitchCase="'delivery'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="9" height="7"/><path d="M10 8h4l1 4H10"/><circle cx="4" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/></svg>
+                    <svg *ngSwitchCase="'credit'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="13" rx="1"/><polyline points="10 7 7 10 10 13"/><line x1="7" y1="10" x2="13" y2="10"/></svg>
+                    <!-- Inventory -->
+                    <svg *ngSwitchCase="'inv-item'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L14 5v6L8 14 2 11V5z"/><polyline points="2 5 8 8 14 5"/><line x1="8" y1="8" x2="8" y2="14"/></svg>
+                    <svg *ngSwitchCase="'inv-take'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="12" rx="1"/><path d="M6 3a2 2 0 0 1 4 0"/><circle cx="7.5" cy="9.5" r="2"/><line x1="9" y1="11" x2="11" y2="13"/></svg>
+                    <svg *ngSwitchCase="'inv-reorder'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5A5.5 5.5 0 0 0 3 6"/><polyline points="1 4 3 6 5 4"/><path d="M2.5 11.5A5.5 5.5 0 0 0 13 10"/><polyline points="15 12 13 10 11 12"/></svg>
+                    <svg *ngSwitchCase="'inv-cogs'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><ellipse cx="8" cy="5" rx="5" ry="2"/><path d="M3 5v3c0 1.1 2.24 2 5 2s5-.9 5-2V5"/><path d="M3 8v3c0 1.1 2.24 2 5 2s5-.9 5-2V8"/></svg>
+                    <svg *ngSwitchCase="'inv-history'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="8 5 8 8 10.5 10.5"/></svg>
+                    <svg *ngSwitchCase="'inv-internal'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/></svg>
+                    <svg *ngSwitchCase="'inv-mr'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="13" rx="1"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="8" y1="4" x2="8" y2="8"/><line x1="5" y1="10" x2="11" y2="10"/><line x1="5" y1="12" x2="9" y2="12"/></svg>
+                    <svg *ngSwitchCase="'inv-transfer'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="6" x2="14" y2="6"/><polyline points="11 3 14 6 11 9"/><line x1="14" y1="10" x2="2" y2="10"/><polyline points="5 7 2 10 5 13"/></svg>
+                    <!-- Financial -->
+                    <svg *ngSwitchCase="'circle'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+                    <svg *ngSwitchCase="'ledger'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v11"/><path d="M3 3h5v11H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M13 3H8v11h5a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/></svg>
+                    <svg *ngSwitchCase="'journal'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="12" rx="1"/><path d="M11 5l3-1v9l-3 1"/><line x1="4" y1="6" x2="9" y2="6"/><line x1="4" y1="9" x2="7" y2="9"/></svg>
+                    <svg *ngSwitchCase="'ar'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="14" height="9" rx="1.5"/><line x1="1" y1="7" x2="15" y2="7"/><line x1="4" y1="11" x2="7" y2="11"/><line x1="10" y1="9" x2="10" y2="13"/><line x1="8" y1="11" x2="12" y2="11"/></svg>
+                    <svg *ngSwitchCase="'ap'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="14" height="9" rx="1.5"/><line x1="1" y1="7" x2="15" y2="7"/><line x1="4" y1="11" x2="8" y2="11"/></svg>
+                    <svg *ngSwitchCase="'tax'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="5" y1="11" x2="11" y2="5"/><circle cx="5.8" cy="6" r="1"/><circle cx="10.2" cy="10" r="1"/></svg>
+                    <svg *ngSwitchCase="'close'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1"/><line x1="2" y1="7" x2="14" y2="7"/><line x1="5" y1="2" x2="5" y2="4"/><line x1="11" y1="2" x2="11" y2="4"/><line x1="6" y1="10" x2="10" y2="14"/><line x1="10" y1="10" x2="6" y2="14"/></svg>
+                    <svg *ngSwitchCase="'report'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="14" x2="14" y2="14"/><rect x="3" y="9" width="2" height="5"/><rect x="7" y="5" width="2" height="9"/><rect x="11" y="2" width="2" height="12"/></svg>
+                    <!-- Recipe -->
+                    <svg *ngSwitchCase="'recipe'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h12c0 3.31-2.69 6-6 6S2 11.31 2 8z"/><line x1="8" y1="2" x2="8" y2="8"/><line x1="5" y1="4" x2="8" y2="8"/><line x1="11" y1="4" x2="8" y2="8"/></svg>
+                    <svg *ngSwitchCase="'plan'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1"/><line x1="2" y1="7" x2="14" y2="7"/><line x1="5" y1="2" x2="5" y2="4"/><line x1="11" y1="2" x2="11" y2="4"/><line x1="4" y1="10" x2="8" y2="10"/><line x1="4" y1="13" x2="12" y2="13"/></svg>
+                    <svg *ngSwitchCase="'batch'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="8" width="6" height="6"/><rect x="9" y="8" width="6" height="6"/><rect x="5" y="2" width="6" height="6"/></svg>
+                    <span *ngSwitchDefault>&#9679;</span>
                   </span>
                   <span>{{ child.label }}</span>
                 </a>
@@ -158,13 +191,15 @@
         <ng-container *ngIf="!hasChildren(m)">
           <a class="nav-item" [routerLink]="m.route" routerLinkActive="active">
             <span class="nav-icon" [ngSwitch]="m.icon">
-              <span *ngSwitchCase="'home'">&#8962;</span>
-              <span *ngSwitchCase="'partners'">&#128101;</span>
-              <span *ngSwitchCase="'sales'">&#128722;</span>
-              <span *ngSwitchCase="'inventory'">&#128230;</span>
-              <span *ngSwitchCase="'components'">&#129513;</span>
-              <span *ngSwitchCase="'master'">&#9881;</span>
-                <span *ngSwitchCase="'finance'">$</span>
+              <svg *ngSwitchCase="'home'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8L8 2l7 6v6H1z"/><path d="M5 14V9h6v5"/></svg>
+              <svg *ngSwitchCase="'partners'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5"/><circle cx="11" cy="5" r="2"/><path d="M11 9c2.21 0 4 1.79 4 4"/></svg>
+              <svg *ngSwitchCase="'purchase'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h8l1 9H3z"/><path d="M6 3a2 2 0 0 1 4 0"/></svg>
+              <svg *ngSwitchCase="'sales'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 2h2l2.5 8h6l2-6H5"/><circle cx="7" cy="13.5" r="1.2"/><circle cx="12" cy="13.5" r="1.2"/></svg>
+              <svg *ngSwitchCase="'inventory'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L14 5v6L8 14 2 11V5z"/><polyline points="2 5 8 8 14 5"/><line x1="8" y1="8" x2="8" y2="14"/></svg>
+              <svg *ngSwitchCase="'components'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+              <svg *ngSwitchCase="'master'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"/></svg>
+              <svg *ngSwitchCase="'finance'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v8"/><path d="M10 5.5a2 2 0 0 0-4 0c0 1.5 4 1.5 4 3a2 2 0 0 1-4 0"/></svg>
+              <svg *ngSwitchCase="'recipe'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h12c0 3.31-2.69 6-6 6S2 11.31 2 8z"/><line x1="8" y1="2" x2="8" y2="8"/><line x1="5" y1="4" x2="8" y2="8"/><line x1="11" y1="4" x2="8" y2="8"/></svg>
               <span *ngSwitchDefault>&#9679;</span>
             </span>
             <span class="nav-label" *ngIf="sidebarOpen">{{ m.label }}</span>

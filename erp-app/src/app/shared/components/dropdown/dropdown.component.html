@@ -24,7 +24,7 @@
       <div class="dd-item"
            *ngFor="let opt of filteredOptions"
            [class.selected]="sameValue(opt.value, value)"
-           (click)="select(opt)">
+           (mousedown)="select(opt, $event)">
         {{ opt.label }}
       </div>
       <div class="dd-empty" *ngIf="filteredOptions.length === 0">No results</div>

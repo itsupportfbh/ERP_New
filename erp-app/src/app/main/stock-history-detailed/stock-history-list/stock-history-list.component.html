@@ -37,17 +37,17 @@
       </div>
       <div class="mf-group" style="margin:0;min-width:160px">
         <label class="mf-label">Status</label>
-        <select class="mf-select" [(ngModel)]="filters.status" (change)="onFilterChange()">
-          <option [ngValue]="null">All Status</option>
-          <option *ngFor="let s of stockStatuses" [ngValue]="s.value">{{ s.label }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="filters.status"
+          [items]="stockStatuses" bindLabel="label" bindValue="value"
+          placeholder="All Status" (ngModelChange)="onFilterChange()">
+        </erp-dropdown>
       </div>
       <div class="mf-group" style="margin:0;min-width:160px">
         <label class="mf-label">Category</label>
-        <select class="mf-select" [(ngModel)]="filters.categoryId" (change)="onFilterChange()">
-          <option [ngValue]="null">All Category</option>
-          <option *ngFor="let c of categories" [ngValue]="c.id">{{ c.name }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="filters.categoryId"
+          [items]="categories" bindLabel="name" bindValue="id"
+          placeholder="All Category" (ngModelChange)="onFilterChange()">
+        </erp-dropdown>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" type="button" (click)="applyFilters()">Search</button>

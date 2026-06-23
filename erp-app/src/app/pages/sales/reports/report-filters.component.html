@@ -8,9 +8,8 @@
     <div class="rf-body">
       <div class="rf-group">
         <label class="rf-label">Date Range</label>
-        <select class="rf-input" [(ngModel)]="model.dateRange" name="dateRange">
-          <option *ngFor="let o of dateRangeOptions" [value]="o.value">{{ o.label }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="model.dateRange" name="dateRange"
+          [items]="dateRangeOptions" bindLabel="label" bindValue="value"></erp-dropdown>
       </div>
 
       <div class="rf-row" *ngIf="model.dateRange === 'custom'">
@@ -26,42 +25,37 @@
 
       <div class="rf-group" *ngIf="showCustomer">
         <label class="rf-label">Customer</label>
-        <select class="rf-input" [(ngModel)]="model.customerId" name="customerId">
-          <option [ngValue]="null">All Customers</option>
-          <option *ngFor="let c of customers" [value]="c.id">{{ c.name }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="model.customerId" name="customerId"
+          [items]="customers" bindLabel="name" bindValue="id"
+          placeholder="All Customers"></erp-dropdown>
       </div>
 
       <div class="rf-group" *ngIf="showBranch">
         <label class="rf-label">Branch / Location</label>
-        <select class="rf-input" [(ngModel)]="model.branchId" name="branchId">
-          <option [ngValue]="null">All Branches</option>
-          <option *ngFor="let b of branches" [value]="b.id">{{ b.name }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="model.branchId" name="branchId"
+          [items]="branches" bindLabel="name" bindValue="id"
+          placeholder="All Branches"></erp-dropdown>
       </div>
 
       <div class="rf-group" *ngIf="showSalesperson">
         <label class="rf-label">Salesperson</label>
-        <select class="rf-input" [(ngModel)]="model.salespersonId" name="salespersonId">
-          <option [ngValue]="null">All Salespersons</option>
-          <option *ngFor="let s of salespersons" [value]="s.id">{{ s.name }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="model.salespersonId" name="salespersonId"
+          [items]="salespersons" bindLabel="name" bindValue="id"
+          placeholder="All Salespersons"></erp-dropdown>
       </div>
 
       <div class="rf-group" *ngIf="showCategory">
         <label class="rf-label">Category</label>
-        <select class="rf-input" [(ngModel)]="model.categoryId" name="categoryId">
-          <option [ngValue]="null">All Categories</option>
-          <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="model.categoryId" name="categoryId"
+          [items]="categories" bindLabel="name" bindValue="id"
+          placeholder="All Categories"></erp-dropdown>
       </div>
 
       <div class="rf-group" *ngIf="showStatus">
         <label class="rf-label">Status</label>
-        <select class="rf-input" [(ngModel)]="model.status" name="status">
-          <option [ngValue]="null">All Statuses</option>
-          <option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</option>
-        </select>
+        <erp-dropdown [(ngModel)]="model.status" name="status"
+          [items]="statuses" bindLabel="label" bindValue="value"
+          placeholder="All Statuses"></erp-dropdown>
       </div>
     </div>
 

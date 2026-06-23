@@ -50,26 +50,24 @@
         </div>
         <div class="mf-group">
           <label class="mf-label">Item Category Type <span style="color:red">*</span></label>
-          <select class="mf-select" [(ngModel)]="form.itemCategoryType" name="itemCategoryType">
-            <option [ngValue]="null">Select Type</option>
-            <option [ngValue]="1">Sales Item</option>
-            <option [ngValue]="2">Purchase Item</option>
-            <option [ngValue]="3">Both</option>
-          </select>
+          <erp-dropdown name="itemCategoryType" [(ngModel)]="form.itemCategoryType"
+            [options]="[{label:'Sales Item',value:1},{label:'Purchase Item',value:2},{label:'Both',value:3}]"
+            placeholder="Select Type">
+          </erp-dropdown>
         </div>
         <div class="mf-group" *ngIf="showSales">
           <label class="mf-label">Sales Budget Line</label>
-          <select class="mf-select" [(ngModel)]="form.salesParentHeadCode" name="salesParentHeadCode">
-            <option [ngValue]="null">Select Sales Budget Line</option>
-            <option *ngFor="let b of salesBudgetLines" [ngValue]="b.headCode">{{ b.label }}</option>
-          </select>
+          <erp-dropdown name="salesParentHeadCode" [(ngModel)]="form.salesParentHeadCode"
+            [items]="salesBudgetLines" bindLabel="label" bindValue="headCode"
+            placeholder="Select Sales Budget Line">
+          </erp-dropdown>
         </div>
         <div class="mf-group" *ngIf="showPurchase">
           <label class="mf-label">Purchase Budget Line</label>
-          <select class="mf-select" [(ngModel)]="form.purchaseParentHeadCode" name="purchaseParentHeadCode">
-            <option [ngValue]="null">Select Purchase Budget Line</option>
-            <option *ngFor="let b of purchaseBudgetLines" [ngValue]="b.headCode">{{ b.label }}</option>
-          </select>
+          <erp-dropdown name="purchaseParentHeadCode" [(ngModel)]="form.purchaseParentHeadCode"
+            [items]="purchaseBudgetLines" bindLabel="label" bindValue="headCode"
+            placeholder="Select Purchase Budget Line">
+          </erp-dropdown>
         </div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit">

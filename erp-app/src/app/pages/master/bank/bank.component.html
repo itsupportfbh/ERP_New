@@ -59,10 +59,10 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Account Type <span style="color:red">*</span></label>
-            <select class="mf-select" [(ngModel)]="form.accountTypeId" name="accountTypeId">
-              <option value="">-- Select account type --</option>
-              <option *ngFor="let item of accountTypes" [ngValue]="item.id">{{ item.name }}</option>
-            </select>
+            <erp-dropdown name="accountTypeId" [(ngModel)]="form.accountTypeId"
+              [items]="accountTypes" bindLabel="name" bindValue="id"
+              placeholder="-- Select account type --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Branch</label>
@@ -78,24 +78,24 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Currency <span style="color:red">*</span></label>
-            <select class="mf-select" [(ngModel)]="form.currencyId" name="currencyId">
-              <option [ngValue]="null">-- Select currency --</option>
-              <option *ngFor="let c of currencies" [ngValue]="c.id">{{ c.currencyName || c.name }}</option>
-            </select>
+            <erp-dropdown name="currencyId" [(ngModel)]="form.currencyId"
+              [items]="currencies" bindLabel="currencyName" bindValue="id"
+              placeholder="-- Select currency --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Country <span style="color:red">*</span></label>
-            <select class="mf-select" [(ngModel)]="form.countryId" name="countryId">
-              <option [ngValue]="null">-- Select Country --</option>
-              <option *ngFor="let c of countries" [ngValue]="c.id">{{ c.countryName || c.name }}</option>
-            </select>
+            <erp-dropdown name="countryId" [(ngModel)]="form.countryId"
+              [items]="countries" bindLabel="countryName" bindValue="id"
+              placeholder="-- Select Country --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Ledger Name <span style="color:red">*</span></label>
-            <select class="mf-select" [(ngModel)]="form.budgetLineId" name="budgetLineId">
-              <option [ngValue]="null">-- Select ledger --</option>
-              <option *ngFor="let line of budgetLines" [ngValue]="line.id">{{ line.label }}</option>
-            </select>
+            <erp-dropdown name="budgetLineId" [(ngModel)]="form.budgetLineId"
+              [items]="budgetLines" bindLabel="label" bindValue="id"
+              placeholder="-- Select ledger --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Primary Contact</label>

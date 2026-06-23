@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Submitted', 2: 'Approved', 3: 'Rejected', 4: 'Posted' };
 
@@ -19,9 +21,6 @@ export class QuotationListComponent implements OnInit {
   pageSize = 10;
   sortField = '';
   sortAsc = true;
-
-  showDeleteModal = false;
-  itemToDelete: any = null;
 
   // lookups for resolving line names
   private uomMap = new Map<number, string>();
@@ -48,7 +47,8 @@ export class QuotationListComponent implements OnInit {
     { header: 'Total', key: 'lineTotal', align: 'right', type: 'number' },
   ];
 
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService) {}
+  readonly fnId = 'qt-list';
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
 
   ngOnInit(): void {
     this.load();
@@ -183,13 +183,20 @@ export class QuotationListComponent implements OnInit {
   }
 
   // ── Delete ────────────────────────────────────────────
-  openDelete(row: any): void { this.itemToDelete = row; this.showDeleteModal = true; }
-
-  confirmDelete(): void {
-    if (!this.itemToDelete) return;
-    this.svc.deleteQuotation(this.itemToDelete.id).subscribe({
-      next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); },
-      error: () => { this.showDeleteModal = false; }
+  async deleteRow(row: any): Promise<void> {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Confirm Delete',
+      text: 'Delete this quotation?',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#d33'
+    });
+    if (!result.isConfirmed) return;
+    this.svc.deleteQuotation(row.id).subscribe({
+      next: () => { void Swal.fire('Deleted', 'Quotation deleted.', 'success').then(() => this.load()); },
+      error: () => { void Swal.fire('Error', 'Unable to delete quotation.', 'error'); }
     });
   }
 }

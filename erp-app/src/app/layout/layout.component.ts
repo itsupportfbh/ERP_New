@@ -126,7 +126,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
           icon: 'inv-internal',
           children: [
             { label: 'Material Request',       icon: 'inv-mr',       route: '/app/inventory/list-material-requisition', permId: 'mr-list' },
-            { label: 'Stock Transfer Request', icon: 'inv-transfer', route: '/app/inventory/list-stocktransfer',        permId: 'list-stock-transfer-receipt' },
+            { label: 'Stock Transfer Request', icon: 'inv-transfer', route: '/app/inventory/list-stock-transfer-receipt', permId: 'list-stock-transfer-receipt' },
           ]
         },
       ]
@@ -160,9 +160,47 @@ export class LayoutComponent implements OnInit, OnDestroy {
     { label: 'Components', icon: 'components', route: '/app/demo' },
   ];
 
-  get filteredMenus(): MenuItem[] {
-    if (this.showAll || !this.permLoaded) return this.menus;
-    return this.menus
+  filteredMenus: MenuItem[] = this.menus;
+  menuSearch = '';
+
+  get searchedMenus(): MenuItem[] {
+    const term = this.menuSearch.trim().toLowerCase();
+    if (!term) return this.filteredMenus;
+
+    const result: MenuItem[] = [];
+    for (const m of this.filteredMenus) {
+      if (!m.children?.length) {
+        if (m.label.toLowerCase().includes(term)) result.push(m);
+        continue;
+      }
+      const parentMatches = m.label.toLowerCase().includes(term);
+      const filteredChildren = (m.children || [])
+        .map(child => {
+          if (!child.children?.length) {
+            return (parentMatches || child.label.toLowerCase().includes(term)) ? child : null;
+          }
+          const gcMatches = child.children.filter(gc => gc.label.toLowerCase().includes(term));
+          const childMatches = parentMatches || child.label.toLowerCase().includes(term);
+          if (childMatches || gcMatches.length > 0) {
+            return { ...child, children: childMatches ? child.children : gcMatches };
+          }
+          return null;
+        })
+        .filter((c): c is MenuItem => c !== null);
+
+      if (parentMatches || filteredChildren.length > 0) {
+        result.push({ ...m, children: parentMatches ? m.children : filteredChildren });
+      }
+    }
+    return result;
+  }
+
+  private applyMenuFilter(): void {
+    if (this.showAll || !this.permLoaded) {
+      this.filteredMenus = this.menus;
+      return;
+    }
+    this.filteredMenus = this.menus
       .map(m => {
         if (!m.children?.length) {
           return (!m.permId || this.viewableIds.has(m.permId)) ? m : null;
@@ -200,6 +238,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
     if (this.showAll) {
       this.permLoaded = true;
+      this.applyMenuFilter();
     } else {
       this.loadMenuPermissions();
     }
@@ -230,7 +269,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private menuContainsUrl(menu: MenuItem, url: string): boolean {
     if (!menu.children) return false;
     for (const child of menu.children) {
-      if (child.route && url.startsWith(child.route)) return true;
+      if (child.route) {
+        if (url.startsWith(child.route)) return true;
+        // Also match create/edit pages under the same module directory
+        const lastSlash = child.route.lastIndexOf('/');
+        if (lastSlash > 5) {
+          const moduleDir = child.route.substring(0, lastSlash + 1);
+          if (url.startsWith(moduleDir)) return true;
+        }
+      }
       if (child.children?.length && this.menuContainsUrl(child, url)) return true;
     }
     return false;
@@ -262,10 +309,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
             .filter((id): id is string => id !== null)
         );
         this.permLoaded = true;
+        this.applyMenuFilter();
       },
       error: () => {
         this.showAll = true;
         this.permLoaded = true;
+        this.applyMenuFilter();
       }
     });
   }
@@ -274,14 +323,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   toggleMenu(menu: MenuItem): void {
     if (!menu.children?.length) return;
-    const isTopLevel = this.menus.some(m => m === menu);
+    const topLevelLabels = new Set(this.menus.filter(m => m.children?.length).map(m => m.label));
+    const isTopLevel = topLevelLabels.has(menu.label);
     if (this.openMenus.has(menu.label)) {
       const next = new Set(this.openMenus);
       next.delete(menu.label);
       this.openMenus = next;
     } else if (isTopLevel) {
-      // Accordion at top level: close other top-level parents, keep nested labels
-      const topLevelLabels = new Set(this.menus.filter(m => m.children?.length).map(m => m.label));
       const next = new Set<string>();
       this.openMenus.forEach(label => { if (!topLevelLabels.has(label)) next.add(label); });
       next.add(menu.label);
@@ -292,22 +340,46 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   isOpen(menu: MenuItem): boolean {
+    if (this.menuSearch.trim()) return true;
     return this.openMenus.has(menu.label);
   }
 
   isMenuActive(menu: MenuItem): boolean {
     if (menu.route && this.router.url.startsWith(menu.route)) return true;
-    return !!menu.children?.some(child => child.route && this.router.url.startsWith(child.route));
+    return this.menuContainsUrl(menu, this.router.url.split('?')[0]);
   }
 
   isChildActive(menu: MenuItem): boolean {
     if (!menu.route) return false;
-    const tree = this.router.createUrlTree([menu.route], { queryParams: menu.queryParams });
-    return this.router.isActive(tree, {
-      paths: 'exact',
-      queryParams: menu.queryParams ? 'exact' : 'ignored',
-      fragment: 'ignored',
-      matrixParams: 'ignored'
-    });
+    // Business Partners tabs use queryParams — exact match only
+    if (menu.queryParams) {
+      const tree = this.router.createUrlTree([menu.route], { queryParams: menu.queryParams });
+      return this.router.isActive(tree, {
+        paths: 'exact', queryParams: 'exact', fragment: 'ignored', matrixParams: 'ignored'
+      });
+    }
+    const url = this.router.url.split('?')[0];
+    // Direct prefix match — handles /app/purchase/requests/new, /app/purchase/requests/:id
+    if (url.startsWith(menu.route)) return true;
+    // Key match — handles Create/Edit pages whose URL segment differs from the list route
+    // e.g. /app/inventory/Create-itemmaster  →  activates /app/inventory/List-itemmaster
+    const moduleDir = menu.route.substring(0, menu.route.lastIndexOf('/') + 1);
+    if (moduleDir.length > 5 && url.startsWith(moduleDir)) {
+      const menuKey = this.routeKey(menu.route);
+      const urlKey  = this.routeKey(url);
+      return menuKey.length > 0 && menuKey === urlKey;
+    }
+    return false;
+  }
+
+  private routeKey(route: string): string {
+    const parts = route.split('/');
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      if (p && !p.startsWith(':') && !/^\d+$/.test(p)) {
+        return p.replace(/^(list|create|edit|update|view|details|new)-?/i, '').toLowerCase();
+      }
+    }
+    return '';
   }
 }

@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 interface CnFormLine {
   doLineId: number | null;
@@ -37,8 +39,6 @@ export class CreditNoteFormComponent implements OnInit {
   id: number | null = null;
   loading = false;
   saving = false;
-  error = '';
-  success = '';
 
   // Header
   doId: number | null = null;
@@ -67,10 +67,12 @@ export class CreditNoteFormComponent implements OnInit {
   ];
   private selectedDoRaw: any = null;
 
+  readonly fnId = 'cn-list';
   constructor(
     private svc: SalesService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    public perm: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -275,11 +277,8 @@ export class CreditNoteFormComponent implements OnInit {
   saveAndApprove(): void { this.submit(2); }
 
   private submit(statusValue: number): void {
-    this.error = '';
-    this.success = '';
-
-    if (!this.doId) { this.error = 'Select a Delivery Order.'; return; }
-    if (!this.lines.length) { this.error = 'No lines to return.'; return; }
+    if (!this.doId) { void Swal.fire('Validation', 'Select a Delivery Order.', 'warning'); return; }
+    if (!this.lines.length) { void Swal.fire('Validation', 'No lines to return.', 'warning'); return; }
 
     this.saving = true;
     const firstSiId = this.siId ?? (this.lines[0]?.siId ?? null);
@@ -324,7 +323,7 @@ export class CreditNoteFormComponent implements OnInit {
 
     obs$.subscribe({
       next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed.', 'error'); }
     });
   }
 

@@ -8,8 +8,6 @@
   </div>
 
   <div class="loading-row" *ngIf="loading">Loading…</div>
-  <div class="alert-msg is-error" *ngIf="error">{{ error }}</div>
-  <div class="alert-msg" *ngIf="success">&#10003; {{ success }}</div>
 
   <!-- Header card: Credit Note (CN) -->
   <div class="card cn-card">
@@ -18,10 +16,10 @@
       <div class="mf-group">
         <label class="mf-label">Delivery Order <span class="req">*</span></label>
         <input *ngIf="isEdit" type="text" class="mf-input" [value]="doNumber" disabled placeholder="—" />
-        <select *ngIf="!isEdit" class="mf-select" [(ngModel)]="doId" name="doId" (change)="onDoSelect()">
-          <option [ngValue]="null">Select delivery order…</option>
-          <option *ngFor="let d of doOptions" [ngValue]="d.value">{{ d.label }}</option>
-        </select>
+        <erp-dropdown *ngIf="!isEdit" [(ngModel)]="doId" name="doId"
+          [items]="doOptions" bindLabel="label" bindValue="value"
+          placeholder="Select delivery order…"
+          (ngModelChange)="onDoSelect()"></erp-dropdown>
       </div>
       <div class="mf-group">
         <label class="mf-label">Sales Invoice</label>
@@ -66,10 +64,9 @@
           <tr *ngFor="let l of lines; let i = index">
             <td>
               <span *ngIf="isEdit" class="cn-itemname">{{ l.itemName || '—' }}</span>
-              <select *ngIf="!isEdit" class="mf-select cn-cell" [(ngModel)]="l.itemId" name="item{{i}}" (change)="onItemSelect(l)">
-                <option [ngValue]="null">Select item…</option>
-                <option *ngFor="let it of availableItems" [ngValue]="it.itemId">{{ it.itemName }}</option>
-              </select>
+              <erp-dropdown *ngIf="!isEdit" [(ngModel)]="l.itemId"
+                [items]="availableItems" bindLabel="itemName" bindValue="itemId"
+                placeholder="Select item…" (ngModelChange)="onItemSelect(l)"></erp-dropdown>
             </td>
             <td>{{ l.uom || '—' }}</td>
             <td class="ta-right">{{ l.deliveredQty }}</td>
@@ -85,15 +82,13 @@
             <td class="ta-right">{{ l.taxAmount | number:'1.2-2' }}</td>
             <td class="ta-right cn-amt">{{ lineAmount(l) | number:'1.2-2' }}</td>
             <td>
-              <select class="mf-select cn-cell" [(ngModel)]="l.reasonId" name="reason{{i}}">
-                <option [ngValue]="null">Select reason…</option>
-                <option *ngFor="let rs of reasonOptions" [ngValue]="rs.value">{{ rs.label }}</option>
-              </select>
+              <erp-dropdown [(ngModel)]="l.reasonId"
+                [items]="reasonOptions" bindLabel="label" bindValue="value"
+                placeholder="Select reason…"></erp-dropdown>
             </td>
             <td>
-              <select class="mf-select cn-cell" [(ngModel)]="l.dispositionId" name="disp{{i}}">
-                <option *ngFor="let dp of dispositions" [ngValue]="dp.id">{{ dp.name }}</option>
-              </select>
+              <erp-dropdown [(ngModel)]="l.dispositionId"
+                [items]="dispositions" bindLabel="name" bindValue="id"></erp-dropdown>
             </td>
             <td class="ta-center">
               <button class="cn-del" type="button" (click)="removeLine(i)" title="Remove">&times;</button>
@@ -116,8 +111,8 @@
   <!-- Footer -->
   <div class="cn-foot">
     <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
-    <button class="btn btn-outline btn-sm" type="button" [disabled]="saving" (click)="saveAsDraft()">Save as Draft</button>
-    <button class="btn btn-primary" type="button" [disabled]="saving" (click)="saveAndApprove()">
+    <button *ngIf="(isEdit && perm.canEdit(fnId)) || (!isEdit && perm.canCreate(fnId))" class="btn btn-outline btn-sm" type="button" [disabled]="saving" (click)="saveAsDraft()">Save as Draft</button>
+    <button *ngIf="perm.canApprove(fnId)" class="btn btn-primary" type="button" [disabled]="saving" (click)="saveAndApprove()">
       {{ saving ? 'Saving…' : 'Save & Approve' }}
     </button>
   </div>
