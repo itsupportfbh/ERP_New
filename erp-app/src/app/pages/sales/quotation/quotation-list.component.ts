@@ -108,7 +108,13 @@ export class QuotationListComponent implements OnInit {
 
   create(): void { this.router.navigate(['/app/sales/quotations/new']); }
 
-  edit(row: any): void { this.router.navigate(['/app/sales/quotations', row.id]); }
+  /** Approved (2) or Posted (4) quotations are locked from edit/delete. */
+  isLocked(row: any): boolean { return Number(row?.status) === 2 || Number(row?.status) === 4; }
+
+  edit(row: any): void {
+    if (this.isLocked(row)) return;
+    this.router.navigate(['/app/sales/quotations', row.id]);
+  }
 
   // ── View / Print ──────────────────────────────────────
   private buildDetail(row: any, cb: () => void): void {
@@ -184,6 +190,7 @@ export class QuotationListComponent implements OnInit {
 
   // ── Delete ────────────────────────────────────────────
   async deleteRow(row: any): Promise<void> {
+    if (this.isLocked(row)) return;
     const result = await Swal.fire({
       icon: 'warning',
       title: 'Confirm Delete',

@@ -43,15 +43,15 @@
     <div class="card section-card">
       <div class="section-label">Recipe Details</div>
       <div class="form-row cols-3">
-        <erp-input label="Code" [(ngModel)]="code" placeholder="Auto / enter code"></erp-input>
-        <erp-dropdown label="Finished Item" [required]="true" [options]="itemOptions"
-          [(ngModel)]="finishedItemId" placeholder="Select finished item"></erp-dropdown>
-        <erp-input label="Cuisine" [(ngModel)]="cuisine" placeholder="e.g. Italian"></erp-input>
-      </div>
-      <div class="form-row cols-2 block-gap">
+        <erp-dropdown label="Recipe (Finished Food)" [required]="true" [options]="itemOptions"
+          [(ngModel)]="finishedItemId" placeholder="Search / Select..."></erp-dropdown>
+        <erp-dropdown label="Cuisine" [options]="cuisineOptions"
+          [(ngModel)]="cuisine" placeholder="-- Select --"></erp-dropdown>
         <erp-dropdown label="Status" [options]="statusOptions"
           [(ngModel)]="status" placeholder="Select status"></erp-dropdown>
-        <erp-input label="Notes" [(ngModel)]="notes" placeholder="Additional notes"></erp-input>
+      </div>
+      <div class="block-gap">
+        <erp-input label="Notes" [(ngModel)]="notes" placeholder="Optional..."></erp-input>
       </div>
     </div>
 
@@ -66,7 +66,7 @@
     <div class="card section-card">
       <div class="section-label-row">
         <div class="section-label">Ingredients</div>
-        <button class="btn btn-outline btn-xs" (click)="addLine()">+ Add Line</button>
+        <button class="btn btn-outline btn-xs" (click)="openLineModal()">+ Add Line</button>
       </div>
 
       <div class="lines-table-wrap">
@@ -74,57 +74,45 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Ingredient *</th>
-              <th>Qty *</th>
+              <th>Ingredient</th>
               <th>UOM</th>
-              <th>Yield %</th>
-              <th>Unit Cost</th>
-              <th>Row Cost</th>
-              <th>Remarks</th>
-              <th></th>
+              <th class="ta-right">Qty</th>
+              <th class="ta-right">Yield %</th>
+              <th class="ta-right">Unit Cost</th>
+              <th class="ta-right">Total</th>
+              <th class="ta-center">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let line of lines; let i = index">
               <td class="row-num">{{ i + 1 }}</td>
-              <td class="item-col">
-                <erp-dropdown [options]="itemOptions" [(ngModel)]="line.ingredientItemId"
-                  placeholder="Select ingredient" (ngModelChange)="onItemSelect(line)"></erp-dropdown>
-              </td>
-              <td class="qty-col">
-                <erp-input type="number" [(ngModel)]="line.qty" placeholder="0"></erp-input>
-              </td>
-              <td class="uom-col">
-                <erp-dropdown [options]="uomOptions" [(ngModel)]="line.uomId"
-                  placeholder="UOM" (ngModelChange)="onUomSelect(line)"></erp-dropdown>
-              </td>
-              <td class="disc-col">
-                <erp-input type="number" [(ngModel)]="line.yieldPct" placeholder="100"></erp-input>
-              </td>
-              <td class="price-col">
-                <erp-input type="number" [(ngModel)]="line.unitCost" placeholder="0.00"></erp-input>
-              </td>
-              <td class="price-col">{{ rowCost(line) | number:'1.2-2' }}</td>
-              <td class="remarks-col">
-                <erp-input [(ngModel)]="line.remarks" placeholder="Remarks"></erp-input>
-              </td>
+              <td>{{ line.ingredientName || getLabel(itemOptions, line.ingredientItemId) || '—' }}</td>
+              <td>{{ line.uom || getLabel(uomOptions, line.uomId) || '—' }}</td>
+              <td class="ta-right">{{ line.qty }}</td>
+              <td class="ta-right">{{ line.yieldPct ?? 100 }}</td>
+              <td class="ta-right">{{ line.unitCost | number:'1.2-2' }}</td>
+              <td class="ta-right">{{ rowCost(line) | number:'1.2-2' }}</td>
               <td class="del-col">
+                <button class="btn-icon edit" (click)="editLine(i)" title="Edit">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-8 8H3v-3z"/></svg>
+                </button>
                 <button class="btn-icon danger" (click)="removeLine(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
                 </button>
               </td>
             </tr>
             <tr *ngIf="!lines.length">
-              <td colspan="9" class="empty-lines">Click "+ Add Line" to add ingredients</td>
+              <td colspan="8" class="empty-lines">Click "+ Add Line" to add ingredients</td>
             </tr>
           </tbody>
+          <tfoot *ngIf="lines.length">
+            <tr class="lines-tfoot">
+              <td colspan="6" class="ta-right tfoot-label">Total Cost</td>
+              <td class="ta-right tfoot-val">{{ totalCost | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
-      </div>
-
-      <!-- Totals -->
-      <div class="totals-row">
-        <div class="total-sep"></div>
-        <div class="total-item grand"><span>Total Cost</span><strong>{{ totalCost | number:'1.2-2' }}</strong></div>
       </div>
     </div>
 
@@ -139,8 +127,7 @@
     <div class="card section-card">
       <div class="section-label">Recipe Summary</div>
       <div class="review-grid">
-        <div class="review-row"><span class="review-key">Code</span><span class="review-val">{{ code }}</span></div>
-        <div class="review-row"><span class="review-key">Finished Item</span><span class="review-val">{{ getLabel(itemOptions, finishedItemId) }}</span></div>
+        <div class="review-row"><span class="review-key">Recipe (Finished Food)</span><span class="review-val">{{ getLabel(itemOptions, finishedItemId) }}</span></div>
         <div class="review-row"><span class="review-key">Cuisine</span><span class="review-val">{{ cuisine }}</span></div>
         <div class="review-row"><span class="review-key">Status</span><span class="review-val">{{ statusLabel }}</span></div>
         <div class="review-row"><span class="review-key">Notes</span><span class="review-val">{{ notes }}</span></div>
@@ -174,4 +161,37 @@
       </button>
     </div>
   </ng-container>
+
+  <!-- Add Recipe Line modal -->
+  <div class="rl-overlay" *ngIf="showLineModal" (click)="closeLineModal()">
+    <div class="rl-modal" (click)="$event.stopPropagation()">
+      <div class="rl-head">
+        <h3>{{ isEditingLine ? 'Edit Recipe Line' : 'Add Recipe Line' }}</h3>
+        <button class="rl-x" type="button" (click)="closeLineModal()" aria-label="Close">&times;</button>
+      </div>
+      <div class="rl-body">
+        <div class="form-row cols-3">
+          <erp-dropdown label="Item" [options]="itemOptions" [(ngModel)]="lineModal.ingredientItemId"
+            placeholder="Search / Select..." (ngModelChange)="onModalItemSelect()"></erp-dropdown>
+          <erp-input label="Quantity" type="number" [(ngModel)]="lineModal.qty" placeholder="0"></erp-input>
+          <erp-dropdown label="UOM" [options]="uomOptions" [(ngModel)]="lineModal.uomId"
+            placeholder="Select UOM" (ngModelChange)="onModalUomSelect()"></erp-dropdown>
+        </div>
+        <div class="form-row cols-3 block-gap">
+          <erp-input label="Yield %" type="number" [(ngModel)]="lineModal.yieldPct" placeholder="100"></erp-input>
+          <erp-input label="Unit Cost" type="number" [(ngModel)]="lineModal.unitCost" placeholder="0"></erp-input>
+        </div>
+        <div class="block-gap">
+          <label class="rl-label">Remarks</label>
+          <textarea class="rl-textarea" rows="3" [(ngModel)]="lineModal.remarks" placeholder="Optional..."></textarea>
+        </div>
+        <div class="rl-err" *ngIf="lineError">{{ lineError }}</div>
+      </div>
+      <div class="rl-foot">
+        <button *ngIf="!isEditingLine" class="btn btn-outline btn-sm" type="button" (click)="addAnother()">Add Another</button>
+        <button class="btn btn-primary btn-sm" type="button" (click)="addAndClose()">{{ isEditingLine ? 'Update' : 'Add & Close' }}</button>
+        <button class="btn btn-outline btn-sm" type="button" (click)="closeLineModal()">Close</button>
+      </div>
+    </div>
+  </div>
 </div>

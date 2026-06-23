@@ -52,6 +52,9 @@ export class RecipeService {
   savePlan(data: any): Observable<any> {
     return this.http.post(`${this.api}/ProductionPlan/save`, data);
   }
+  createPrFromRecipeShortage(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequest/create-from-recipe-shortage`, data);
+  }
   getProductionPlans(): Observable<any> {
     return this.http.get(`${this.api}/ProductionPlan/list-with-lines`);
   }

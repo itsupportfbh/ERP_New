@@ -38,6 +38,16 @@ export class RecipeMasterFormComponent implements OnInit {
   // Lines
   lines: RecipeLine[] = [];
 
+  // Add-line modal
+  showLineModal = false;
+  lineError = '';
+  editingIndex: number | null = null;
+  lineModal: RecipeLine = this.blankLine();
+
+  private blankLine(): RecipeLine {
+    return { ingredientItemId: null, ingredientName: '', qty: null, uomId: null, uom: '', yieldPct: 100, unitCost: null, remarks: '' };
+  }
+
   // Dropdowns
   itemOptions: any[] = [];
   uomOptions: any[] = [];
@@ -45,6 +55,12 @@ export class RecipeMasterFormComponent implements OnInit {
     { label: 'Active', value: 'Active' },
     { label: 'Inactive', value: 'Inactive' },
     { label: 'Draft', value: 'Draft' }
+  ];
+  cuisineOptions: any[] = [
+    { label: 'South Indian', value: 'South Indian' },
+    { label: 'North Indian', value: 'North Indian' },
+    { label: 'Chinese', value: 'Chinese' },
+    { label: 'Western', value: 'Western' }
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
@@ -96,8 +112,6 @@ export class RecipeMasterFormComponent implements OnInit {
           unitCost: l.unitCost ?? null,
           remarks: l.remarks ?? ''
         }));
-
-        if (!this.lines.length) this.addLine();
         this.loading = false;
       },
       error: () => { this.loading = false; }
@@ -114,13 +128,38 @@ export class RecipeMasterFormComponent implements OnInit {
 
   removeLine(i: number): void { this.lines.splice(i, 1); }
 
+  // ── Add-line modal ───────────────────────────────────
+  openLineModal(): void { this.editingIndex = null; this.lineModal = this.blankLine(); this.lineError = ''; this.showLineModal = true; }
+  editLine(i: number): void { this.editingIndex = i; this.lineModal = { ...this.lines[i] }; this.lineError = ''; this.showLineModal = true; }
+  closeLineModal(): void { this.showLineModal = false; this.editingIndex = null; }
+
+  get isEditingLine(): boolean { return this.editingIndex !== null; }
+
+  onModalItemSelect(): void { this.onItemSelect(this.lineModal); }
+  onModalUomSelect(): void { this.onUomSelect(this.lineModal); }
+
+  rowCostModal(): number { return this.rowCost(this.lineModal); }
+
+  private commitModalLine(): boolean {
+    if (!this.lineModal.ingredientItemId) { this.lineError = 'Please select an item.'; return false; }
+    if (!this.lineModal.qty || this.lineModal.qty <= 0) { this.lineError = 'Quantity must be greater than 0.'; return false; }
+    this.lineError = '';
+    if (this.editingIndex !== null) {
+      this.lines[this.editingIndex] = { ...this.lineModal };
+      this.editingIndex = null;
+    } else {
+      this.lines.push({ ...this.lineModal });
+    }
+    return true;
+  }
+  addAnother(): void { if (this.commitModalLine()) { this.lineModal = this.blankLine(); } }
+  addAndClose(): void { if (this.commitModalLine()) { this.showLineModal = false; } }
+
   onItemSelect(line: RecipeLine): void {
     const found = this.itemOptions.find(o => o.value === line.ingredientItemId);
     if (found?.raw) {
       const raw = found.raw;
       line.ingredientName = raw.itemName ?? found.label;
-      if (raw.uomId != null) line.uomId = raw.uomId;
-      if (raw.uomName) line.uom = raw.uomName;
       const cost = raw.standardCost ?? raw.unitCost ?? raw.price;
       if (cost != null) line.unitCost = cost;
     }
@@ -145,11 +184,9 @@ export class RecipeMasterFormComponent implements OnInit {
     if (this.step === 1) {
       if (!this.finishedItemId) { this.error = 'Please select a Finished Item.'; return; }
       this.error = '';
-      if (!this.lines.length) this.addLine();
       this.step = 2;
     } else if (this.step === 2) {
-      const invalid = this.lines.some(l => !l.ingredientItemId || !l.qty || (l.qty ?? 0) <= 0);
-      if (invalid) { this.error = 'Each line needs an Ingredient and Quantity > 0.'; return; }
+      if (!this.lines.length) { this.error = 'Please add at least one ingredient.'; return; }
       this.error = '';
       this.step = 3;
     }

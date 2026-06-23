@@ -43,7 +43,6 @@ export class RecipeMasterListComponent implements OnInit {
     { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
     { header: 'Yield %', key: 'yieldPct', align: 'right', type: 'number' },
     { header: 'Unit Cost', key: 'unitCost', align: 'right', type: 'number' },
-    { header: 'Line Cost', key: 'lineCost', align: 'right', type: 'number' },
   ];
 
   constructor(private svc: RecipeService, private router: Router, private printSvc: DocumentPrintService) {}
@@ -65,6 +64,7 @@ export class RecipeMasterListComponent implements OnInit {
           finishedItemName: r.finishedItem ?? r.finishedItemName ?? r.itemName ?? '',
           cuisine: r.cuisine ?? '',
           status: r.status ?? 'Draft',
+          cost: r.totalCost ?? r.cost ?? r.recipeCost ?? r.costPrice ?? null,
           ingredientCount: r.ingredientCount ?? (Array.isArray(r.ingredients) ? r.ingredients.length : null),
         }));
         this.applyFilter();
@@ -138,17 +138,15 @@ export class RecipeMasterListComponent implements OnInit {
         const status = d.status ?? row.status ?? 'Draft';
         const cuisine = d.cuisine ?? row.cuisine ?? '';
         this.viewInfo = [
-          { label: 'Code', value: code || '—' },
           { label: 'Finished Item', value: finishedItem || '—' },
           { label: 'Cuisine', value: cuisine || '—' },
           { label: 'Status', value: status },
           { label: 'Ingredients', value: this.viewLines.length },
-          { label: 'Remarks', value: d.notes ?? d.remarks ?? '—' },
         ];
         this.viewTotals = [
           { label: 'Total Cost', value: totalCost.toFixed(2) },
         ];
-        this.viewTitle = `Recipe Ingredients — ${code || '—'}`;
+        this.viewTitle = `Recipe Ingredients — ${finishedItem || '—'}`;
         this.viewSubtitle = `Finished Item: ${finishedItem || '—'} · Cuisine: ${cuisine || '—'}`;
         this.viewLoading = false;
         cb();

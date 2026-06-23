@@ -20,7 +20,7 @@ export class ProductionPlanningFormComponent implements OnInit {
   // Header
   salesOrderId: number | null = null;
   warehouseId: number | null = null;
-  outletId = 0;
+  outletId = Number(localStorage.getItem('outletId')) || 1;
   status: number = 1;
   planDate = '';
 
@@ -60,7 +60,21 @@ export class ProductionPlanningFormComponent implements OnInit {
         label: w.warehouseName ?? w.name,
         value: w.id
       }));
+      this.setDefaultWarehouse();
     });
+  }
+
+  /** Default the production warehouse like the old project: user default → first warehouse. */
+  private setDefaultWarehouse(): void {
+    if (this.isEdit) return;
+    if (this.warehouseId && this.warehouseId > 0) return;
+    const userWh = Number(localStorage.getItem('defaultWarehouseId') || 0);
+    if (userWh > 0 && this.warehouseOptions.some(o => Number(o.value) === userWh)) {
+      this.warehouseId = userWh;
+    } else if (this.warehouseOptions.length) {
+      this.warehouseId = Number(this.warehouseOptions[0].value);
+    }
+    if (this.salesOrderId && this.warehouseId) this.fetchPlan(false);
   }
 
   loadSalesOrders(includeSoId?: number): void {
@@ -84,7 +98,7 @@ export class ProductionPlanningFormComponent implements OnInit {
         this.productionPlanId = h.id ?? h.Id ?? this.id;
         this.salesOrderId = h.salesOrderId ?? h.SalesOrderId ?? null;
         this.warehouseId = h.warehouseId ?? h.WarehouseId ?? null;
-        this.outletId = h.outletId ?? h.OutletId ?? 0;
+        this.outletId = Number(h.outletId ?? h.OutletId ?? this.outletId) || this.outletId;
         this.status = Number(h.status ?? h.Status ?? 1);
         if (![0, 1, 2, 8, 9].includes(this.status)) this.status = 1;
         this.planDate = h.planDate ? String(h.planDate).substring(0, 10) : this.today;
@@ -158,6 +172,7 @@ export class ProductionPlanningFormComponent implements OnInit {
       itemId: g.itemId ?? null,
       itemName: g.itemName ?? '',
       uom: g.uom ?? '',
+      baseUomName: g.baseUomName ?? g.baseUom ?? g.stockUomName ?? '',
       requiredQty: g.requiredQty ?? 0,
       availableQty: g.availableQty ?? 0,
       status: g.status ?? 'OK'
@@ -166,6 +181,111 @@ export class ProductionPlanningFormComponent implements OnInit {
 
   get shortageCount(): number {
     return (this.ingredients || []).filter(i => (i?.status ?? '') !== 'OK').length;
+  }
+
+  refresh(): void {
+    if (this.salesOrderId && this.warehouseId) this.fetchPlan(true);
+  }
+
+  // ── Create PR from recipe shortage ───────────────────
+  showPrConfirm = false;
+  prBusy = false;
+  private planCreatedInThisFlow = false;
+
+  createPr(): void {
+    this.error = '';
+    if (this.shortageCount <= 0) { this.error = 'No shortage items found.'; return; }
+    if (!this.salesOrderId) { this.error = 'Please select a Sales Order first.'; return; }
+    if (!this.warehouseId) { this.error = 'Please select a Production Warehouse.'; return; }
+    this.showPrConfirm = true;
+  }
+
+  cancelPrConfirm(): void { this.showPrConfirm = false; }
+
+  confirmCreatePr(): void {
+    this.showPrConfirm = false;
+    // Plan already exists (edit / previously saved) → create PR directly, no rollback of an existing plan.
+    if (this.productionPlanId && this.productionPlanId > 0) {
+      this.planCreatedInThisFlow = false;
+      this.doCreatePr(this.productionPlanId);
+      return;
+    }
+    // First time → save plan, then create PR. If PR fails we roll this plan back.
+    this.prBusy = true;
+    this.error = '';
+    this.svc.savePlan({
+      salesOrderId: this.salesOrderId,
+      warehouseId: this.warehouseId,
+      outletId: this.outletId,
+      planDate: this.planDate || this.today,
+      createdBy: this.loginUserId,
+      status: 0
+    }).subscribe({
+      next: (res: any) => {
+        const d = this.svc.unwrapOne(res) ?? res;
+        const pid = Number(d?.productionPlanId ?? d?.id ?? res?.productionPlanId ?? 0);
+        if (!pid) { this.prBusy = false; this.error = 'Production Plan save failed.'; return; }
+        this.productionPlanId = pid;
+        this.planCreatedInThisFlow = true;
+        this.doCreatePr(pid);
+      },
+      error: e => { this.prBusy = false; this.error = e?.error?.message ?? 'Failed to save plan before PR creation.'; }
+    });
+  }
+
+  private doCreatePr(planId: number): void {
+    this.prBusy = true;
+    this.error = '';
+    const payload = {
+      productionPlanId: planId,
+      salesOrderId: this.salesOrderId,
+      warehouseId: this.warehouseId,
+      outletId: this.outletId,
+      userId: this.loginUserId,
+      userName: (localStorage.getItem('username') || '').trim(),
+      deliveryDate: null,
+      note: `Auto from Production Planning SO:${this.salesOrderId}`
+    };
+    this.svc.createPrFromRecipeShortage(payload).subscribe({
+      next: (res: any) => {
+        const d = this.svc.unwrapOne(res) ?? res;
+        const prId = Number(d?.prId ?? d?.id ?? res?.prId ?? 0);
+        if (prId > 0) {
+          // Success → plan stays, mark status, alert to PO already raised by backend.
+          this.planCreatedInThisFlow = false;
+          this.svc.updatePlanStatus(planId, { status: 0, updatedBy: this.loginUserId }).subscribe({
+            next: () => { this.prBusy = false; this.success = 'PR created from recipe shortage. Alert sent to Purchase / PO.'; setTimeout(() => this.back(), 1000); },
+            error: () => { this.prBusy = false; this.success = 'PR created (plan status update pending).'; setTimeout(() => this.back(), 1000); }
+          });
+        } else {
+          // No PR raised → undo the plan we just created so nothing is left in the list.
+          this.rollbackPlanIfNeeded(() => {
+            this.prBusy = false;
+            this.error = d?.message ?? 'No shortage items to raise a PR.';
+          });
+        }
+      },
+      error: err => {
+        // PR failed → undo the plan we just created.
+        this.rollbackPlanIfNeeded(() => {
+          this.prBusy = false;
+          this.error = err?.error?.message ?? 'Failed to create PR.';
+        });
+      }
+    });
+  }
+
+  /** Delete the plan only if it was auto-created during this Create-PR attempt (so a failed PR leaves nothing behind). */
+  private rollbackPlanIfNeeded(done: () => void): void {
+    if (this.planCreatedInThisFlow && this.productionPlanId) {
+      const pid = this.productionPlanId;
+      this.svc.deletePlan(pid).subscribe({
+        next: () => { this.productionPlanId = null; this.planCreatedInThisFlow = false; done(); },
+        error: () => { this.planCreatedInThisFlow = false; done(); }
+      });
+    } else {
+      done();
+    }
   }
 
   save(): void {
@@ -179,6 +299,7 @@ export class ProductionPlanningFormComponent implements OnInit {
       salesOrderId: this.salesOrderId,
       warehouseId: this.warehouseId,
       outletId: this.outletId,
+      planDate: this.planDate || this.today,
       createdBy: this.loginUserId
     }).subscribe({
       next: () => { this.saving = false; this.success = 'Production plan saved.'; this.back(); },
