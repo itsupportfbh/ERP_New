@@ -54,7 +54,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Currency',        icon: 'm-currency',  route: '/app/master/currency',         permId: 'currency' },
         { label: 'Customer Groups', icon: 'm-custgrp',   route: '/app/master/customergroups',   permId: 'customergroups' },
         { label: 'Department',      icon: 'm-dept',      route: '/app/master/department',       permId: 'department' },
-        { label: 'Department Menu Access', icon: 'm-dept', route: '/app/master/department-menu-access' },
+        { label: 'Department Access', icon: 'm-dept', route: '/app/master/department-menu-access' },
         { label: 'Driver',          icon: 'm-driver',    route: '/app/master/driver',           permId: 'driver' },
         { label: 'Exchange Rate',   icon: 'm-exchange',  route: '/app/master/exchangerate',     permId: 'exchangerate' },
         { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue',        permId: 'flagissue' },

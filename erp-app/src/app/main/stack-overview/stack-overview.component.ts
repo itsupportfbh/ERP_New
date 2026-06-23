@@ -680,7 +680,6 @@ private rebuildFromOutletOptions(): void {
   }
 
   this.fromOutletOptions = Array.from(map.values())
-    .filter(x => x.onHand > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
   /* ===================== GRID FILTER ===================== */

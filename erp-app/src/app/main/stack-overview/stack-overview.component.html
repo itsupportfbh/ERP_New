@@ -34,10 +34,10 @@
       <div class="form-row cols-3">
         <div>
           <label class="fc-label">Material Requisition</label>
-          <ng-select class="fc-ng" [items]="mrList" bindLabel="display" bindValue="id"
-            placeholder="Select MRQ" [(ngModel)]="selectedMrId"
-            (ngModelChange)="onMrChanged($event)" appendTo="body">
-          </ng-select>
+          <erp-dropdown [items]="mrList" bindLabel="display" bindValue="id"
+            placeholder="Select MRQ..." [(ngModel)]="selectedMrId"
+            (ngModelChange)="onMrChanged($event)">
+          </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Destination Warehouse</label>
@@ -53,8 +53,8 @@
         <div>
           <label class="fc-label">From Warehouse</label>
           <ng-select class="fc-ng" [items]="fromOutletOptions" bindLabel="label" bindValue="id"
-            [compareWith]="compareById"
-            [placeholder]="selectedMrId ? 'Select From Warehouse' : 'Select MRQ first'"
+            [compareWith]="compareById" [searchable]="true"
+            [placeholder]="selectedMrId ? 'Search warehouse...' : 'Select MRQ first'"
             [disabled]="!selectedMrId"
             [(ngModel)]="selectedFromOutletId" (ngModelChange)="onFromOutletChanged($event)" appendTo="body">
             <ng-template ng-option-tmp let-item="item">

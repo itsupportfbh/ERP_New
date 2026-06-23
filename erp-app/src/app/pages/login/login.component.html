@@ -1,323 +1,163 @@
 <div class="login-page">
 
-  <!-- LEFT — CATERING PANEL -->
-  <div class="catering-panel">
-    <div class="cp-vignette"></div>
-    <div class="cp-lines"></div>
+  <div class="main-area">
 
-    <!-- Corner decorative arcs -->
-    <svg class="corner-arc ca-tl" viewBox="0 0 120 120" fill="none">
-      <path d="M 0 120 Q 0 0 120 0" stroke="rgba(56,178,200,0.18)" stroke-width="1"/>
-      <path d="M 0 100 Q 0 0 100 0" stroke="rgba(56,178,200,0.10)" stroke-width="1"/>
-      <path d="M 0 80  Q 0 0 80  0" stroke="rgba(56,178,200,0.06)" stroke-width="1"/>
-    </svg>
-    <svg class="corner-arc ca-br" viewBox="0 0 120 120" fill="none">
-      <path d="M 120 0 Q 120 120 0 120" stroke="rgba(56,178,200,0.14)" stroke-width="1"/>
-      <path d="M 120 20 Q 120 120 20 120" stroke="rgba(56,178,200,0.08)" stroke-width="1"/>
-    </svg>
+    <!-- ═══ LEFT PANEL ═══ -->
+    <div class="left-panel">
+      <div class="lp-overlay"></div>
 
-    <!-- Logo -->
-    <div class="cp-logo">
-      <div class="cp-logo-mark">
-        <svg viewBox="0 0 20 20" fill="none" stroke="#38b2c8" stroke-width="1.6" stroke-linecap="round">
-          <path d="M 3 2 L 3 12 Q 3 14 5 14 L 8 14 Q 10 14 10 12 L 10 2"/>
-          <path d="M 6.5 2 L 6.5 18"/>
-          <path d="M 17 14 L 17 2 Q 12.5 2 12.5 7 L 12.5 12 Q 12.5 14 14.5 14 L 17 14"/>
-          <path d="M 17 14 L 17 18"/>
-        </svg>
+      <!-- Logo -->
+      <div class="lp-logo-row">
+        <img src="assets/images/catering-logo.png" alt="Catering ERP" class="lp-logo-img"/>
+        <div class="lp-logo-text">
+          <span>CATERING <em>ERP</em></span>
+          <small>Smart. Efficient. Global.</small>
+        </div>
       </div>
-      <div class="cp-logo-text">
-        <span>Unity ERP</span>
-        <em>Catering Management</em>
-      </div>
+      <div class="lp-accent"></div>
+
+      <!-- Heading -->
+      <h1 class="lp-heading">
+        Empowering Catering<br>
+        Businesses <em>Worldwide</em>
+      </h1>
+      <p class="lp-desc">
+        Manage your catering operations seamlessly with our<br>
+        all-in-one ERP solution.
+      </p>
+
+
     </div>
 
-    <!-- Central fine-dining plate illustration -->
-    <div class="plate-stage">
-      <svg class="plate-art" viewBox="0 0 440 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- ═══ RIGHT PANEL ═══ -->
+    <div class="right-panel">
+      <div class="rp-inner">
 
-        <!-- Ambient glow behind plate -->
-        <ellipse cx="220" cy="232" rx="148" ry="142"
-                 fill="rgba(56,178,200,0.05)" filter="url(#blur)"/>
-        <defs>
-          <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="12"/>
-          </filter>
-        </defs>
-
-        <!-- Plate shadow -->
-        <ellipse cx="225" cy="240" rx="142" ry="138" fill="rgba(0,0,0,0.28)"/>
-
-        <!-- Plate outer rim -->
-        <circle cx="220" cy="232" r="138"
-                fill="rgba(224,245,248,0.055)"
-                stroke="rgba(224,245,248,0.30)" stroke-width="2"/>
-        <!-- Rim inner detail line -->
-        <circle cx="220" cy="232" r="124"
-                fill="none"
-                stroke="rgba(224,245,248,0.10)" stroke-width="1"/>
-        <!-- Plate surface -->
-        <circle cx="220" cy="232" r="114"
-                fill="rgba(8,28,36,0.88)"/>
-        <!-- Plate highlight (top-left arc) -->
-        <path d="M 135 175 A 114 114 0 0 1 298 165"
-              stroke="rgba(224,245,248,0.07)" stroke-width="10" fill="none"
-              stroke-linecap="round"/>
-
-        <!-- ══ PLATING — Fine dining composition ══ -->
-
-        <!-- Sauce base smear (paintbrush style) -->
-        <path d="M 165 248 Q 188 238 215 242 Q 238 246 248 260"
-              stroke="rgba(45,138,158,0.38)" stroke-width="16"
-              stroke-linecap="round" fill="none"/>
-        <path d="M 168 249 Q 190 241 215 244 Q 236 247 244 259"
-              stroke="rgba(56,178,200,0.22)" stroke-width="8"
-              stroke-linecap="round" fill="none"/>
-
-        <!-- Protein: grilled fillet (rounded lens) -->
-        <path d="M 185 220 C 183 204 200 194 218 198
-                 C 234 202 240 216 236 230
-                 C 232 244 216 250 200 246
-                 C 184 242 186 232 185 220 Z"
-              fill="rgba(42,98,80,0.90)"/>
-        <!-- Protein inner shadow -->
-        <path d="M 190 220 C 189 208 203 200 217 203
-                 C 229 206 233 218 229 228
-                 C 226 238 213 243 201 240
-                 C 189 237 191 228 190 220 Z"
-              fill="rgba(28,72,58,0.95)"/>
-        <!-- Grill marks -->
-        <path d="M 196 212 Q 215 206 228 215"
-              stroke="rgba(56,178,200,0.16)" stroke-width="2" stroke-linecap="round" fill="none"/>
-        <path d="M 193 222 Q 215 216 228 224"
-              stroke="rgba(56,178,200,0.11)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-        <!-- Protein gloss highlight -->
-        <path d="M 193 208 C 200 202 214 200 222 204"
-              stroke="rgba(255,255,255,0.09)" stroke-width="3" stroke-linecap="round" fill="none"/>
-
-        <!-- Sauce dot cascade (fine dining quenelle dots) -->
-        <circle cx="258" cy="210" r="7"   fill="rgba(56,178,200,0.72)"/>
-        <circle cx="271" cy="222" r="5.5" fill="rgba(56,178,200,0.60)"/>
-        <circle cx="280" cy="235" r="4"   fill="rgba(56,178,200,0.48)"/>
-        <circle cx="286" cy="246" r="2.8" fill="rgba(56,178,200,0.36)"/>
-        <circle cx="289" cy="255" r="1.8" fill="rgba(56,178,200,0.25)"/>
-        <!-- Dot inner specular -->
-        <circle cx="255" cy="207" r="2.5" fill="rgba(255,255,255,0.22)"/>
-        <circle cx="268" cy="219" r="2"   fill="rgba(255,255,255,0.18)"/>
-
-        <!-- Thin sauce drizzle line -->
-        <path d="M 250 200 Q 264 218 260 240"
-              stroke="rgba(56,178,200,0.30)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-
-        <!-- Micro herb cluster (top of protein) -->
-        <g transform="translate(196, 185)">
-          <path d="M 5 22 C 3 14 5 8 5 0"  stroke="rgba(56,178,200,0.75)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-          <path d="M 5 22 C 9 13 12 8 10 1" stroke="rgba(38,155,130,0.65)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-          <path d="M 5 22 C 0 15 -2 8 1 2"  stroke="rgba(56,178,200,0.60)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-          <path d="M 5 22 C 10 18 13 12 11 6" stroke="rgba(38,155,130,0.50)" stroke-width="1.0" fill="none" stroke-linecap="round"/>
-          <path d="M 5 22 C 2 18 -1 14 0 9"   stroke="rgba(56,178,200,0.50)" stroke-width="1.0" fill="none" stroke-linecap="round"/>
-          <!-- Tiny herb dots -->
-          <circle cx="5"  cy="0"  r="1.8" fill="rgba(56,178,200,0.60)"/>
-          <circle cx="10" cy="1"  r="1.5" fill="rgba(38,155,130,0.55)"/>
-          <circle cx="1"  cy="2"  r="1.5" fill="rgba(56,178,200,0.55)"/>
-          <circle cx="11" cy="6"  r="1.2" fill="rgba(38,155,130,0.45)"/>
-          <circle cx="-1" cy="9"  r="1.2" fill="rgba(56,178,200,0.45)"/>
-        </g>
-
-        <!-- Edible flower (small decorative) -->
-        <g transform="translate(168, 248)">
-          <circle cx="6" cy="6" r="5.5" fill="rgba(180,50,50,0.38)"/>
-          <circle cx="6" cy="6" r="3"   fill="rgba(210,70,70,0.30)"/>
-          <circle cx="6" cy="6" r="1.5" fill="rgba(240,160,100,0.50)"/>
-        </g>
-
-        <!-- Root vegetable crisps (thin elegant slices) -->
-        <ellipse cx="248" cy="190" rx="9" ry="5"
-                 fill="rgba(198,70,26,0.42)" transform="rotate(-20 248 190)"/>
-        <ellipse cx="248" cy="190" rx="5" ry="2.5"
-                 fill="rgba(215,85,35,0.28)" transform="rotate(-20 248 190)"/>
-
-        <!-- Steam wisps (animated via CSS class .steam) -->
-        <path class="steam sp1"
-              d="M 208 90 C 200 75 208 60 200 45 C 192 30 200 15 192 0"
-              stroke="rgba(224,245,248,0.50)" stroke-width="2.5" stroke-linecap="round"/>
-        <path class="steam sp2"
-              d="M 222 86 C 214 70 222 55 214 40 C 206 25 214 10 206 -5"
-              stroke="rgba(224,245,248,0.38)" stroke-width="2.0" stroke-linecap="round"/>
-        <path class="steam sp3"
-              d="M 236 90 C 244 74 236 59 244 44 C 252 29 244 14 252 -1"
-              stroke="rgba(224,245,248,0.30)" stroke-width="1.8" stroke-linecap="round"/>
-
-        <!-- ══ Fork (left) ══ -->
-        <g transform="translate(46, 95)" opacity="0.68">
-          <!-- Tines -->
-          <path d="M 6  0 L 6  66" stroke="rgba(224,245,248,0.78)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M 13 0 L 13 66" stroke="rgba(224,245,248,0.78)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M 20 0 L 20 66" stroke="rgba(224,245,248,0.78)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M 27 0 L 27 66" stroke="rgba(224,245,248,0.78)" stroke-width="2.2" stroke-linecap="round"/>
-          <!-- Tine connector -->
-          <path d="M 4 66 Q 4 82 13 88 L 13 200 Q 16 207 20 200 L 20 88 Q 29 82 29 66"
-                fill="rgba(224,245,248,0.55)" stroke="none"/>
-        </g>
-
-        <!-- ══ Knife (right) ══ -->
-        <g transform="translate(362, 92)" opacity="0.62">
-          <!-- Blade -->
-          <path d="M 12 2 C 20 2 24 28 22 68"
-                fill="rgba(224,245,248,0.28)" stroke="none"/>
-          <path d="M 12 2 L 12 68 Q 9 75 9 82"
-                stroke="rgba(224,245,248,0.72)" stroke-width="2" stroke-linecap="round" fill="none"/>
-          <path d="M 12 2 C 22 18 22 48 22 68"
-                stroke="rgba(224,245,248,0.30)" stroke-width="1" fill="none"/>
-          <!-- Handle bolster -->
-          <rect x="7" y="80" width="16" height="6" rx="2" fill="rgba(224,245,248,0.40)"/>
-          <!-- Handle -->
-          <path d="M 8 86 L 8 205 Q 14 212 20 205 L 20 86 Z"
-                fill="rgba(224,245,248,0.52)"/>
-          <!-- Handle rivets -->
-          <circle cx="14" cy="120" r="2.5" fill="rgba(224,245,248,0.30)"/>
-          <circle cx="14" cy="145" r="2.5" fill="rgba(224,245,248,0.30)"/>
-          <circle cx="14" cy="170" r="2.5" fill="rgba(224,245,248,0.30)"/>
-        </g>
-
-        <!-- Scattered micro dots on plate -->
-        <circle cx="175" cy="200" r="2" fill="rgba(56,178,200,0.35)"/>
-        <circle cx="248" cy="268" r="2" fill="rgba(56,178,200,0.28)"/>
-        <circle cx="162" cy="262" r="1.5" fill="rgba(224,245,248,0.22)"/>
-        <circle cx="268" cy="190" r="1.5" fill="rgba(224,245,248,0.18)"/>
-
-      </svg>
-    </div>
-
-    <!-- Tagline at bottom -->
-    <div class="cp-tagline">
-      <div class="cp-divider"></div>
-      <p class="cp-pre">Premier Catering Management</p>
-      <h2 class="cp-headline">Elevate Every<br>dining <em>Experience</em></h2>
-    </div>
-  </div>
-
-  <!-- RIGHT — FORM PANEL -->
-  <div class="form-panel">
-    <div class="form-box">
-
-      <!-- Mobile logo -->
-      <div class="mob-logo">
-        <div class="mob-logo-dot"></div>
-        Unity ERP Catering
-      </div>
-
-      <div class="form-head">
-        <h1 class="form-title">Welcome back</h1>
-        <p class="form-sub">Sign in to your Unity ERP account</p>
-      </div>
-
-      <form (ngSubmit)="onLogin()" autocomplete="on">
-
-        <!-- Email -->
-        <div class="f-group">
-          <label class="f-label">Email</label>
-          <div class="f-control" [class.is-focused]="uFocus" [class.is-error]="error">
-            <div class="f-icon">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                <rect x="2" y="5" width="16" height="12" rx="2"/>
-                <path d="M2 7l8 5 8-5"/>
-              </svg>
-            </div>
-            <input type="email" [(ngModel)]="email" name="email"
-                   placeholder="Enter your email"
-                   autocomplete="email"
-                   (focus)="uFocus=true" (blur)="uFocus=false"/>
-          </div>
-        </div>
-
-        <!-- Password -->
-        <div class="f-group">
-          <label class="f-label">Password</label>
-          <div class="f-control" [class.is-focused]="pFocus" [class.is-error]="error">
-            <div class="f-icon">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                <rect x="3" y="9" width="14" height="10" rx="2"/>
-                <path d="M6 9V6.5a4 4 0 1 1 8 0V9"/>
-              </svg>
-            </div>
-            <input [type]="showPassword ? 'text' : 'password'"
-                   [(ngModel)]="password" name="password"
-                   placeholder="Enter your password"
-                   autocomplete="current-password"
-                   (focus)="pFocus=true" (blur)="pFocus=false"/>
-            <button type="button" class="eye-btn" (click)="showPassword=!showPassword" tabindex="-1">
-              <svg *ngIf="!showPassword" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                <path d="M1 10s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7z"/>
-                <circle cx="10" cy="10" r="2.5"/>
-              </svg>
-              <svg *ngIf="showPassword" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                <path d="M14.5 14.5A8.4 8.4 0 0 1 10 16c-5.4 0-9-6-9-6a16 16 0 0 1 4.4-5"/>
-                <path d="M8 4.2A8.5 8.5 0 0 1 10 4c5.4 0 9 6 9 6a16 16 0 0 1-1.8 2.7"/>
-                <line x1="1" y1="1" x2="19" y2="19"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Options -->
-        <div class="f-options">
-          <label class="f-remember" (click)="rememberMe=!rememberMe">
-            <span class="f-chk" [class.checked]="rememberMe">
-              <svg *ngIf="rememberMe" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="1.5,5 3.8,7.5 8.5,2"/>
-              </svg>
-            </span>
-            Keep me signed in
-          </label>
-          <a class="f-forgot" routerLink="/forgot-password">Forgot password?</a>
-        </div>
-
-        <!-- Error message -->
-        <div class="f-error" *ngIf="error">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-            <circle cx="10" cy="10" r="9"/>
-            <line x1="10" y1="6" x2="10" y2="10"/>
-            <line x1="10" y1="13.5" x2="10.01" y2="13.5"/>
+        <!-- Language selector -->
+        <div class="lang-sel">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <circle cx="10" cy="10" r="8"/>
+            <line x1="2" y1="10" x2="18" y2="10"/>
+            <path d="M10 2a12 12 0 0 1 3 8 12 12 0 0 1-3 8 12 12 0 0 1-3-8 12 12 0 0 1 3-8z"/>
           </svg>
-          {{ error }}
+          English
+          <svg viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <polyline points="1,1 6,7 11,1"/>
+          </svg>
         </div>
 
-        <!-- Submit -->
-        <button type="submit" class="f-submit" [disabled]="loading">
-          <span class="btn-spinner" *ngIf="loading"></span>
-          <span class="btn-label">{{ loading ? 'Signing in…' : 'Sign In' }}</span>
-          <svg *ngIf="!loading" class="btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="4" y1="10" x2="16" y2="10"/>
-            <polyline points="11 5 16 10 11 15"/>
-          </svg>
-        </button>
+        <div class="rp-head">
+          <h2 class="rp-title">Welcome Back! 👋</h2>
+          <p class="rp-sub">Sign in to continue to Catering ERP</p>
+        </div>
 
-      </form>
+        <form (ngSubmit)="onLogin()" autocomplete="on">
 
+          <!-- Username -->
+          <div class="f-group">
+            <label class="f-label">Username</label>
+            <div class="f-control" [class.is-focused]="uFocus" [class.is-error]="error">
+              <div class="f-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                  <circle cx="10" cy="6" r="3.5"/>
+                  <path d="M2.5 18.5a7.5 7.5 0 0 1 15 0"/>
+                </svg>
+              </div>
+              <input type="text" [(ngModel)]="email" name="email"
+                     placeholder="Enter your username"
+                     autocomplete="username"
+                     (focus)="uFocus=true" (blur)="uFocus=false"/>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="f-group">
+            <label class="f-label">Password</label>
+            <div class="f-control" [class.is-focused]="pFocus" [class.is-error]="error">
+              <div class="f-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                  <rect x="3" y="9" width="14" height="10" rx="2"/>
+                  <path d="M6 9V6.5a4 4 0 1 1 8 0V9"/>
+                </svg>
+              </div>
+              <input [type]="showPassword ? 'text' : 'password'"
+                     [(ngModel)]="password" name="password"
+                     placeholder="Enter your password"
+                     autocomplete="current-password"
+                     (focus)="pFocus=true" (blur)="pFocus=false"/>
+              <button type="button" class="eye-btn" (click)="showPassword=!showPassword" tabindex="-1">
+                <svg *ngIf="!showPassword" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                  <path d="M1 10s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7z"/>
+                  <circle cx="10" cy="10" r="2.5"/>
+                </svg>
+                <svg *ngIf="showPassword" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                  <path d="M14.5 14.5A8.4 8.4 0 0 1 10 16c-5.4 0-9-6-9-6a16 16 0 0 1 4.4-5"/>
+                  <path d="M8 4.2A8.5 8.5 0 0 1 10 4c5.4 0 9 6 9 6a16 16 0 0 1-1.8 2.7"/>
+                  <line x1="1" y1="1" x2="19" y2="19"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Options -->
+          <div class="f-options">
+            <label class="f-remember" (click)="rememberMe=!rememberMe">
+              <span class="f-chk" [class.checked]="rememberMe">
+                <svg *ngIf="rememberMe" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="1.5,5 3.8,7.5 8.5,2"/>
+                </svg>
+              </span>
+              Remember me
+            </label>
+            <a class="f-forgot" routerLink="/forgot-password">Forgot Password?</a>
+          </div>
+
+          <!-- Error -->
+          <div class="f-error" *ngIf="error">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="10" cy="10" r="9"/>
+              <line x1="10" y1="6" x2="10" y2="10"/>
+              <line x1="10" y1="13.5" x2="10.01" y2="13.5"/>
+            </svg>
+            {{ error }}
+          </div>
+
+          <!-- Login button -->
+          <button type="submit" class="btn-login" [disabled]="loading">
+            <span class="btn-spinner" *ngIf="loading"></span>
+            <span>{{ loading ? 'Signing in…' : 'Login' }}</span>
+            <svg *ngIf="!loading" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="4" y1="10" x2="16" y2="10"/>
+              <polyline points="11 5 16 10 11 15"/>
+            </svg>
+          </button>
+
+        </form>
+
+      </div>
     </div>
-  </div>
+
+  </div><!-- /main-area -->
+
+
 
 </div>
 
-<!-- Company Selection Modal -->
+<!-- Company Modal -->
 <div class="company-overlay" *ngIf="showCompanySelect">
   <div class="company-modal">
     <h2 class="company-title">Select Company</h2>
     <p class="company-sub">Your account is linked to multiple companies. Please select one to continue.</p>
-
     <div class="company-list">
       <label class="company-item" *ngFor="let c of companies" [class.selected]="selectedCompanyId === c.companyId">
         <input type="radio" name="company" [value]="c.companyId" [(ngModel)]="selectedCompanyId"/>
         <span class="company-name">{{ c.companyName }}</span>
       </label>
     </div>
-
     <div class="f-error" *ngIf="error" style="margin-top:12px">{{ error }}</div>
-
-    <button class="f-submit" [disabled]="loading || !selectedCompanyId" (click)="selectCompany()">
+    <button class="btn-login" [disabled]="loading || !selectedCompanyId" (click)="selectCompany()">
       <span class="btn-spinner" *ngIf="loading"></span>
-      <span class="btn-label">{{ loading ? 'Signing in…' : 'Continue' }}</span>
+      <span>{{ loading ? 'Signing in…' : 'Continue' }}</span>
     </button>
   </div>
 </div>
