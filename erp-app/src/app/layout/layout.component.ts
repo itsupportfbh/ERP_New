@@ -3,6 +3,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { forkJoin, Subscription, filter } from 'rxjs';
 import { AuthService } from '../core/services/auth.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
+import { CurrentPeriodLockState, PeriodLockStateService } from '../core/services/period-lock-state.service';
 
 interface MenuItem {
   label: string;
@@ -25,10 +26,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
   openMenus = new Set<string>();
 
   private routerSub!: Subscription;
+  private periodLockSub?: Subscription;
 
   viewableIds = new Set<string>();
   permLoaded = false;
   showAll = false;
+  currentPeriodLocked = false;
+  currentPeriodName = '';
 
   private readonly menuReloadHandler = () => this.loadMenuPermissions();
 
@@ -54,7 +58,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Currency',        icon: 'm-currency',  route: '/app/master/currency',         permId: 'currency' },
         { label: 'Customer Groups', icon: 'm-custgrp',   route: '/app/master/customergroups',   permId: 'customergroups' },
         { label: 'Department',      icon: 'm-dept',      route: '/app/master/department',       permId: 'department' },
-        { label: 'Department Access', icon: 'm-dept', route: '/app/master/department-menu-access' },
+        { label: 'Department Access', icon: 'm-dept', route: '/app/master/department-menu-access', permId: 'department-menu-access' },
         { label: 'Driver',          icon: 'm-driver',    route: '/app/master/driver',           permId: 'driver' },
         { label: 'Exchange Rate',   icon: 'm-exchange',  route: '/app/master/exchangerate',     permId: 'exchangerate' },
         { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue',        permId: 'flagissue' },
@@ -89,13 +93,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
       label: 'Sales',
       icon: 'sales',
       children: [
-        { label: 'Quotation',          icon: 'quote',    route: '/app/sales/quotations' },
-        { label: 'Sales Order',        icon: 'so',       route: '/app/sales/orders' },
-        { label: 'Picking & Packing',  icon: 'pick',     route: '/app/sales/picking' },
-        { label: 'Delivery Order',     icon: 'delivery', route: '/app/sales/delivery-orders' },
-        { label: 'Sales Invoice',      icon: 'invoice',  route: '/app/sales/invoices' },
-        { label: 'Return / Credit',    icon: 'credit',   route: '/app/sales/credit-notes' },
-        { label: 'Report',             icon: 'report',   route: '/app/sales/reports' },
+        { label: 'Quotation',          icon: 'quote',    route: '/app/sales/quotations',       permId: 'qt-list' },
+        { label: 'Sales Order',        icon: 'so',       route: '/app/sales/orders',            permId: 'so-list' },
+        { label: 'Picking & Packing',  icon: 'pick',     route: '/app/sales/picking',           permId: 'sales-pp-list' },
+        { label: 'Delivery Order',     icon: 'delivery', route: '/app/sales/delivery-orders',   permId: 'do-list2' },
+        { label: 'Sales Invoice',      icon: 'invoice',  route: '/app/sales/invoices',          permId: 'si-list' },
+        { label: 'Return / Credit',    icon: 'credit',   route: '/app/sales/credit-notes',      permId: 'cn-list' },
+        { label: 'Report',             icon: 'report',   route: '/app/sales/reports',           permId: 'sales-report' },
       ]
     },
     {
@@ -152,12 +156,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
       label: 'Recipe',
       icon: 'recipe',
       children: [
-        { label: 'Recipe Master',       icon: 'recipe',  route: '/app/recipe/recipes' },
-        { label: 'Production Planning',  icon: 'plan',    route: '/app/recipe/production-planning' },
-        { label: 'Batch Production',     icon: 'batch',   route: '/app/recipe/batch-production' },
+        { label: 'Recipe Master',        icon: 'recipe', route: '/app/recipe/recipes',              permId: 'recipe-list' },
+        { label: 'Production Planning', icon: 'plan',   route: '/app/recipe/production-planning',  permId: 'pp-list' },
+        { label: 'Batch Production',    icon: 'batch',  route: '/app/recipe/batch-production',     permId: 'bp-list' },
       ]
     },
-    { label: 'Components', icon: 'components', route: '/app/demo' },
   ];
 
   filteredMenus: MenuItem[] = this.menus;
@@ -224,7 +227,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   constructor(
     private auth: AuthService,
     private router: Router,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private periodLockState: PeriodLockStateService
   ) {
     this.showAll = localStorage.getItem('isMasterOwner') === 'true';
     window.addEventListener('menu-permission-updated', this.menuReloadHandler);
@@ -242,10 +246,17 @@ export class LayoutComponent implements OnInit, OnDestroy {
     } else {
       this.loadMenuPermissions();
     }
+
+    this.periodLockSub = this.periodLockState.currentState$.subscribe((state: CurrentPeriodLockState) => {
+      this.currentPeriodLocked = !!state.isLocked;
+      this.currentPeriodName = state.periodName || '';
+    });
+    this.periodLockState.refresh().subscribe({ error: () => {} });
   }
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
+    this.periodLockSub?.unsubscribe();
     window.removeEventListener('menu-permission-updated', this.menuReloadHandler);
   }
 

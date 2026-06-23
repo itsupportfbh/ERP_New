@@ -3,6 +3,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FinanceActionKey, FinancePageConfig, FinanceService, FINANCE_PAGES } from './finance.service';
 import { RowAction, TableColumn } from '../../shared/components/data-table/data-table.component';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
+import { PeriodCloseService, PeriodOption, PeriodStatus } from '../../main/financial/period-close-fx/period-close-fx.service';
+import { PeriodLockStateService } from '../../core/services/period-lock-state.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-finance-workspace',
@@ -33,6 +36,10 @@ export class FinanceWorkspaceComponent implements OnInit {
   lockPeriod = false;
   fxRevalDate = new Date().toISOString().slice(0, 10);
   lastFxResult: any = null;
+  periodOptions: PeriodOption[] = [];
+  periodStatus: PeriodStatus | null = null;
+  isLockingPeriod = false;
+  isRunningFx = false;
 
   // Year End Close
   fyStartYear = this.currentFiscalYear();
@@ -43,7 +50,8 @@ export class FinanceWorkspaceComponent implements OnInit {
   yearEndPreviewRows: any[] = [];
 
   get sortedPeriods(): any[] {
-    return [...this.rows].sort((a, b) => {
+    const source = this.config?.key === 'period-close' && this.periodOptions.length ? this.periodOptions : this.rows;
+    return [...source].sort((a, b) => {
       const da = new Date(b.startDate ?? b.StartDate ?? b.fromDate ?? 0).getTime();
       const db = new Date(a.startDate ?? a.StartDate ?? a.fromDate ?? 0).getTime();
       return da - db;
@@ -105,7 +113,14 @@ export class FinanceWorkspaceComponent implements OnInit {
     'reports': 'reports'
   };
 
-  constructor(private route: ActivatedRoute, private router: Router, private finance: FinanceService, private permissionService: PermissionService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private finance: FinanceService,
+    private permissionService: PermissionService,
+    private periodCloseService: PeriodCloseService,
+    private periodLockState: PeriodLockStateService
+  ) {}
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -113,6 +128,11 @@ export class FinanceWorkspaceComponent implements OnInit {
       this.config = FINANCE_PAGES.find(p => p.key === key) || FINANCE_PAGES[0];
       this.setDefaultDates();
       this.resetForm();
+      this.selectedPeriod = '';
+      this.lockPeriod = false;
+      this.lastFxResult = null;
+      this.periodStatus = null;
+      this.periodOptions = [];
       this.load();
       if (this.route.snapshot.data['autoCreate']) {
         setTimeout(() => this.openCreate());
@@ -170,6 +190,10 @@ export class FinanceWorkspaceComponent implements OnInit {
   }
 
   load(): void {
+    if (this.config.key === 'period-close') {
+      this.loadPeriodClose();
+      return;
+    }
     if (this.config.endpoint.static === 'reports') {
       this.rows = [...this.reportRows];
       this.applyFilter();
@@ -185,19 +209,6 @@ export class FinanceWorkspaceComponent implements OnInit {
         this.rows = rows.map((r: any) => this.normalizeRow(r));
         this.applyFilter();
         this.loading = false;
-        if (this.config.key === 'period-close' && this.rows.length) {
-          if (!this.selectedPeriod) {
-            const first = this.sortedPeriods[0];
-            this.selectedPeriod = String(first.id ?? first.periodId ?? first.periodNo ?? '');
-          }
-          // Always sync toggle state from DB after load
-          const current = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod));
-          if (current) {
-            this.lockPeriod = !!(current.isLocked || current.IsLocked || current.status === 'Locked');
-            const endDate = current.endDate ?? current.EndDate;
-            if (endDate && !this.fxRevalDate) this.fxRevalDate = new Date(endDate).toISOString().slice(0, 10);
-          }
-        }
       },
       error: err => {
         this.rows = [];
@@ -286,24 +297,81 @@ export class FinanceWorkspaceComponent implements OnInit {
   }
 
   runFxReval(): void {
+    if (this.config.key !== 'period-close') return;
     const periodId = Number(this.selectedPeriod);
     if (!periodId) { this.error = 'Please select a period first.'; return; }
     if (!this.fxRevalDate) { this.error = 'Please enter FX Revaluation date.'; return; }
-    this.error = '';
-    const payload = { periodId, fxDate: this.fxRevalDate };
-    this.saving = true;
-    this.finance.run(this.config.endpoint, 'fx', payload).subscribe({
-      next: (res: any) => {
-        this.saving = false;
-        this.lastFxResult = this.finance.unwrapOne(res);
-        this.message = 'FX Revaluation completed successfully.';
-        this.load();
-      },
-      error: (err: any) => { this.saving = false; this.error = err?.error?.message || 'FX Revaluation failed.'; }
+    const periodLabel = this.currentPeriodLabel;
+
+    Swal.fire({
+      title: 'Run FX Revaluation?',
+      html: `<div style="text-align:left;font-size:13.5px;">
+        <p><strong>Period:</strong> ${periodLabel}</p>
+        <p><strong>FX Date:</strong> ${this.fxRevalDate}</p>
+        <hr style="margin:10px 0;border-color:#e5e7eb;"/>
+        <p style="margin-bottom:4px;font-weight:600;">This will:</p>
+        <ul style="padding-left:18px;line-height:1.9;">
+          <li>Revalue all open AR/AP foreign-currency balances</li>
+          <li>Calculate unrealized gain / loss</li>
+          <li>Post GL Journal automatically</li>
+        </ul>
+      </div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Run Revaluation',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#0e4a60',
+      cancelButtonColor: '#6b7280'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.error = '';
+      this.message = '';
+      this.isRunningFx = true;
+      this.periodCloseService.runFxReval({ periodId, fxDate: this.fxRevalDate }).subscribe({
+        next: (res: any) => {
+          this.isRunningFx = false;
+          const data = this.finance.unwrapOne(res);
+          const totalGain = Number(data.totalGain ?? 0);
+          const totalLoss = Number(data.totalLoss ?? 0);
+          const net = Number(data.net ?? (totalGain - totalLoss));
+          this.lastFxResult = {
+            runNo: data.runNo ?? data.referenceNo ?? data.runId ?? null,
+            fxDate: this.fxRevalDate,
+            totalGain,
+            totalLoss,
+            net
+          };
+          this.message = 'FX Revaluation completed successfully.';
+          void Swal.fire({
+            icon: totalGain === 0 && totalLoss === 0 ? 'info' : 'success',
+            title: totalGain === 0 && totalLoss === 0 ? 'No FX Differences' : 'FX Revaluation Completed',
+            html: totalGain === 0 && totalLoss === 0
+              ? 'No unrealized FX differences found. No GL journal was posted.'
+              : `<div style="text-align:left;font-size:13.5px;">
+                  <p><strong>Period:</strong> ${periodLabel}</p>
+                  <p><strong>FX Date:</strong> ${this.fxRevalDate}</p>
+                  <hr style="margin:10px 0;border-color:#e5e7eb;"/>
+                  ${totalGain > 0 ? `<p style="color:#16a34a;"><strong>FX Gain:</strong> ${totalGain.toFixed(2)}</p>` : ''}
+                  ${totalLoss > 0 ? `<p style="color:#dc2626;"><strong>FX Loss:</strong> ${totalLoss.toFixed(2)}</p>` : ''}
+                  <p><strong>Net:</strong> <span style="color:${net >= 0 ? '#16a34a' : '#dc2626'};font-weight:700;">${net >= 0 ? '+' : ''}${net.toFixed(2)}</span></p>
+                </div>`,
+            confirmButtonColor: '#0e4a60'
+          });
+          this.loadPeriodClose();
+        },
+        error: (err: any) => {
+          this.isRunningFx = false;
+          this.error = err?.error?.message || 'FX Revaluation failed.';
+        }
+      });
     });
   }
 
   onPeriodChange(): void {
+    if (this.config.key === 'period-close') {
+      this.syncPeriodCloseStatus();
+      return;
+    }
     const row = this.rows.find(r => String(r.id ?? r.periodId ?? r.periodNo) === String(this.selectedPeriod));
     if (row) {
       this.lockPeriod = !!(row.isLocked || row.IsLocked || row.status === 'Locked');
@@ -315,37 +383,72 @@ export class FinanceWorkspaceComponent implements OnInit {
   }
 
   onLockToggle(): void {
+    if (this.config.key !== 'period-close') return;
     const periodId = Number(this.selectedPeriod);
     if (!periodId) {
       this.error = 'Please select a period first.';
       this.lockPeriod = false;
       return;
     }
-    const action = this.lockPeriod ? 'Lock' : 'Unlock';
-    const confirmed = confirm(`${action} this accounting period? ${this.lockPeriod ? 'No transactions can be posted to a locked period.' : ''}`);
-    if (!confirmed) {
-      this.lockPeriod = !this.lockPeriod;
-      return;
-    }
-    this.error = '';
-    this.saving = true;
-    const payload = { periodId, lock: this.lockPeriod };
-    this.finance.run(this.config.endpoint, this.lockPeriod ? 'lock' : 'unlock', payload).subscribe({
-      next: () => {
-        this.saving = false;
-        this.message = `Period ${this.lockPeriod ? 'locked' : 'unlocked'} successfully.`;
-        this.load();
-      },
-      error: (err: any) => {
-        this.saving = false;
-        this.error = err?.error?.message || `${action} failed.`;
-        this.lockPeriod = !this.lockPeriod;
+    const target = this.lockPeriod;
+    const periodLabel = this.currentPeriodLabel;
+    Swal.fire({
+      title: target ? 'Lock Period?' : 'Unlock Period?',
+      html: target
+        ? `<div style="text-align:left;font-size:13.5px;">
+            <p><strong>Period:</strong> ${periodLabel}</p>
+            <p style="color:#b45309;">Users will <strong>not</strong> be able to post any transactions in this period.</p>
+          </div>`
+        : `<div style="text-align:left;font-size:13.5px;">
+            <p><strong>Period:</strong> ${periodLabel}</p>
+            <p style="color:#15803d;">Users will be able to post transactions in this period again.</p>
+          </div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: target ? 'Yes, Lock Period' : 'Yes, Unlock Period',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: target ? '#dc2626' : '#16a34a',
+      cancelButtonColor: '#6b7280'
+    }).then(result => {
+      if (!result.isConfirmed) {
+        this.lockPeriod = !target;
+        return;
       }
+      this.error = '';
+      this.message = '';
+      this.isLockingPeriod = true;
+      this.periodCloseService.setLock(periodId, target).subscribe({
+        next: (status: PeriodStatus) => {
+          this.isLockingPeriod = false;
+          this.periodStatus = status;
+          this.lockPeriod = !!status?.isLocked;
+          this.message = `Period ${target ? 'locked' : 'unlocked'} successfully.`;
+          void Swal.fire({
+            icon: 'success',
+            title: target ? 'Period Locked' : 'Period Unlocked',
+            text: `${periodLabel} has been ${target ? 'locked' : 'unlocked'} successfully.`,
+            confirmButtonColor: '#0e4a60'
+          });
+          this.periodLockState.refresh().subscribe({ error: () => {} });
+          this.loadPeriodClose();
+        },
+        error: (err: any) => {
+          this.isLockingPeriod = false;
+          this.error = err?.error?.message || `${target ? 'Lock' : 'Unlock'} failed.`;
+          this.lockPeriod = !target;
+        }
+      });
     });
   }
 
   openTrialBalance(): void {
     this.router.navigate(['/app/finance/trial-balance']);
+  }
+
+  get currentPeriodLabel(): string {
+    return this.periodOptions.find(p => String(p.id) === String(this.selectedPeriod))?.label
+      ?? this.periodStatus?.periodLabel
+      ?? '';
   }
 
   previewYearEnd(): void {
@@ -587,6 +690,74 @@ export class FinanceWorkspaceComponent implements OnInit {
   private currentFiscalYear(): number {
     const today = new Date();
     return today.getMonth() + 1 >= 4 ? today.getFullYear() : today.getFullYear() - 1;
+  }
+
+  private loadPeriodClose(): void {
+    this.loading = true;
+    this.error = '';
+    this.message = '';
+    this.periodCloseService.getPeriods().subscribe({
+      next: (periods: PeriodOption[]) => {
+        this.periodOptions = periods || [];
+        this.rows = [...this.periodOptions];
+        this.applyFilter();
+        this.loading = false;
+
+        if (!this.periodOptions.length) {
+          this.selectedPeriod = '';
+          this.periodStatus = null;
+          return;
+        }
+
+        if (!this.selectedPeriod) {
+          const today = new Date();
+          const current = this.periodOptions.find(p => {
+            const start = new Date(p.startDate);
+            const end = new Date(p.endDate);
+            return today >= start && today <= end;
+          });
+          const selected = current ?? this.sortedPeriods[0];
+          this.selectedPeriod = String(selected?.id ?? '');
+        }
+
+        this.syncPeriodCloseStatus();
+      },
+      error: (err: any) => {
+        this.periodOptions = [];
+        this.rows = [];
+        this.filtered = [];
+        this.periodStatus = null;
+        this.loading = false;
+        this.error = err?.error?.message || 'Failed to load periods.';
+      }
+    });
+  }
+
+  private syncPeriodCloseStatus(): void {
+    const periodId = Number(this.selectedPeriod);
+    if (!periodId) {
+      this.periodStatus = null;
+      this.lockPeriod = false;
+      return;
+    }
+
+    const selected = this.periodOptions.find(p => p.id === periodId);
+    if (selected?.endDate) {
+      this.fxRevalDate = selected.endDate.substring(0, 10);
+    }
+
+    this.periodCloseService.getStatus(periodId).subscribe({
+      next: (status: PeriodStatus) => {
+        this.periodStatus = status;
+        this.lockPeriod = !!status?.isLocked;
+        if (status?.periodEndDate) {
+          this.fxRevalDate = status.periodEndDate.substring(0, 10);
+        }
+      },
+      error: () => {
+        this.periodStatus = null;
+      }
+    });
   }
 
   private downloadBlob(blob: Blob, fileName: string): void {

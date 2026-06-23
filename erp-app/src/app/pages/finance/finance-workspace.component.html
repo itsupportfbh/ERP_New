@@ -152,26 +152,27 @@
             {{ getPeriodLabel(p) }}
           </option>
         </select>
+        <small *ngIf="!sortedPeriods.length">No periods found. Please set up accounting periods first.</small>
       </label>
 
       <div class="pc-toggle-wrap" *ngIf="permission?.post">
         <label class="pc-toggle">
-          <input type="checkbox" [(ngModel)]="lockPeriod" (change)="onLockToggle()">
+          <input type="checkbox" [(ngModel)]="lockPeriod" (change)="onLockToggle()" [disabled]="isLockingPeriod || !selectedPeriod">
           <span class="pc-slider"></span>
         </label>
-        <span class="pc-toggle-label">Lock Period</span>
+        <span class="pc-toggle-label">{{ isLockingPeriod ? 'Updating...' : 'Lock Period' }}</span>
       </div>
 
       <label class="pc-field">
         <span>FX Reval Date</span>
-        <input type="date" [(ngModel)]="fxRevalDate">
+        <input type="date" [(ngModel)]="fxRevalDate" [disabled]="isRunningFx">
       </label>
 
-      <button class="pc-btn-fx" type="button" (click)="runFxReval()" [disabled]="saving">
+      <button class="pc-btn-fx" type="button" (click)="runFxReval()" [disabled]="isRunningFx || !selectedPeriod || !fxRevalDate">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 4v5h5M16 16v-5h-5"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 11a9 9 0 0 0 14.85 3.36L23 10"/>
         </svg>
-        {{ saving ? 'Running...' : 'Run FX Revaluation' }}
+        {{ isRunningFx ? 'Running...' : 'Run FX Revaluation' }}
       </button>
     </div>
 
@@ -183,6 +184,14 @@
         Net: {{ (lastFxResult.net || 0) | number:'1.2-2' }} SGD
       </span>
       <span>{{ lastFxResult.fxDate || fxRevalDate }}</span>
+    </div>
+
+    <div class="pc-run-result" *ngIf="periodStatus">
+      <strong>{{ periodStatus.periodLabel || currentPeriodLabel }}</strong>
+      <span>{{ periodStatus.periodEndDate | date:'dd MMM yyyy' }}</span>
+      <span class="pc-net" [class.loss]="periodStatus.isLocked">
+        {{ periodStatus.isLocked ? 'Locked' : 'Open' }}
+      </span>
     </div>
 
     <div class="pc-info-row">

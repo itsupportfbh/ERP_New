@@ -31,11 +31,11 @@
           &#128276; Alerts
           <span class="badge-pill danger" *ngIf="pendingPrCount > 0">{{ pendingPrCount }}</span>
         </button>
-        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()">
+        <button class="panel-toggle-btn draft-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()" [disabled]="isCurrentPeriodLocked">
           &#128190; Drafts
           <span class="badge-pill info" *ngIf="draftCount > 0">{{ draftCount }}</span>
         </button>
-        <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()">
+        <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()" [disabled]="isCurrentPeriodLocked">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           New PO
         </button>
@@ -49,14 +49,14 @@
         <button class="sp-btn" (click)="loadDrafts()" [disabled]="draftsLoading">Refresh</button>
       </div>
       <div class="sp-empty" *ngIf="!draftsLoading && !drafts.length">No drafts found</div>
-      <div class="sp-row clickable" *ngFor="let d of drafts" (click)="openDraft(d)">
+      <div class="sp-row clickable" *ngFor="let d of drafts" (click)="openDraft(d)" [class.is-disabled]="isCurrentPeriodLocked">
         <div class="sp-row-info">
           <strong>{{ d.purchaseOrderNo || d.pO_No || 'Draft PO' }}</strong>
           <span>{{ d.supplierName || d.poDate || d.createdDate }}</span>
         </div>
         <div class="sp-row-acts">
-          <button class="sp-btn primary" (click)="promoteDraft(d, $event)">Promote</button>
-          <button class="sp-btn danger" (click)="deleteDraft(d, $event)">Delete</button>
+          <button class="sp-btn primary" (click)="promoteDraft(d, $event)" [disabled]="isCurrentPeriodLocked">Promote</button>
+          <button class="sp-btn danger" (click)="deleteDraft(d, $event)" [disabled]="isCurrentPeriodLocked">Delete</button>
         </div>
       </div>
     </div>
@@ -69,6 +69,7 @@
       [eyeFirst]="true"
       [rowActions]="rowActions"
       [rowActionFilter]="poActionFilter"
+      [rowActionDisabled]="poActionDisabled"
       (rowClick)="onRowClick($event)"
       (actionClick)="onAction($event)">
     </erp-table>
@@ -125,7 +126,7 @@
             Delivery: {{ pr.deliveryDate | date:'dd-MM-yyyy' }}
           </div>
         </div>
-        <button (click)="createPoFromPr(pr)"
+        <button (click)="createPoFromPr(pr)" [disabled]="isCurrentPeriodLocked"
           style="flex-shrink:0;background:var(--primary,#0e4a60);border:0;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
           &#43; Create PO
         </button>
