@@ -55,6 +55,8 @@
                 <th class="col-supplier">Supplier</th>
                 <th class="col-batch">Batch / Serial</th>
                 <th class="col-qty">Qty</th>
+                <th class="col-price" style="text-align:right;min-width:90px">Unit Price</th>
+                <th class="col-total" style="text-align:right;min-width:90px">Line Total</th>
                 <th class="col-qc">Quality</th>
                 <th class="col-storage">Storage</th>
                 <th class="col-expiry">Expiry</th>
@@ -64,7 +66,7 @@
             </thead>
             <tbody>
               <tr *ngIf="!lines.length">
-                <td colspan="9" class="empty-lines">No lines found.</td>
+                <td colspan="11" class="empty-lines">No lines found.</td>
               </tr>
               <tr *ngFor="let line of lines; let i = index" [class.posted-row]="line.isPosted">
                 <td class="col-item">
@@ -74,6 +76,8 @@
                 <td class="col-supplier">{{ line.supplierName || '—' }}</td>
                 <td class="col-batch">{{ line.batchNo || '—' }}</td>
                 <td class="col-qty num-cell">{{ line.qtyReceived ?? '—' }}</td>
+                <td class="col-price" style="text-align:right">{{ line.unitPrice != null ? (line.unitPrice | number:'1.2-2') : '—' }}</td>
+                <td class="col-total" style="text-align:right">{{ lineTotal(line) | number:'1.2-2' }}</td>
                 <td class="col-qc">{{ line.qualityCheck || '—' }}</td>
                 <td class="col-storage">{{ line.storageType || '—' }}</td>
                 <td class="col-expiry">{{ line.expiryDate || '—' }}</td>

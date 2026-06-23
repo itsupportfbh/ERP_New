@@ -44,6 +44,8 @@ export class PurchaseOrderFormComponent implements OnInit {
   fromPrId: number | null = null;
   fromReorderPrId: number | null = null;
   fromAlertPrId: number | null = null;
+  sourceType = '';
+  sourceRefId: number | null = null;
   loading = false;
   saving = false;
   error = '';
@@ -106,9 +108,19 @@ export class PurchaseOrderFormComponent implements OnInit {
     const fromPR = this.route.snapshot.queryParamMap.get('fromPR');
     const fromReorder = this.route.snapshot.queryParamMap.get('fromReorderPrId');
     const fromAlert = this.route.snapshot.queryParamMap.get('prId');
+    const fromSO = this.route.snapshot.queryParamMap.get('fromSO');
+    const fromRecipe = this.route.snapshot.queryParamMap.get('fromRecipe');
 
     this.isEdit = !!paramId && paramId !== 'new';
     this.loadLookups();
+
+    if (fromSO) {
+      this.sourceType = 'SO';
+      this.sourceRefId = Number(fromSO);
+    } else if (fromRecipe) {
+      this.sourceType = 'RECIPE_SHORTAGE';
+      this.sourceRefId = Number(fromRecipe);
+    }
 
     if (this.isEdit) {
       this.id = Number(paramId);
@@ -288,6 +300,13 @@ export class PurchaseOrderFormComponent implements OnInit {
       next: res => {
         const d = this.svc.unwrapOne(res);
         this.deliveryDate = d.deliveryDate ? d.deliveryDate.substring(0, 10) : '';
+        // Inherit sourceType/sourceRefId from the PR if it was created from a SO or Recipe
+        if (!this.sourceType) {
+          const prSourceType = d.sourceType ?? d.SourceType ?? '';
+          const prSourceRefId = Number(d.sourceRefId ?? d.SourceRefId ?? 0);
+          if (prSourceType) { this.sourceType = String(prSourceType).toUpperCase(); }
+          if (prSourceRefId) { this.sourceRefId = prSourceRefId; }
+        }
         const rawLines = d.pRLines ?? d.prLines ?? d.PRLines ?? '[]';
         const parsed: any[] = typeof rawLines === 'string'
           ? JSON.parse(rawLines || '[]')
@@ -653,7 +672,9 @@ export class PurchaseOrderFormComponent implements OnInit {
       PurchaseOrderNo: this.purchaseOrderNo || 'PO-00000',
       IsActive: true,
       CreatedBy: this.loginUserId ?? 0,
-      UpdatedBy: this.loginUserId ?? 0
+      UpdatedBy: this.loginUserId ?? 0,
+      SourceType: this.sourceType || null,
+      SourceRefId: this.sourceRefId || null
     };
   }
 
