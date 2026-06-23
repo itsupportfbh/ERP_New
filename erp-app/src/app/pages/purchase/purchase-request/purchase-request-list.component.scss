@@ -30,6 +30,7 @@
 .sp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border);
   &:last-child { border-bottom: none; }
   &.clickable { cursor: pointer; &:hover { background: #f1f5f9; border-radius: 6px; padding-left: 6px; } }
+  &.is-disabled { opacity: .6; cursor: not-allowed; }
 }
 .sp-row-info { display: flex; flex-direction: column; gap: 2px; font-size: 12px; flex: 1; strong { font-size: 13px; color: var(--text); } span { color: var(--text-muted); } }
 .sp-row-acts { display: flex; gap: 6px; }

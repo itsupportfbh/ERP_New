@@ -98,8 +98,9 @@
               <!-- Other actions -->
               <ng-container *ngFor="let act of rowActions">
                 <button *ngIf="!rowActionFilter || rowActionFilter(act.key, row)"
-                  class="btn-icon {{ act.btnClass ?? '' }}"
+                  class="btn-icon action-{{ act.key }} {{ act.btnClass ?? '' }}"
                   [title]="act.label"
+                  [disabled]="isActionDisabled(act.key, row)"
                   (click)="onAction(act.key, row, $event)">
                   <svg *ngIf="act.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path [attr.d]="iconPath(act.icon)"></path>

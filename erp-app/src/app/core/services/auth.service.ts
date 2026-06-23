@@ -5,6 +5,7 @@ import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { PermissionService } from './permission.service';
+import { PeriodLockStateService } from './period-lock-state.service';
 
 export interface LoginPayload {
   email: string;
@@ -48,7 +49,12 @@ export class AuthService {
   private readonly TOKEN_KEY = 'token';
   private readonly REMEMBER_KEY = 'erp_remember_user';
 
-  constructor(private http: HttpClient, private router: Router, private perm: PermissionService) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private perm: PermissionService,
+    private periodLockState: PeriodLockStateService
+  ) {}
 
   login(payload: LoginPayload): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/user/login`, payload).pipe(
@@ -56,6 +62,7 @@ export class AuthService {
         if (res.success && res.data) {
           this.storeUserData(res.data);
           this.perm.load();
+          this.periodLockState.refresh().subscribe({ error: () => {} });
         }
       }),
       catchError(err => {
@@ -100,6 +107,7 @@ export class AuthService {
       'userPermissions'
     ];
     keys.forEach(k => localStorage.removeItem(k));
+    this.periodLockState.clear();
     this.router.navigate(['/login']);
   }
 

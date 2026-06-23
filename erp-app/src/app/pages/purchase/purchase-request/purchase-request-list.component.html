@@ -27,11 +27,11 @@
           &#128276; Alerts
           <span class="badge-pill warn" *ngIf="alertCount > 0">{{ alertCount }}</span>
         </button>
-        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()">
+        <button class="panel-toggle-btn draft-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()" [disabled]="isCurrentPeriodLocked">
           &#128190; Drafts
           <span class="badge-pill info" *ngIf="draftCount > 0">{{ draftCount }}</span>
         </button>
-        <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()">
+        <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()" [disabled]="isCurrentPeriodLocked">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           New PR
         </button>
@@ -45,14 +45,14 @@
         <button class="sp-btn" (click)="loadDrafts()" [disabled]="sideLoading">Refresh</button>
       </div>
       <div class="sp-empty" *ngIf="!sideLoading && !drafts.length">No drafts</div>
-      <div class="sp-row clickable" *ngFor="let d of drafts" (click)="openDraft(d)">
+      <div class="sp-row clickable" *ngFor="let d of drafts" (click)="openDraft(d)" [class.is-disabled]="isCurrentPeriodLocked">
         <div class="sp-row-info">
           <strong>{{ d.purchaseRequestNo || d.pRNo || 'Draft PR' }}</strong>
           <span>{{ d.departmentName || d.description || d.createdDate }}</span>
         </div>
         <div class="sp-row-acts">
-          <button class="sp-btn primary" (click)="promoteDraft(d, $event)">Promote</button>
-          <button class="sp-btn danger" (click)="deleteDraft(d, $event)">Delete</button>
+          <button class="sp-btn primary" (click)="promoteDraft(d, $event)" [disabled]="isCurrentPeriodLocked">Promote</button>
+          <button class="sp-btn danger" (click)="deleteDraft(d, $event)" [disabled]="isCurrentPeriodLocked">Delete</button>
         </div>
       </div>
     </div>
@@ -65,6 +65,7 @@
       [eyeFirst]="true"
       [rowActions]="rowActions"
       [rowActionFilter]="prActionFilter"
+      [rowActionDisabled]="prActionDisabled"
       (rowClick)="onRowClick($event)"
       (actionClick)="onAction($event)">
     </erp-table>

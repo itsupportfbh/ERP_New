@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
 import { PermissionService } from '../../../core/services/permission.service';
+import { CURRENT_PERIOD_LOCKED_KEY } from '../../../core/services/period-lock-state.service';
 import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'Draft' };
@@ -83,6 +84,9 @@ export class PurchaseRequestListComponent implements OnInit {
   }
 
   prActionFilter = (action: string, row: any): boolean => {
+    if (this.isCurrentPeriodLocked && (action === 'edit' || action === 'delete')) {
+      return action === 'edit' ? this.perm.canEdit(this.fnId) : this.perm.canDelete(this.fnId);
+    }
     const s = this.prStatusNum(row);
     switch (action) {
       case 'edit':   return s !== 2 && s !== 3 && this.perm.canEdit(this.fnId);
@@ -90,6 +94,9 @@ export class PurchaseRequestListComponent implements OnInit {
       default:       return true;
     }
   };
+
+  prActionDisabled = (action: string, _row: any): boolean =>
+    this.isCurrentPeriodLocked && (action === 'edit' || action === 'delete');
 
   private prStatusNum(row: any): number {
     const v = row.approvalStatus ?? row.status;
@@ -181,6 +188,7 @@ export class PurchaseRequestListComponent implements OnInit {
   }
 
   onAction(e: { action: string; row: any }): void {
+    if (this.isCurrentPeriodLocked && (e.action === 'edit' || e.action === 'delete')) return;
     if (e.action === 'view')    this.openLinesModal(e.row);
     if (e.action === 'edit')    this.router.navigate(['/app/purchase/requests', e.row.id]);
     if (e.action === 'approve') this.openConfirm(e.row, 2);
@@ -330,17 +338,20 @@ export class PurchaseRequestListComponent implements OnInit {
   }
 
   openDraft(draft: any): void {
+    if (this.isCurrentPeriodLocked) return;
     const id = draft.id ?? draft.iD;
     this.router.navigate(['/app/purchase/requests/new'], { queryParams: { draftId: id } });
   }
 
   promoteDraft(draft: any, e: Event): void {
     e.stopPropagation();
+    if (this.isCurrentPeriodLocked) return;
     this.openActionConfirm(draft, 'promote-draft');
   }
 
   deleteDraft(draft: any, e: Event): void {
     e.stopPropagation();
+    if (this.isCurrentPeriodLocked) return;
     this.openActionConfirm(draft, 'delete-draft');
   }
 
@@ -367,5 +378,13 @@ export class PurchaseRequestListComponent implements OnInit {
 
   currentUserId(): string {
     return localStorage.getItem('userId') || localStorage.getItem('userid') || '0';
+  }
+
+  get isCurrentPeriodLocked(): boolean {
+    try {
+      return localStorage.getItem(CURRENT_PERIOD_LOCKED_KEY) === 'true';
+    } catch {
+      return false;
+    }
   }
 }

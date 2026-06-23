@@ -39,6 +39,7 @@ export class DataTableComponent implements OnChanges {
   @Output() selectionChange = new EventEmitter<any[]>();
   @Output() actionClick = new EventEmitter<{ action: string; row: any }>();
   @Input() rowActionFilter: ((action: string, row: any) => boolean) | null = null;
+  @Input() rowActionDisabled: ((action: string, row: any) => boolean) | null = null;
   @Input() eyeFirst = false;
   @Input() pageSize = 10;
   @Input() showControls = true;
@@ -94,7 +95,12 @@ export class DataTableComponent implements OnChanges {
 
   onAction(key: string, row: any, e: Event): void {
     e.stopPropagation();
+    if (this.isActionDisabled(key, row)) return;
     this.actionClick.emit({ action: key, row });
+  }
+
+  isActionDisabled(action: string, row: any): boolean {
+    return !!this.rowActionDisabled?.(action, row);
   }
 
   /**

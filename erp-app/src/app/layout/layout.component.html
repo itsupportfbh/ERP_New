@@ -143,6 +143,10 @@
 
     <!-- Page content -->
     <main class="content">
+      <div class="global-period-lock-banner" *ngIf="currentPeriodLocked">
+        <span class="lock-icon">&#128274;</span>
+        <span>Period {{ currentPeriodName || 'current month' }} is locked. New entries cannot be posted.</span>
+      </div>
       <router-outlet></router-outlet>
     </main>
   </div>
