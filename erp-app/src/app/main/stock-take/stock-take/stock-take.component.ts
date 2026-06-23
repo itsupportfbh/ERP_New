@@ -113,7 +113,7 @@ export class StockTakeComponent implements OnInit {
 
       this.loadEditDataIfAny();
     }, (err: any) => {
-      Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Failed to load data.', confirmButtonColor: '#2E5F73' });
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Failed to load data.', confirmButtonColor: '#16a34a' });
     });
   }
 
@@ -179,7 +179,7 @@ export class StockTakeComponent implements OnInit {
         text: 'Please Fill Mandatory Fields',
         icon: 'error',
         allowOutsideClick: false,
-        confirmButtonColor: '#2E5F73'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -195,7 +195,7 @@ export class StockTakeComponent implements OnInit {
           Swal.fire({
             icon: 'warning',
             title: 'No Items in Stocktake list.',
-            confirmButtonColor: '#2E5F73'
+            confirmButtonColor: '#16a34a'
           });
         }
       },
@@ -207,7 +207,7 @@ export class StockTakeComponent implements OnInit {
           title: 'Warning',
           text: msg,
           confirmButtonText: 'OK',
-          confirmButtonColor: '#2E5F73'
+          confirmButtonColor: '#16a34a'
         });
       }
     });
@@ -422,7 +422,7 @@ export class StockTakeComponent implements OnInit {
             text: res.message || 'Stock take saved.',
             icon: 'success',
             allowOutsideClick: false,
-            confirmButtonColor: '#2E5F73'
+            confirmButtonColor: '#16a34a'
           });
           this.router.navigateByUrl('/app/inventory/list-stocktake');
         } else {
@@ -430,7 +430,7 @@ export class StockTakeComponent implements OnInit {
             icon: 'error',
             title: 'Failed',
             text: res?.message || 'Unable to save.',
-            confirmButtonColor: '#2E5F73'
+            confirmButtonColor: '#16a34a'
           });
         }
       },
@@ -439,7 +439,7 @@ export class StockTakeComponent implements OnInit {
           icon: 'error',
           title: 'Error',
           text: err?.error?.message || 'Something went wrong while saving.',
-          confirmButtonColor: '#2E5F73'
+          confirmButtonColor: '#16a34a'
         });
       }
     });
@@ -453,7 +453,7 @@ export class StockTakeComponent implements OnInit {
         icon: 'info',
         title: 'No lines',
         text: 'There are no lines to send.',
-        confirmButtonColor: '#2E5F73'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -463,7 +463,7 @@ export class StockTakeComponent implements OnInit {
         icon: 'warning',
         title: 'No lines selected',
         text: 'Select at least one line in the Stock Review before Approved.',
-        confirmButtonColor: '#2E5F73'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -494,7 +494,7 @@ export class StockTakeComponent implements OnInit {
             icon: 'success',
             title: 'Review updated',
             text: res.message || 'Lines saved.',
-            confirmButtonColor: '#2E5F73'
+            confirmButtonColor: '#16a34a'
           });
           this.showStockReview = false;
           this.router.navigateByUrl('/app/inventory/list-stocktake');
@@ -503,7 +503,7 @@ export class StockTakeComponent implements OnInit {
             icon: 'error',
             title: 'Failed',
             text: res?.message || 'Unable to save review.',
-            confirmButtonColor: '#2E5F73'
+            confirmButtonColor: '#16a34a'
           });
         }
       },
@@ -512,7 +512,7 @@ export class StockTakeComponent implements OnInit {
           icon: 'error',
           title: 'Error',
           text: err?.error?.message || 'Something went wrong while saving review.',
-          confirmButtonColor: '#2E5F73'
+          confirmButtonColor: '#16a34a'
         });
       }
     });
@@ -564,7 +564,7 @@ export class StockTakeComponent implements OnInit {
       html: `<div style="text-align:left"><ul>${errs.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>`,
       confirmButtonText: 'OK',
       allowOutsideClick: false,
-      confirmButtonColor: '#2E5F73'
+      confirmButtonColor: '#16a34a'
     });
   }
 
@@ -583,7 +583,7 @@ export class StockTakeComponent implements OnInit {
         text: 'Please Fill Line Items',
         icon: 'error',
         allowOutsideClick: false,
-        confirmButtonColor: '#2E5F73'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }

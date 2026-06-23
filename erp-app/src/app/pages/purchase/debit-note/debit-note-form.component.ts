@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { forkJoin } from 'rxjs';
@@ -305,10 +305,10 @@ export class DebitNoteFormComponent implements OnInit {
   // ── Save / Post ───────────────────────────────────────────────
 
   save(post = false): void {
-    if (!this.supplierId) { Swal.fire('Required', 'Please select a Supplier Invoice.', 'warning'); return; }
+    if (!this.supplierId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a Supplier Invoice.', confirmButtonColor: '#16a34a' }); return; }
 
     const hasValidLine = this.retRows.some(r => r.item && this.toNum(r.varianceQty) > 0);
-    if (!hasValidLine) { Swal.fire('Required', 'At least one line with item name and variance qty is required.', 'warning'); return; }
+    if (!hasValidLine) { Swal.fire({ icon: 'warning', title: 'Required', text: 'At least one line with item name and variance qty is required.', confirmButtonColor: '#16a34a' }); return; }
 
     this.saving = true;
     this.error = '';
@@ -362,23 +362,23 @@ export class DebitNoteFormComponent implements OnInit {
           this.svc.postDebitNote(savedId).subscribe({
             next: () => {
               this.saving = false;
-              Swal.fire({ icon: 'success', title: 'Posted!', text: 'Debit Note posted successfully.', confirmButtonColor: '#1a9db8' }).then(() => this.back());
+              Swal.fire({ icon: 'success', title: 'Posted!', text: 'Debit Note posted successfully.', confirmButtonColor: '#16a34a' }).then(() => this.back());
             },
             error: (err: any) => {
               this.saving = false;
               this.error = err?.error?.message ?? 'Saved as draft. Post failed — try the Post button from the list.';
-              Swal.fire({ icon: 'error', title: 'Post Failed', text: err?.error?.message ?? 'Saved as draft. Post failed — try the Post button from the list.', confirmButtonColor: '#1a9db8' });
+              Swal.fire({ icon: 'error', title: 'Post Failed', text: err?.error?.message ?? 'Saved as draft. Post failed — try the Post button from the list.', confirmButtonColor: '#16a34a' });
             }
           });
         } else {
           this.saving = false;
-          Swal.fire({ icon: 'success', title: 'Saved!', text: 'Debit Note saved as draft.', confirmButtonColor: '#1a9db8' }).then(() => this.back());
+          Swal.fire({ icon: 'success', title: 'Saved!', text: 'Debit Note saved as draft.', confirmButtonColor: '#16a34a' }).then(() => this.back());
         }
       },
       error: err => {
         this.saving = false;
         this.error = err?.error?.message ?? 'Save failed.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#16a34a' });
       }
     });
   }

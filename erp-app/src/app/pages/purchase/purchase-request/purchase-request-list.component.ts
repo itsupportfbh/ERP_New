@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
@@ -208,12 +208,12 @@ export class PurchaseRequestListComponent implements OnInit {
     request$.subscribe({
       next: () => {
         this.confirmLoading = false; this.closeConfirm(); this.load(); this.loadPendingApprovals();
-        Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: status === 2 ? `PR ${row.purchaseRequestNo} approved successfully.` : `PR ${row.purchaseRequestNo} rejected.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: status === 2 ? `PR ${row.purchaseRequestNo} approved successfully.` : `PR ${row.purchaseRequestNo} rejected.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
         this.confirmLoading = false;
         this.confirmError = err?.error?.message || 'Action failed. Please try again.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Action failed. Please try again.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Action failed. Please try again.', confirmButtonColor: '#16a34a' });
       }
     });
   }
@@ -235,33 +235,33 @@ export class PurchaseRequestListComponent implements OnInit {
       this.svc.deletePurchaseRequest(row.id).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load();
-          Swal.fire({ icon: 'success', title: 'Deleted!', text: `PR ${row.purchaseRequestNo} deleted.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: `PR ${row.purchaseRequestNo} deleted.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#16a34a' });
         }
       });
     } else if (this.actionType === 'promote-draft') {
       this.svc.promotePurchaseRequestDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load(); this.loadDrafts();
-          Swal.fire({ icon: 'success', title: 'Promoted!', text: 'Draft promoted to purchase request.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Promoted!', text: 'Draft promoted to purchase request.', confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to promote draft.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to promote draft.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to promote draft.', confirmButtonColor: '#16a34a' });
         }
       });
     } else if (this.actionType === 'delete-draft') {
       this.svc.deletePurchaseRequestDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.loadDrafts();
-          Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Draft deleted.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Draft deleted.', confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to delete draft.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete draft.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete draft.', confirmButtonColor: '#16a34a' });
         }
       });
     }
@@ -285,18 +285,18 @@ export class PurchaseRequestListComponent implements OnInit {
       text: `Delete PR ${row.purchaseRequestNo}? This action cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
       confirmButtonText: 'Yes, delete it!'
     });
     if (!result.isConfirmed) return;
     this.svc.deletePurchaseRequest(row.id).subscribe({
       next: () => {
         this.load();
-        Swal.fire({ icon: 'success', title: 'Deleted!', text: `PR ${row.purchaseRequestNo} deleted.`, confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: `PR ${row.purchaseRequestNo} deleted.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to delete.', confirmButtonColor: '#16a34a' });
       }
     });
   }

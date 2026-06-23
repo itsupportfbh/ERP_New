@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
@@ -119,7 +119,7 @@ export class FinanceYearEndCloseComponent implements OnInit {
 
   runYearEndClose(): void {
     if (!this.fyStartYear || !this.fyEndYear || !this.closeDate) {
-      Swal.fire('Missing Data', 'Select Financial Year and Close Date first.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Missing Data', text: 'Select Financial Year and Close Date first.', confirmButtonColor: '#16a34a' });
       return;
     }
     if (this.status?.isClosed) {
@@ -127,7 +127,7 @@ export class FinanceYearEndCloseComponent implements OnInit {
       return;
     }
     if (!this.permission?.post) {
-      Swal.fire('Access Denied', 'You do not have Year End Close permission.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Access Denied', text: 'You do not have Year End Close permission.', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -149,7 +149,7 @@ export class FinanceYearEndCloseComponent implements OnInit {
       showCancelButton: true,
       confirmButtonText: 'Yes, Run Year End Close',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#2e5f73'
+      confirmButtonColor: '#16a34a'
     }).then(r => {
       if (!r.isConfirmed) return;
       this.running = true;
@@ -168,7 +168,7 @@ export class FinanceYearEndCloseComponent implements OnInit {
               <p><strong>Journal:</strong> ${this.result?.journalNo}</p>
               <p><strong>Net P&amp;L:</strong> ${this.result?.netProfitLoss?.toFixed(2)}</p>
             </div>`,
-            confirmButtonColor: '#2e5f73'
+            confirmButtonColor: '#16a34a'
           });
         },
         error: err => {

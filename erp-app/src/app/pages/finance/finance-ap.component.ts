@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
@@ -266,10 +266,10 @@ export class FinanceApComponent implements OnInit {
   }
 
   savePayment(): void {
-    if (!this.paymentForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
-    if (!this.paymentForm.supplierInvoiceId) { Swal.fire('Required', 'Please select a supplier invoice.', 'warning'); return; }
-    if (!this.paymentForm.paymentDate) { Swal.fire('Required', 'Payment date is required.', 'warning'); return; }
-    if (!(Number(this.paymentForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+    if (!this.paymentForm.supplierId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a supplier.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.paymentForm.supplierInvoiceId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a supplier invoice.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.paymentForm.paymentDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Payment date is required.', confirmButtonColor: '#16a34a' }); return; }
+    if (!(Number(this.paymentForm.amount) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
 
     this.savingPayment = true;
     this.error = '';
@@ -505,11 +505,11 @@ export class FinanceApComponent implements OnInit {
   }
 
   saveAdvance(): void {
-    if (!this.advanceForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
-    if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
-    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+    if (!this.advanceForm.supplierId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a supplier.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.advanceForm.advanceDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Advance date is required.', confirmButtonColor: '#16a34a' }); return; }
+    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
     if ((this.apAdvMethodId === 2 || this.apAdvMethodId === 3) && !this.apAdvBankHeadId) {
-      Swal.fire('Required', 'Please select a bank account.', 'warning'); return;
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a bank account.', confirmButtonColor: '#16a34a' }); return;
     }
 
     this.savingAdvance = true;

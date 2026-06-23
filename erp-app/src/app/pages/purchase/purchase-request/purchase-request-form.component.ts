@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
@@ -397,7 +397,7 @@ export class PurchaseRequestFormComponent implements OnInit {
     obs$.subscribe({
       next: () => {
         this.saving = false;
-        Swal.fire('Draft Saved', 'Purchase request draft saved successfully.', 'success').then(() => this.back());
+        Swal.fire({ icon: 'success', title: 'Draft Saved', text: 'Purchase request draft saved successfully.', confirmButtonColor: '#16a34a' }).then(() => this.back());
       },
       error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Draft save failed.'; }
     });
@@ -464,7 +464,7 @@ export class PurchaseRequestFormComponent implements OnInit {
   private showDetailSwal(title: string, rows: [string, any][]): void {
     const html = rows.filter(([, v]) => v != null && v !== '')
       .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
-    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#0e7490', width: 500, showCloseButton: true });
+    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#16a34a', width: 500, showCloseButton: true });
   }
 
   back(): void { this.router.navigate(['/app/purchase/requests']); }

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -256,13 +256,13 @@ export class SupplierInvoiceFormComponent implements OnInit {
       if (currentSelected.length > 0) {
         const existingSupplier = currentSelected[0].supplierId;
         if (existingSupplier && g.supplierId && existingSupplier !== g.supplierId) {
-          Swal.fire('Invalid', 'Multiple supplier GRNs cannot be combined into one invoice.', 'warning');
+          Swal.fire({ icon: 'warning', title: 'Invalid', text: 'Multiple supplier GRNs cannot be combined into one invoice.', confirmButtonColor: '#16a34a' });
           return;
         }
         // Validate same PO (3-way match requires single PO)
         const existingPoId = currentSelected[0].poId;
         if (existingPoId && g.poId && existingPoId !== g.poId) {
-          Swal.fire('Invalid', 'GRNs from different POs cannot be combined into one invoice (3-way match).', 'warning');
+          Swal.fire({ icon: 'warning', title: 'Invalid', text: 'GRNs from different POs cannot be combined into one invoice (3-way match).', confirmButtonColor: '#16a34a' });
           return;
         }
       }
@@ -501,8 +501,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       icon: this.mismatchCount > 0 ? 'warning' : 'question',
       showCancelButton: true,
       confirmButtonText: 'Post to A/P',
-      confirmButtonColor: '#1a9db8',
-      cancelButtonColor: '#6b7280'
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626'
     }).then(r => {
       if (!r.isConfirmed) return;
       this.posting = true;
@@ -511,11 +511,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
           this.posting = false;
           this.isGlPosted = true;
           this.status = 'Posted';
-          Swal.fire({ icon: 'success', title: 'Posted!', text: 'Supplier invoice posted to Accounts Payable.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Posted!', text: 'Supplier invoice posted to Accounts Payable.', confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.posting = false;
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'GL posting failed.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'GL posting failed.', confirmButtonColor: '#16a34a' });
         }
       });
     });
@@ -523,10 +523,10 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   submit(draft = false): void {
     if (!this.invoiceNo.trim()) {
-      Swal.fire('Required', 'Please enter Invoice No.', 'warning'); return;
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter Invoice No.', confirmButtonColor: '#16a34a' }); return;
     }
     if (!this.selectedGrnIds.length) {
-      Swal.fire('Required', 'Please select at least one GRN.', 'warning'); return;
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select at least one GRN.', confirmButtonColor: '#16a34a' }); return;
     }
     this.saving = true;
     this.error = '';
@@ -590,13 +590,13 @@ export class SupplierInvoiceFormComponent implements OnInit {
     obs$.subscribe({
       next: () => {
         this.saving = false;
-        Swal.fire({ icon: 'success', title: 'Saved!', text: draft ? 'Invoice saved as draft.' : 'Invoice saved successfully.', confirmButtonColor: '#1a9db8' })
+        Swal.fire({ icon: 'success', title: 'Saved!', text: draft ? 'Invoice saved as draft.' : 'Invoice saved successfully.', confirmButtonColor: '#16a34a' })
           .then(() => this.back());
       },
       error: err => {
         this.saving = false;
         this.error = err?.error?.message ?? 'Save failed.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#1a9db8' });
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? 'Save failed.', confirmButtonColor: '#16a34a' });
       }
     });
   }

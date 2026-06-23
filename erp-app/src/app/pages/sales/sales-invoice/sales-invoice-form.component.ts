@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -273,13 +273,13 @@ export class SalesInvoiceFormComponent implements OnInit {
 
   // ── Save ──────────────────────────────────────────────
   submit(): void {
-    if (!this.invoiceDate) { void Swal.fire('Validation', 'Invoice Date is required.', 'warning'); return; }
+    if (!this.invoiceDate) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Invoice Date is required.', confirmButtonColor: '#16a34a' }); return; }
 
     this.saving = true;
 
     if (this.isEdit) {
       this.svc.updateSalesInvoiceHeader(this.id!, { invoiceDate: this.invoiceDate }).subscribe({
-        next: () => { this.saving = false; void Swal.fire('Success', 'Invoice updated.', 'success').then(() => this.back()); },
+        next: () => { this.saving = false; void Swal.fire({ icon: 'success', title: 'Success', text: 'Invoice updated.', confirmButtonColor: '#16a34a' }).then(() => this.back()); },
         error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Update failed.', 'error'); }
       });
       return;
@@ -287,7 +287,7 @@ export class SalesInvoiceFormComponent implements OnInit {
 
     if (!this.sourceId || !this.lines.length) {
       this.saving = false;
-      void Swal.fire('Validation', 'Select a source document and load at least one line.', 'warning');
+      void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Select a source document and load at least one line.', confirmButtonColor: '#16a34a' });
       return;
     }
 

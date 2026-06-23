@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
@@ -255,7 +255,7 @@ export class BusinessPartnersComponent implements OnInit {
       showCancelButton: true,
       confirmButtonText: 'Delete',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#d33'
+      confirmButtonColor: '#16a34a'
     });
     if (!result.isConfirmed) return;
 
@@ -268,7 +268,7 @@ export class BusinessPartnersComponent implements OnInit {
 
     request.subscribe({
       next: async () => {
-        await Swal.fire('Deleted', 'Record deleted successfully.', 'success');
+        await Swal.fire({ icon: 'success', title: 'Deleted', text: 'Record deleted successfully.', confirmButtonColor: '#16a34a' });
         this.load();
       },
       error: () => {

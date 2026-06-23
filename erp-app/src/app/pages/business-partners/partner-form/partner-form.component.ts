@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -484,7 +484,7 @@ export class PartnerFormComponent implements OnInit {
       showCancelButton: true,
       confirmButtonText: 'Load Existing',
       cancelButtonText: 'Stay Here',
-      confirmButtonColor: '#1a5c6e'
+      confirmButtonColor: '#16a34a'
     });
     if (result.isConfirmed) {
       const dupId = duplicate.customerId ?? duplicate.CustomerId ?? duplicate.id ?? duplicate.Id;
@@ -498,15 +498,15 @@ export class PartnerFormComponent implements OnInit {
   }
 
   private showWarning(title: string, text: string) {
-    return Swal.fire({ icon: 'warning', title, text, confirmButtonColor: '#1a5c6e' });
+    return Swal.fire({ icon: 'warning', title, text, confirmButtonColor: '#16a34a' });
   }
 
   private showError(title: string, text: string) {
-    return Swal.fire({ icon: 'error', title, text, confirmButtonColor: '#d33' });
+    return Swal.fire({ icon: 'error', title, text, confirmButtonColor: '#16a34a' });
   }
 
   private showSuccess(title: string, text: string) {
-    return Swal.fire({ icon: 'success', title, text, confirmButtonColor: '#1a5c6e' });
+    return Swal.fire({ icon: 'success', title, text, confirmButtonColor: '#16a34a' });
   }
 
   private patchCustomer(data: any): void {

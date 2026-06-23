@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
@@ -198,12 +198,12 @@ export class QuotationListComponent implements OnInit {
       showCancelButton: true,
       confirmButtonText: 'Delete',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#d33'
+      confirmButtonColor: '#16a34a'
     });
     if (!result.isConfirmed) return;
     this.svc.deleteQuotation(row.id).subscribe({
-      next: () => { void Swal.fire('Deleted', 'Quotation deleted.', 'success').then(() => this.load()); },
-      error: () => { void Swal.fire('Error', 'Unable to delete quotation.', 'error'); }
+      next: () => { void Swal.fire({ icon: 'success', title: 'Deleted', text: 'Quotation deleted.', confirmButtonColor: '#16a34a' }).then(() => this.load()); },
+      error: () => { void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to delete quotation.', confirmButtonColor: '#16a34a' }); }
     });
   }
 }

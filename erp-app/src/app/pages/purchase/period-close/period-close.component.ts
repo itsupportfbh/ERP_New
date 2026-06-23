@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import {
   PeriodCloseService,
   PeriodOption,
@@ -94,7 +94,7 @@ export class PeriodCloseComponent implements OnInit {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: target ? 'Lock' : 'Unlock',
-      confirmButtonColor: '#1a9db8'
+      confirmButtonColor: '#16a34a'
     }).then(result => {
       if (!result.isConfirmed) return;
       this.isLocking = true;
@@ -103,12 +103,12 @@ export class PeriodCloseComponent implements OnInit {
         next: s => {
           this.status = s;
           this.isLocking = false;
-          Swal.fire({ icon: 'success', title: 'Success', text: `Period ${target ? 'locked' : 'unlocked'} successfully.`, confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Success', text: `Period ${target ? 'locked' : 'unlocked'} successfully.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.isLocking = false;
           this.error = err?.error?.message || 'Failed to change lock status.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Failed to change lock status.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Failed to change lock status.', confirmButtonColor: '#16a34a' });
         }
       });
     });
@@ -125,7 +125,7 @@ export class PeriodCloseComponent implements OnInit {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Run',
-      confirmButtonColor: '#1a9db8'
+      confirmButtonColor: '#16a34a'
     }).then(result => {
       if (!result.isConfirmed) return;
       this.isRunningFx = true;
@@ -143,12 +143,12 @@ export class PeriodCloseComponent implements OnInit {
             totalLoss,
             net: totalGain - totalLoss
           };
-          Swal.fire({ icon: 'success', title: 'Success', text: 'FX Revaluation completed successfully.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'success', title: 'Success', text: 'FX Revaluation completed successfully.', confirmButtonColor: '#16a34a' });
         },
         error: err => {
           this.isRunningFx = false;
           this.error = err?.error?.message || 'FX Revaluation failed.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'FX Revaluation failed.', confirmButtonColor: '#1a9db8' });
+          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'FX Revaluation failed.', confirmButtonColor: '#16a34a' });
         }
       });
     });

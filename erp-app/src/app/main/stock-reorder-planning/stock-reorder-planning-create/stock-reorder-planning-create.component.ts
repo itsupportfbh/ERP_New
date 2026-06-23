@@ -318,7 +318,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     if (!src) return;
 
     if (this.allRows.some(r => r.itemId === id)) {
-      Swal.fire({ icon: 'info', title: 'Item already in the list', confirmButtonColor: '#2E5F73' });
+      Swal.fire({ icon: 'info', title: 'Item already in the list', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -365,7 +365,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
 
   runSuggestion(): void {
     if (!this.methodId) {
-      Swal.fire({ icon: 'warning', title: 'Select a Method', confirmButtonColor: '#2E5F73' });
+      Swal.fire({ icon: 'warning', title: 'Select a Method', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -478,13 +478,13 @@ export class StockReorderPlanningCreateComponent implements OnInit {
   async onSuggestPO(): Promise<void> {
     const selectedRows = this.allRows.filter(r => this.selectedIds.has(r.itemId));
     if (!selectedRows.length) {
-      await Swal.fire({ icon: 'warning', title: 'Select items', confirmButtonColor: '#2E5F73' });
+      await Swal.fire({ icon: 'warning', title: 'Select items', confirmButtonColor: '#16a34a' });
       return;
     }
     for (const r of selectedRows) {
       const anySup = (r.supplierBreakdown || []).some(s => s.selected);
       if (!anySup) {
-        await Swal.fire({ icon: 'warning', title: 'Select supplier', html: `Choose a supplier for item <b>${r.itemName}</b>.`, confirmButtonColor: '#2E5F73' });
+        await Swal.fire({ icon: 'warning', title: 'Select supplier', html: `Choose a supplier for item <b>${r.itemName}</b>.`, confirmButtonColor: '#16a34a' });
         return;
       }
     }
@@ -521,7 +521,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
     }, []);
 
     if (!lines.length) {
-      await Swal.fire({ icon: 'warning', title: 'Nothing to suggest', text: 'Quantities are zero.', confirmButtonColor: '#2E5F73' });
+      await Swal.fire({ icon: 'warning', title: 'Nothing to suggest', text: 'Quantities are zero.', confirmButtonColor: '#16a34a' });
       return;
     }
 
@@ -567,14 +567,14 @@ export class StockReorderPlanningCreateComponent implements OnInit {
           icon: 'success',
           title: `Created ${count} PR${count === 1 ? '' : 's'}`,
           text: 'PR(s) created from Reorder.',
-          confirmButtonColor: '#2E5F73'
+          confirmButtonColor: '#16a34a'
         }).then(() => {
           this.router.navigate(['/purchase/list-purchaseorder'], { queryParams: { recent: 'reorder' } });
         });
       },
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'Failed to create PR suggestions.';
-        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
+        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#16a34a' });
       },
       complete: () => this.isBusy = false
     });
@@ -628,7 +628,7 @@ export class StockReorderPlanningCreateComponent implements OnInit {
         },
         error: (err) => {
           const msg = err?.error?.message || err?.message || 'Failed to save.';
-          Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
+          Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#16a34a' });
           reject(err);
         }
       });

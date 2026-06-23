@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+﻿import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ItemMasterService } from '../item-master.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
@@ -162,7 +162,7 @@ export class ItemMasterListComponent implements OnInit {
           icon: 'warning',
           title: 'Access Denied',
           text: 'User not found. Please login again.',
-          confirmButtonColor: '#0e3a4c'
+          confirmButtonColor: '#16a34a'
         });
         return;
       }
@@ -191,7 +191,7 @@ export class ItemMasterListComponent implements OnInit {
             icon: 'error',
             title: 'Error',
             text: this.getErrorMessage(err, 'Unable to load permission.'),
-            confirmButtonColor: '#d33'
+            confirmButtonColor: '#16a34a'
           });
         }
       });

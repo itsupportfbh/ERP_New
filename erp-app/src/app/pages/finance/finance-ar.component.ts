@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
@@ -311,9 +311,9 @@ export class FinanceArComponent implements OnInit {
   }
 
   saveReceipt(): void {
-    if (!this.receiptForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
-    if (!this.receiptForm.receiptDate) { Swal.fire('Required', 'Receipt date is required.', 'warning'); return; }
-    if (!(Number(this.receiptForm.amountReceived) > 0)) { Swal.fire('Required', 'Amount received must be greater than 0.', 'warning'); return; }
+    if (!this.receiptForm.customerId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a customer.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.receiptForm.receiptDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Receipt date is required.', confirmButtonColor: '#16a34a' }); return; }
+    if (!(Number(this.receiptForm.amountReceived) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount received must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
 
     this.savingReceipt = true;
     this.error = '';
@@ -400,9 +400,9 @@ export class FinanceArComponent implements OnInit {
   get invoiceGrandTotal(): number { return this.invoiceSubtotal + this.invoiceTaxTotal; }
 
   saveInvoice(): void {
-    if (!this.invoiceForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
-    if (!this.invoiceForm.invoiceDate) { Swal.fire('Required', 'Invoice date is required.', 'warning'); return; }
-    if (this.invoiceLines.every(l => !l.itemName.trim())) { Swal.fire('Required', 'Add at least one line item.', 'warning'); return; }
+    if (!this.invoiceForm.customerId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a customer.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.invoiceForm.invoiceDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Invoice date is required.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.invoiceLines.every(l => !l.itemName.trim())) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Add at least one line item.', confirmButtonColor: '#16a34a' }); return; }
 
     this.savingInvoice = true;
     this.error = '';
@@ -662,12 +662,12 @@ export class FinanceArComponent implements OnInit {
   }
 
   saveAdvance(): void {
-    if (!this.advanceForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
-    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
-    if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
-    if (!this.isOrderSpecific) { Swal.fire('Required', 'Please tick "Link to Sales Order" and select an order.', 'warning'); return; }
-    if (this.isOrderSpecific && !this.advanceForm.salesOrderId) { Swal.fire('Required', 'Please select a Sales Order.', 'warning'); return; }
-    if (this.advanceForm.paymentMode === 'BANK' && !this.advanceForm.bankAccountId) { Swal.fire('Required', 'Please select a bank account.', 'warning'); return; }
+    if (!this.advanceForm.customerId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a customer.', confirmButtonColor: '#16a34a' }); return; }
+    if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Amount must be greater than 0.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.advanceForm.advanceDate) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Advance date is required.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.isOrderSpecific) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please tick "Link to Sales Order" and select an order.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.isOrderSpecific && !this.advanceForm.salesOrderId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a Sales Order.', confirmButtonColor: '#16a34a' }); return; }
+    if (this.advanceForm.paymentMode === 'BANK' && !this.advanceForm.bankAccountId) { Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select a bank account.', confirmButtonColor: '#16a34a' }); return; }
 
     this.savingAdvance = true;
     this.error = '';

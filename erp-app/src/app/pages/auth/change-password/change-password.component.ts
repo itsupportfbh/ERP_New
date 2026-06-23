@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+﻿import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import Swal from 'sweetalert2';
@@ -49,7 +49,7 @@ export class ChangePasswordComponent {
           icon: 'success',
           title: 'Password Changed!',
           text: 'Your password has been updated successfully.',
-          confirmButtonColor: '#2E5F73',
+          confirmButtonColor: '#16a34a',
           showConfirmButton: false,
           timer: 2000
         });
@@ -58,7 +58,7 @@ export class ChangePasswordComponent {
       error: (err) => {
         this.loading = false;
         const msg = err.error?.message || (typeof err.error === 'string' ? err.error : 'Something went wrong.');
-        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#d33' });
+        Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#16a34a' });
       }
     });
   }

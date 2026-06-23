@@ -943,7 +943,7 @@ private rebuildFromOutletOptions(): void {
           icon: 'success',
           title: 'Transfer Created',
           text: `Transfer created for ${payload.length} row(s).${shortageMsg}`,
-          confirmButtonColor: '#2E5F73'
+          confirmButtonColor: '#16a34a'
         }).then(() => {
           this.resetAll();
 

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CogsItemRow, CogsReport } from './cogs-report.model';
 import { CogsReportService } from '../stock-cogs-service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
@@ -68,7 +68,7 @@ export class StockCogsComponent implements OnInit {
         icon: 'warning',
         title: 'Access Denied',
         text: 'User not found. Please login again.',
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -96,7 +96,7 @@ export class StockCogsComponent implements OnInit {
           icon: 'error',
           title: 'Error',
           text: 'Unable to load permission.',
-          confirmButtonColor: '#d33'
+          confirmButtonColor: '#16a34a'
         });
       }
     });
@@ -128,7 +128,7 @@ export class StockCogsComponent implements OnInit {
         icon: 'warning',
         title: 'Date Required',
         text: 'Please select From Date and To Date.',
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -138,7 +138,7 @@ export class StockCogsComponent implements OnInit {
         icon: 'warning',
         title: 'Invalid Date Range',
         text: 'From Date should be less than or equal to To Date.',
-        confirmButtonColor: '#0e3a4c'
+        confirmButtonColor: '#16a34a'
       });
       return;
     }
@@ -163,7 +163,7 @@ export class StockCogsComponent implements OnInit {
             icon: 'info',
             title: 'No Data',
             text: 'No COGS data found for selected filter.',
-            confirmButtonColor: '#0e3a4c'
+            confirmButtonColor: '#16a34a'
           });
         }
 
@@ -177,7 +177,7 @@ export class StockCogsComponent implements OnInit {
           icon: 'error',
           title: 'Error',
           text: 'Unable to load COGS report.',
-          confirmButtonColor: '#d33'
+          confirmButtonColor: '#16a34a'
         });
       }
     });

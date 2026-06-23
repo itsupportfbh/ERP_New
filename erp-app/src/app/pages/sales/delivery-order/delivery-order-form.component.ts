@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+﻿import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -173,13 +173,13 @@ export class DeliveryOrderFormComponent implements OnInit {
             title: 'Stock Not Yet Received',
             text: 'This Sales Order has Direct DO items where stock has not been fully received yet. Delivery may be incomplete.',
             confirmButtonText: 'OK',
-            confirmButtonColor: '#e67e22'
+            confirmButtonColor: '#16a34a'
           }).then(() => this.clear());
         }
 
         this.loading = false;
       },
-      error: () => { this.loading = false; void Swal.fire('Error', 'Unable to load sales order lines.', 'error'); }
+      error: () => { this.loading = false; void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load sales order lines.', confirmButtonColor: '#16a34a' }); }
     });
   }
 
@@ -304,10 +304,10 @@ export class DeliveryOrderFormComponent implements OnInit {
 
   // ── Save ──────────────────────────────────────────────
   submit(): void {
-    if (this.isPosted) { void Swal.fire('Validation', 'This delivery order is already posted.', 'warning'); return; }
-    if (!this.soId) { void Swal.fire('Validation', 'Please select a Sales Order.', 'warning'); return; }
+    if (this.isPosted) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'This delivery order is already posted.', confirmButtonColor: '#16a34a' }); return; }
+    if (!this.soId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Sales Order.', confirmButtonColor: '#16a34a' }); return; }
     const anyQty = this.lines.some(l => (Number(l.deliverQty) || 0) > 0);
-    if (!anyQty) { void Swal.fire('Validation', 'Enter at least one deliver quantity.', 'warning'); return; }
+    if (!anyQty) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Enter at least one deliver quantity.', confirmButtonColor: '#16a34a' }); return; }
     this.saving = true;
 
     if (this.isEdit) {
