@@ -168,11 +168,24 @@ export class DeliveryOrderFormComponent implements OnInit {
           const ps = Number(l.procurementStatus ?? l.ProcurementStatus ?? 0);
           return sm === 2 && sq > 0 && ps < 4;
         });
+        const hasRecipeNotReady = arr.some((l: any) => {
+          const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
+          const ps = Number(l.procurementStatus ?? l.ProcurementStatus ?? 0);
+          return sm === 1 && ps < 4;
+        });
         if (hasDirectDoShortage) {
           void Swal.fire({
             icon: 'warning',
             title: 'Stock Not Yet Received',
             text: 'This Sales Order has Direct DO items where stock has not been fully received yet. Delivery may be incomplete.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#16a34a'
+          }).then(() => this.clear());
+        } else if (hasRecipeNotReady) {
+          void Swal.fire({
+            icon: 'warning',
+            title: 'Recipe Not Ready',
+            text: 'This Sales Order has items where recipe / food preparation has not been completed yet. Delivery may be incomplete.',
             confirmButtonText: 'OK',
             confirmButtonColor: '#16a34a'
           }).then(() => this.clear());
