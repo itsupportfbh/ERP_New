@@ -3,6 +3,13 @@
   flex: 1;
 }
 
+/* ===== Read-only / disabled input look ===== */
+.fc-input--disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
 /* ===== Stepper nav ===== */
 .im-step {
   display: flex;

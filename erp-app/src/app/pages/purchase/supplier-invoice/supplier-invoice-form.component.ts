@@ -85,6 +85,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
   private itemLedgerMap = new Map<number, number>();
   private itemCategoryMap = new Map<number, number>();
   private categoryLedgerMap = new Map<number, number>();
+  private itemLeafLedgerMap = new Map<number, number>(); // itemId → item-specific leaf COA id (e.g. 501021601 butter milk)
 
   taxModeOptions = [
     { label: 'Exclusive', value: 'Exclusive' },
@@ -181,33 +182,85 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id
       })));
-    this.svc.getChartOfAccounts().subscribe(r => {
-      const list = this.svc.unwrap(r);
-      this.ledgerOptions = list.map((c: any) => ({
+
+    // Load COA + categories + items together so we can resolve each item's
+    // own leaf ledger (Item → Category → category COA → item leaf COA).
+    forkJoin({
+      coa: this.svc.getChartOfAccounts().pipe(catchError(() => of([]))),
+      cats: this.svc.getCategories().pipe(catchError(() => of([]))),
+      items: this.svc.getItems().pipe(catchError(() => of([])))
+    }).subscribe(({ coa, cats, items }) => {
+      const coaList: any[] = this.svc.unwrap(coa);
+      const catList: any[] = (cats as any)?.data || cats || [];
+      const itemList: any[] = this.svc.unwrap(items);
+
+      this.ledgerOptions = coaList.map((c: any) => ({
         label: `${c.headCode ?? ''} ${c.headName ?? ''}`.trim(), value: c.id
       }));
-      const headCodeToId = new Map<number, number>();
-      list.forEach((c: any) => {
-        if (c.headCode != null && c.id != null) headCodeToId.set(Number(c.headCode), Number(c.id));
+
+      const norm = (s: any) => String(s ?? '').trim().toUpperCase();
+
+      // category by id
+      const catById = new Map<number, any>();
+      catList.forEach((c: any) => {
+        const id = c.id ?? c.iD;
+        if (id) catById.set(Number(id), c);
       });
-      this.svc.getCategories().subscribe(r2 =>
-        (r2?.data || r2 || []).forEach((cat: any) => {
-          const catId = cat.id ?? cat.iD;
-          const headCode = cat.purchaseParentHeadCode ?? cat.PurchaseParentHeadCode;
-          if (catId && headCode) {
-            const coaId = headCodeToId.get(Number(headCode));
-            if (coaId) this.categoryLedgerMap.set(Number(catId), coaId);
-          }
-        }));
+
+      // headCode → COA id (for the category-level fallback ledger)
+      const headCodeToId = new Map<number, number>();
+      // "parentHead|HEADNAME" → COA row, for O(1) parent/child resolution
+      const coaByParentAndName = new Map<string, any>();
+      coaList.forEach((c: any) => {
+        if (c.headCode != null && c.id != null) headCodeToId.set(Number(c.headCode), Number(c.id));
+        if (c.parentHead != null) coaByParentAndName.set(`${Number(c.parentHead)}|${norm(c.headName)}`, c);
+      });
+
+      // categoryId → purchase parent head COA id (fallback when no item leaf exists)
+      this.categoryLedgerMap.clear();
+      catList.forEach((cat: any) => {
+        const catId = cat.id ?? cat.iD;
+        const headCode = cat.purchaseParentHeadCode ?? cat.PurchaseParentHeadCode;
+        if (catId && headCode) {
+          const coaId = headCodeToId.get(Number(headCode));
+          if (coaId) this.categoryLedgerMap.set(Number(catId), coaId);
+        }
+      });
+
+      // itemId → leaf ledger (the item's own COA account)
+      this.itemLedgerMap.clear();
+      this.itemCategoryMap.clear();
+      this.itemLeafLedgerMap.clear();
+      itemList.forEach((i: any) => {
+        const itemId = Number(i.id ?? i.iD ?? 0);
+        if (!itemId) return;
+        const itemName = i.itemName ?? i.ItemName ?? i.name ?? '';
+        const catId = Number(i.categoryId ?? i.CategoryId ?? 0);
+        const ledger = Number(i.budgetLineId ?? i.BudgetLineId ?? 0);
+
+        if (ledger) this.itemLedgerMap.set(itemId, ledger);
+        if (catId) this.itemCategoryMap.set(itemId, catId);
+
+        const cat = catById.get(catId);
+        if (!cat || !itemName) return;
+
+        // Purchase context (supplier invoice): use PurchaseParentHeadCode; fall back to Sales.
+        const parentHeadCode =
+          cat.purchaseParentHeadCode ?? cat.PurchaseParentHeadCode ??
+          cat.salesParentHeadCode ?? cat.SalesParentHeadCode ?? null;
+        if (!parentHeadCode) return;
+
+        const catName = cat.catagoryName ?? cat.CatagoryName ?? cat.categoryName ?? '';
+
+        // 1) category COA: ParentHead == parentHeadCode AND HeadName == CatagoryName → its HeadCode (e.g. 5010216)
+        const categoryCoa = coaByParentAndName.get(`${Number(parentHeadCode)}|${norm(catName)}`);
+        if (categoryCoa?.headCode == null) return;
+
+        // 2) item leaf COA: ParentHead == categoryCoa.HeadCode AND HeadName == ItemName → its Id (e.g. 1977)
+        const leafCoa = coaByParentAndName.get(`${Number(categoryCoa.headCode)}|${norm(itemName)}`);
+        if (leafCoa?.id != null) this.itemLeafLedgerMap.set(itemId, Number(leafCoa.id));
+      });
     });
-    this.svc.getItems().subscribe(r =>
-      this.svc.unwrap(r).forEach((i: any) => {
-        const id = i.id ?? i.iD;
-        const ledger = i.budgetLineId ?? i.BudgetLineId;
-        const catId = i.categoryId ?? i.CategoryId;
-        if (id && ledger) this.itemLedgerMap.set(Number(id), Number(ledger));
-        if (id && catId) this.itemCategoryMap.set(Number(id), Number(catId));
-      }));
   }
 
   loadGrnList(applyOcr = false): void {
@@ -415,10 +468,13 @@ export class SupplierInvoiceFormComponent implements OnInit {
           (itemName && (p.itemName === itemName || p.itemSearch === itemName || p.item === itemName))
         );
         const poQty = poLine ? Number(poLine.qty ?? poLine.quantity ?? 0) : 0;
+        const leafLedger = itemId ? (this.itemLeafLedgerMap.get(Number(itemId)) || null) : null;
         const itemLedger = itemId ? (this.itemLedgerMap.get(Number(itemId)) || null) : null;
         const catId = itemId ? (this.itemCategoryMap.get(Number(itemId)) || null) : null;
         const catLedger = catId ? (this.categoryLedgerMap.get(catId) || null) : null;
-        const itemDefault = itemLedger || catLedger || null;
+        // Prefer the item's own leaf ledger (e.g. 501021601 butter milk), then the saved
+        // item ledger, and only fall back to the category parent (e.g. 50102 Purchases).
+        const itemDefault = leafLedger || itemLedger || catLedger || null;
         const ledgerId = x.budgetLineId ?? x.BudgetLineId ?? poLine?.budgetLineId ?? poLine?.BudgetLineId ?? itemDefault;
 
         const existing = merged.find(pl => pl.itemId === itemId && pl.unitPrice === unitPrice);

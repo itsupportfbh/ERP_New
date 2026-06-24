@@ -220,6 +220,11 @@ export class CreateItemMasterComponent implements OnInit {
         Swal.fire({ icon: 'warning', title: 'Required', text: 'Conversion Factor must be greater than 0.' });
         return;
       }
+      const dupWarning = this.getDuplicateWarning();
+      if (dupWarning) {
+        Swal.fire({ icon: 'warning', title: 'Duplicate', text: dupWarning });
+        return;
+      }
       // if (!this.item.budgetLineId) {
       //   Swal.fire({ icon: 'warning', title: 'Required', text: 'Ledger Name is required.' });
       //   return;
@@ -241,6 +246,9 @@ export class CreateItemMasterComponent implements OnInit {
   /* Edit vs Create */
   isEdit = false;
   editingId: number | null = null;
+
+  /* Existing items (for duplicate code/name validation) */
+  existingItems: Array<{ id: number; itemCode: string; itemName: string }> = [];
 
   /* Audit */
   audits: ItemMasterAudit[] = [];
@@ -329,6 +337,7 @@ export class CreateItemMasterComponent implements OnInit {
     this.getAllSupplier();
     this.getAllStrategy();
     this.getItemType();
+    this.loadExistingItems();
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.isEdit = true;
@@ -361,6 +370,40 @@ export class CreateItemMasterComponent implements OnInit {
     this.itemsSvc.getAllItemType().subscribe((res: any) => {
       this.ItemTypeList = res?.data ?? [];
     });
+  }
+
+  /* Load all items so we can warn on duplicate Item Code / Item Name */
+  private loadExistingItems(): void {
+    this.itemsSvc.getAllItemMaster().subscribe({
+      next: (res: any) => {
+        const raw = Array.isArray(res) ? res : (res?.data ?? []);
+        this.existingItems = (raw || []).map((x: any) => ({
+          id: Number(x.id ?? 0),
+          itemCode: (x.itemCode ?? x.sku ?? '').toString(),
+          itemName: (x.itemName ?? x.name ?? '').toString()
+        }));
+      },
+      error: () => { this.existingItems = []; }
+    });
+  }
+
+  /* Returns a warning message if code/name already exists, otherwise null */
+  private getDuplicateWarning(): string | null {
+    const code = (this.item.itemCode ?? '').toString().trim().toLowerCase();
+    const name = (this.item.itemName ?? '').toString().trim().toLowerCase();
+    const currentId = Number(this.item.id ?? 0);
+
+    const dupCode = this.existingItems.some(
+      x => x.id !== currentId && x.itemCode.trim().toLowerCase() === code && code !== ''
+    );
+    const dupName = this.existingItems.some(
+      x => x.id !== currentId && x.itemName.trim().toLowerCase() === name && name !== ''
+    );
+
+    if (dupCode && dupName) return 'An item with the same Item Code and Item Name already exists.';
+    if (dupCode) return 'An item with the same Item Code already exists.';
+    if (dupName) return 'An item with the same Item Name already exists.';
+    return null;
   }
   /* -------------------- Edit loader -------------------- */
   private loadForEdit(id: number): void {
@@ -489,6 +532,13 @@ export class CreateItemMasterComponent implements OnInit {
         title: 'Required',
         text: 'Conversion Factor must be greater than 0.'
       });
+      return;
+    }
+
+    // ✅ warn on duplicate Item Code / Item Name
+    const dupWarning = this.getDuplicateWarning();
+    if (dupWarning) {
+      await Swal.fire({ icon: 'warning', title: 'Duplicate', text: dupWarning });
       return;
     }
 
