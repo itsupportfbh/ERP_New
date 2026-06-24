@@ -59,7 +59,8 @@
     <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
     <div class="rpt-error" *ngIf="error">{{ error }}</div>
 
-    <div class="table-wrap" *ngIf="!loading">
+    <!-- DETAILED VIEW -->
+    <div class="table-wrap" *ngIf="!loading && viewMode === 'detailed'">
       <table class="db-table">
         <thead>
           <tr>
@@ -69,19 +70,49 @@
         </thead>
         <tbody>
           <tr *ngFor="let r of runningRows">
-            <td>{{ r.postingDate | date:'yyyy-MM-dd' }}</td>
+            <td>{{ r.postingDate | date:'dd-MM-yyyy' }}</td>
             <td class="voucher-link">{{ r.voucherNo }}</td>
-            <td><span class="type-badge" [ngClass]="voucherTypeClass(r.voucherType)">{{ r.voucherType }}</span></td>
+            <td><span class="type-badge" [ngClass]="voucherTypeClass(r.voucherType)">{{ typeLabel(r.voucherType) }}</span></td>
             <td>{{ r.accountName }}</td>
             <td class="num debit-val">{{ r.debit ? (r.debit | number:'1.2-2') : '–' }}</td>
             <td class="num credit-val">{{ r.credit ? (r.credit | number:'1.2-2') : '–' }}</td>
-            <td class="num balance-val"><strong>{{ r._running | number:'1.2-2' }}</strong></td>
+            <td class="num balance-val">
+              <strong [class.dr-val]="r._rowType === 'Dr'" [class.cr-val]="r._rowType === 'Cr'">
+                {{ r._rowAmt | number:'1.2-2' }} <span class="bal-type">{{ r._rowType }}</span>
+              </strong>
+            </td>
           </tr>
           <tr *ngIf="!filtered.length">
             <td colspan="7" class="no-data">No transactions found for selected period.</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- SUMMARY VIEW -->
+    <div class="sum-view" *ngIf="!loading && viewMode === 'summary'">
+      <p class="sum-hint">Showing totals by voucher type for the selected period.</p>
+      <div class="sum-type-grid">
+        <div class="sum-type-card" *ngFor="let g of summaryGroups">
+          <div class="sum-type-head">
+            <span class="sum-type-name">{{ typeLabel(g.type) }}</span>
+            <span class="sum-type-net" [class.net-dr]="groupType(g) === 'Dr'" [class.net-cr]="groupType(g) === 'Cr'">
+              ₹ {{ groupNetAbs(g) | number:'1.2-2' }} {{ groupType(g) }}
+            </span>
+          </div>
+          <div class="sum-type-body">
+            <div class="sum-type-col">
+              <div class="stc-lbl">Total Debit</div>
+              <div class="stc-val">₹ {{ g.debit | number:'1.2-2' }}</div>
+            </div>
+            <div class="sum-type-col">
+              <div class="stc-lbl">Total Credit</div>
+              <div class="stc-val">₹ {{ g.credit | number:'1.2-2' }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="sum-empty" *ngIf="!summaryGroups.length">No transactions found for selected period.</div>
+      </div>
     </div>
 
     <div class="table-footer" *ngIf="!loading && filtered.length">

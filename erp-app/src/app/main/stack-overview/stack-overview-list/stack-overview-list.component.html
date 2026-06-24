@@ -1,19 +1,45 @@
-<div class="page-container">
-  <div class="page-header">
-    <h2>Stock Overview</h2>
-    <div class="btn-group">
-      <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="goToCreateItem()" [disabled]="isPeriodLocked">+ Go to Overview</button>
-    </div>
-  </div>
+<div class="list-page">
+  <div class="list-card">
 
-  <div class="card table-section">
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Stock Overview</h3>
+          <p class="list-card-sub">View current stock levels across all warehouses</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <button class="list-add-btn" *ngIf="canCreate()" (click)="goToCreateItem()" [disabled]="isPeriodLocked">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Go to Overview
+        </button>
+      </div>
+    </div>
+
     <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
       <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search Item / SKU / Category / UOM / Warehouse / Bin"/>
     </div>
     <erp-table
       [columns]="columns"
       [data]="tableData"
       [loading]="loading"
+      [showControls]="false"
       [rowActions]="rowActions"
       (actionClick)="onAction($event)">
     </erp-table>
@@ -24,13 +50,13 @@
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)">
     </erp-pager>
+
   </div>
 </div>
 
 <!-- View Modal -->
 <div *ngIf="showViewModal" class="dt-modal-overlay" (click)="showViewModal=false">
   <div style="background:#fff;border-radius:12px;width:900px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.18);overflow:hidden" (click)="$event.stopPropagation()">
-
     <div style="background:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
         <div style="font-size:15px;font-weight:700;color:#fff">{{ selectedItem?.name }}</div>
@@ -38,29 +64,23 @@
       </div>
       <button (click)="showViewModal=false" style="border:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
     </div>
-
     <div style="flex:1;overflow:auto;padding:16px 20px">
       <table class="dt-table" style="width:100%">
-        <thead>
-          <tr>
-            <th>WAREHOUSE</th><th>BIN / LOCATION</th><th>SUPPLIER</th>
-            <th style="text-align:right">ON HAND</th><th style="text-align:right">RESERVED</th><th style="text-align:right">AVAILABLE</th>
-            <th>EXPIRY</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th>WAREHOUSE</th><th>BIN / LOCATION</th><th>SUPPLIER</th>
+          <th style="text-align:right">ON HAND</th><th style="text-align:right">RESERVED</th><th style="text-align:right">AVAILABLE</th>
+          <th>EXPIRY</th>
+        </tr></thead>
         <tbody>
           <tr *ngFor="let l of selectedItem?.locations">
             <td>{{ l.warehouseName || '-' }}</td><td>{{ l.binName || '-' }}</td><td>{{ l.supplierName || '-' }}</td>
             <td style="text-align:right">{{ l.onHand ?? 0 }}</td><td style="text-align:right">{{ l.reserved ?? '-' }}</td><td style="text-align:right">{{ l.available ?? 0 }}</td>
             <td>{{ l.expiryDate ? (l.expiryDate | date:'yyyy-MM-dd') : '-' }}</td>
           </tr>
-          <tr *ngIf="!selectedItem?.locations?.length">
-            <td colspan="7" class="dt-empty">No stock data for this item.</td>
-          </tr>
+          <tr *ngIf="!selectedItem?.locations?.length"><td colspan="7" class="dt-empty">No stock data for this item.</td></tr>
         </tbody>
       </table>
     </div>
-
     <div style="display:flex;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0">
       <button class="btn btn-outline btn-sm" (click)="showViewModal=false">Close</button>
     </div>

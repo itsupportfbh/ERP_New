@@ -1,25 +1,50 @@
-<div class="page-container">
-  <div class="page-header">
-    <h2>Receive Confirm</h2>
-    <div class="btn-group">
-      <span class="text-muted">{{ pendingCount }} pending</span>
-    </div>
-  </div>
+<div class="list-page">
+  <div class="list-card">
 
-  <div class="card table-section">
-    <div class="table-search-bar">
-      <div style="width:220px;display:inline-block">
-        <erp-dropdown [items]="toOutletOptions" bindLabel="name" bindValue="id"
-          [(ngModel)]="selectedToOutletId" (ngModelChange)="onToOutletChange()"
-          placeholder="Search warehouse...">
-        </erp-dropdown>
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
+            <line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Receive Confirm</h3>
+          <p class="list-card-sub">{{ pendingCount }} pending transfers to receive</p>
+        </div>
       </div>
-      <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search TransferNo / SKU / From / Reason"/>
+      <div class="list-card-actions">
+      </div>
+    </div>
+
+    <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:200px">
+          <erp-dropdown [items]="toOutletOptions" bindLabel="name" bindValue="id"
+            [(ngModel)]="selectedToOutletId" (ngModelChange)="onToOutletChange()"
+            placeholder="Filter warehouse...">
+          </erp-dropdown>
+        </div>
+        <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search TransferNo / SKU / From / Reason"/>
+      </div>
     </div>
     <erp-table
       [columns]="columns"
       [data]="tableData"
       [loading]="isLoading"
+      [showControls]="false"
       [rowActions]="rowActions"
       (actionClick)="onAction($event)">
     </erp-table>
@@ -30,90 +55,46 @@
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)">
     </erp-pager>
+
   </div>
 </div>
 
 <!-- Receive Modal -->
 <div class="rcm-backdrop" *ngIf="showReceiveModal" (click)="closeReceiveModal()">
   <div class="rcm-modal" (click)="$event.stopPropagation()">
-
     <div class="rcm-hdr">
       <div class="rcm-hleft">
         <div class="rcm-kicker">Transfer No</div>
         <div class="rcm-no">{{ receiveForm?.transferNo }}</div>
       </div>
       <div class="rcm-hright">
-        <span class="rcm-pill" [class.ok]="receiveForm?.status === 'RECEIVED'">
-          {{ receiveForm?.statusLabel }}
-        </span>
+        <span class="rcm-pill" [class.ok]="receiveForm?.status === 'RECEIVED'">{{ receiveForm?.statusLabel }}</span>
         <button class="rcm-x" type="button" (click)="closeReceiveModal()">&times;</button>
       </div>
     </div>
-
     <div class="rcm-body" *ngIf="receiveForm as f">
       <div class="rcm-grid">
-        <div class="rcm-field">
-          <label class="rcm-lbl">SKU</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" [value]="f.sku" disabled />
-          </div>
-        </div>
-        <div class="rcm-field">
-          <label class="rcm-lbl">Item Name</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" [value]="f.name" disabled />
-          </div>
-        </div>
-        <div class="rcm-field">
-          <label class="rcm-lbl">From Warehouse</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" [value]="f.fromWarehouseName" disabled />
-          </div>
-        </div>
-        <div class="rcm-field">
-          <label class="rcm-lbl">To Warehouse</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" [value]="f.toWarehouseName" disabled />
-          </div>
-        </div>
-        <div class="rcm-field">
-          <label class="rcm-lbl">Planned Qty</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" [value]="f.plannedQty" disabled />
-          </div>
-        </div>
+        <div class="rcm-field"><label class="rcm-lbl">SKU</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.sku" disabled /></div></div>
+        <div class="rcm-field"><label class="rcm-lbl">Item Name</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.name" disabled /></div></div>
+        <div class="rcm-field"><label class="rcm-lbl">From Warehouse</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.fromWarehouseName" disabled /></div></div>
+        <div class="rcm-field"><label class="rcm-lbl">To Warehouse</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.toWarehouseName" disabled /></div></div>
+        <div class="rcm-field"><label class="rcm-lbl">Planned Qty</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.plannedQty" disabled /></div></div>
         <div class="rcm-field">
           <label class="rcm-lbl">Receive Qty</label>
           <div class="rcm-inpwrap">
-            <input class="rcm-inp" type="number" min="0" [max]="f.plannedQty"
-                   [(ngModel)]="f.receiveQty" (input)="recalcVariance()"
-                   [disabled]="f.status !== 'IN_TRANSIT'" />
+            <input class="rcm-inp" type="number" min="0" [max]="f.plannedQty" [(ngModel)]="f.receiveQty" (input)="recalcVariance()" [disabled]="f.status !== 'IN_TRANSIT'" />
           </div>
           <div class="rcm-meta">
-            <span class="rcm-variance" [class.bad]="f.variance !== 0">
-              Variance: <b>{{ f.variance }}</b>
-            </span>
-            <div class="rcm-warn" *ngIf="f.receiveQty > f.plannedQty">
-              Receive qty cannot exceed planned qty.
-            </div>
+            <span class="rcm-variance" [class.bad]="f.variance !== 0">Variance: <b>{{ f.variance }}</b></span>
+            <div class="rcm-warn" *ngIf="f.receiveQty > f.plannedQty">Receive qty cannot exceed planned qty.</div>
           </div>
         </div>
-        <div class="rcm-field full">
-          <label class="rcm-lbl">Remarks</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" placeholder="Damage / Short / Excess notes"
-                   [(ngModel)]="f.remarks" [disabled]="f.status !== 'IN_TRANSIT'" />
-          </div>
-        </div>
+        <div class="rcm-field full"><label class="rcm-lbl">Remarks</label><div class="rcm-inpwrap"><input class="rcm-inp" placeholder="Damage / Short / Excess notes" [(ngModel)]="f.remarks" [disabled]="f.status !== 'IN_TRANSIT'" /></div></div>
       </div>
     </div>
-
     <div class="rcm-ftr">
       <button type="button" class="rcm-btn ghost" (click)="closeReceiveModal()">Back</button>
-      <button type="button" class="rcm-btn primary" *ngIf="canCreate()"
-              (click)="confirmReceive()" [disabled]="!canConfirmReceive()">
-        Confirm Receive
-      </button>
+      <button type="button" class="rcm-btn primary" *ngIf="canCreate()" (click)="confirmReceive()" [disabled]="!canConfirmReceive()">Confirm Receive</button>
     </div>
   </div>
 </div>

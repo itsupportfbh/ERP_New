@@ -122,9 +122,45 @@ export class FinanceDaybookComponent implements OnInit {
   get runningRows(): any[] {
     let balance = 0;
     return this.filtered.map(r => {
-      balance += (r.debit || 0) - (r.credit || 0);
-      return { ...r, _running: balance };
+      const d = Number(r.debit  || 0);
+      const c = Number(r.credit || 0);
+      balance += d - c;
+      return {
+        ...r,
+        _running:     balance,
+        _runningAbs:  Math.abs(balance),
+        _runningType: balance >= 0 ? 'Dr' : 'Cr',
+        _rowAmt:  d > 0 ? d : c,
+        _rowType: d > 0 ? 'Dr' : 'Cr'
+      };
     });
+  }
+
+  get summaryGroups(): any[] {
+    const map = new Map<string, { type: string; debit: number; credit: number }>();
+    this.filtered.forEach(r => {
+      const t = r.voucherType || 'Other';
+      if (!map.has(t)) map.set(t, { type: t, debit: 0, credit: 0 });
+      const g = map.get(t)!;
+      g.debit  += Number(r.debit  || 0);
+      g.credit += Number(r.credit || 0);
+    });
+    return Array.from(map.values());
+  }
+
+  groupNet(g: any): number   { return g.debit - g.credit; }
+  groupNetAbs(g: any): number { return Math.abs(g.debit - g.credit); }
+  groupType(g: any): string  { return (g.debit - g.credit) >= 0 ? 'Dr' : 'Cr'; }
+
+  private readonly TYPE_LABELS: Record<string, string> = {
+    PIN: 'Supplier Invoice', SI: 'Sales Invoice', SDN: 'Supplier Debit Note',
+    SP: 'Supplier Payment', CP: 'Customer Payment', CN: 'Credit Note',
+    DN: 'Debit Note', JV: 'Journal Voucher', BPV: 'Bank Payment', BRV: 'Bank Receipt',
+    CPV: 'Cash Payment', CRV: 'Cash Receipt',
+  };
+
+  typeLabel(code: string): string {
+    return this.TYPE_LABELS[String(code).toUpperCase()] ?? code;
   }
 
   private normalize(r: any): any {
@@ -136,7 +172,9 @@ export class FinanceDaybookComponent implements OnInit {
     c.description  = c.description  ?? c.Description  ?? c.narration ?? '-';
     c.debit        = Number(c.debit   ?? c.Debit   ?? c.debitAmount  ?? 0);
     c.credit       = Number(c.credit  ?? c.Credit  ?? c.creditAmount ?? 0);
-    c.voucherType  = c.voucherType  ?? c.VoucherType  ?? c.transactionType ?? '';
+    const rawType  = c.voucherType ?? c.VoucherType ?? c.transactionType ?? c.docType ?? '';
+    c.voucherType  = rawType;
+    c.voucherTypeCode = rawType;
     return c;
   }
 }

@@ -45,22 +45,3 @@
 
 .pager-ellipsis { font-size: 11px; color: var(--text-muted); padding: 0 2px; }
 
-.pager-size {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  select {
-    height: 24px;
-    padding: 0 4px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 11px;
-    background: var(--surface);
-    cursor: pointer;
-    outline: none;
-    &:focus { border-color: var(--accent); }
-  }
-}

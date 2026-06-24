@@ -1,133 +1,54 @@
-<div class="coa-page">
+<div class="list-page">
+  <div class="list-card">
 
-  <!-- Header -->
-  <div class="coa-head">
-    <div class="coa-head-left">
-      <div class="coa-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-      </div>
-      <div>
-        <h2>Chart of Accounts</h2>
-        <p>Account hierarchy and structure</p>
-      </div>
-    </div>
-    <button class="coa-add-btn" type="button" (click)="openCreate()" *ngIf="permission?.create">+ Add</button>
-  </div>
-
-  <!-- Modal Backdrop -->
-  <div class="coa-backdrop" *ngIf="showForm" (click)="showForm = false"></div>
-
-  <!-- Modal -->
-  <div class="coa-modal" *ngIf="showForm">
     <!-- Header -->
-    <div class="coa-modal-head">
-      <span>{{ editRow ? 'Edit Chart Of Account' : 'New Chart Of Account' }}</span>
-      <button class="coa-modal-x" type="button" (click)="showForm = false">&#215;</button>
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Chart of Accounts</h3>
+          <p class="list-card-sub">Account hierarchy and structure</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <button class="list-add-btn" type="button" (click)="openCreate()" *ngIf="permission?.create">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add Account
+        </button>
+      </div>
     </div>
 
-    <!-- Body -->
-    <div class="coa-modal-body">
-      <div class="coa-alert coa-danger" *ngIf="error">{{ error }}</div>
-
-      <!-- Head Name -->
-      <label class="coa-field">
-        <span>Head Name <span class="req">*</span></span>
-        <input type="text" [(ngModel)]="form.headName" placeholder="Enter Head Name">
-      </label>
-
-      <!-- Head Code -->
-      <label class="coa-field">
-        <span>Head Code</span>
-        <input type="text" [(ngModel)]="form.headCode"
-               [readonly]="!editRow" [class.coa-readonly]="!editRow"
-               placeholder="Auto Generated">
-      </label>
-
-      <!-- Parent Head -->
-      <label class="coa-field">
-        <span>Parent Head</span>
-        <select [(ngModel)]="form.parentHead" (change)="onParentHeadChange()">
-          <option [ngValue]="null">Search / choose Parent Head...</option>
-          <option *ngFor="let p of rows" [ngValue]="p.headCode">{{ p.headCode }} – {{ p.headName }}</option>
+    <!-- Show entries + Search -->
+    <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="9999">All</option>
         </select>
-      </label>
-
-      <!-- P Head Name -->
-      <label class="coa-field">
-        <span>P Head Name</span>
-        <input type="text" [value]="form.pHeadName ?? ''" readonly class="coa-readonly">
-      </label>
-
-      <!-- Head Level + Head Type (2 col) -->
-      <div class="coa-row-2">
-        <label class="coa-field">
-          <span>Head Level</span>
-          <input type="text" [value]="form.headLevel ?? ''" readonly class="coa-readonly">
-        </label>
-        <label class="coa-field">
-          <span>Head Type</span>
-          <input type="text" [value]="form.headType ?? ''" readonly class="coa-readonly">
-        </label>
+        entries
       </div>
-
-      <!-- Is Transaction + Is Gl (checkboxes) -->
-      <div class="coa-row-checks">
-        <label class="coa-check">
-          <span>Is Transaction</span>
-          <input type="checkbox" [(ngModel)]="form.isTransaction">
-        </label>
-        <label class="coa-check">
-          <span>Is Gl</span>
-          <input type="checkbox" [(ngModel)]="form.isGl">
-        </label>
-      </div>
+      <input class="table-search-input" type="text" placeholder="Search accounts..." [(ngModel)]="search">
     </div>
 
-    <!-- Footer -->
-    <div class="coa-modal-foot">
-      <button class="coa-save-btn" type="button" (click)="save()" [disabled]="saving">
-        {{ saving ? 'Saving...' : 'Save' }}
-      </button>
-      <button class="coa-cancel-btn" type="button" (click)="showForm = false">Cancel</button>
-    </div>
-  </div>
-
-  <!-- Controls: Show entries (left) + Search (right) -->
-  <div class="coa-controls">
-    <div class="coa-show-row">
-      <span>Show</span>
-      <div class="coa-select-wrap">
-        <select [(ngModel)]="pageSize">
-          <option [value]="10">10</option>
-          <option [value]="25">25</option>
-          <option [value]="50">50</option>
-          <option [value]="9999">All</option>
-        </select>
-        <span class="select-arrow">&#9660;</span>
-      </div>
-      <span>entries</span>
-    </div>
-    <div class="coa-search-wrap">
-      <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input class="coa-search" type="text" placeholder="Search accounts..." [(ngModel)]="search">
-    </div>
-  </div>
-
-  <!-- Table Card -->
-  <div class="coa-table-card">
+    <!-- Loading -->
     <div class="coa-loading" *ngIf="loading">Loading...</div>
+
+    <!-- Table -->
     <div class="coa-table-wrap" *ngIf="!loading">
       <table class="coa-table">
         <thead>
           <tr>
             <th class="th-code">HEAD CODE</th>
             <th class="th-name">HEAD NAME</th>
-            <th class="th-type">TYPE</th>
+            <!-- <th class="th-type">TYPE</th> -->
             <th class="th-action">ACTION</th>
           </tr>
         </thead>
@@ -147,7 +68,7 @@
                 </span>
               </div>
             </td>
-            <td class="td-type">{{ row.headType || '—' }}</td>
+            <!-- <td class="td-type">{{ row.headType || '—' }}</td> -->
             <td class="td-action">
               <button class="icon-btn edit-icon" type="button" (click)="openEdit(row)" title="Edit" *ngIf="permission?.edit">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -165,11 +86,72 @@
             </td>
           </tr>
           <tr *ngIf="pagedRows.length === 0 && !loading">
-            <td colspan="3" class="coa-empty">No accounts found.</td>
+            <td colspan="4" class="coa-empty">No accounts found.</td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
 
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="coa-backdrop" *ngIf="showForm" (click)="showForm = false"></div>
+
+<!-- Create / Edit Modal -->
+<div class="coa-modal" *ngIf="showForm">
+  <div class="coa-modal-head">
+    <span>{{ editRow ? 'Edit Chart Of Account' : 'New Chart Of Account' }}</span>
+    <button class="coa-modal-x" type="button" (click)="showForm = false">&#215;</button>
+  </div>
+  <div class="coa-modal-body">
+    <div class="coa-alert coa-danger" *ngIf="error">{{ error }}</div>
+    <label class="coa-field">
+      <span>Head Name <span class="req">*</span></span>
+      <input type="text" [(ngModel)]="form.headName" placeholder="Enter Head Name">
+    </label>
+    <label class="coa-field">
+      <span>Head Code</span>
+      <input type="text" [(ngModel)]="form.headCode"
+             [readonly]="!editRow" [class.coa-readonly]="!editRow"
+             placeholder="Auto Generated">
+    </label>
+    <label class="coa-field">
+      <span>Parent Head</span>
+      <select [(ngModel)]="form.parentHead" (change)="onParentHeadChange()">
+        <option [ngValue]="null">Search / choose Parent Head...</option>
+        <option *ngFor="let p of rows" [ngValue]="p.headCode">{{ p.headCode }} – {{ p.headName }}</option>
+      </select>
+    </label>
+    <label class="coa-field">
+      <span>P Head Name</span>
+      <input type="text" [value]="form.pHeadName ?? ''" readonly class="coa-readonly">
+    </label>
+    <div class="coa-row-2">
+      <label class="coa-field">
+        <span>Head Level</span>
+        <input type="text" [value]="form.headLevel ?? ''" readonly class="coa-readonly">
+      </label>
+      <label class="coa-field">
+        <span>Head Type</span>
+        <input type="text" [value]="form.headType ?? ''" readonly class="coa-readonly">
+      </label>
+    </div>
+    <div class="coa-row-checks">
+      <label class="coa-check">
+        <span>Is Transaction</span>
+        <input type="checkbox" [(ngModel)]="form.isTransaction">
+      </label>
+      <label class="coa-check">
+        <span>Is Gl</span>
+        <input type="checkbox" [(ngModel)]="form.isGl">
+      </label>
+    </div>
+  </div>
+  <div class="coa-modal-foot">
+    <button class="coa-save-btn" type="button" (click)="save()" [disabled]="saving">
+      {{ saving ? 'Saving...' : 'Save' }}
+    </button>
+    <button class="coa-cancel-btn" type="button" (click)="showForm = false">Cancel</button>
+  </div>
 </div>

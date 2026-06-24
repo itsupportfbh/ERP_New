@@ -6,7 +6,8 @@ $border:     #e7e9ee;
 $row-hover:  #ebf4f7;
 $muted:      #6c757d;
 
-:host { display: block; }
+
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
 .fin-workspace {
   display: flex;

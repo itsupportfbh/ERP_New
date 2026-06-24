@@ -1,27 +1,80 @@
-<div class="page-container">
-  <div class="page-header">
-    <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="create()">
-      + New {{ activeTab === 'customers' ? 'Customer' : activeTab === 'suppliers' ? 'Supplier' : 'User' }}
-    </button>
-  </div>
+<div class="list-page">
 
-  <div class="card filter-bar">
-    <div class="form-row cols-3">
-      <erp-input
-        label="Search"
-        [placeholder]="activeTab === 'customers' ? 'Customer name / email / phone...' : activeTab === 'suppliers' ? 'Supplier name / email / phone...' : 'Username / email / role...'"
-        [(ngModel)]="filter.search"
-        (ngModelChange)="onSearch()">
-      </erp-input>
+  <div class="list-card">
+
+    <!-- Card header — title/icon changes per active tab -->
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+
+        <!-- Customers icon -->
+        <div class="list-card-icon" *ngIf="activeTab === 'customers'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+
+        <!-- Suppliers icon -->
+        <div class="list-card-icon" *ngIf="activeTab === 'suppliers'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="15" height="13"/>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/>
+            <circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+        </div>
+
+        <!-- Users icon -->
+        <div class="list-card-icon" *ngIf="activeTab === 'users'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+
+        <div>
+          <h3 class="list-card-title">
+            {{ activeTab === 'customers' ? 'Customers' : activeTab === 'suppliers' ? 'Suppliers' : 'Users' }}
+          </h3>
+          <p class="list-card-sub">
+            {{ activeTab === 'customers' ? 'Create and manage customer accounts'
+             : activeTab === 'suppliers' ? 'Create and manage supplier accounts'
+             : 'Manage system users and access' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="list-card-actions">
+        <button class="list-add-btn" *ngIf="canCreate()" (click)="create()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          New {{ activeTab === 'customers' ? 'Customer' : activeTab === 'suppliers' ? 'Supplier' : 'User' }}
+        </button>
+      </div>
     </div>
-    <div class="error-text" *ngIf="error">{{ error }}</div>
-  </div>
 
-  <div class="card table-section">
+    <!-- Show entries + Search -->
+    <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSize($event)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
+      <input class="table-search-input" type="text" placeholder="Search..." [(ngModel)]="filter.search" (ngModelChange)="onSearch()">
+    </div>
+
     <erp-table
       [columns]="columns"
       [data]="tableData"
+      [pageSize]="pageSize"
       [loading]="loading"
+      [showControls]="false"
       [rowKey]="rowKey"
       [rowActions]="rowActions"
       rowActionsHeader="Action"
@@ -29,12 +82,15 @@
       (actionClick)="onActionClick($event)"
       (sortChange)="onSort($event)">
     </erp-table>
+
     <erp-pager
-      [totalItems]="allData.length"
+      [totalItems]="filteredData.length"
       [pageSize]="pageSize"
       [currentPage]="currentPage"
       (pageChange)="onPage($event)"
       (pageSizeChange)="onPageSize($event)">
     </erp-pager>
+
   </div>
+
 </div>

@@ -1,18 +1,40 @@
-<div class="page-container">
-  <div class="page-header">
-    <h2>Stock Transfer</h2>
-    <div class="btn-group">
-    </div>
-  </div>
+<div class="list-page">
+  <div class="list-card">
 
-  <div class="card table-section">
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Stock Transfer</h3>
+          <p class="list-card-sub">Transfer stock between warehouses</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+      </div>
+    </div>
+
     <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
       <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search SKU / Item / Warehouse / Status"/>
     </div>
     <erp-table
       [columns]="columns"
       [data]="tableData"
       [loading]="false"
+      [showControls]="false"
       [rowActions]="rowActions"
       (actionClick)="onAction($event)">
     </erp-table>
@@ -23,5 +45,6 @@
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)">
     </erp-pager>
+
   </div>
 </div>

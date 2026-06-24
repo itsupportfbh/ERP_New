@@ -1,38 +1,59 @@
-<div class="page-container">
-  <div class="page-header">
-    <h2>Internal Material Transfer Request</h2>
-    <div class="mrq-header-actions">
-      <button class="mrq-btn-outline" type="button" *ngIf="canShowStockButtons()" (click)="goStockOverview()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-        </svg>
-        Stock Overview
-      </button>
-      <button class="mrq-btn-outline" type="button" *ngIf="canShowStockButtons()" (click)="goStockTransfer()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-        Stock Transfer
-      </button>
-      <button class="mrq-btn-primary" *ngIf="canCreate()" (click)="goToCreateForm()" [disabled]="isPeriodLocked"
-        [attr.title]="isPeriodLocked ? (periodName ? 'Period ' + periodName + ' is locked' : 'Period is locked') : 'Create new request'">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        New Request
-      </button>
-    </div>
-  </div>
+<div class="list-page">
+  <div class="list-card">
 
-  <div class="card table-section">
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+            <rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Internal Material Transfer Request</h3>
+          <p class="list-card-sub">Request stock movements between outlets</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <button class="list-add-btn" type="button" *ngIf="canShowStockButtons()" (click)="goStockOverview()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+          Stock Overview
+        </button>
+        <button class="list-add-btn" type="button" *ngIf="canShowStockButtons()" (click)="goStockTransfer()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          Stock Transfer
+        </button>
+        <button class="list-add-btn" *ngIf="canCreate()" (click)="goToCreateForm()" [disabled]="isPeriodLocked"
+          [attr.title]="isPeriodLocked ? (periodName ? 'Period ' + periodName + ' is locked' : 'Period is locked') : 'Create new request'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          New Request
+        </button>
+      </div>
+    </div>
+
     <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
       <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search Req No / Requester / Warehouse"/>
     </div>
     <erp-table
       [columns]="columns"
       [data]="tableData"
       [loading]="loading"
+      [showControls]="false"
       [rowActions]="rowActions"
       [rowActionFilter]="rowActionFilter"
       (actionClick)="onAction($event)">
@@ -44,14 +65,13 @@
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)">
     </erp-pager>
+
   </div>
 </div>
 
 <!-- View Items Modal -->
 <div *ngIf="showViewModal" class="dt-modal-overlay" (click)="closeModal()">
   <div style="background:#fff;border-radius:12px;width:720px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.18);overflow:hidden" (click)="$event.stopPropagation()">
-
-    <!-- Header -->
     <div style="background:var(--primary);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
         <div style="font-size:15px;font-weight:700;color:#fff">{{ selectedReq?.reqNo || 'Material Requisition' }}</div>
@@ -62,40 +82,23 @@
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.2);color:#fff">
-          {{ getStatusLabel(selectedReq?.status) }}
-        </span>
+        <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.2);color:#fff">{{ getStatusLabel(selectedReq?.status) }}</span>
         <button (click)="closeModal()" style="border:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
       </div>
     </div>
-
-    <!-- Body -->
     <div style="flex:1;overflow:auto;padding:16px 20px">
       <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">Items ({{ selectedReq?.lines?.length || 0 }})</div>
       <table class="dt-table" style="width:100%">
-        <thead>
-          <tr>
-            <th>ITEM CODE</th>
-            <th>ITEM NAME</th>
-            <th>UOM</th>
-            <th style="text-align:right">QTY</th>
-          </tr>
-        </thead>
+        <thead><tr><th>ITEM CODE</th><th>ITEM NAME</th><th>UOM</th><th style="text-align:right">QTY</th></tr></thead>
         <tbody>
           <tr *ngFor="let l of selectedReq?.lines">
-            <td>{{ l.itemCode || '-' }}</td>
-            <td>{{ l.itemName || '-' }}</td>
-            <td>{{ l.uomName || '-' }}</td>
+            <td>{{ l.itemCode || '-' }}</td><td>{{ l.itemName || '-' }}</td><td>{{ l.uomName || '-' }}</td>
             <td style="text-align:right;font-weight:600">{{ l.qty ?? 0 }}</td>
           </tr>
-          <tr *ngIf="(selectedReq?.lines?.length ?? 0) === 0">
-            <td colspan="4" class="dt-empty">No items</td>
-          </tr>
+          <tr *ngIf="(selectedReq?.lines?.length ?? 0) === 0"><td colspan="4" class="dt-empty">No items</td></tr>
         </tbody>
       </table>
     </div>
-
-    <!-- Footer -->
     <div style="display:flex;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0">
       <button class="btn btn-outline btn-sm" (click)="closeModal()">Close</button>
     </div>
