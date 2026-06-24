@@ -1,38 +1,243 @@
-:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; }
+$teal-dark: #2E5F73;
 
-.stat-grid {
+:host { display: block; }
+
+.dash-page {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Page Head ── */
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e7e9ee;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: $teal-dark; }
+  .role-tag { margin: 4px 0 0; font-size: 12px; color: #6c757d; font-weight: 500; }
+}
+
+.refresh-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: $teal-dark; color: #fff; border: none; border-radius: 6px;
+  padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer;
+  white-space: nowrap; transition: background 0.15s;
+  &:hover:not(:disabled) { background: #245068; }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+/* ── States ── */
+.dash-loading, .dash-empty { color: #6c757d; font-size: 13px; padding: 1rem 0; }
+
+/* ── KPI Grid ── */
+.kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
-  box-shadow: var(--shadow);
 }
 
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+/* ── KPI Card ── */
+.kpi-card {
+  background: #fff; border: 1px solid #e8edf3;
+  border-top: 3px solid transparent; border-radius: 14px;
+  padding: 16px; display: flex; flex-direction: column; min-height: 130px;
+  &.blue-card   { border-top-color: #2d9cdb; }
+  &.green-card  { border-top-color: #2ecc71; }
+  &.orange-card { border-top-color: #f5b301; }
+  &.red-card    { border-top-color: #ea5455; }
+  &.purple-card { border-top-color: #9b59b6; }
+  &.teal-card   { border-top-color: #2E5F73; }
 }
 
-.stat-value { font-size: 20px; font-weight: 700; color: var(--text); }
-.stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.kpi-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; justify-content: center; align-items: center;
+  margin-bottom: 8px; flex-shrink: 0;
+  svg { width: 16px; height: 16px; }
+  &.blue-icon   { background: #e8f4ff; color: #2d9cdb; }
+  &.green-icon  { background: #e9f9ef; color: #2ecc71; }
+  &.orange-icon { background: #fff4de; color: #d97706; }
+  &.red-icon    { background: #ffeaea; color: #ea5455; }
+  &.purple-icon { background: #f3e8ff; color: #9b59b6; }
+  &.teal-icon   { background: #e8f4f8; color: #2E5F73; }
+}
 
-.dashboard-note {
-  padding: 14px 16px;
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.6;
+.kpi-title {
+  font-size: 11px; font-weight: 700; color: #8d99ae;
+  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;
+}
+
+.kpi-value { font-size: 20px; font-weight: 700; color: #2c3e50; line-height: 1.2; }
+
+.kpi-footer { margin-top: auto; padding-top: 10px; }
+
+.badge-up, .badge-down {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;
+}
+.badge-up   { background: #e7f8ee; color: #28c76f; border: 1px solid #c7edd7; }
+.badge-down { background: #ffeaea; color: #ea5455; border: 1px solid #f5c2c7; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION LAYOUT
+═══════════════════════════════════════════════════════════════ */
+
+.section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.section-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  padding: 18px;
+  &.half-width { max-width: 500px; }
+}
+
+.section-title {
+  font-size: 12px; font-weight: 700; color: $teal-dark;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 0 0 14px; padding-bottom: 10px;
+  border-bottom: 1px solid #f0f3f8;
+}
+
+/* ── Data Table ── */
+.table-wrap { overflow-x: auto; }
+
+.dash-table {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+
+  th {
+    background: #f8fafb; color: #6c757d; font-weight: 600;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid #e8edf3; white-space: nowrap;
+  }
+
+  td {
+    padding: 8px 10px; border-bottom: 1px solid #f0f3f8;
+    color: #2c3e50; vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfd; }
+}
+
+.no-data {
+  text-align: center; color: #adb5bd; font-size: 12px;
+  padding: 20px 10px !important;
+}
+
+/* ── Progress Bars ── */
+.prog-wrap {
+  flex: 1; background: #f0f3f8; border-radius: 6px;
+  height: 8px; overflow: hidden; min-width: 60px;
+}
+
+.prog-fill {
+  height: 100%; border-radius: 6px; transition: width 0.5s ease;
+  &.blue   { background: #2d9cdb; }
+  &.green  { background: #2ecc71; }
+  &.orange { background: #f5b301; }
+  &.teal   { background: $teal-dark; }
+  &.red    { background: #ea5455; }
+}
+
+/* ── Overview / Flow rows ── */
+.ov-row, .mod-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; font-size: 12.5px; color: #4a5568;
+  > span:first-child { min-width: 120px; white-space: nowrap; }
+}
+
+.ov-val, .prog-pct {
+  min-width: 32px; text-align: right;
+  font-weight: 600; font-size: 12px; color: #2c3e50;
+}
+
+.mod-name { min-width: 110px; font-size: 12.5px; color: #4a5568; }
+.warn-text { color: #ea5455; font-weight: 600; }
+
+/* ── Health Stats (Admin) ── */
+.health-stats {
+  display: flex; gap: 24px; margin-top: 14px;
+  padding-top: 12px; border-top: 1px solid #f0f3f8;
+}
+
+.health-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+
+.hs-val {
+  font-size: 22px; font-weight: 700; color: #2c3e50;
+  &.warn { color: #ea5455; }
+}
+
+.hs-lbl {
+  font-size: 10px; color: #8d99ae;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/* ── Badge variants ── */
+.badge-sm-danger, .badge-sm-warn, .badge-sm-success, .badge-sm-info {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 10px; font-size: 10.5px; font-weight: 600;
+}
+.badge-sm-danger  { background: #ffeaea; color: #ea5455; }
+.badge-sm-warn    { background: #fff4de; color: #d97706; }
+.badge-sm-success { background: #e7f8ee; color: #28c76f; }
+.badge-sm-info    { background: #e8f4ff; color: #2d9cdb; }
+
+/* ── Production order status badges ── */
+.st-done, .st-progress, .st-pending, .st-overdue {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 10px; font-size: 10.5px; font-weight: 600;
+}
+.st-done     { background: #e7f8ee; color: #28c76f; }
+.st-progress { background: #e8f4ff; color: #2d9cdb; }
+.st-pending  { background: #fff4de; color: #d97706; }
+.st-overdue  { background: #ffeaea; color: #ea5455; }
+
+/* ── Recipe List ── */
+.recipe-list { display: flex; flex-direction: column; gap: 10px; }
+
+.recipe-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px; border-radius: 8px; background: #fafbfd;
+  border: 1px solid #f0f3f8;
+}
+
+.recipe-img {
+  width: 38px; height: 38px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0;
+  &.img-blue   { background: #2d9cdb; }
+  &.img-green  { background: #2ecc71; }
+  &.img-beige  { background: #c49a6c; }
+  &.img-purple { background: #9b59b6; }
+}
+
+.recipe-info { flex: 1; }
+.recipe-name { font-size: 13px; font-weight: 600; color: #2c3e50; }
+.recipe-meta { font-size: 11px; color: #8d99ae; margin-top: 2px; }
+
+.badge-active {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 10px; font-size: 10.5px; font-weight: 600;
+  background: #e7f8ee; color: #28c76f; white-space: nowrap;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .page-head { flex-direction: column; gap: 10px; }
+  .kpi-grid  { grid-template-columns: repeat(2, 1fr); }
+  .section-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 500px) {
+  .kpi-grid { grid-template-columns: 1fr; }
 }

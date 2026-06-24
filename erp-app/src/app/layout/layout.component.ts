@@ -42,7 +42,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   hasChildren(menu: MenuItem): boolean { return !!(menu.children?.length); }
 
   menus: MenuItem[] = [
-    { label: 'Dashboard', icon: 'home', route: '/app/dashboard', permId: 'home' },
+    { label: 'Dashboard', icon: 'home', route: '/app/dashboard' },
      {
       label: 'Master',
       icon: 'master',

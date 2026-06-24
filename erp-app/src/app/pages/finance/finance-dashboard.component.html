@@ -2,61 +2,88 @@
 
   <!-- Page Head -->
   <div class="page-head">
-    <div class="page-head-left">
-      <h2>Finance</h2>
-      <p>General Ledger &middot; Accounts Payable &middot; Accounts Receivable &middot; GST &middot; Reports &amp; Close</p>
+    <div>
+      <h2>Finance Dashboard</h2>
+      <p>Revenue, collections, payables and exception summary.</p>
     </div>
+    <button class="refresh-btn" type="button" (click)="load()" [disabled]="loading">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      {{ loading ? 'Loading...' : 'Refresh' }}
+    </button>
   </div>
 
-  <!-- Alert -->
-  <div class="fin-alert" *ngIf="error">
-    <span class="alert-icon">&#9432;</span> {{ error }}
-  </div>
+  <!-- Loading -->
+  <div class="dash-loading" *ngIf="loading && !summary">Loading dashboard...</div>
 
-  <!-- KPI Grid -->
-  <div class="kpi-grid">
-    <article class="kpi-card kpi-c1" *ngIf="kpis[0]">
-      <div class="kpi-body">
-        <span class="kpi-label">{{ kpis[0].label }}</span>
-        <strong class="kpi-val">{{ value(kpis[0].key) | number:'1.2-2' }}</strong>
-      </div>
-      <div class="kpi-icon kpi-icon-cash">&#9654;</div>
-    </article>
-    <article class="kpi-card kpi-c2" *ngIf="kpis[1]">
-      <div class="kpi-body">
-        <span class="kpi-label">{{ kpis[1].label }}</span>
-        <strong class="kpi-val">{{ value(kpis[1].key) | number:'1.2-2' }}</strong>
-      </div>
-      <div class="kpi-icon kpi-icon-ap">&#9660;</div>
-    </article>
-    <article class="kpi-card kpi-c3" *ngIf="kpis[2]">
-      <div class="kpi-body">
-        <span class="kpi-label">{{ kpis[2].label }}</span>
-        <strong class="kpi-val">{{ value(kpis[2].key) | number:'1.2-2' }}</strong>
-      </div>
-      <div class="kpi-icon kpi-icon-ar">&#9650;</div>
-    </article>
-    <article class="kpi-card kpi-c4" *ngIf="kpis[3]">
-      <div class="kpi-body">
-        <span class="kpi-label">{{ kpis[3].label }}</span>
-        <strong class="kpi-val">{{ value(kpis[3].key) | number:'1.2-2' }}</strong>
-      </div>
-      <div class="kpi-icon kpi-icon-pl">&#9670;</div>
-    </article>
-  </div>
+  <!-- KPI Cards -->
+  <div class="kpi-grid" *ngIf="summary">
 
-  <!-- Module Navigation -->
-  <div class="mod-section">
-    <div class="mod-head">
-      <h3>Finance Modules</h3>
-      <span class="mod-count">{{ pages.length }} modules</span>
+    <div class="kpi-card blue-card">
+      <div class="kpi-icon blue-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+      <div class="kpi-title">TOTAL REVENUE</div>
+      <div class="kpi-value">{{ formatAmount(summary.totalRevenue) }}</div>
+      <div class="kpi-footer">
+        <span [ngClass]="summary.totalRevenueChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+          {{ summary.totalRevenueChangePercent >= 0 ? '↑' : '↓' }}
+          {{ absValue(summary.totalRevenueChangePercent) }}%
+        </span>
+      </div>
     </div>
-    <div class="module-grid">
-      <button class="module-tile" type="button" *ngFor="let p of pages" (click)="open(p.key)">
-        <strong class="tile-title">{{ p.title }}</strong>
-        <span class="tile-sub">{{ p.subtitle }}</span>
-      </button>
+
+    <div class="kpi-card green-card">
+      <div class="kpi-icon green-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+      </div>
+      <div class="kpi-title">COLLECTIONS</div>
+      <div class="kpi-value">{{ formatAmount(summary.collections) }}</div>
+      <div class="kpi-footer">
+        <span [ngClass]="summary.collectionsChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+          {{ summary.collectionsChangePercent >= 0 ? '↑' : '↓' }}
+          {{ absValue(summary.collectionsChangePercent) }}%
+        </span>
+      </div>
     </div>
+
+    <div class="kpi-card orange-card">
+      <div class="kpi-icon orange-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+      </div>
+      <div class="kpi-title">TOTAL PAYABLES</div>
+      <div class="kpi-value">{{ formatAmount(summary.totalPayables) }}</div>
+      <div class="kpi-footer">
+        <span [ngClass]="summary.totalPayablesChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+          {{ summary.totalPayablesChangePercent >= 0 ? '↑' : '↓' }}
+          {{ absValue(summary.totalPayablesChangePercent) }}%
+        </span>
+      </div>
+    </div>
+
+    <div class="kpi-card red-card">
+      <div class="kpi-icon red-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="kpi-title">EXCEPTIONS</div>
+      <div class="kpi-value">{{ summary.exceptions }}</div>
+      <div class="kpi-footer">
+        <span [ngClass]="summary.exceptionsChange >= 0 ? 'badge-up' : 'badge-down'">
+          {{ summary.exceptionsChange >= 0 ? '↑' : '↓' }}
+          {{ absValue(summary.exceptionsChange) }}
+        </span>
+      </div>
+    </div>
+
   </div>
 
 </div>

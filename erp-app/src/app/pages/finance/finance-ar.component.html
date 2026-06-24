@@ -30,15 +30,15 @@
     <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">▣</span>
-        <span class="sum-text"><span class="sum-label">Total Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">▰</span>
-        <span class="sum-text"><span class="sum-label">Total Paid</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Paid</span><strong class="sum-val green">− {{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">▤</span>
-        <span class="sum-text"><span class="sum-label">Credit Notes</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Credit Notes</span><strong class="sum-val slate">− {{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-icon">⚖</span>
@@ -61,10 +61,11 @@
               <th style="width:32px"></th>
               <th>Customer / Invoice No</th>
               <th class="right">Due Date</th>
-              <th class="right">Total Amount</th>
-              <th class="right">Paid</th>
-              <th class="right">Credit Note</th>
-              <th class="right teal-hdr">Balance</th>
+              <th class="right">Invoice Amount</th>
+              <th class="right danger-text">Paid</th>
+              <th class="right danger-text">Credit Note</th>
+              <th class="right danger-text">Advance Applied</th>
+              <th class="right teal-hdr">Net Balance</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -77,8 +78,9 @@
                 <td class="customer-name">{{ grp.customer }}</td>
                 <td class="right muted small">{{ grp.invoices.length }} invoice(s)</td>
                 <td class="right">{{ grp.total | number:'1.2-2' }}</td>
-                <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
-                <td class="right info-text">{{ grp.creditNote | number:'1.2-2' }}</td>
+                <td class="right danger-text">{{ grp.paid | number:'1.2-2' }}</td>
+                <td class="right danger-text">{{ grp.creditNote | number:'1.2-2' }}</td>
+                <td class="right danger-text">—</td>
                 <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
                 <td></td>
               </tr>
@@ -88,8 +90,9 @@
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}<br><span class="muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</span></td>
                   <td class="right muted small">{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
                   <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }}</td>
-                  <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
-                  <td class="right info-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
+                  <td class="right danger-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
+                  <td class="right danger-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
+                  <td class="right danger-text">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
                   <td class="right teal-bold">{{ (inv.balance || 0) | number:'1.2-2' }}</td>
                   <td><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span></td>
                 </tr>
