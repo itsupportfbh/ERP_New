@@ -185,7 +185,6 @@ export class FinanceArComponent implements OnInit {
   // ── Receipt Form ───────────────────────────────────────────────────────────
 
   openReceiptForm(): void {
-    if (this.isPeriodLocked) return;
     this.showReceiptForm = true;
     this.message = '';
     this.error = '';
@@ -234,13 +233,32 @@ export class FinanceArComponent implements OnInit {
           advance: Number(inv.advanceAmount ?? inv.AdvanceAmount ?? 0),
           paid: Number(inv.paidAmount ?? inv.PaidAmount ?? 0),
           balance: Number(inv.balance ?? inv.Balance ?? 0),
-          selected: false,
+          selected: true,
           allocatedAmount: 0
         }));
+        // Pre-select all open invoices, allocate their balance and set amount received
+        this.autoAllocateFromSelection();
         this.loadingInvoices = false;
       },
       error: () => { this.receiptInvoices = []; this.loadingInvoices = false; }
     });
+  }
+
+  /** Allocate each selected invoice's balance and set Amount Received to the total. */
+  private autoAllocateFromSelection(): void {
+    let total = 0;
+    for (const row of this.receiptInvoices) {
+      if (row.selected) {
+        const bal = this.receiptRowBalance(row);
+        row.allocatedAmount = bal;
+        total += bal;
+      } else {
+        row.allocatedAmount = 0;
+      }
+    }
+    this.receiptForm.amountReceived = parseFloat(total.toFixed(2));
+    this.recalcReceiptBase();
+    this.recalcExchangeGainLoss();
   }
 
   onReceiptCurrencyChange(): void {
@@ -313,22 +331,12 @@ export class FinanceArComponent implements OnInit {
   }
 
   onReceiptRowCheckbox(row: AllocationRow): void {
-    this.autoFillAmountFromSelected();
-    this.recalcReceiptAllocations();
+    this.autoAllocateFromSelection();
   }
 
   onReceiptHeaderCheckbox(checked: boolean): void {
     this.receiptInvoices.forEach(r => r.selected = checked);
-    this.autoFillAmountFromSelected();
-    this.recalcReceiptAllocations();
-  }
-
-  private autoFillAmountFromSelected(): void {
-    const total = this.receiptInvoices
-      .filter(r => r.selected)
-      .reduce((sum, r) => sum + this.receiptRowBalance(r), 0);
-    this.receiptForm.amountReceived = total > 0 ? parseFloat(total.toFixed(2)) : null;
-    this.recalcReceiptBase();
+    this.autoAllocateFromSelection();
   }
 
   onReceiptAllocateChange(row: AllocationRow): void {
@@ -513,7 +521,6 @@ export class FinanceArComponent implements OnInit {
   // ── Tabs ───────────────────────────────────────────────────────────────────
 
   setTab(tab: ArTab): void {
-    if (tab === 'create-invoice' && this.isPeriodLocked) return;
     this.activeTab = tab;
     this.error = '';
     this.message = '';
@@ -567,11 +574,11 @@ export class FinanceArComponent implements OnInit {
   applyInvoiceFilter(): void {
     const q = this.search.toLowerCase();
     this.filteredInvoices = q
-      ? this.invoices.filter(r => ['customerName', 'invoiceNo', 'status'].some(k => String(r[k] ?? '').toLowerCase().includes(q)))
+      ? this.invoices.filter(r => ['customerName', 'invoiceNo'].some(k => String(r[k] ?? '').toLowerCase().includes(q)))
       : [...this.invoices];
   }
 
-  get customerGroups(): { customer: string; invoices: any[]; total: number; paid: number; creditNote: number; outstanding: number }[] {
+  get customerGroups(): { customer: string; invoices: any[]; total: number; paid: number; creditNote: number; advance: number; outstanding: number }[] {
     const map = new Map<string, any[]>();
     this.filteredInvoices.forEach(inv => {
       const key = inv.customerName || 'Unknown Customer';
@@ -584,6 +591,7 @@ export class FinanceArComponent implements OnInit {
       total: invs.reduce((s, i) => s + (i.amount || 0), 0),
       paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
       creditNote: invs.reduce((s, i) => s + (i.creditNote || 0), 0),
+      advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
       outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0)
     }));
   }
@@ -596,7 +604,6 @@ export class FinanceArComponent implements OnInit {
   // ── Advance Form ───────────────────────────────────────────────────────────
 
   openAdvanceForm(): void {
-    if (this.isPeriodLocked) return;
     this.showAdvanceForm = true;
     this.message = '';
     this.error = '';
@@ -754,10 +761,10 @@ export class FinanceArComponent implements OnInit {
   }
 
   private calcInvoiceSummary(): void {
-    this.invoiceSummary.total       = this.invoices.reduce((s, r) => s + (r.amount     || 0), 0);
-    this.invoiceSummary.paid        = this.invoices.reduce((s, r) => s + (r.paid       || 0), 0);
-    this.invoiceSummary.creditNote  = this.invoices.reduce((s, r) => s + (r.creditNote || 0), 0);
-    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance    || 0), 0);
+    this.invoiceSummary.total = this.invoices.reduce((s, r) => s + (r.amount || 0), 0);
+    this.invoiceSummary.paid  = this.invoices.reduce((s, r) => s + (r.paid || 0), 0);
+    this.invoiceSummary.creditNote = this.invoices.reduce((s, r) => s + (r.creditNote || 0), 0);
+    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance || 0), 0);
   }
 
   private calcAdvanceSummary(): void {
@@ -776,20 +783,23 @@ export class FinanceArComponent implements OnInit {
   private normalizeInvoice(row: any): any {
     // Skip credit note rows — API may return rowType:'CN' mixed with invoices
     if (row.rowType && row.rowType !== 'INV') return null;
-    const amount     = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal']);
-    const paid       = this.money(row, ['paid', 'Paid', 'paidAmount', 'PaidAmount', 'totalPaid', 'TotalPaid']);
+    const amount = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal']);
+    const paid = this.money(row, ['paid', 'Paid', 'paidAmount', 'PaidAmount', 'totalPaid', 'TotalPaid']);
     const creditNote = this.money(row, ['creditNote', 'CreditNote', 'customerCreditNoteAmount', 'creditNoteAmount', 'CreditNoteAmount']);
-    const advance    = this.money(row, ['advance', 'Advance', 'advanceApplied', 'AdvanceApplied', 'advanceAmount', 'AdvanceAmount', 'advanceAppliedAmount', 'AdvanceAppliedAmount']);
-    const balance    = this.money(row, ['outstanding', 'Outstanding', 'balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote - advance);
+    const advance = this.money(row, ['advance', 'Advance', 'advanceAmount', 'AdvanceAmount']);
+    // outstanding is the canonical field name from the API; balance is fallback
+    const balance = this.money(row, ['outstanding', 'Outstanding', 'balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote - advance);
     return {
       ...row,
       customerName: row.customerName ?? row.CustomerName ?? row.customer ?? 'Unknown Customer',
-      invoiceNo:    row.invoiceNo ?? row.InvoiceNo ?? row.salesInvoiceNo ?? row.SalesInvoiceNo,
-      invoiceDate:  row.invoiceDate ?? row.InvoiceDate,
-      dueDate:      row.dueDate ?? row.DueDate,
-      amount, paid, creditNote, advance,
-      balance: Math.max(balance, 0),
-      status: row.status ?? row.Status ?? (balance <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid')
+      invoiceNo: row.invoiceNo ?? row.InvoiceNo ?? row.salesInvoiceNo ?? row.SalesInvoiceNo,
+      invoiceDate: row.invoiceDate ?? row.InvoiceDate,
+      dueDate: row.dueDate ?? row.DueDate,
+      amount,
+      paid,
+      creditNote,
+      advance,
+      balance: Math.max(balance, 0)
     };
   }
 

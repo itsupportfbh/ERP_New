@@ -30,15 +30,15 @@
     <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">▣</span>
-        <span class="sum-text"><span class="sum-label">Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">▰</span>
-        <span class="sum-text"><span class="sum-label">Paid</span><strong class="sum-val green">− {{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Paid</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">▤</span>
-        <span class="sum-text"><span class="sum-label">Credit Notes</span><strong class="sum-val slate">− {{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Credit Notes</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-icon">⚖</span>
@@ -49,7 +49,7 @@
     <div class="ar-search-row">
       <label>Search:</label>
       <input class="ar-search" type="text" [(ngModel)]="search" (ngModelChange)="applyInvoiceFilter()">
-      <button class="ar-btn ar-btn-primary" type="button" (click)="setTab('create-invoice')" *ngIf="permission?.create" [disabled]="isPeriodLocked">+ Create Invoice</button>
+      <button class="ar-btn ar-btn-primary" type="button" (click)="setTab('create-invoice')" *ngIf="permission?.create">+ Create Invoice</button>
     </div>
 
     <div class="ar-card invoice-card">
@@ -61,12 +61,11 @@
               <th style="width:32px"></th>
               <th>Customer / Invoice No</th>
               <th class="right">Due Date</th>
-              <th class="right">Invoice Amount</th>
-              <th class="right danger-text">Paid</th>
-              <th class="right danger-text">Credit Note</th>
-              <th class="right danger-text">Advance Applied</th>
-              <th class="right teal-hdr">Net Balance</th>
-              <th>Status</th>
+              <th class="right">Total Amount</th>
+              <th class="right">Paid</th>
+              <th class="right">Credit Note</th>
+              <th class="right">Advance</th>
+              <th class="right teal-hdr">Outstanding</th>
             </tr>
           </thead>
           <tbody>
@@ -78,11 +77,10 @@
                 <td class="customer-name">{{ grp.customer }}</td>
                 <td class="right muted small">{{ grp.invoices.length }} invoice(s)</td>
                 <td class="right">{{ grp.total | number:'1.2-2' }}</td>
-                <td class="right danger-text">{{ grp.paid | number:'1.2-2' }}</td>
-                <td class="right danger-text">{{ grp.creditNote | number:'1.2-2' }}</td>
-                <td class="right danger-text">—</td>
+                <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
+                <td class="right info-text">{{ grp.creditNote | number:'1.2-2' }}</td>
+                <td class="right muted">{{ grp.advance | number:'1.2-2' }}</td>
                 <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
-                <td></td>
               </tr>
               <ng-container *ngIf="isExpanded(grp.customer)">
                 <tr class="invoice-row" *ngFor="let inv of grp.invoices">
@@ -90,11 +88,10 @@
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}<br><span class="muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</span></td>
                   <td class="right muted small">{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
                   <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }}</td>
-                  <td class="right danger-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
-                  <td class="right danger-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
-                  <td class="right danger-text">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
+                  <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
+                  <td class="right info-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
+                  <td class="right muted">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
                   <td class="right teal-bold">{{ (inv.balance || 0) | number:'1.2-2' }}</td>
-                  <td><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span></td>
                 </tr>
               </ng-container>
             </ng-container>
@@ -144,7 +141,7 @@
           <select [(ngModel)]="receiptForm.bankId">
             <option [ngValue]="null">— Select Bank —</option>
             <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
-              {{ b.bankName ?? b.accountName ?? b.name }} {{ b.accountNo ? '(' + b.accountNo + ')' : '' }}
+              {{ b.headName ?? b.bankName ?? b.accountName ?? b.name }} {{ b.accountNo ? '(' + b.accountNo + ')' : '' }}
             </option>
           </select>
         </label>
@@ -252,10 +249,10 @@
       </div>
     </div>
 
-    <div class="ar-card">
+    <div class="ar-card" *ngIf="!showReceiptForm">
       <div class="ar-card-head">
         <strong class="ar-card-title">Customer Receipts</strong>
-        <button class="ar-btn ar-btn-primary" type="button" (click)="openReceiptForm()" *ngIf="permission?.create" [disabled]="isPeriodLocked">+ New Receipt</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="openReceiptForm()" *ngIf="permission?.create">+ New Receipt</button>
       </div>
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">
@@ -466,7 +463,7 @@
     <div class="ar-card">
       <div class="ar-card-head">
         <strong class="ar-card-title">AR Advances</strong>
-        <button class="ar-btn ar-btn-primary" type="button" (click)="openAdvanceForm()" *ngIf="permission?.create" [disabled]="isPeriodLocked">+ New Advance</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="openAdvanceForm()" *ngIf="permission?.create">+ New Advance</button>
       </div>
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">
