@@ -59,7 +59,7 @@ export class AuthService {
   login(payload: LoginPayload): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/user/login`, payload).pipe(
       tap(res => {
-        if (res.success && res.data) {
+        if (res.success && res.data && !res.data.requiresCompanySelection && res.data.token) {
           this.storeUserData(res.data);
           this.perm.load();
           this.periodLockState.refresh().subscribe({ error: () => {} });

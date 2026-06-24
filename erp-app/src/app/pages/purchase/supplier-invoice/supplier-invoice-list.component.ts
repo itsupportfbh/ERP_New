@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -333,6 +333,8 @@ export class SupplierInvoiceListComponent implements OnInit {
     this.currentRow = row;
     this.threeWay = null;
     this.matchLoading = true;
+    this.matchError = '';
+    this.postError = '';
     this.showMatchModal = true;
     this.svc.getThreeWayMatch(row.id).subscribe({
       next: res => { this.threeWay = this.svc.unwrapOne(res) ?? res; this.matchLoading = false; },

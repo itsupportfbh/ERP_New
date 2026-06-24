@@ -375,7 +375,7 @@
       <div class="ap-card">
         <div class="ap-card-head">
           <strong class="ap-card-title">Supplier Payments</strong>
-          <button class="ap-btn ap-btn-primary" type="button" (click)="openPaymentForm()" *ngIf="permission?.create">
+          <button class="ap-btn ap-btn-primary" type="button" (click)="openPaymentForm()" *ngIf="permission?.create" [disabled]="isPeriodLocked">
             + New Payment
           </button>
         </div>
@@ -715,7 +715,7 @@
       <div class="ap-card">
         <div class="ap-card-head">
           <strong class="ap-card-title">AP Advances</strong>
-          <button class="ap-btn ap-btn-primary" type="button" (click)="openApAdvanceForm()" *ngIf="permission?.create">
+          <button class="ap-btn ap-btn-primary" type="button" (click)="openApAdvanceForm()" *ngIf="permission?.create" [disabled]="isPeriodLocked">
             + New Advance
           </button>
         </div>

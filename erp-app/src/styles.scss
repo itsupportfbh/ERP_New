@@ -72,6 +72,15 @@ body.period-locked .sp-btn.danger {
   filter: grayscale(0.15);
 }
 
+body.period-locked .dt-pg .mbtn-add:not(:disabled),
+body.period-locked .item-master-no-lock .dt-icon-btn.edit,
+body.period-locked .item-master-no-lock .dt-icon-btn.del {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  filter: none !important;
+}
+
 .panel-toggle-btn:disabled,
 .list-add-btn:disabled,
 .sp-btn:disabled,

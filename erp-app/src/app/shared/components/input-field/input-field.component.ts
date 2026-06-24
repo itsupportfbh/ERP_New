@@ -22,6 +22,13 @@ export class InputFieldComponent implements ControlValueAccessor {
 
   value = '';
   touched = false;
+  showPassword = false;
+
+  get effectiveType(): string {
+    return this.type === 'password' && this.showPassword ? 'text' : this.type;
+  }
+
+  togglePassword(): void { this.showPassword = !this.showPassword; }
 
   onChange = (_: any) => {};
   onTouched = () => {};

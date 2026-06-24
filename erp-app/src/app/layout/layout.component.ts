@@ -230,7 +230,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private permissionService: PermissionService,
     private periodLockState: PeriodLockStateService
   ) {
-    this.showAll = localStorage.getItem('isMasterOwner') === 'true';
+    const isMasterOwner = localStorage.getItem('isMasterOwner') === 'true';
+    const roles: string[] = JSON.parse(localStorage.getItem('approvalRoles') || '[]');
+    const isSuperAdmin = Array.isArray(roles) && roles.some((r: string) =>
+      ['super admin', 'super_admin', 'admin', 'owner'].includes(r.toLowerCase())
+    );
+    this.showAll = isMasterOwner || isSuperAdmin;
     window.addEventListener('menu-permission-updated', this.menuReloadHandler);
   }
 
@@ -295,6 +300,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   loadMenuPermissions(): void {
+    if (this.showAll) {
+      this.permLoaded = true;
+      this.applyMenuFilter();
+      return;
+    }
     const userId = Number(localStorage.getItem('id') || 0);
     if (!userId) {
       this.permLoaded = true;

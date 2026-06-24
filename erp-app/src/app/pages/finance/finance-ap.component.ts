@@ -202,6 +202,7 @@ export class FinanceApComponent implements OnInit {
   // ── Payment Form ───────────────────────────────────────────────────────────
 
   openPaymentForm(): void {
+    if (this.isPeriodLocked) return;
     this.showPaymentForm = true;
     this.activeTab = 'payments';
     this.message = '';
@@ -634,6 +635,7 @@ export class FinanceApComponent implements OnInit {
   }
 
   openApAdvanceForm(): void {
+    if (this.isPeriodLocked) return;
     this.showAdvanceForm = true;
     this.activeTab = 'advances';
     this.message = '';

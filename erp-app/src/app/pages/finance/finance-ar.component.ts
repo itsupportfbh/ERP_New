@@ -185,6 +185,7 @@ export class FinanceArComponent implements OnInit {
   // ── Receipt Form ───────────────────────────────────────────────────────────
 
   openReceiptForm(): void {
+    if (this.isPeriodLocked) return;
     this.showReceiptForm = true;
     this.message = '';
     this.error = '';
@@ -512,6 +513,7 @@ export class FinanceArComponent implements OnInit {
   // ── Tabs ───────────────────────────────────────────────────────────────────
 
   setTab(tab: ArTab): void {
+    if (tab === 'create-invoice' && this.isPeriodLocked) return;
     this.activeTab = tab;
     this.error = '';
     this.message = '';
@@ -594,6 +596,7 @@ export class FinanceArComponent implements OnInit {
   // ── Advance Form ───────────────────────────────────────────────────────────
 
   openAdvanceForm(): void {
+    if (this.isPeriodLocked) return;
     this.showAdvanceForm = true;
     this.message = '';
     this.error = '';
