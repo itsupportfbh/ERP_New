@@ -44,11 +44,11 @@
       <div class="form-row cols-4">
         <div>
           <label class="fc-label">Item Code *</label>
-          <input class="fc-input" type="text" [(ngModel)]="item.itemCode" name="itemCode" placeholder="Enter Item Code" required />
+          <input class="fc-input" type="text" [(ngModel)]="item.itemCode" name="itemCode" placeholder="Enter Item Code" [readonly]="isEdit" [class.fc-input--disabled]="isEdit" required />
         </div>
         <div>
           <label class="fc-label">Item Name *</label>
-          <input class="fc-input" type="text" [(ngModel)]="item.itemName" name="itemName" placeholder="Enter Item Name" required />
+          <input class="fc-input" type="text" [(ngModel)]="item.itemName" name="itemName" placeholder="Enter Item Name" [readonly]="isEdit" [class.fc-input--disabled]="isEdit" required />
         </div>
         <div>
           <label class="fc-label">Item Type *</label>

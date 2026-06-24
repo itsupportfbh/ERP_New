@@ -831,6 +831,9 @@ setTab(tab: ArTab): void {
       customerName: row.customerName ?? row.CustomerName,
       advanceDate:  row.advanceDate  ?? row.AdvanceDate,
       paymentMode:  row.paymentMode  ?? row.PaymentMode,
+      orderNo:      row.orderNo      ?? row.OrderNo ?? row.salesOrderNo ?? row.SalesOrderNo,
+      amountBase:   this.money(row, ['amountBase', 'AmountBase'], amount),
+      currencyName: row.currencyName ?? row.CurrencyName,
       amount,
       utilised: this.money(row, ['utilised', 'Utilised', 'utilisedAmount', 'UtilisedAmount'], amount - balance),
       balance

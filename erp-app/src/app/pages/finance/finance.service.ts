@@ -378,7 +378,7 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
     key: 'ar-advance',
     title: 'AR Advance',
     subtitle: 'Customer advance receipts',
-    endpoint: { list: '/ArInvoice/advance/open', create: '/ArInvoice/advance' },
+    endpoint: { list: '/finance/ap/list', create: '/ArInvoice/advance' },
     columns: [
       { key: 'customerName', header: 'Customer' },
       { key: 'advanceNo', header: 'Advance No' },
