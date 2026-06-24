@@ -49,7 +49,7 @@
     <div class="ar-search-row">
       <label>Search:</label>
       <input class="ar-search" type="text" [(ngModel)]="search" (ngModelChange)="applyInvoiceFilter()">
-      <button class="ar-btn ar-btn-primary" type="button" (click)="setTab('create-invoice')" *ngIf="permission?.create">+ Create Invoice</button>
+      <!-- <button class="ar-btn ar-btn-primary" type="button" (click)="setTab('create-invoice')" *ngIf="permission?.create">+ Create Invoice</button> -->
     </div>
 
     <div class="ar-card invoice-card">
@@ -250,9 +250,9 @@
     </div>
 
     <div class="ar-card" *ngIf="!showReceiptForm">
-      <div class="ar-card-head">
+   <div class="ar-card-head">
         <strong class="ar-card-title">Customer Receipts</strong>
-        <button class="ar-btn ar-btn-primary" type="button" (click)="openReceiptForm()" *ngIf="permission?.create">+ New Receipt</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="openReceiptForm()" *ngIf="permission?.create" [disabled]="isPeriodLocked">+ New Receipt</button>
       </div>
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">
@@ -461,9 +461,9 @@
     </div>
 
     <div class="ar-card">
-      <div class="ar-card-head">
+ <div class="ar-card-head">
         <strong class="ar-card-title">AR Advances</strong>
-        <button class="ar-btn ar-btn-primary" type="button" (click)="openAdvanceForm()" *ngIf="permission?.create">+ New Advance</button>
+        <button class="ar-btn ar-btn-primary" type="button" (click)="openAdvanceForm()" *ngIf="permission?.create" [disabled]="isPeriodLocked">+ New Advance</button>
       </div>
       <div class="ar-loading" *ngIf="loading">Loading...</div>
       <div class="ar-table-wrap" *ngIf="!loading">

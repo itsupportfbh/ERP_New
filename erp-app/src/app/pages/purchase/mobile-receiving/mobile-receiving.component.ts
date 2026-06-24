@@ -1,7 +1,8 @@
-﻿import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { PurchaseService } from '../purchase.service';
-import { PermissionService } from '../../../core/services/permission.service';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import Swal from 'sweetalert2';
+import { ReceivingIntegrationService } from '../../../core/services/receiving-integration.service';
+import { PermissionService } from '../../../core/services/permission.service';
+import { PurchaseService } from '../purchase.service';
 
 type ScanRow = {
   ts: Date;
@@ -24,7 +25,7 @@ export class MobileReceivingComponent implements OnInit {
 
   mrPo = '';
   mrBarcode = '';
-  mrQty: number = 1;
+  mrQty = 1;
   mrOffline = false;
   mrScanMessage = '';
   isSyncing = false;
@@ -36,7 +37,11 @@ export class MobileReceivingComponent implements OnInit {
   loginUserId = Number(localStorage.getItem('id')) || 0;
   lineInputQty: { [item: string]: number } = {};
 
-  constructor(private svc: PurchaseService, public perm: PermissionService) {}
+  constructor(
+    private svc: PurchaseService,
+    public perm: PermissionService,
+    private receivingSvc: ReceivingIntegrationService
+  ) {}
 
   ngOnInit(): void {
     if (!this.perm.canView(this.fnId)) {
@@ -59,7 +64,7 @@ export class MobileReceivingComponent implements OnInit {
         this.hydrateQueuedLineNames();
         this.focusBarcode();
       },
-      error: () => { this.poLines = []; this.error = 'Failed to load PO lines — check PO number and backend.'; }
+      error: () => { this.poLines = []; this.error = 'Failed to load PO lines - check PO number and backend.'; }
     });
   }
 
@@ -74,7 +79,7 @@ export class MobileReceivingComponent implements OnInit {
     const qty = Number(this.mrQty || 0);
 
     if (!poNo || !barcode) { this.error = 'Enter PO number and barcode.'; return; }
-    if (!qty || qty <= 0)  { this.error = 'Enter a valid quantity.'; return; }
+    if (!qty || qty <= 0) { this.error = 'Enter a valid quantity.'; return; }
 
     const localErr = this.validateLocal(barcode, qty);
     if (localErr) { this.error = localErr; return; }
@@ -99,7 +104,9 @@ export class MobileReceivingComponent implements OnInit {
       existing.qty += qty;
     } else {
       this.mrRows.unshift({
-        ts: new Date(), barcode, qty,
+        ts: new Date(),
+        barcode,
+        qty,
         itemCode: code,
         itemName: line?.item ?? line?.itemName ?? barcode,
         status: 'queued'
@@ -132,8 +139,9 @@ export class MobileReceivingComponent implements OnInit {
       next: () => {
         this.isSyncing = false;
         this.mrScanMessage = 'Sync successful! Desktop GRN updated.';
+        this.receivingSvc.saveSynced(this.mrPo.trim(), this.mrRows);
         this.mrRows = [];
-        localStorage.removeItem(this.offlineKey());
+        this.receivingSvc.clearQueue(this.mrPo.trim());
         this.loadPo();
         Swal.fire({ icon: 'success', title: 'Sync Complete!', text: 'All scans synced. Desktop GRN updated.', confirmButtonColor: '#16a34a' });
       },
@@ -194,15 +202,23 @@ export class MobileReceivingComponent implements OnInit {
     this.lineInputQty[key] = 1;
   }
 
-  private offlineKey(): string { return `mrRows_${this.mrPo?.trim() || 'NA'}`; }
-
-  saveOffline(): void { localStorage.setItem(this.offlineKey(), JSON.stringify(this.mrRows)); }
+  saveOffline(): void {
+    this.receivingSvc.saveQueue(this.mrPo.trim(), this.mrRows);
+  }
 
   loadOffline(): void {
-    const saved = localStorage.getItem(this.offlineKey());
-    const rows = saved ? JSON.parse(saved) : [];
-    this.mrRows = (rows || []).map((r: any) => ({
-      ...r, ts: r.ts ? new Date(r.ts) : new Date(),
+    const snapshot = this.receivingSvc.getQueue(this.mrPo.trim());
+    const rows = snapshot?.lines?.map((line: any) => ({
+      barcode: line.itemKey,
+      itemName: line.itemName,
+      itemCode: line.itemKey,
+      qty: line.qty,
+      ts: snapshot.queuedAt,
+      status: 'queued'
+    })) || [];
+    this.mrRows = rows.map((r: any) => ({
+      ...r,
+      ts: r.ts ? new Date(r.ts) : new Date(),
       qty: Number(r.qty || 0),
       itemCode: r.itemCode || this.codeFrom(r.barcode),
       status: r.status || 'queued'

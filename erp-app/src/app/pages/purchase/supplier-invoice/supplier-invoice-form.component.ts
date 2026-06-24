@@ -2,8 +2,11 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
+import { DocumentNumberService } from '../../../core/services/document-number.service';
+import { MasterService } from '../../../core/services/master.service';
+import { CalculatedTaxMode, TaxDecisionService } from '../../../core/services/tax-decision.service';
+import { PurchaseService } from '../purchase.service';
 
 type TaxMode = 'Exclusive' | 'Inclusive' | 'Zero';
 
@@ -14,6 +17,7 @@ interface GrnHeader {
   poNo: string;
   supplierId: number;
   supplierName: string;
+  supplierCountryId: number | null;
   currencyId: number | null;
   currencyName: string;
   fxRate: number;
@@ -54,7 +58,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
   posting = false;
   error = '';
 
-  // Header
   invoiceNo = '';
   invoiceDate = new Date().toISOString().substring(0, 10);
   supplierId: number | null = null;
@@ -65,9 +68,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
   taxRate = 0;
   isPartial = false;
   isGlPosted = false;
+  isOverseas = false;
   status = 'Draft';
 
-  // GRN combobox state
   grnList: GrnHeader[] = [];
   grnFiltered: GrnHeader[] = [];
   grnOpen = false;
@@ -75,36 +78,64 @@ export class SupplierInvoiceFormComponent implements OnInit {
   selectedGrnIds: number[] = [];
   selectedGrnNos: string[] = [];
 
-  // Lines
   lines: PinLine[] = [];
 
-  // Dropdowns
   ledgerOptions: any[] = [];
   locationOptions: any[] = [];
-  private itemLedgerMap = new Map<number, number>();     // itemId → budgetLineId
-  private itemCategoryMap = new Map<number, number>();   // itemId → categoryId
-  private categoryLedgerMap = new Map<number, number>(); // categoryId → purchaseParentHeadCode
+  private itemLedgerMap = new Map<number, number>();
+  private itemCategoryMap = new Map<number, number>();
+  private categoryLedgerMap = new Map<number, number>();
 
   taxModeOptions = [
     { label: 'Exclusive', value: 'Exclusive' },
     { label: 'Inclusive', value: 'Inclusive' },
-    { label: 'Zero',      value: 'Zero' }
+    { label: 'Zero', value: 'Zero' }
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+  companyId = Number(localStorage.getItem('companyId') || 0);
+  companyCountryId = Number(localStorage.getItem('companyCountryId') || 0) || null;
+  private suggestedInvoiceNo = '';
+  private selectedSupplierCountryId: number | null = null;
+  private defaultTaxMode: CalculatedTaxMode = 'Exclusive';
 
   constructor(
     private svc: PurchaseService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private masterSvc: MasterService,
+    private docNoSvc: DocumentNumberService,
+    private taxDecisionSvc: TaxDecisionService
   ) {}
 
   ngOnInit(): void {
     const paramId = this.route.snapshot.paramMap.get('id');
     this.isEdit = !!paramId && paramId !== 'new';
+    this.loadCompanyContext();
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
     else { this.loadGrnList(true); }
     this.loadLookups();
+  }
+
+  private loadCompanyContext(): void {
+    const applySuggestion = () => {
+      this.suggestedInvoiceNo = this.docNoSvc.peekNextNumber('PIN', this.companyId || undefined);
+      if (!this.isEdit && !this.invoiceNo) this.invoiceNo = this.suggestedInvoiceNo;
+    };
+    if (!this.companyId) {
+      applySuggestion();
+      return;
+    }
+    this.masterSvc.getCompanyById(this.companyId).subscribe({
+      next: (res: any) => {
+        if (res?.numberSeries?.length) this.docNoSvc.cacheCompanySeries(this.companyId, res.numberSeries);
+        const countryId = Number(res?.financeTax?.countryId ?? res?.general?.countryId ?? 0) || null;
+        this.companyCountryId = countryId;
+        if (countryId) localStorage.setItem('companyCountryId', String(countryId));
+        applySuggestion();
+      },
+      error: () => applySuggestion()
+    });
   }
 
   private applyOcrDraft(): void {
@@ -115,7 +146,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
       const draft = JSON.parse(raw);
       if (draft.invoiceNo) this.invoiceNo = draft.invoiceNo;
       if (draft.invoiceDate) this.invoiceDate = draft.invoiceDate.substring(0, 10);
-      // Auto-select GRNs from draft
       const draftGrnIds: number[] = draft.grnIds ?? [];
       if (draftGrnIds.length) {
         const toSelect = this.grnList.filter(g => draftGrnIds.includes(Number(g.id)));
@@ -130,20 +160,20 @@ export class SupplierInvoiceFormComponent implements OnInit {
         if (selectedGrns.length > 0) {
           this.supplierName = selectedGrns[0].supplierName;
           this.supplierId = selectedGrns[0].supplierId;
+          this.selectedSupplierCountryId = selectedGrns[0].supplierCountryId;
           this.currencyId = selectedGrns[0].currencyId;
           this.currencyName = selectedGrns[0].currencyName;
           this.fxRate = selectedGrns[0].fxRate;
+          this.applyTaxDecision(this.taxRate);
         }
         this.loadLinesWithPoFetch(selectedGrns);
       }
-    } catch { /* ignore bad draft */ }
+    } catch {}
   }
 
   @HostListener('document:click', ['$event'])
   onDocClick(ev: MouseEvent): void {
-    if (!(ev.target as HTMLElement).closest('.grn-combobox')) {
-      this.grnOpen = false;
-    }
+    if (!(ev.target as HTMLElement).closest('.grn-combobox')) this.grnOpen = false;
   }
 
   loadLookups(): void {
@@ -151,13 +181,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id
       })));
-    // Load COA first, then derive category → coaId mapping using headCode→id lookup
     this.svc.getChartOfAccounts().subscribe(r => {
       const list = this.svc.unwrap(r);
       this.ledgerOptions = list.map((c: any) => ({
         label: `${c.headCode ?? ''} ${c.headName ?? ''}`.trim(), value: c.id
       }));
-      // headCode (e.g. 5001) → id (DB primary key) — needed to resolve category.purchaseParentHeadCode
       const headCodeToId = new Map<number, number>();
       list.forEach((c: any) => {
         if (c.headCode != null && c.id != null) headCodeToId.set(Number(c.headCode), Number(c.id));
@@ -211,6 +239,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       poNo: String(g.poNo ?? g.PoNo ?? g.PONo ?? g.poid ?? g.POID ?? ''),
       supplierId: Number(g.supplierId ?? g.SupplierId ?? 0),
       supplierName: g.supplierName ?? g.SupplierName ?? '',
+      supplierCountryId: Number(g.countryId ?? g.CountryId ?? g.supplierCountryId ?? 0) || null,
       currencyId: g.currencyId ?? g.CurrencyId ?? null,
       currencyName: g.currencyName ?? g.CurrencyName ?? '',
       fxRate: Number(g.fxRate ?? g.FxRate ?? 1),
@@ -251,7 +280,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
     if (alreadySelected) {
       newIds = prev.filter(x => x !== gid);
     } else {
-      // Validate same supplier
       const currentSelected = this.grnList.filter(x => prev.includes(Number(x.id)));
       if (currentSelected.length > 0) {
         const existingSupplier = currentSelected[0].supplierId;
@@ -259,7 +287,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
           Swal.fire({ icon: 'warning', title: 'Invalid', text: 'Multiple supplier GRNs cannot be combined into one invoice.', confirmButtonColor: '#16a34a' });
           return;
         }
-        // Validate same PO (3-way match requires single PO)
         const existingPoId = currentSelected[0].poId;
         if (existingPoId && g.poId && existingPoId !== g.poId) {
           Swal.fire({ icon: 'warning', title: 'Invalid', text: 'GRNs from different POs cannot be combined into one invoice (3-way match).', confirmButtonColor: '#16a34a' });
@@ -276,18 +303,21 @@ export class SupplierInvoiceFormComponent implements OnInit {
     if (selectedGrns.length > 0) {
       this.supplierName = selectedGrns[0].supplierName;
       this.supplierId = selectedGrns[0].supplierId;
+      this.selectedSupplierCountryId = selectedGrns[0].supplierCountryId;
       this.currencyId = selectedGrns[0].currencyId;
       this.currencyName = selectedGrns[0].currencyName;
       this.fxRate = selectedGrns[0].fxRate;
     } else {
       this.supplierName = '';
       this.supplierId = null;
+      this.selectedSupplierCountryId = null;
       this.currencyId = null;
       this.currencyName = '';
       this.fxRate = 1;
     }
 
     this.grnSearch = selectedGrns.map(x => x.grnNo).join(', ');
+    this.applyTaxDecision(this.taxRate);
     this.loadLinesWithPoFetch(selectedGrns);
   }
 
@@ -303,16 +333,35 @@ export class SupplierInvoiceFormComponent implements OnInit {
     if (selectedGrns.length > 0) {
       this.supplierName = selectedGrns[0].supplierName;
       this.supplierId = selectedGrns[0].supplierId;
+      this.selectedSupplierCountryId = selectedGrns[0].supplierCountryId;
     } else {
       this.supplierName = '';
       this.supplierId = null;
+      this.selectedSupplierCountryId = null;
     }
+    this.applyTaxDecision(this.taxRate);
     this.loadLinesWithPoFetch(selectedGrns);
+  }
+
+  private applyTaxDecision(defaultTaxRate: number): void {
+    const decision = this.taxDecisionSvc.decide({
+      companyCountryId: this.companyCountryId,
+      partnerCountryId: this.selectedSupplierCountryId,
+      companyCurrencyId: Number(localStorage.getItem('companyCurrencyId') || 0),
+      documentCurrencyId: this.currencyId,
+      defaultTaxRate
+    });
+    this.isOverseas = decision.isOverseas;
+    this.defaultTaxMode = decision.taxMode;
+    this.taxRate = decision.taxRate;
+    this.lines.forEach(line => {
+      line.taxMode = this.defaultTaxMode === 'ZeroRated' ? 'Zero' : (line.taxMode === 'Zero' ? 'Exclusive' : line.taxMode);
+      this.recalcLine(line);
+    });
   }
 
   private loadLinesWithPoFetch(grns: GrnHeader[]): void {
     if (!grns.length) { this.lines = []; return; }
-    // Fetch PO when poLines are missing OR when taxRate is not yet set
     const needFetch = grns.filter(g => g.poId > 0 && (!this.safeJsonArray(g.poLines).length || !this.taxRate));
     if (!needFetch.length) { this.loadLinesFromGrns(grns); return; }
 
@@ -326,11 +375,13 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const po = this.svc.unwrapOne(res);
         const poId = uniquePoIds[idx];
         const rawLines = po?.poLines ?? po?.PoLines ?? null;
-        // Only overwrite poLines if not already populated
         if (rawLines) grns.filter(g => g.poId === poId && !this.safeJsonArray(g.poLines).length).forEach(g => g.poLines = rawLines);
         if (!this.taxRate) {
           const poTax = Number(po?.tax ?? po?.gstPct ?? po?.taxRate ?? po?.taxPct ?? 0);
-          if (poTax > 0) this.taxRate = poTax;
+          if (poTax > 0) {
+            this.taxRate = poTax;
+            this.applyTaxDecision(poTax);
+          }
         }
       });
       this.loadLinesFromGrns(grns);
@@ -347,7 +398,10 @@ export class SupplierInvoiceFormComponent implements OnInit {
       const poItems = this.safeJsonArray(g.poLines);
       if (!this.taxRate && grnItems.length) {
         const grnTax = Number(grnItems[0].taxRate ?? 0);
-        if (grnTax > 0) this.taxRate = grnTax;
+        if (grnTax > 0) {
+          this.taxRate = grnTax;
+          this.applyTaxDecision(grnTax);
+        }
       }
 
       grnItems.forEach((x: any) => {
@@ -355,8 +409,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const itemName = x.itemName ?? x.itemSearch ?? x.item ?? '';
         const grnQty = Number(x.qtyReceived ?? x.qty ?? 0);
         const unitPrice = Number(x.unitPrice ?? x.price ?? 0);
-
-        // Find matching PO line for PO qty (try by itemId, itemCode, or itemName)
         const poLine = poItems.find((p: any) =>
           (itemId && Number(p.itemId) === Number(itemId)) ||
           (x.itemCode && p.itemCode === x.itemCode) ||
@@ -369,10 +421,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const itemDefault = itemLedger || catLedger || null;
         const ledgerId = x.budgetLineId ?? x.BudgetLineId ?? poLine?.budgetLineId ?? poLine?.BudgetLineId ?? itemDefault;
 
-        // Group same item
-        const existing = merged.find(pl =>
-          pl.itemId === itemId && pl.unitPrice === unitPrice
-        );
+        const existing = merged.find(pl => pl.itemId === itemId && pl.unitPrice === unitPrice);
         if (existing) {
           existing.grnQty += grnQty;
           existing.qty += grnQty;
@@ -391,7 +440,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
           qty: grnQty,
           unitPrice,
           discountPct: 0,
-          taxMode: 'Exclusive',
+          taxMode: this.defaultTaxMode === 'ZeroRated' ? 'Zero' : 'Exclusive',
           lineTotal: 0,
           taxAmt: 0,
           lineGrandTotal: 0,
@@ -411,9 +460,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   private calcMatchStatus(poQty: number, grnQty: number, invQty: number): 'OK' | 'Mismatch' | '' {
     if (!poQty && !grnQty) return '';
-    // No PO linked — 2-way match: GRN qty vs invoice qty
     if (!poQty) return grnQty === invQty ? 'OK' : 'Mismatch';
-    // Full 3-way match: PO qty = GRN qty = invoice qty
     if (poQty === grnQty && grnQty === invQty) return 'OK';
     return 'Mismatch';
   }
@@ -456,6 +503,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
         this.taxRate = d.taxRate ?? d.taxPct ?? 0;
         this.isPartial = d.isPartial ?? false;
         this.isGlPosted = d.isGlPosted ?? d.glPosted ?? false;
+        this.isOverseas = !!(d.isOverseas ?? d.IsOverseas);
         this.status = d.status ?? 'Draft';
         this.selectedGrnIds = d.grnId ? [d.grnId] : (d.grnIds ?? []);
         this.selectedGrnNos = (d.grnNos ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -532,7 +580,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   submit(draft = false): void {
     if (!this.selectedGrnIds.length) {
-      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select at least one GRN.', confirmButtonColor: '#16a34a' }); return;
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select at least one GRN.', confirmButtonColor: '#16a34a' });
+      return;
     }
     this.saving = true;
     this.error = '';
@@ -548,6 +597,16 @@ export class SupplierInvoiceFormComponent implements OnInit {
       },
       error: () => this.doSubmit(draft)
     });
+  }
+
+  private resolveInvoiceNo(): string {
+    const current = (this.invoiceNo || '').trim();
+    if (this.isEdit && current) return current;
+    if (!current || current === this.suggestedInvoiceNo) {
+      this.invoiceNo = this.docNoSvc.reserveNextNumber('PIN', this.companyId || undefined);
+      return this.invoiceNo;
+    }
+    return current;
   }
 
   private doSubmit(draft: boolean): void {
@@ -570,8 +629,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       matchStatus: l.matchStatus
     }));
 
-    const payload = {
-      InvoiceNo: this.invoiceNo,
+    const payload: any = {
+      InvoiceNo: this.resolveInvoiceNo(),
       InvoiceDate: this.invoiceDate,
       SupplierId: this.supplierId,
       CurrencyId: this.currencyId ?? 0,
@@ -586,7 +645,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       GrnIds: this.selectedGrnIds,
       IsPartial: this.isPartial,
       CreatedBy: this.loginUserId ?? 0,
-      UpdatedBy: this.loginUserId ?? 0
+      UpdatedBy: this.loginUserId ?? 0,
+      IsOverseas: this.isOverseas
     };
 
     const obs$ = this.isEdit
