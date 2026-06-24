@@ -7,6 +7,19 @@ $row-hover:  #ebf4f7;
 $muted:      #6c757d;
 
 
+.fw-post-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid $border;
+}
+
+.fw-post-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 :host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
 .fin-workspace {

@@ -322,6 +322,17 @@
       (rowClick)="onRowClick($event)"
       (actionClick)="onAction($event)">
     </erp-table>
+ <div class="fw-post-footer" *ngIf="config.key === 'journal'">
+      <button class="fw-btn fw-btn-primary fw-post-btn" type="button"
+        [disabled]="loading || !filtered.length"
+        (click)="postJournals()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <polyline points="4 10 8 14 16 6"></polyline>
+        </svg>
+        Post
+      </button>
+  </div><!-- /.fw-post-footer -->
 
   </div><!-- /.list-card -->
   </div><!-- /.list-page -->
