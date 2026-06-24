@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
+import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 
 @Component({
   selector: 'erp-finance-collection-forecast',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FinanceReportsHubComponent],
   templateUrl: './finance-collection-forecast.component.html',
   styleUrls: ['./finance-collection-forecast.component.scss']
 })

@@ -1,0 +1,49 @@
+$teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
+:host { display: block; }
+.gst-page { display: flex; flex-direction: column; gap: 12px; padding: 0 0 32px; }
+.rpt-head { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 1rem; padding: .7rem 1.2rem; box-shadow: 0 2px 8px rgba(15,23,42,.05); border: 1px solid $border; }
+.rpt-title { font-size: 1.15rem; font-weight: 700; color: $teal; margin: 0; }
+.btn-export { display: flex; align-items: center; gap: 6px; padding: .35rem .9rem; background: #fff; border: 1px solid $border; border-radius: .5rem; font-size: .82rem; cursor: pointer; color: #374151;
+  &:hover { background: #f3f4f6; }
+}
+.sum-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; @media(max-width:600px){ grid-template-columns: 1fr; } }
+.sum-card { display: flex; align-items: flex-start; gap: 12px; background: #fff; border-radius: 1rem; padding: .9rem 1.1rem; border: 1px solid $border; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
+.sum-icon-wrap { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.taxable-icon { background: #fee2e2; color: #dc2626; }
+.tax-icon     { background: #e0f2fe; color: #0284c7; }
+.net-icon     { background: #d1fae5; color: #059669; }
+.sum-lbl  { font-size: .78rem; color: $muted; margin-bottom: 2px; }
+.sum-val  { font-size: 1.05rem; font-weight: 700; color: #111827; }
+.sum-sub  { font-size: .72rem; color: $muted; margin-top: 1px; }
+.filter-card { background: #fff; border-radius: 1rem; padding: 1rem 1.2rem; border: 1px solid $border; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
+.filter-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: .8rem; @media(max-width:700px){ grid-template-columns: repeat(2,1fr); } @media(max-width:480px){ grid-template-columns: 1fr; } }
+.filter-lbl { display: flex; flex-direction: column; gap: 3px; font-size: .8rem; color: $muted;
+  input, select { border: 1px solid $border; border-radius: .4rem; padding: .35rem .65rem; font-size: .82rem; color: #374151; }
+}
+.filter-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-filter-primary { display: flex; align-items: center; gap: 5px; padding: .4rem 1rem; background: $teal; color: #fff; border: none; border-radius: .5rem; font-size: .82rem; cursor: pointer; }
+.btn-filter-outline { padding: .4rem 1rem; background: #fff; border: 1px solid $border; border-radius: .5rem; font-size: .82rem; cursor: pointer; color: #374151; &:hover { background: #f3f4f6; } }
+.table-card { background: #fff; border-radius: 1rem; border: 1px solid $border; box-shadow: 0 2px 8px rgba(15,23,42,.04); padding: 1rem 1.2rem; }
+.table-controls { margin-bottom: .6rem; }
+.show-entries { font-size: .82rem; color: $muted; select { margin: 0 4px; border: 1px solid $border; border-radius: .3rem; padding: .2rem .4rem; font-size: .82rem; } }
+.table-wrap { overflow-x: auto; }
+.gst-table { width: 100%; border-collapse: collapse; font-size: .85rem;
+  thead { background: $teal; color: #fff; th { padding: .55rem .75rem; text-align: left; &.num { text-align: right; } } }
+  tbody tr { &:hover { background: #f0f9ff; } td { padding: .45rem .75rem; border-bottom: 1px solid $border; &.num { text-align: right; font-variant-numeric: tabular-nums; } &.doc-link { color: $teal; font-weight: 500; } } }
+  .no-data { text-align: center; color: #dc2626; padding: 1.2rem; }
+}
+.type-badge { display: inline-block; padding: .18rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.badge-supplier { background: #ccfbf1; color: #0f766e; }
+.badge-customer { background: #e0f2fe; color: #0369a1; }
+.badge-other    { background: #f3f4f6; color: #374151; }
+.pagination-bar { display: flex; justify-content: space-between; align-items: center; margin-top: .75rem; font-size: .82rem; color: $muted; }
+.page-btns { display: flex; gap: 4px; }
+.page-btn { width: 30px; height: 30px; border: 1px solid $border; background: #fff; border-radius: .4rem; font-size: .82rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  &.active { background: $teal; color: #fff; border-color: $teal; }
+  &:disabled { opacity: .4; cursor: not-allowed; }
+}
+.table-footer { font-size: .8rem; color: $muted; margin-top: .5rem; }
+.rpt-error   { background: #fee2e2; color: #dc2626; border-radius: .5rem; padding: .5rem .75rem; font-size: .85rem; }
+.rpt-loading { color: $muted; font-size: .9rem; display: flex; align-items: center; gap: 6px; }
+.spinner { width: 16px; height: 16px; border: 2px solid $border; border-top-color: $teal; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

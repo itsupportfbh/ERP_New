@@ -1,0 +1,132 @@
+<erp-finance-reports-hub></erp-finance-reports-hub>
+
+<div class="gst-page">
+
+  <!-- Header -->
+  <div class="rpt-head">
+    <h4 class="rpt-title">GST Details by Transaction</h4>
+    <button class="btn-export" type="button" (click)="exportExcel()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Export
+    </button>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="sum-row">
+    <div class="sum-card sum-taxable">
+      <div class="sum-icon-wrap taxable-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div>
+        <div class="sum-lbl">Total Taxable</div>
+        <div class="sum-val">{{ totalTaxable | number:'1.2-2' }}</div>
+        <div class="sum-sub">Sum of taxable base value</div>
+      </div>
+    </div>
+    <div class="sum-card sum-tax">
+      <div class="sum-icon-wrap tax-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="14.31" y1="8" x2="20.05" y2="17.94"/><line x1="9.69" y1="8" x2="21.17" y2="8"/><line x1="7.38" y1="12" x2="13.12" y2="2.06"/><line x1="9.69" y1="16" x2="3.95" y2="6.06"/><line x1="14.31" y1="16" x2="2.83" y2="16"/><line x1="16.62" y1="12" x2="10.88" y2="21.94"/></svg></div>
+      <div>
+        <div class="sum-lbl">Total Tax</div>
+        <div class="sum-val">{{ totalTax | number:'1.2-2' }}</div>
+        <div class="sum-sub">Output + Input tax</div>
+      </div>
+    </div>
+    <div class="sum-card sum-net">
+      <div class="sum-icon-wrap net-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div>
+        <div class="sum-lbl">Total Net</div>
+        <div class="sum-val">{{ totalNet | number:'1.2-2' }}</div>
+        <div class="sum-sub">Taxable + Tax</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <label class="filter-lbl">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="fromDate">
+      </label>
+      <label class="filter-lbl">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="toDate">
+      </label>
+      <label class="filter-lbl">
+        <span>Type</span>
+        <select [(ngModel)]="docType">
+          <option value="ALL">All</option>
+          <option value="SI">Sales Invoice</option>
+          <option value="PIN">Supplier Invoice</option>
+        </select>
+      </label>
+      <label class="filter-lbl">
+        <span>Search</span>
+        <input type="text" [(ngModel)]="search" placeholder="Doc / Customer / Supplier" (input)="applyFilter()">
+      </label>
+    </div>
+    <div class="filter-actions">
+      <button class="btn-filter-primary" type="button" (click)="load()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Filter
+      </button>
+      <button class="btn-filter-outline" type="button" (click)="reset()">Reset</button>
+    </div>
+  </div>
+
+  <div class="rpt-error" *ngIf="error">{{ error }}</div>
+  <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
+
+  <!-- Table -->
+  <div class="table-card" *ngIf="!loading">
+    <div class="table-controls">
+      <div class="show-entries">
+        Show
+        <select [(ngModel)]="pageSize" (change)="page = 1">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="gst-table">
+        <thead>
+          <tr>
+            <th>TYPE</th><th>SOURCE</th><th>DATE</th><th>DOC NO</th>
+            <th>CUSTOMER / SUPPLIER</th><th class="num">TAXABLE</th><th class="num">TAX</th><th class="num">NET</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of pagedRows">
+            <td><span class="type-badge" [ngClass]="typeBadgeClass(r)">{{ typeLabel(r) }}</span></td>
+            <td>{{ r.source }}</td>
+            <td>{{ r.txnDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="doc-link">{{ r.docNo }}</td>
+            <td>{{ r.partyName }}</td>
+            <td class="num">{{ r.taxable | number:'1.2-2' }}</td>
+            <td class="num">{{ r.taxAmt | number:'1.2-2' }}</td>
+            <td class="num">{{ r.net | number:'1.2-2' }}</td>
+          </tr>
+          <tr *ngIf="!pagedRows.length">
+            <td colspan="8" class="no-data">No GST records found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar" *ngIf="totalPages > 1">
+      <span class="page-info">Showing {{ (page-1)*pageSize+1 }} – {{ minVal(page*pageSize, filtered.length) }} of {{ filtered.length }} entries</span>
+      <div class="page-btns">
+        <button class="page-btn" [disabled]="page === 1" (click)="page = page - 1">‹</button>
+        <button class="page-btn" *ngFor="let p of pages" [class.active]="p === page" (click)="page = p">{{ p }}</button>
+        <button class="page-btn" [disabled]="page === totalPages" (click)="page = page + 1">›</button>
+      </div>
+    </div>
+    <div class="table-footer" *ngIf="filtered.length">
+      Showing {{ (page-1)*pageSize + 1 }} – {{ minVal(page*pageSize, filtered.length) }} of {{ filtered.length }} entries
+    </div>
+  </div>
+
+</div>

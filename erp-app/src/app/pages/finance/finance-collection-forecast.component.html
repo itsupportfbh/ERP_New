@@ -1,114 +1,131 @@
+<erp-finance-reports-hub></erp-finance-reports-hub>
+
 <div class="cf-page">
 
-  <!-- Page Header -->
-  <div class="cf-page-head">
-    <div>
-      <h2>Collection Forecast</h2>
-      <p>Expected customer collections by due date and probability</p>
-    </div>
-  </div>
-
-  <!-- Alert -->
-  <div class="cf-alert cf-danger" *ngIf="error">{{ error }}</div>
-
-  <!-- Filter Bar -->
-  <div class="cf-filter-bar">
-    <label class="cf-filter-field">
-      <span>From Date</span>
-      <input type="date" [(ngModel)]="fromDate">
-    </label>
-    <label class="cf-filter-field">
-      <span>To Date</span>
-      <input type="date" [(ngModel)]="toDate">
-    </label>
-    <button class="cf-btn cf-btn-primary" type="button" (click)="load()" [disabled]="loading">
-      {{ loading ? 'Loading...' : 'Run Forecast' }}
-    </button>
-    <div class="cf-search-wrap">
-      <input class="cf-search" type="text" placeholder="Search customer, invoice..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+  <!-- Header -->
+  <div class="rpt-head">
+    <h4 class="rpt-title">Collections Forecast</h4>
+    <div class="rpt-head-actions">
+      <span class="rpt-sub">Expected customer collections by due date and probability</span>
     </div>
   </div>
 
   <!-- Bucket Summary Cards -->
-  <div class="cf-buckets">
-    <div class="cf-bucket cf-bucket-total">
-      <span class="cf-bucket-label">Total Expected</span>
-      <strong class="cf-bucket-amt">{{ total | number:'1.2-2' }}</strong>
-      <span class="cf-bucket-count">{{ rows.length }} invoices</span>
+  <div class="bucket-row">
+    <div class="bucket-card bucket-total">
+      <div class="bucket-icon-wrap bucket-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+      <div class="bucket-info">
+        <div class="bucket-lbl">Total Expected</div>
+        <div class="bucket-val">{{ total | number:'1.2-2' }}</div>
+        <div class="bucket-count">{{ rows.length }} invoice{{ rows.length !== 1 ? 's' : '' }}</div>
+      </div>
     </div>
-    <div class="cf-bucket cf-bucket-overdue">
-      <span class="cf-bucket-label">{{ buckets.overdue.label }}</span>
-      <strong class="cf-bucket-amt">{{ buckets.overdue.amount | number:'1.2-2' }}</strong>
-      <span class="cf-bucket-count">{{ buckets.overdue.count }} invoices</span>
+    <div class="bucket-card bucket-overdue">
+      <div class="bucket-icon-wrap bucket-icon-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <div class="bucket-info">
+        <div class="bucket-lbl">Overdue</div>
+        <div class="bucket-val">{{ buckets.overdue.amount | number:'1.2-2' }}</div>
+        <div class="bucket-count">{{ buckets.overdue.count }} invoice{{ buckets.overdue.count !== 1 ? 's' : '' }}</div>
+      </div>
     </div>
-    <div class="cf-bucket cf-bucket-current">
-      <span class="cf-bucket-label">{{ buckets.current.label }}</span>
-      <strong class="cf-bucket-amt">{{ buckets.current.amount | number:'1.2-2' }}</strong>
-      <span class="cf-bucket-count">{{ buckets.current.count }} invoices</span>
+    <div class="bucket-card bucket-current">
+      <div class="bucket-icon-wrap bucket-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="bucket-info">
+        <div class="bucket-lbl">Current (0–30 days)</div>
+        <div class="bucket-val">{{ buckets.current.amount | number:'1.2-2' }}</div>
+        <div class="bucket-count">{{ buckets.current.count }} invoice{{ buckets.current.count !== 1 ? 's' : '' }}</div>
+      </div>
     </div>
-    <div class="cf-bucket cf-bucket-30">
-      <span class="cf-bucket-label">{{ buckets.days30.label }}</span>
-      <strong class="cf-bucket-amt">{{ buckets.days30.amount | number:'1.2-2' }}</strong>
-      <span class="cf-bucket-count">{{ buckets.days30.count }} invoices</span>
+    <div class="bucket-card bucket-30">
+      <div class="bucket-icon-wrap bucket-icon-orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="bucket-info">
+        <div class="bucket-lbl">31–60 Days</div>
+        <div class="bucket-val">{{ buckets.days30.amount | number:'1.2-2' }}</div>
+        <div class="bucket-count">{{ buckets.days30.count }} invoice{{ buckets.days30.count !== 1 ? 's' : '' }}</div>
+      </div>
     </div>
-    <div class="cf-bucket cf-bucket-60">
-      <span class="cf-bucket-label">{{ buckets.days60.label }}</span>
-      <strong class="cf-bucket-amt">{{ buckets.days60.amount | number:'1.2-2' }}</strong>
-      <span class="cf-bucket-count">{{ buckets.days60.count }} invoices</span>
+    <div class="bucket-card bucket-60">
+      <div class="bucket-icon-wrap bucket-icon-purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="bucket-info">
+        <div class="bucket-lbl">61–90 Days</div>
+        <div class="bucket-val">{{ buckets.days60.amount | number:'1.2-2' }}</div>
+        <div class="bucket-count">{{ buckets.days60.count }} invoice{{ buckets.days60.count !== 1 ? 's' : '' }}</div>
+      </div>
     </div>
-    <div class="cf-bucket cf-bucket-90">
-      <span class="cf-bucket-label">{{ buckets.days90.label }}</span>
-      <strong class="cf-bucket-amt">{{ buckets.days90.amount | number:'1.2-2' }}</strong>
-      <span class="cf-bucket-count">{{ buckets.days90.count }} invoices</span>
+    <div class="bucket-card bucket-90">
+      <div class="bucket-icon-wrap bucket-icon-gray"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+      <div class="bucket-info">
+        <div class="bucket-lbl">90+ Days</div>
+        <div class="bucket-val">{{ buckets.days90.amount | number:'1.2-2' }}</div>
+        <div class="bucket-count">{{ buckets.days90.count }} invoice{{ buckets.days90.count !== 1 ? 's' : '' }}</div>
+      </div>
     </div>
   </div>
 
-  <!-- Table -->
-  <div class="cf-card">
-    <div class="cf-loading" *ngIf="loading">Loading collection forecast...</div>
-    <div class="cf-table-wrap" *ngIf="!loading">
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <label class="filter-lbl">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="fromDate">
+      </label>
+      <label class="filter-lbl">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="toDate">
+      </label>
+      <label class="filter-lbl">
+        <span>Search</span>
+        <input type="text" [(ngModel)]="search" placeholder="Customer / Invoice No" (input)="applyFilter()">
+      </label>
+    </div>
+    <div class="filter-actions">
+      <button class="btn-run" type="button" (click)="load()" [disabled]="loading">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        {{ loading ? 'Loading…' : 'Run Forecast' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="rpt-error" *ngIf="error">{{ error }}</div>
+
+  <!-- Table Card -->
+  <div class="table-card">
+    <div class="table-header-row">
+      <span class="table-title">Forecast Detail</span>
+      <span class="table-count" *ngIf="filtered.length">{{ filtered.length }} record{{ filtered.length !== 1 ? 's' : '' }}</span>
+    </div>
+
+    <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
+
+    <div class="table-wrap" *ngIf="!loading">
       <table class="cf-table">
         <thead>
           <tr>
-            <th>Customer</th>
-            <th>Invoice No</th>
-            <th>Due Date</th>
-            <th>Expected Date</th>
-            <th class="right">Amount</th>
-            <th class="center">Probability</th>
-            <th class="center">Days to Due</th>
+            <th>CUSTOMER</th><th>INVOICE NO</th><th>DUE DATE</th><th>EXPECTED DATE</th>
+            <th class="num">AMOUNT</th><th class="center">PROBABILITY</th><th class="center">DAYS TO DUE</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of filtered" class="cf-row">
-            <td class="customer-cell">{{ row.customerName }}</td>
-            <td class="invoice-cell">{{ row.invoiceNo }}</td>
-            <td class="date-cell" [ngClass]="overdueClass(daysUntilDue(row.dueDate))">
-              {{ row.dueDate | date:'dd-MMM-yyyy' }}
-            </td>
-            <td class="date-cell muted">
-              {{ row.expectedDate | date:'dd-MMM-yyyy' }}
-            </td>
-            <td class="right amount-cell">{{ row.amount | number:'1.2-2' }}</td>
+          <tr *ngFor="let r of filtered">
+            <td class="cust-cell">{{ r.customerName }}</td>
+            <td class="inv-cell">{{ r.invoiceNo }}</td>
+            <td [ngClass]="overdueClass(daysUntilDue(r.dueDate))">{{ r.dueDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="muted-cell">{{ r.expectedDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="num amt-cell">{{ r.amount | number:'1.2-2' }}</td>
             <td class="center">
-              <div class="prob-wrap">
-                <div class="prob-bar">
-                  <div class="prob-fill" [ngClass]="probabilityClass(row.probability)"
-                       [style.width.%]="row.probability"></div>
-                </div>
-                <span class="prob-label" [ngClass]="probabilityClass(row.probability)">
-                  {{ row.probability }}%
-                </span>
+              <div class="prob-row">
+                <div class="prob-bar"><div class="prob-fill" [ngClass]="probabilityClass(r.probability)" [style.width.%]="r.probability"></div></div>
+                <span class="prob-pct" [ngClass]="probabilityClass(r.probability)">{{ r.probability }}%</span>
               </div>
             </td>
             <td class="center">
-              <span class="days-badge" [ngClass]="overdueClass(daysUntilDue(row.dueDate))">
-                {{ daysUntilDue(row.dueDate) < 0 ? (daysUntilDue(row.dueDate) * -1) + ' days overdue' : daysUntilDue(row.dueDate) + ' days' }}
+              <span class="days-badge" [ngClass]="overdueClass(daysUntilDue(r.dueDate))">
+                {{ daysUntilDue(r.dueDate) < 0 ? (daysUntilDue(r.dueDate) * -1) + ' days overdue' : daysUntilDue(r.dueDate) + ' days' }}
               </span>
             </td>
           </tr>
-          <tr *ngIf="filtered.length === 0 && !loading">
-            <td colspan="7" class="cf-empty">No collection forecast data found.</td>
+          <tr *ngIf="!filtered.length && !loading">
+            <td colspan="7" class="no-data">No collection forecast data found for selected period.</td>
           </tr>
         </tbody>
       </table>

@@ -1,76 +1,67 @@
+<erp-finance-reports-hub></erp-finance-reports-hub>
+
 <div class="bs-page">
 
   <!-- Header -->
   <div class="rpt-head">
-    <div class="rpt-head-left">
-      <div class="rpt-icon">&#9878;</div>
-      <div>
-        <h2>Balance Sheet</h2>
-        <p>Assets, liabilities and equity statement</p>
-      </div>
+    <h4 class="rpt-title">Balance Sheet</h4>
+    <div class="rpt-actions">
+      <button class="btn-export btn-excel" type="button" (click)="exportExcel()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export Excel
+      </button>
+      <button class="btn-export btn-pdf" type="button" (click)="exportPdf()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export PDF
+      </button>
     </div>
   </div>
 
   <!-- Summary Cards -->
-  <div class="sum-grid">
-    <div class="sum-card sum-c3">
-      <div class="sum-icon">&#8595;</div>
-      <div>
-        <span class="sum-label">Total Liabilities</span>
-        <strong class="sum-val">{{ totalLiabilities | number:'1.2-2' }}</strong>
-      </div>
+  <div class="sum-row">
+    <div class="sum-card sum-liab">
+      <div class="sum-icon-wrap liab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+      <div><div class="sum-lbl">Total Liabilities</div><div class="sum-val">{{ totalLiabilities | number:'1.2-2' }}</div></div>
     </div>
-    <div class="sum-card sum-c2">
-      <div class="sum-icon">&#8593;</div>
-      <div>
-        <span class="sum-label">Total Assets</span>
-        <strong class="sum-val">{{ totalAssets | number:'1.2-2' }}</strong>
-      </div>
+    <div class="sum-card sum-asset">
+      <div class="sum-icon-wrap asset-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <div><div class="sum-lbl">Total Assets</div><div class="sum-val">{{ totalAssets | number:'1.2-2' }}</div></div>
     </div>
   </div>
 
-  <!-- Date Filter -->
-  <div class="rpt-filter-bar">
-    <label class="filter-lbl">
-      <span>From Date</span>
-      <input type="date" [(ngModel)]="fromDate">
-    </label>
-    <label class="filter-lbl">
-      <span>To Date</span>
-      <input type="date" [(ngModel)]="toDate">
-    </label>
-    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()">Run Report</button>
-  </div>
+  <div class="rpt-error" *ngIf="error">{{ error }}</div>
+  <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
 
-  <div class="rpt-alert rpt-danger" *ngIf="error">{{ error }}</div>
-  <div class="rpt-loading" *ngIf="loading">Loading...</div>
-
-  <!-- Two Column Layout -->
-  <div class="two-col-card rpt-card" *ngIf="!loading">
-
+  <!-- Two Column -->
+  <div class="two-col-card" *ngIf="!loading">
     <!-- Liabilities -->
     <div class="col-section">
-      <div class="col-header liab-hdr">Liabilities &amp; Equity</div>
-      <div class="acc-list">
-        <div class="acc-row" *ngFor="let row of visibleIn(liabilityRows)"
-          [class.acc-parent]="row._hasChildren" (click)="row._hasChildren && toggle(row)">
-          <div class="acc-left" [style.paddingLeft]="indentPx(row)">
-            <span class="toggle-icon" *ngIf="row._hasChildren">
-              {{ isExpanded(row) ? '&#8964;' : '&#8250;' }}
-            </span>
-            <span class="leaf-dash" *ngIf="!row._hasChildren">–</span>
-            <span class="acc-name" [class.fw-bold]="row._hasChildren">{{ row.accountName }}</span>
+      <div class="col-head">Liabilities</div>
+      <ul class="acc-list">
+        <li class="acc-item" *ngFor="let r of visibleIn(liabilityRows)"
+            [class.acc-parent]="r._hasChildren" (click)="r._hasChildren && toggle(r)">
+          <div class="acc-left" [style.paddingLeft]="indentPx(r)">
+            <span class="toggle-icon" *ngIf="r._hasChildren">{{ isExpanded(r) ? '▾' : '›' }}</span>
+            <span class="leaf-dash" *ngIf="!r._hasChildren">—</span>
+            <div class="acc-text">
+              <span class="acc-name" [class.fw-bold]="r._hasChildren">{{ r.accountName }}</span>
+            </div>
           </div>
           <div class="acc-right">
-            <span class="acc-amt">{{ (row.amount || 0) | number:'1.2-2' }}</span>
-            <span class="avatar avatar-orange" *ngIf="!row._hasChildren">{{ initials(row.accountName) }}</span>
+            <span class="acc-amt">{{ (r.amount || 0) | number:'1.2-2' }}</span>
+            <span class="avatar" *ngIf="!r._hasChildren" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
           </div>
-        </div>
-        <div class="acc-empty" *ngIf="liabilityRows.length === 0">No liability data.</div>
-        <div class="total-row" *ngIf="liabilityRows.length > 0">
-          <strong>Total Liabilities</strong>
-          <strong>{{ totalLiabilities | number:'1.2-2' }}</strong>
-        </div>
+        </li>
+        <!-- Balancing Figure -->
+        <li class="acc-item balancing-row" *ngIf="liabilityRows.length > 0 && totalAssets > totalLiabilities">
+          <div class="acc-left"><span class="leaf-dash">—</span><div class="acc-text"><span class="acc-name">Balancing Figure</span></div></div>
+          <div class="acc-right"><span class="acc-amt">{{ (totalAssets - totalLiabilities) | number:'1.2-2' }}</span></div>
+        </li>
+        <li class="acc-empty" *ngIf="!liabilityRows.length">No liability data.</li>
+      </ul>
+      <div class="col-total">
+        <span>Total Liabilities</span>
+        <span>{{ (totalAssets > totalLiabilities ? totalAssets : totalLiabilities) | number:'1.2-2' }}</span>
       </div>
     </div>
 
@@ -78,30 +69,34 @@
 
     <!-- Assets -->
     <div class="col-section">
-      <div class="col-header asset-hdr">Assets</div>
-      <div class="acc-list">
-        <div class="acc-row" *ngFor="let row of visibleIn(assetRows)"
-          [class.acc-parent]="row._hasChildren" (click)="row._hasChildren && toggle(row)">
-          <div class="acc-left" [style.paddingLeft]="indentPx(row)">
-            <span class="toggle-icon" *ngIf="row._hasChildren">
-              {{ isExpanded(row) ? '&#8964;' : '&#8250;' }}
-            </span>
-            <span class="leaf-dash" *ngIf="!row._hasChildren">–</span>
-            <span class="acc-name" [class.fw-bold]="row._hasChildren">{{ row.accountName }}</span>
+      <div class="col-head">Assets</div>
+      <ul class="acc-list">
+        <li class="acc-item" *ngFor="let r of visibleIn(assetRows)"
+            [class.acc-parent]="r._hasChildren" (click)="r._hasChildren && toggle(r)">
+          <div class="acc-left" [style.paddingLeft]="indentPx(r)">
+            <span class="toggle-icon" *ngIf="r._hasChildren">{{ isExpanded(r) ? '▾' : '›' }}</span>
+            <span class="leaf-dash" *ngIf="!r._hasChildren">—</span>
+            <div class="acc-text">
+              <span class="acc-name" [class.fw-bold]="r._hasChildren">{{ r.accountName }}</span>
+            </div>
           </div>
           <div class="acc-right">
-            <span class="acc-amt">{{ (row.amount || 0) | number:'1.2-2' }}</span>
-            <span class="avatar avatar-green" *ngIf="!row._hasChildren">{{ initials(row.accountName) }}</span>
+            <span class="acc-amt">{{ (r.amount || 0) | number:'1.2-2' }}</span>
+            <span class="avatar" *ngIf="!r._hasChildren" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
           </div>
-        </div>
-        <div class="acc-empty" *ngIf="assetRows.length === 0">No asset data.</div>
-        <div class="total-row" *ngIf="assetRows.length > 0">
-          <strong>Total Assets</strong>
-          <strong>{{ totalAssets | number:'1.2-2' }}</strong>
-        </div>
+        </li>
+        <!-- Balancing Figure on asset side -->
+        <li class="acc-item balancing-row" *ngIf="assetRows.length > 0 && totalLiabilities > totalAssets">
+          <div class="acc-left"><span class="leaf-dash">—</span><div class="acc-text"><span class="acc-name">Balancing Figure</span></div></div>
+          <div class="acc-right"><span class="acc-amt">{{ (totalLiabilities - totalAssets) | number:'1.2-2' }}</span></div>
+        </li>
+        <li class="acc-empty" *ngIf="!assetRows.length">No asset data.</li>
+      </ul>
+      <div class="col-total">
+        <span>Total Assets</span>
+        <span>{{ (totalLiabilities > totalAssets ? totalLiabilities : totalAssets) | number:'1.2-2' }}</span>
       </div>
     </div>
-
   </div>
 
 </div>

@@ -1,0 +1,14 @@
+<div class="hub-card">
+  <div class="hub-body">
+    <h5 class="hub-title">Reports Center</h5>
+    <div class="hub-grid">
+      <div class="report-card" *ngFor="let r of reports">
+        <div class="report-card-row">
+          <span class="report-name">{{ r.title }}</span>
+          <button class="btn-open" [class.btn-open--active]="isActive(r.route)" type="button" (click)="open(r)">Open</button>
+        </div>
+        <div class="report-sub">{{ r.subtitle }}</div>
+      </div>
+    </div>
+  </div>
+</div>
