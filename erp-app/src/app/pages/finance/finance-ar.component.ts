@@ -312,12 +312,22 @@ export class FinanceArComponent implements OnInit {
   }
 
   onReceiptRowCheckbox(row: AllocationRow): void {
+    this.autoFillAmountFromSelected();
     this.recalcReceiptAllocations();
   }
 
   onReceiptHeaderCheckbox(checked: boolean): void {
     this.receiptInvoices.forEach(r => r.selected = checked);
+    this.autoFillAmountFromSelected();
     this.recalcReceiptAllocations();
+  }
+
+  private autoFillAmountFromSelected(): void {
+    const total = this.receiptInvoices
+      .filter(r => r.selected)
+      .reduce((sum, r) => sum + this.receiptRowBalance(r), 0);
+    this.receiptForm.amountReceived = total > 0 ? parseFloat(total.toFixed(2)) : null;
+    this.recalcReceiptBase();
   }
 
   onReceiptAllocateChange(row: AllocationRow): void {
@@ -741,10 +751,10 @@ export class FinanceArComponent implements OnInit {
   }
 
   private calcInvoiceSummary(): void {
-    this.invoiceSummary.total = this.invoices.reduce((s, r) => s + (r.amount || 0), 0);
-    this.invoiceSummary.paid  = this.invoices.reduce((s, r) => s + (r.paid || 0), 0);
-    this.invoiceSummary.creditNote = this.invoices.reduce((s, r) => s + (r.creditNote || 0), 0);
-    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance || 0), 0);
+    this.invoiceSummary.total       = this.invoices.reduce((s, r) => s + (r.amount     || 0), 0);
+    this.invoiceSummary.paid        = this.invoices.reduce((s, r) => s + (r.paid       || 0), 0);
+    this.invoiceSummary.creditNote  = this.invoices.reduce((s, r) => s + (r.creditNote || 0), 0);
+    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance    || 0), 0);
   }
 
   private calcAdvanceSummary(): void {
@@ -763,20 +773,18 @@ export class FinanceArComponent implements OnInit {
   private normalizeInvoice(row: any): any {
     // Skip credit note rows — API may return rowType:'CN' mixed with invoices
     if (row.rowType && row.rowType !== 'INV') return null;
-    const amount = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal']);
-    const paid = this.money(row, ['paid', 'Paid', 'paidAmount', 'PaidAmount', 'totalPaid', 'TotalPaid']);
+    const amount     = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal']);
+    const paid       = this.money(row, ['paid', 'Paid', 'paidAmount', 'PaidAmount', 'totalPaid', 'TotalPaid']);
     const creditNote = this.money(row, ['creditNote', 'CreditNote', 'customerCreditNoteAmount', 'creditNoteAmount', 'CreditNoteAmount']);
-    // outstanding is the canonical field name from the API; balance is fallback
-    const balance = this.money(row, ['outstanding', 'Outstanding', 'balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote);
+    const advance    = this.money(row, ['advance', 'Advance', 'advanceApplied', 'AdvanceApplied', 'advanceAmount', 'AdvanceAmount', 'advanceAppliedAmount', 'AdvanceAppliedAmount']);
+    const balance    = this.money(row, ['outstanding', 'Outstanding', 'balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote - advance);
     return {
       ...row,
       customerName: row.customerName ?? row.CustomerName ?? row.customer ?? 'Unknown Customer',
-      invoiceNo: row.invoiceNo ?? row.InvoiceNo ?? row.salesInvoiceNo ?? row.SalesInvoiceNo,
-      invoiceDate: row.invoiceDate ?? row.InvoiceDate,
-      dueDate: row.dueDate ?? row.DueDate,
-      amount,
-      paid,
-      creditNote,
+      invoiceNo:    row.invoiceNo ?? row.InvoiceNo ?? row.salesInvoiceNo ?? row.SalesInvoiceNo,
+      invoiceDate:  row.invoiceDate ?? row.InvoiceDate,
+      dueDate:      row.dueDate ?? row.DueDate,
+      amount, paid, creditNote, advance,
       balance: Math.max(balance, 0),
       status: row.status ?? row.Status ?? (balance <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid')
     };

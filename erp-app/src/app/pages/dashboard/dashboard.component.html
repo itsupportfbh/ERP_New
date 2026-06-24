@@ -1,22 +1,495 @@
-<div class="page-container">
-  <div class="page-header">
-    <h2>Dashboard</h2>
-    <span class="text-muted">Welcome back, Admin</span>
+<div class="dash-page">
+
+  <!-- ── Page Head ── -->
+  <div class="page-head">
+    <div>
+      <h2>Dashboard</h2>
+      <p class="role-tag">{{ roleLabel }}</p>
+    </div>
+    <button class="refresh-btn" type="button" (click)="load()" [disabled]="loading">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      {{ loading ? 'Loading...' : 'Refresh' }}
+    </button>
   </div>
 
-  <div class="stat-grid">
-    <div class="stat-card" *ngFor="let s of stats">
-      <div class="stat-icon" [style.background]="s.color + '18'">
-        <span [style.fontSize]="'20px'">{{ s.icon }}</span>
+  <!-- ── Loading ── -->
+  <div class="dash-loading" *ngIf="loading">Loading dashboard...</div>
+
+  <!-- ── KPI Cards (all roles) ── -->
+  <div class="kpi-grid" *ngIf="!loading && cards.length">
+    <div class="kpi-card" *ngFor="let c of cards" [ngClass]="c.color + '-card'">
+
+      <div class="kpi-icon" [ngClass]="c.color + '-icon'">
+        <svg *ngIf="c.icon==='dollar'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <svg *ngIf="c.icon==='briefcase'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <svg *ngIf="c.icon==='card'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <svg *ngIf="c.icon==='alert'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg *ngIf="c.icon==='box'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <svg *ngIf="c.icon==='users'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg *ngIf="c.icon==='doc'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <svg *ngIf="c.icon==='invoice'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <svg *ngIf="c.icon==='truck'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <svg *ngIf="c.icon==='pr'||c.icon==='po'||c.icon==='so'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+        <svg *ngIf="c.icon==='grn'||c.icon==='pin'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/></svg>
+        <svg *ngIf="c.icon==='clock'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <svg *ngIf="c.icon==='plus'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <svg *ngIf="c.icon==='recipe'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
       </div>
-      <div>
-        <div class="stat-value">{{ s.value }}</div>
-        <div class="stat-label">{{ s.label }}</div>
+
+      <div class="kpi-title">{{ c.title }}</div>
+      <div class="kpi-value">{{ c.value }}</div>
+
+      <div class="kpi-footer" *ngIf="c.change !== 0">
+        <span [ngClass]="c.change >= 0 ? 'badge-up' : 'badge-down'">
+          {{ c.change >= 0 ? '↑' : '↓' }} {{ absChange(c.change) }}{{ c.isCount ? '' : '%' }}
+        </span>
       </div>
     </div>
   </div>
 
-  <div class="card dashboard-note">
-    <p>Navigate the sidebar to explore <strong>Sales Order</strong>, <strong>Inventory</strong>, and the <strong>Components</strong> showcase.</p>
-  </div>
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ADMIN                                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'admin'">
+
+    <div class="section-row">
+
+      <!-- AR / AP Health -->
+      <div class="section-card">
+        <h6 class="section-title">AR / AP Health</h6>
+        <ng-container *ngIf="arApHealth; else loadingTpl">
+          <div class="ov-row">
+            <span>Receivables Collected</span>
+            <div class="prog-wrap"><div class="prog-fill blue" [style.width.%]="arApHealth.receivablePercent || 0"></div></div>
+            <span class="prog-pct">{{ arApHealth.receivablePercent || 0 }}%</span>
+          </div>
+          <div class="ov-row">
+            <span>Payables Paid</span>
+            <div class="prog-wrap"><div class="prog-fill orange" [style.width.%]="arApHealth.payablePercent || 0"></div></div>
+            <span class="prog-pct">{{ arApHealth.payablePercent || 0 }}%</span>
+          </div>
+          <div class="health-stats">
+            <div class="health-stat">
+              <span class="hs-val">{{ arApHealth.activeUsers || 0 }}</span>
+              <span class="hs-lbl">Active Users</span>
+            </div>
+            <div class="health-stat">
+              <span class="hs-val warn">{{ arApHealth.pendingApprovals || 0 }}</span>
+              <span class="hs-lbl">Pending Approvals</span>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- Module Health -->
+      <div class="section-card">
+        <h6 class="section-title">Module Health</h6>
+        <ng-container *ngIf="moduleHealth.length; else loadingTpl">
+          <div *ngFor="let m of moduleHealth" class="mod-row">
+            <span class="mod-name">{{ m.moduleName }}</span>
+            <div class="prog-wrap"><div class="prog-fill" [ngClass]="m.alerts > 0 ? 'orange' : 'green'" [style.width.%]="m.healthPercent || 0"></div></div>
+            <span class="prog-pct" [class.warn-text]="m.alerts > 0">{{ m.healthPercent || 0 }}%</span>
+          </div>
+        </ng-container>
+      </div>
+
+    </div>
+
+    <!-- System Exceptions -->
+    <div class="section-card">
+      <h6 class="section-title">System Exceptions</h6>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Severity</th><th>Type</th><th>Module</th><th>Document</th><th>Party</th><th>Impact</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let ex of sysExceptions">
+              <td><span [ngClass]="ex.severity === 'High' ? 'badge-sm-danger' : 'badge-sm-warn'">{{ ex.severity }}</span></td>
+              <td>{{ ex.type }}</td><td>{{ ex.module }}</td><td>{{ ex.document }}</td><td>{{ ex.party }}</td><td>{{ ex.impact }}</td>
+            </tr>
+            <tr *ngIf="!sysExceptions.length"><td colspan="6" class="no-data">No exceptions found</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- FINANCE MANAGER                                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'finance-manager'">
+
+    <div class="section-row">
+
+      <!-- AR Aging -->
+      <div class="section-card">
+        <h6 class="section-title">AR Aging (Receivables)</h6>
+        <table class="dash-table">
+          <thead><tr><th>Bucket</th><th>Amount</th></tr></thead>
+          <tbody *ngIf="arAging">
+            <tr><td>0 – 30 days</td><td>{{ formatAmount(arAging.currentAmount) }}</td></tr>
+            <tr><td>31 – 60 days</td><td>{{ formatAmount(arAging.days30) }}</td></tr>
+            <tr><td>61 – 90 days</td><td>{{ formatAmount(arAging.days60) }}</td></tr>
+            <tr><td>&gt; 90 days</td><td class="warn-text">{{ formatAmount(arAging.days90) }}</td></tr>
+          </tbody>
+          <tbody *ngIf="!arAging"><tr><td colspan="2" class="no-data">Loading...</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Finance Exceptions -->
+      <div class="section-card">
+        <h6 class="section-title">Finance Exceptions</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Severity</th><th>Type</th><th>Document</th><th>Impact</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let ex of sysExceptions">
+                <td><span [ngClass]="ex.severity === 'High' ? 'badge-sm-danger' : 'badge-sm-warn'">{{ ex.severity }}</span></td>
+                <td>{{ ex.type }}</td><td>{{ ex.document }}</td><td>{{ ex.impact }}</td>
+              </tr>
+              <tr *ngIf="!sysExceptions.length"><td colspan="4" class="no-data">No exceptions</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- FINANCE EXECUTIVE                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'finance-executive'">
+    <div class="section-card half-width">
+      <h6 class="section-title">AR Aging (Receivables)</h6>
+      <table class="dash-table">
+        <thead><tr><th>Bucket</th><th>Amount</th></tr></thead>
+        <tbody *ngIf="arAging">
+          <tr><td>0 – 30 days</td><td>{{ formatAmount(arAging.currentAmount) }}</td></tr>
+          <tr><td>31 – 60 days</td><td>{{ formatAmount(arAging.days30) }}</td></tr>
+          <tr><td>61 – 90 days</td><td>{{ formatAmount(arAging.days60) }}</td></tr>
+          <tr><td>&gt; 90 days</td><td class="warn-text">{{ formatAmount(arAging.days90) }}</td></tr>
+        </tbody>
+        <tbody *ngIf="!arAging"><tr><td colspan="2" class="no-data">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SALES MANAGER                                                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'sales-manager'">
+
+    <!-- Sales Overview -->
+    <div class="section-card" *ngIf="salesOverview">
+      <h6 class="section-title">Sales Overview</h6>
+      <div class="overview-bars">
+        <div class="ov-row">
+          <span>Quotations</span>
+          <div class="prog-wrap"><div class="prog-fill blue" [style.width.%]="ovPct(salesOverview.quotation, salesOverview)"></div></div>
+          <span class="ov-val">{{ salesOverview.quotation || 0 }}</span>
+        </div>
+        <div class="ov-row">
+          <span>Sales Orders</span>
+          <div class="prog-wrap"><div class="prog-fill green" [style.width.%]="ovPct(salesOverview.salesOrders, salesOverview)"></div></div>
+          <span class="ov-val">{{ salesOverview.salesOrders || 0 }}</span>
+        </div>
+        <div class="ov-row">
+          <span>Deliveries</span>
+          <div class="prog-wrap"><div class="prog-fill orange" [style.width.%]="ovPct(salesOverview.deliveries, salesOverview)"></div></div>
+          <span class="ov-val">{{ salesOverview.deliveries || 0 }}</span>
+        </div>
+        <div class="ov-row">
+          <span>Invoices</span>
+          <div class="prog-wrap"><div class="prog-fill teal" [style.width.%]="ovPct(salesOverview.invoices, salesOverview)"></div></div>
+          <span class="ov-val">{{ salesOverview.invoices || 0 }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open Sales Orders -->
+    <div class="section-card">
+      <h6 class="section-title">Open Sales Orders</h6>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Order #</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th><th>Due Date</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let so of openSalesOrders">
+              <td>{{ so.salesOrderNo }}</td>
+              <td>{{ so.customerName }}</td>
+              <td>{{ so.requestedDate | date:'dd/MM/yy' }}</td>
+              <td>{{ formatAmount(so.grandTotal) }}</td>
+              <td><span class="badge-sm-info">{{ so.statusText }}</span></td>
+              <td>{{ so.deliveryDate | date:'dd/MM/yy' }}</td>
+            </tr>
+            <tr *ngIf="!openSalesOrders.length"><td colspan="6" class="no-data">No open orders</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AR Aging -->
+    <div class="section-card half-width">
+      <h6 class="section-title">AR Aging</h6>
+      <table class="dash-table">
+        <thead><tr><th>Bucket</th><th>Amount</th></tr></thead>
+        <tbody *ngIf="arAging">
+          <tr><td>0 – 30 days</td><td>{{ formatAmount(arAging.currentAmount) }}</td></tr>
+          <tr><td>31 – 60 days</td><td>{{ formatAmount(arAging.days30) }}</td></tr>
+          <tr><td>61 – 90 days</td><td>{{ formatAmount(arAging.days60) }}</td></tr>
+          <tr><td>&gt; 90 days</td><td class="warn-text">{{ formatAmount(arAging.days90) }}</td></tr>
+        </tbody>
+        <tbody *ngIf="!arAging"><tr><td colspan="2" class="no-data">Loading...</td></tr></tbody>
+      </table>
+    </div>
+
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SALES EXECUTIVE                                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'sales-executive'">
+
+    <div class="section-row">
+
+      <div class="section-card">
+        <h6 class="section-title">My Open Sales Orders</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let so of openSalesOrders">
+                <td>{{ so.salesOrderNo }}</td>
+                <td>{{ so.customerName }}</td>
+                <td>{{ formatAmount(so.grandTotal) }}</td>
+                <td><span class="badge-sm-info">{{ so.statusText }}</span></td>
+              </tr>
+              <tr *ngIf="!openSalesOrders.length"><td colspan="4" class="no-data">No open orders</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h6 class="section-title">AR Aging</h6>
+        <table class="dash-table">
+          <thead><tr><th>Bucket</th><th>Amount</th></tr></thead>
+          <tbody *ngIf="arAging">
+            <tr><td>0 – 30 days</td><td>{{ formatAmount(arAging.currentAmount) }}</td></tr>
+            <tr><td>31 – 60 days</td><td>{{ formatAmount(arAging.days30) }}</td></tr>
+            <tr><td>61 – 90 days</td><td>{{ formatAmount(arAging.days60) }}</td></tr>
+            <tr><td>&gt; 90 days</td><td class="warn-text">{{ formatAmount(arAging.days90) }}</td></tr>
+          </tbody>
+          <tbody *ngIf="!arAging"><tr><td colspan="2" class="no-data">Loading...</td></tr></tbody>
+        </table>
+      </div>
+
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PROCUREMENT MANAGER                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'procurement-manager'">
+
+    <div class="section-row">
+
+      <!-- Purchase Flow -->
+      <div class="section-card">
+        <h6 class="section-title">Purchase Flow</h6>
+        <ng-container *ngIf="purchaseFlow; else loadingTpl">
+          <div class="ov-row">
+            <span>Purchase Requests</span>
+            <div class="prog-wrap"><div class="prog-fill blue" [style.width.%]="purchaseFlow.purchaseRequestsPercent || 0"></div></div>
+            <span class="ov-val">{{ purchaseFlow.purchaseRequests || 0 }}</span>
+          </div>
+          <div class="ov-row">
+            <span>Purchase Orders</span>
+            <div class="prog-wrap"><div class="prog-fill green" [style.width.%]="purchaseFlow.purchaseOrdersPercent || 0"></div></div>
+            <span class="ov-val">{{ purchaseFlow.purchaseOrders || 0 }}</span>
+          </div>
+          <div class="ov-row">
+            <span>GRN Received</span>
+            <div class="prog-wrap"><div class="prog-fill orange" [style.width.%]="purchaseFlow.grnReceivedPercent || 0"></div></div>
+            <span class="ov-val">{{ purchaseFlow.grnReceived || 0 }}</span>
+          </div>
+          <div class="ov-row">
+            <span>Supplier Invoices</span>
+            <div class="prog-wrap"><div class="prog-fill teal" [style.width.%]="purchaseFlow.supplierInvoicesPercent || 0"></div></div>
+            <span class="ov-val">{{ purchaseFlow.supplierInvoices || 0 }}</span>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- Open POs -->
+      <div class="section-card">
+        <h6 class="section-title">Open Purchase Orders</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>PO #</th><th>Supplier</th><th>Date</th><th>Amount</th><th>Due</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let po of openPOs">
+                <td>{{ po.poNo }}</td>
+                <td>{{ po.supplierName }}</td>
+                <td>{{ po.poDate | date:'dd/MM/yy' }}</td>
+                <td>{{ formatAmount(po.amount) }}</td>
+                <td>{{ po.dueDate | date:'dd/MM/yy' }}</td>
+              </tr>
+              <tr *ngIf="!openPOs.length"><td colspan="5" class="no-data">No open POs</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PROCUREMENT EXECUTIVE                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && currentRole === 'procurement-executive'">
+
+    <!-- My PRs -->
+    <div class="section-card">
+      <h6 class="section-title">My Purchase Requests</h6>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>PR #</th><th>Item</th><th>Qty</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let pr of myPRs">
+              <td>{{ pr.prNo }}</td>
+              <td>{{ pr.itemName }}</td>
+              <td>{{ pr.qty }} {{ pr.uom }}</td>
+              <td><span [ngClass]="prStatusClass(pr.statusText)">{{ pr.statusText }}</span></td>
+            </tr>
+            <tr *ngIf="!myPRs.length"><td colspan="4" class="no-data">No purchase requests</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Open POs -->
+    <div class="section-card">
+      <h6 class="section-title">Open Purchase Orders</h6>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>PO #</th><th>Supplier</th><th>Date</th><th>Amount</th><th>Due</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let po of openPOs">
+              <td>{{ po.poNo }}</td>
+              <td>{{ po.supplierName }}</td>
+              <td>{{ po.poDate | date:'dd/MM/yy' }}</td>
+              <td>{{ formatAmount(po.amount) }}</td>
+              <td>{{ po.dueDate | date:'dd/MM/yy' }}</td>
+            </tr>
+            <tr *ngIf="!openPOs.length"><td colspan="5" class="no-data">No open POs</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- INVENTORY MANAGER / EXECUTION / STORE INCHARGE                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && (currentRole === 'inventory-manager' || currentRole === 'inventory-execution' || currentRole === 'store-incharge')">
+
+    <div class="section-row">
+
+      <!-- Stock Alerts -->
+      <div class="section-card">
+        <h6 class="section-title">Stock Alerts</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>SKU</th><th>Issue</th><th>Qty</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let a of stockAlerts">
+                <td>{{ a.sku }}</td>
+                <td><span [ngClass]="alertClass(a.issue)">{{ a.issue }}</span></td>
+                <td>{{ a.qty }}</td>
+              </tr>
+              <tr *ngIf="!stockAlerts.length"><td colspan="3" class="no-data">No alerts</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top Stock Items -->
+      <div class="section-card">
+        <h6 class="section-title">Top Stock Items</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>SKU</th><th>Item</th><th>Warehouse</th><th>Qty</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let item of topStockItems">
+                <td>{{ item.sku }}</td>
+                <td>{{ item.itemName }}</td>
+                <td>{{ item.warehouse }}</td>
+                <td>{{ item.qty }}</td>
+              </tr>
+              <tr *ngIf="!topStockItems.length"><td colspan="4" class="no-data">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PRODUCTION MANAGER / RECIPE PRODUCTION                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!loading && (currentRole === 'production-manager' || currentRole === 'recipe-production')">
+
+    <div class="section-row">
+
+      <!-- Production Orders -->
+      <div class="section-card">
+        <h6 class="section-title">Production Orders</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Order</th><th>Recipe</th><th>Status</th><th>Qty</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let po of productionOrders">
+                <td>{{ po.orderNo }}</td>
+                <td>{{ po.recipe }}</td>
+                <td><span [ngClass]="prodStatusClass(po.status)">{{ po.status }}</span></td>
+                <td>{{ po.qty }}</td>
+              </tr>
+              <tr *ngIf="!productionOrders.length"><td colspan="4" class="no-data">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top Recipes -->
+      <div class="section-card">
+        <h6 class="section-title">Top Recipes</h6>
+        <div class="recipe-list">
+          <div class="recipe-item" *ngFor="let r of topRecipes; let i = index">
+            <div class="recipe-img" [ngClass]="recipeColor(i)">{{ (r.recipeName || 'R').charAt(0) }}</div>
+            <div class="recipe-info">
+              <div class="recipe-name">{{ r.recipeName }}</div>
+              <div class="recipe-meta">Used {{ r.usageCount }} times &bull; ₹{{ r.recipeCost | number:'1.0-0' }}</div>
+            </div>
+            <span class="badge-active">Active</span>
+          </div>
+          <div *ngIf="!topRecipes.length" class="no-data">Loading...</div>
+        </div>
+      </div>
+
+    </div>
+  </ng-container>
+
+  <!-- ── Empty state ── -->
+  <div class="dash-empty" *ngIf="!loading && cards.length === 0">No dashboard data available.</div>
+
 </div>
+
+<!-- shared loading template -->
+<ng-template #loadingTpl>
+  <p class="no-data">Loading...</p>
+</ng-template>

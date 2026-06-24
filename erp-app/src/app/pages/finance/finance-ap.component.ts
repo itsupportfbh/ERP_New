@@ -34,7 +34,7 @@ export class FinanceApComponent implements OnInit {
   // Supplier Invoices
   invoices: any[] = [];
   filteredInvoices: any[] = [];
-  expandedSuppliers: Set<string> = new Set();
+  expandedSuppliers: Record<string, boolean> = {};
   invoiceSummary = { totalInvoice: 0, paid: 0, debitNote: 0, advance: 0, outstanding: 0 };
 
   // Payments list
@@ -83,13 +83,22 @@ export class FinanceApComponent implements OnInit {
   advanceForm: any = { supplierId: null, supplierName: '', advanceDate: '', amount: null, referenceNo: '', notes: '' };
   savingAdvance = false;
   apAdvMethodId = 2;
+  apAdvBankId:     number | null = null;
   apAdvBankHeadId: number | null = null;
+  apAdvBankName = '';
   apAdvGrnNo = '';
   apAdvFxRate = 1;
   apAdvAmountBase = 0;
   apAdvCurrencyId: number | null = null;
   apAdvCurrencyName = '';
+  advCurrOpen = false;
+  advCurrSearch  = '';
   suppliers: any[] = [];
+
+  // GRN combobox
+  grns: any[] = [];
+  advGrnOpen = false;
+  advGrnSearch = '';
 
   // 3-Way Match
   matchRows: any[] = [];
@@ -114,6 +123,7 @@ export class FinanceApComponent implements OnInit {
     this.loadSuppliers();
     this.loadBankAccounts();
     this.loadPaymentCurrencies();
+    this.loadGrns();
     this.checkPeriodLock(new Date().toISOString().slice(0, 10));
     const path = this.route.snapshot.routeConfig?.path || '';
     if (path.includes('ap-aging')) this.setTab('aging');
@@ -166,8 +176,8 @@ export class FinanceApComponent implements OnInit {
       next: res => {
         this.bankAccounts = this.finance.unwrap(res).map((b: any) => ({
           ...b,
-          id: b.id ?? b.Id,
-          displayName: b.headName ?? b.HeadName ?? b.bankName ?? b.name ?? b.accountName ?? '—'
+          id: b.bankId ?? b.BankId ?? b.id ?? b.Id,
+          displayName: b.headName ?? b.HeadName ?? b.bankName ?? b.BankName ?? b.name ?? b.accountName ?? '—'
         }));
       },
       error: () => { this.bankAccounts = []; }
@@ -193,7 +203,7 @@ export class FinanceApComponent implements OnInit {
 
   openPaymentForm(): void {
     this.showPaymentForm = true;
-    this.view = 'payment-form';
+    this.activeTab = 'payments';
     this.message = '';
     this.error = '';
     this.paymentForm = {
@@ -223,7 +233,6 @@ export class FinanceApComponent implements OnInit {
 
   closePaymentForm(): void {
     this.showPaymentForm = false;
-    this.view = 'list';
     this.paymentFilteredInvoices = [];
     this.closeAllComboboxes();
   }
@@ -436,7 +445,6 @@ export class FinanceApComponent implements OnInit {
       next: () => {
         this.savingPayment = false;
         this.showPaymentForm = false;
-        this.view = 'list';
         this.paymentFilteredInvoices = [];
         this.paymentInvoicesLoaded = false;
         this.loadPayments();
@@ -559,16 +567,19 @@ export class FinanceApComponent implements OnInit {
     this.filteredInvoices = q
       ? this.invoices.filter(r => ['supplierName', 'invoiceNo', 'status'].some(k => String(r[k] ?? '').toLowerCase().includes(q)))
       : [...this.invoices];
+    this.buildSupplierGroups();
   }
 
-  get supplierGroups(): { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number }[] {
+  supplierGroups: { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number }[] = [];
+
+  private buildSupplierGroups(): void {
     const map = new Map<string, any[]>();
     this.filteredInvoices.forEach(inv => {
       const key = inv.supplierName || 'Unknown Supplier';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(inv);
     });
-    return Array.from(map.entries()).map(([supplier, invs]) => ({
+    this.supplierGroups = Array.from(map.entries()).map(([supplier, invs]) => ({
       supplier,
       invoices: invs,
       total: invs.reduce((s, i) => s + (i.amount || 0), 0),
@@ -579,11 +590,13 @@ export class FinanceApComponent implements OnInit {
     }));
   }
 
+  trackBySupplier(_: number, grp: any): string { return grp.supplier; }
+
   toggleSupplier(supplier: string): void {
-    this.expandedSuppliers.has(supplier) ? this.expandedSuppliers.delete(supplier) : this.expandedSuppliers.add(supplier);
+    this.expandedSuppliers = { ...this.expandedSuppliers, [supplier]: !this.expandedSuppliers[supplier] };
   }
 
-  isExpanded(supplier: string): boolean { return this.expandedSuppliers.has(supplier); }
+  isExpanded(supplier: string): boolean { return !!this.expandedSuppliers[supplier]; }
 
   toggleAgingSupplier(supplier: string): void {
     if (this.expandedSupplierAging.has(supplier)) {
@@ -622,16 +635,25 @@ export class FinanceApComponent implements OnInit {
 
   openApAdvanceForm(): void {
     this.showAdvanceForm = true;
-    this.view = 'advance-form';
+    this.activeTab = 'advances';
     this.message = '';
     this.error = '';
     this.apAdvMethodId = 2;
+    this.apAdvBankId     = null;
     this.apAdvBankHeadId = null;
+    this.apAdvBankName   = '';
     this.apAdvGrnNo = '';
+    this.apAdvGrnSearch = '';
     this.apAdvFxRate = 1;
     this.apAdvAmountBase = 0;
     this.apAdvCurrencyId = null;
     this.apAdvCurrencyName = '';
+    this.advCurrSearch = '';
+    this.advSupplierSearch = '';
+    this.advBankSearch = '';
+    // default to base currency
+    const base = this.paymentCurrencies.find((c: any) => c.isBase) ?? this.paymentCurrencies[0];
+    if (base) { this.apAdvCurrencyId = base.id ?? base.currencyId; this.apAdvCurrencyName = base.currencyCode ?? base.currencyName ?? 'SGD'; }
     this.advanceForm = {
       supplierId: null, supplierName: '',
       advanceDate: new Date().toISOString().slice(0, 10),
@@ -641,7 +663,6 @@ export class FinanceApComponent implements OnInit {
 
   closeApAdvanceForm(): void {
     this.showAdvanceForm = false;
-    this.view = 'list';
     this.closeAllComboboxes();
   }
 
@@ -658,7 +679,8 @@ export class FinanceApComponent implements OnInit {
     if (!this.advanceForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
     if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
     if (!(Number(this.advanceForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
-    if ((this.apAdvMethodId === 2 || this.apAdvMethodId === 3) && !this.apAdvBankHeadId) {
+    const needsBank = this.apAdvMethodId === 2 || this.apAdvMethodId === 3;
+    if (needsBank && !this.apAdvBankId) {
       Swal.fire('Required', 'Please select a bank account.', 'warning'); return;
     }
 
@@ -672,7 +694,8 @@ export class FinanceApComponent implements OnInit {
       referenceNo: this.advanceForm.referenceNo || null,
       notes:       this.advanceForm.notes || null,
       methodId:    this.apAdvMethodId,
-      bankHeadId:  (this.apAdvMethodId === 2 || this.apAdvMethodId === 3) ? this.apAdvBankHeadId : null,
+      bankId:      needsBank ? this.apAdvBankId     : null,
+      bankHeadId:  needsBank ? this.apAdvBankHeadId : null,
       grnNo:       this.apAdvGrnNo || null,
       currencyId:  this.apAdvCurrencyId ?? null,
       fxRate:      this.apAdvFxRate || 1,
@@ -683,7 +706,6 @@ export class FinanceApComponent implements OnInit {
       next: () => {
         this.savingAdvance = false;
         this.showAdvanceForm = false;
-        this.view = 'list';
         this.loadAdvances();
         Swal.fire({ icon: 'success', title: 'Advance Saved', text: 'Supplier advance saved successfully.', confirmButtonColor: '#2e5f73', timer: 2500, timerProgressBar: true });
       },
@@ -704,11 +726,11 @@ export class FinanceApComponent implements OnInit {
 
   closeAllComboboxes(): void {
     this.pmtSupplierOpen = this.pmtInvoiceOpen = this.pmtBankOpen = this.pmtCurrOpen = false;
-    this.advSupplierOpen = this.advBankOpen = false;
+    this.advSupplierOpen = this.advBankOpen = this.advGrnOpen = this.advCurrOpen = false;
   }
 
   toggleCombo(name: string): void {
-    const all = ['pmtSupplierOpen','pmtInvoiceOpen','pmtBankOpen','pmtCurrOpen','advSupplierOpen','advBankOpen'];
+    const all = ['pmtSupplierOpen','pmtInvoiceOpen','pmtBankOpen','pmtCurrOpen','advSupplierOpen','advBankOpen','advGrnOpen','advCurrOpen'];
     const cur = (this as any)[name];
     all.forEach(f => { (this as any)[f] = false; });
     (this as any)[name] = !cur;
@@ -781,9 +803,50 @@ export class FinanceApComponent implements OnInit {
     this.onSupplierSelect();
   }
   selectAdvBank(b: any): void {
+    this.apAdvBankId     = b.id;
     this.apAdvBankHeadId = b.id;
-    this.advBankSearch = b.displayName;
-    this.advBankOpen = false;
+    this.apAdvBankName   = b.displayName;
+    this.advBankSearch   = b.displayName;
+    this.advBankOpen     = false;
+  }
+
+  get advFilteredCurrencies(): any[] {
+    const q = this.advCurrSearch.toLowerCase();
+    return q ? this.paymentCurrencies.filter(c =>
+      (c.currencyCode ?? c.currencyName ?? '').toLowerCase().includes(q)) : this.paymentCurrencies;
+  }
+  selectAdvCurrency(c: any): void {
+    this.apAdvCurrencyId   = c.id ?? c.currencyId;
+    this.apAdvCurrencyName = c.currencyCode ?? c.currencyName ?? '';
+    this.advCurrSearch     = this.apAdvCurrencyName;
+    this.advCurrOpen       = false;
+    this.onApAdvAmountChange();
+  }
+
+  get apAdvGrnSearch(): string { return this.advGrnSearch; }
+  set apAdvGrnSearch(v: string) { this.advGrnSearch = v; }
+
+  get advFilteredGrns(): any[] {
+    const q = this.advGrnSearch.toLowerCase();
+    return q ? this.grns.filter(g => (g.grnNo ?? '').toLowerCase().includes(q)) : this.grns;
+  }
+
+  selectAdvGrn(g: any): void {
+    this.apAdvGrnNo    = g.grnNo ?? g.GrnNo ?? '';
+    this.advGrnSearch  = this.apAdvGrnNo;
+    this.advGrnOpen    = false;
+  }
+
+  private loadGrns(): void {
+    this.finance.list({ list: '/PurchaseGoodReceipt/GetAllGRN' }).subscribe({
+      next: res => {
+        this.grns = this.finance.unwrap(res).map((g: any) => ({
+          ...g,
+          grnNo: g.grnNo ?? g.GrnNo ?? g.grnNumber ?? ''
+        })).filter((g: any) => g.grnNo);
+      },
+      error: () => { this.grns = []; }
+    });
   }
 
   getSelectedBank(bankId: any): any {
@@ -831,11 +894,12 @@ export class FinanceApComponent implements OnInit {
   }
 
   private normalizeInvoice(row: any): any {
-    const amount = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal', 'netAmount', 'NetAmount', 'amountBase', 'AmountBase', 'baseAmount', 'BaseAmount']);
+    const amount = this.money(row, ['amount', 'Amount', 'invoiceAmount', 'InvoiceAmount', 'totalAmount', 'TotalAmount', 'grandTotal', 'GrandTotal', 'netAmount', 'NetAmount']);
+    const taxAmount = this.money(row, ['taxAmount', 'TaxAmount', 'tax', 'Tax']);
     const paid = this.money(row, ['paid', 'Paid', 'paidAmount', 'PaidAmount', 'totalPaid', 'TotalPaid']);
     const debitNote = this.money(row, ['debitNote', 'DebitNote', 'debitNoteAmount', 'DebitNoteAmount']);
-    const advance = this.money(row, ['advance', 'Advance', 'advanceAppliedAmount', 'AdvanceAppliedAmount', 'advanceApplied', 'AdvanceApplied']);
-    const net = this.money(row, ['netPayableAmount', 'NetPayableAmount', 'balance', 'Balance', 'outstanding', 'Outstanding'], amount - paid - debitNote - advance);
+    const advance = this.money(row, ['advance', 'Advance', 'advanceAmount', 'AdvanceAmount', 'advanceAppliedAmount', 'AdvanceAppliedAmount', 'advanceApplied', 'AdvanceApplied']);
+    const net = this.money(row, ['netPayableAmount', 'NetPayableAmount', 'outstandingAmount', 'OutstandingAmount', 'balance', 'Balance', 'outstanding', 'Outstanding'], amount - paid - debitNote - advance);
     return {
       ...row,
       id: row.id ?? row.Id ?? row.invoiceId ?? row.pinId ?? row.supplierInvoiceId,
@@ -846,6 +910,7 @@ export class FinanceApComponent implements OnInit {
       dueDate: row.dueDate ?? row.DueDate,
       invoiceType: row.isOverseas || row.IsOverseas ? 'Overseas' : 'Local',
       amount,
+      taxAmount,
       paid,
       debitNote,
       advance,
@@ -926,14 +991,17 @@ export class FinanceApComponent implements OnInit {
   }
 
   private normalizeAdvance(row: any): any {
-    const amount = this.money(row, ['amount', 'Amount', 'originalAmount', 'OriginalAmount']);
-    const utilised = this.money(row, ['utilised', 'Utilised', 'utilisedAmount', 'UtilisedAmount']);
-    const balance = this.money(row, ['balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - utilised);
+    const amount = this.money(row, ['originalAmount', 'OriginalAmount', 'amount', 'Amount']);
+    const utilised = this.money(row, ['utilisedAmount', 'UtilisedAmount', 'utilised', 'Utilised'], amount - this.money(row, ['balanceAmount', 'BalanceAmount', 'balance', 'Balance']));
+    const balance = this.money(row, ['balanceAmount', 'BalanceAmount', 'balance', 'Balance'], amount - utilised);
     return {
       ...row,
       advanceNo: row.advanceNo ?? row.AdvanceNo,
       supplierName: row.supplierName ?? row.SupplierName,
       advanceDate: row.advanceDate ?? row.AdvanceDate,
+      methodId: row.methodId ?? row.MethodId,
+      amountBase: this.money(row, ['amountBase', 'AmountBase']),
+      currencyName: row.currencyName ?? row.CurrencyName ?? '',
       amount, utilised, balance,
       status: row.status ?? row.Status ?? (balance <= 0 ? 'Closed' : 'Open')
     };

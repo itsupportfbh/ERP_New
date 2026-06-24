@@ -447,6 +447,7 @@ $muted:     #6c757d;
   background: #eef1f3;
   color: #6f7782;
   font-size: 22px;
+  cursor: pointer;
 }
 .invoice-detail-row td {
   background: #fff;
@@ -454,7 +455,6 @@ $muted:     #6c757d;
 }
 .invoice-detail-table {
   width: 100%;
-  min-width: 1220px;
   border-collapse: collapse;
 }
 .invoice-detail-table tbody td {
@@ -1164,4 +1164,183 @@ $muted:     #6c757d;
   color: $muted;
   padding: 12px 0;
   text-align: center;
+}
+
+/* ── Payment list expand ── */
+.expand-col { width: 32px; text-align: center; padding: 0 4px !important; }
+
+.expand-icon {
+  display: inline-block;
+  font-size: 10px;
+  color: $teal;
+  transition: transform 0.15s;
+  &.open { color: $teal-lt; }
+}
+
+.pmt-row:hover { background: $row-hover; }
+
+.pmt-detail-row td { padding: 0 !important; border-bottom: 2px solid $teal-pale !important; }
+
+.pmt-detail-cell {
+  background: #f6fbfd;
+  padding: 10px 16px !important;
+}
+
+.pmt-detail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 36px;
+}
+
+.pmt-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pmt-detail-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pmt-detail-val {
+  font-size: 13px;
+  color: #252943;
+  &.teal-bold { font-weight: 700; color: $teal; }
+}
+
+/* ── Inline form header (shared by payment + advance inline forms) ── */
+.ap-inline-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid $border;
+}
+
+.ap-inline-form-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: $teal;
+}
+
+.ap-inline-form-sub {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: $muted;
+}
+
+/* ── Payment form card (wraps the whole inline payment form body) ── */
+.ap-pmt-form-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+
+/* ── Advance form two-column layout ── */
+.ap-adv-form-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.ap-adv-form-main {
+  flex: 1 1 0;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+
+.ap-adv-form-summary {
+  flex: 0 0 260px;
+  min-width: 230px;
+}
+
+/* ── Advance summary card (right panel) ── */
+.adv-sum-card {
+  background: linear-gradient(145deg, #2e5f73 0%, #3a7a96 100%);
+  border-radius: 12px;
+  padding: 20px 18px;
+  color: #fff;
+  position: sticky;
+  top: 20px;
+}
+
+.adv-sum-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+
+  h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+}
+
+.adv-sum-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.adv-sum-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 9px;
+  font-size: 12.5px;
+
+  span:first-child {
+    color: rgba(255,255,255,0.72);
+    white-space: nowrap;
+  }
+
+  span:last-child,
+  strong {
+    text-align: right;
+    color: #fff;
+    font-weight: 500;
+    word-break: break-word;
+  }
+}
+
+.adv-sum-divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.25);
+  margin: 14px 0;
+}
+
+.adv-sum-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 4px;
+
+  span {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.72);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+}
+
+.adv-sum-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
 }

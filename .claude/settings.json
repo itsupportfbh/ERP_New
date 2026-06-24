@@ -12,7 +12,9 @@
       "Bash(xargs grep -l \"selector: 'erp-dropdown'\")",
       "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" log --oneline -10 -- \"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
       "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 03f9f9e:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
-      "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 78ff235:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")"
+      "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 78ff235:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
+      "Bash(xargs grep -l \"approvalLevelName\\\\|role.*dashboard\\\\|DashboardComponent\")",
+      "Bash(dir \"C:/Users/CCSPLNB03/source/repos/Unity_ERP/starter-kit/src/app/main/sample/\" /b)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
@@ -20,7 +22,8 @@
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\Controllers",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\Repositories",
-      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_Lat\\FinanceApi\\Repositories"
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_Lat\\FinanceApi\\Repositories",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\ModelDTO"
     ]
   }
 }

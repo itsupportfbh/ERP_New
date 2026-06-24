@@ -140,6 +140,10 @@ export class FinanceService {
     return this.http.get(this.url('/Dashboard'));
   }
 
+  financeSummaryDashboard(companyId: number): Observable<any> {
+    return this.http.get(this.url('/Dashboard/FinanceSummaryDashboard'), { params: this.params({ companyId }) });
+  }
+
   gstYears(): Observable<any> {
     return this.http.get(this.url('/GstReturns/years'));
   }
