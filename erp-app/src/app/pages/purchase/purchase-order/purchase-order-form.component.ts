@@ -1,7 +1,10 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
+import { DocumentNumberService } from '../../../core/services/document-number.service';
+import { MasterService } from '../../../core/services/master.service';
+import { CalculatedTaxMode, TaxDecisionService } from '../../../core/services/tax-decision.service';
+import { PurchaseService } from '../purchase.service';
 
 interface POLine {
   prId: number | null;
@@ -33,8 +36,6 @@ const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Appro
   styleUrls: ['./purchase-order-form.component.scss']
 })
 export class PurchaseOrderFormComponent implements OnInit {
-
-  // ── Wizard ──────────────────────────────────────────
   poStep = 0;
   poSteps = ['Header', 'Lines', 'Review'];
 
@@ -51,7 +52,6 @@ export class PurchaseOrderFormComponent implements OnInit {
   error = '';
   private cleanHash = '';
 
-  // ── Header fields ────────────────────────────────────
   purchaseOrderNo = '';
   supplierId: number | null = null;
   paymentTermId: number | null = null;
@@ -69,15 +69,12 @@ export class PurchaseOrderFormComponent implements OnInit {
   approvalStatus = 1;
   gstPct = 0;
 
-  // ── Lines ────────────────────────────────────────────
   lines: POLine[] = [];
 
-  // ── Modal ────────────────────────────────────────────
   showModal = false;
   editingIndex: number | null = null;
   modalLine: POLine = this.emptyLine();
 
-  // ── Dropdowns ────────────────────────────────────────
   supplierOptions: any[] = [];
   paymentTermOptions: any[] = [];
   currencyOptions: any[] = [];
@@ -87,19 +84,27 @@ export class PurchaseOrderFormComponent implements OnInit {
   taxModeOptions = [
     { label: 'Exclusive', value: 'Exclusive' },
     { label: 'Inclusive', value: 'Inclusive' },
-    { label: 'Zero Rated', value: 'ZeroRated' },
+    { label: 'Zero Rated', value: 'ZeroRated' }
   ];
   budgetOptions: any[] = [];
   availablePROptions: any[] = [];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+  companyId = Number(localStorage.getItem('companyId') || 0);
+  companyCountryId = Number(localStorage.getItem('companyCountryId') || 0) || null;
+  supplierCountryId: number | null = null;
+  defaultLineTaxMode: CalculatedTaxMode = 'Exclusive';
+  private suggestedPoNo = '';
   private _locationNameFromEdit = '';
   private _locationNameFromPR = '';
 
   constructor(
     private svc: PurchaseService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private masterSvc: MasterService,
+    private docNoSvc: DocumentNumberService,
+    private taxDecisionSvc: TaxDecisionService
   ) {}
 
   ngOnInit(): void {
@@ -112,6 +117,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     const fromRecipe = this.route.snapshot.queryParamMap.get('fromRecipe');
 
     this.isEdit = !!paramId && paramId !== 'new';
+    this.loadCompanyContext();
     this.loadLookups();
 
     if (fromSO) {
@@ -146,19 +152,50 @@ export class PurchaseOrderFormComponent implements OnInit {
     }
   }
 
+  private loadCompanyContext(): void {
+    const applySuggestion = () => {
+      this.suggestedPoNo = this.docNoSvc.peekNextNumber('PO', this.companyId || undefined);
+      if (!this.isEdit && !this.purchaseOrderNo) this.purchaseOrderNo = this.suggestedPoNo;
+    };
+    if (!this.companyId) {
+      applySuggestion();
+      return;
+    }
+    this.masterSvc.getCompanyById(this.companyId).subscribe({
+      next: (res: any) => {
+        if (res?.numberSeries?.length) this.docNoSvc.cacheCompanySeries(this.companyId, res.numberSeries);
+        const countryId = Number(res?.financeTax?.countryId ?? res?.general?.countryId ?? 0) || null;
+        this.companyCountryId = countryId;
+        if (countryId) localStorage.setItem('companyCountryId', String(countryId));
+        applySuggestion();
+      },
+      error: () => applySuggestion()
+    });
+  }
+
   private emptyLine(): POLine {
     return {
-      prId: null, prNumber: '',
-      itemId: null, itemCode: '', itemName: '', description: '',
-      quantity: null, uomId: null,
-      unitPrice: null, discountPct: null,
-      taxCodeId: null, taxRate: 0, taxMode: 'Exclusive', taxAmt: 0, lineTotal: 0,
-      budgetId: null, budget: '',
+      prId: null,
+      prNumber: '',
+      itemId: null,
+      itemCode: '',
+      itemName: '',
+      description: '',
+      quantity: null,
+      uomId: null,
+      unitPrice: null,
+      discountPct: null,
+      taxCodeId: null,
+      taxRate: 0,
+      taxMode: this.defaultLineTaxMode,
+      taxAmt: 0,
+      lineTotal: 0,
+      budgetId: null,
+      budget: '',
       remarks: ''
     };
   }
 
-  // ── Lookups ──────────────────────────────────────────
   loadLookups(): void {
     this.svc.getSuppliers().subscribe(r =>
       this.supplierOptions = this.svc.unwrap(r).map((s: any) => ({
@@ -204,37 +241,32 @@ export class PurchaseOrderFormComponent implements OnInit {
       })));
   }
 
-  // ── Parse lines ──────────────────────────────────────
   private parsePoLines(raw: any): POLine[] {
     const parsed: any[] = typeof raw === 'string'
       ? JSON.parse(raw || '[]')
       : (Array.isArray(raw) ? raw : []);
-    return parsed.map((l: any) => {
-      const line: POLine = {
-        prId: l.prId ?? null,
-        prNumber: l.prNo ?? l.prNumber ?? '',
-        itemId: l.itemId ?? null,
-        itemCode: l.itemCode ?? '',
-        itemName: l.itemSearch ?? l.itemName ?? '',
-        description: l.description ?? '',
-        quantity: l.qty ?? l.quantity ?? null,
-        uomId: l.uomId ?? null,
-        unitPrice: l.unitPrice ?? null,
-        discountPct: l.discountPct ?? null,
-        taxCodeId: l.taxCodeId ?? null,
-        taxRate: Number(l.taxRate ?? 0),
-        taxMode: l.taxMode ?? 'Exclusive',
-        taxAmt: Number(l.taxAmt ?? 0),
-        lineTotal: Number(l.lineTotal ?? 0),
-        budgetId: l.budgetId ?? null,
-        budget: l.budget ?? '',
-        remarks: l.remarks ?? ''
-      };
-      return line;
-    });
+    return parsed.map((l: any) => ({
+      prId: l.prId ?? null,
+      prNumber: l.prNo ?? l.prNumber ?? '',
+      itemId: l.itemId ?? null,
+      itemCode: l.itemCode ?? '',
+      itemName: l.itemSearch ?? l.itemName ?? '',
+      description: l.description ?? '',
+      quantity: l.qty ?? l.quantity ?? null,
+      uomId: l.uomId ?? null,
+      unitPrice: l.unitPrice ?? null,
+      discountPct: l.discountPct ?? null,
+      taxCodeId: l.taxCodeId ?? null,
+      taxRate: Number(l.taxRate ?? 0),
+      taxMode: l.taxMode ?? this.defaultLineTaxMode,
+      taxAmt: Number(l.taxAmt ?? 0),
+      lineTotal: Number(l.lineTotal ?? 0),
+      budgetId: l.budgetId ?? null,
+      budget: l.budget ?? '',
+      remarks: l.remarks ?? ''
+    }));
   }
 
-  // ── Load for edit ────────────────────────────────────
   loadForEdit(): void {
     this.loading = true;
     this.svc.getPurchaseOrderById(this.id!).subscribe({
@@ -266,7 +298,6 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
-  // ── Load from draft ──────────────────────────────────
   loadFromDraft(): void {
     this.loading = true;
     this.svc.getPurchaseOrderDraftById(this.draftId!).subscribe({
@@ -296,19 +327,17 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
-  // ── Load from PR ─────────────────────────────────────
   loadFromPR(prId: number): void {
     this.loading = true;
     this.svc.getPurchaseRequestById(prId).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
         this.deliveryDate = d.deliveryDate ? d.deliveryDate.substring(0, 10) : '';
-        // Inherit sourceType/sourceRefId from the PR if it was created from a SO or Recipe
         if (!this.sourceType) {
           const prSourceType = d.sourceType ?? d.SourceType ?? '';
           const prSourceRefId = Number(d.sourceRefId ?? d.SourceRefId ?? 0);
-          if (prSourceType) { this.sourceType = String(prSourceType).toUpperCase(); }
-          if (prSourceRefId) { this.sourceRefId = prSourceRefId; }
+          if (prSourceType) this.sourceType = String(prSourceType).toUpperCase();
+          if (prSourceRefId) this.sourceRefId = prSourceRefId;
         }
         const rawLines = d.pRLines ?? d.prLines ?? d.PRLines ?? '[]';
         const parsed: any[] = typeof rawLines === 'string'
@@ -317,7 +346,7 @@ export class PurchaseOrderFormComponent implements OnInit {
 
         this.lines = parsed.map((l: any) => ({
           ...this.emptyLine(),
-          prId: prId,
+          prId,
           prNumber: d.purchaseRequestNo ?? '',
           itemId: l.itemId ?? null,
           itemCode: l.itemCode ?? '',
@@ -329,15 +358,11 @@ export class PurchaseOrderFormComponent implements OnInit {
           remarks: l.remarks ?? ''
         }));
 
-        // Auto-set outlet from the first PR line's location
         const firstLine = parsed[0];
         const locName = firstLine?.locationSearch ?? firstLine?.location ?? '';
         if (locName) {
-          if (this.locationOptions.length) {
-            this.autoSetLocationByName(locName);
-          } else {
-            this._locationNameFromPR = locName;
-          }
+          if (this.locationOptions.length) this.autoSetLocationByName(locName);
+          else this._locationNameFromPR = locName;
         }
 
         this.loading = false;
@@ -347,7 +372,6 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
-  // ── RFQ → PO ─────────────────────────────────────────
   private tryApplyRfqDraft(): void {
     try {
       const raw = sessionStorage.getItem('rfqPoDraft');
@@ -379,53 +403,67 @@ export class PurchaseOrderFormComponent implements OnInit {
 
       sessionStorage.removeItem('rfqPoDraft');
       Swal.fire({ icon: 'success', title: 'RFQ Loaded', text: 'Supplier and quote lines loaded from RFQ winner.', timer: 2500, showConfirmButton: false });
-    } catch { /* ignore parse errors */ }
+    } catch {}
   }
 
-  // ── isDirty guard ─────────────────────────────────────
   private computeHash(): string {
     return JSON.stringify({
-      supplierId: this.supplierId, paymentTermId: this.paymentTermId,
-      currencyId: this.currencyId, fxRate: this.fxRate,
-      poDate: this.poDate, deliveryDate: this.deliveryDate,
-      locationId: this.locationId, remarks: this.remarks,
-      isOverseas: this.isOverseas, incotermsId: this.incotermsId,
-      shipping: this.shipping, discount: this.discount,
+      supplierId: this.supplierId,
+      paymentTermId: this.paymentTermId,
+      currencyId: this.currencyId,
+      fxRate: this.fxRate,
+      poDate: this.poDate,
+      deliveryDate: this.deliveryDate,
+      locationId: this.locationId,
+      remarks: this.remarks,
+      isOverseas: this.isOverseas,
+      incotermsId: this.incotermsId,
+      shipping: this.shipping,
+      discount: this.discount,
       lines: this.lines
     });
   }
   private markClean(): void { this.cleanHash = this.computeHash(); }
   get isDirty(): boolean { return this.computeHash() !== this.cleanHash; }
 
-  // ── Supplier / Currency events ───────────────────────
   onSupplierChange(): void {
     const found = this.supplierOptions.find(o => o.value === this.supplierId);
-    if (found?.raw) {
-      const s = found.raw;
-      if (s.paymentTermId) this.paymentTermId = s.paymentTermId;
-      if (s.currencyId) { this.currencyId = s.currencyId; this.onCurrencyChange(); }
-      if (s.incotermsId) this.incotermsId = s.incotermsId;
-      const countryId = s.countryId ?? s.CountryId ?? 0;
-      if (countryId) {
-        this.svc.getCountryById(countryId).subscribe({
-          next: (res: any) => {
-            const country = this.svc.unwrapOne(res);
-            const gst = Number(country?.gSTPercentage ?? country?.gstPercentage ?? country?.GSTPercentage ?? 0);
-            this.gstPct = gst;
-            this.onGstPctChange();
-          },
-          error: () => {}
-        });
-      }
+    if (!found?.raw) return;
+    const s = found.raw;
+    if (s.paymentTermId) this.paymentTermId = s.paymentTermId;
+    if (s.currencyId) { this.currencyId = s.currencyId; this.onCurrencyChange(); }
+    if (s.incotermsId) this.incotermsId = s.incotermsId;
+    const countryId = Number(s.countryId ?? s.CountryId ?? 0);
+    this.supplierCountryId = countryId || null;
+    if (countryId) {
+      this.svc.getCountryById(countryId).subscribe({
+        next: (res: any) => {
+          const country = this.svc.unwrapOne(res);
+          const gst = Number(country?.gSTPercentage ?? country?.gstPercentage ?? country?.GSTPercentage ?? 0);
+          this.applyTaxDecision(gst);
+        },
+        error: () => this.applyTaxDecision(this.gstPct)
+      });
+      return;
     }
+    this.applyTaxDecision(this.gstPct);
   }
 
   onCurrencyChange(): void {
     const baseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
+    const decision = this.taxDecisionSvc.decide({
+      companyCountryId: this.companyCountryId,
+      partnerCountryId: this.supplierCountryId,
+      companyCurrencyId: baseCurrencyId,
+      documentCurrencyId: this.currencyId,
+      defaultTaxRate: this.gstPct
+    });
+    this.isOverseas = decision.isOverseas;
     if (!this.currencyId || !baseCurrencyId || this.currencyId === baseCurrencyId) {
-      this.fxRate = 1; this.isOverseas = false; return;
+      this.fxRate = 1;
+      this.applyTaxDecision(this.gstPct);
+      return;
     }
-    this.isOverseas = true;
     const today = new Date().toISOString().substring(0, 10);
     this.svc.getExchangeRate(this.currencyId, baseCurrencyId, today).subscribe({
       next: (res: any) => {
@@ -434,6 +472,7 @@ export class PurchaseOrderFormComponent implements OnInit {
       },
       error: () => {}
     });
+    this.applyTaxDecision(this.gstPct);
   }
 
   onOverseasToggle(): void {
@@ -448,46 +487,55 @@ export class PurchaseOrderFormComponent implements OnInit {
   onGstPctChange(): void {
     this.lines.forEach(l => {
       l.taxRate = this.gstPct ?? 0;
+      if (this.defaultLineTaxMode === 'ZeroRated' && l.taxMode !== 'Inclusive') l.taxMode = 'ZeroRated';
+      if (this.defaultLineTaxMode === 'Exclusive' && l.taxMode === 'ZeroRated') l.taxMode = 'Exclusive';
       this.recalcLine(l);
     });
     if (this.showModal) {
       this.modalLine.taxRate = this.gstPct ?? 0;
+      if (this.defaultLineTaxMode === 'ZeroRated' && this.modalLine.taxMode !== 'Inclusive') this.modalLine.taxMode = 'ZeroRated';
+      if (this.defaultLineTaxMode === 'Exclusive' && this.modalLine.taxMode === 'ZeroRated') this.modalLine.taxMode = 'Exclusive';
       this.recalcLine(this.modalLine);
     }
   }
 
-  // Auto-fill contactNumber when outlet is selected manually
+  private applyTaxDecision(defaultTaxRate: number): void {
+    const baseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
+    const decision = this.taxDecisionSvc.decide({
+      companyCountryId: this.companyCountryId,
+      partnerCountryId: this.supplierCountryId,
+      companyCurrencyId: baseCurrencyId,
+      documentCurrencyId: this.currencyId,
+      defaultTaxRate
+    });
+    this.isOverseas = decision.isOverseas;
+    this.gstPct = decision.taxRate;
+    this.defaultLineTaxMode = decision.taxMode;
+    this.onGstPctChange();
+  }
+
   onLocationChange(): void {
     const found = this.locationOptions.find(o => o.value === this.locationId);
-    if (found?.raw?.contactNumber) {
-      this.contactNumber = found.raw.contactNumber;
-    }
+    if (found?.raw?.contactNumber) this.contactNumber = found.raw.contactNumber;
   }
 
-  // Set locationId by name string (used when loading from PR / edit)
   private autoSetLocationByName(name: string): void {
     if (!name) return;
-    const found = this.locationOptions.find(o =>
-      (o.label || '').toLowerCase() === name.toLowerCase()
-    );
-    if (found) {
-      this.locationId = found.value;
-      if (!this.contactNumber && found.raw?.contactNumber) {
-        this.contactNumber = found.raw.contactNumber;
-      }
-    }
+    const found = this.locationOptions.find(o => (o.label || '').toLowerCase() === name.toLowerCase());
+    if (!found) return;
+    this.locationId = found.value;
+    if (!this.contactNumber && found.raw?.contactNumber) this.contactNumber = found.raw.contactNumber;
   }
 
-  // Outlet + Contact are locked when lines were loaded from a PR
   get lockHeaderByPR(): boolean {
     return !!(this.fromPrId || this.fromReorderPrId || this.fromAlertPrId) && this.lines.length > 0;
   }
 
-  // ── Modal actions ─────────────────────────────────────
   openAddLine(): void {
     this.editingIndex = null;
     this.modalLine = this.emptyLine();
-    if (this.gstPct > 0) this.modalLine.taxRate = this.gstPct;
+    this.modalLine.taxMode = this.defaultLineTaxMode;
+    this.modalLine.taxRate = this.gstPct > 0 ? this.gstPct : 0;
     this.error = '';
     this.showModal = true;
   }
@@ -503,21 +551,21 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   onModalItemChange(): void {
     const found = this.itemOptions.find(o => o.value === this.modalLine.itemId);
-    if (found?.raw) {
-      this.modalLine.itemCode = found.raw.itemCode ?? '';
-      this.modalLine.itemName = found.raw.itemName ?? found.label;
-      if (!this.modalLine.description) this.modalLine.description = found.raw.description ?? '';
-      if (found.raw.uomId) this.modalLine.uomId = found.raw.uomId;
-      if (this.supplierId) {
-        this.svc.getItemSupplierPrices(this.modalLine.itemId!).subscribe(res => {
-          const prices = this.svc.unwrap(res);
-          const match = prices.find((p: any) => p.supplierId === this.supplierId);
-          if (match) {
-            this.modalLine.unitPrice = match.unitPrice ?? match.price;
-            this.recalcLine(this.modalLine);
-          }
-        });
-      }
+    if (!found?.raw) return;
+    this.modalLine.itemCode = found.raw.itemCode ?? '';
+    this.modalLine.itemName = found.raw.itemName ?? found.label;
+    if (!this.modalLine.description) this.modalLine.description = found.raw.description ?? '';
+    if (found.raw.uomId) this.modalLine.uomId = found.raw.uomId;
+    if (!this.modalLine.taxMode) this.modalLine.taxMode = this.defaultLineTaxMode;
+    if (this.supplierId) {
+      this.svc.getItemSupplierPrices(this.modalLine.itemId!).subscribe(res => {
+        const prices = this.svc.unwrap(res);
+        const match = prices.find((p: any) => p.supplierId === this.supplierId);
+        if (match) {
+          this.modalLine.unitPrice = match.unitPrice ?? match.price;
+          this.recalcLine(this.modalLine);
+        }
+      });
     }
   }
 
@@ -560,6 +608,7 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   recalcModal(): void {
     this.modalLine.taxRate = this.gstPct ?? 0;
+    if (this.defaultLineTaxMode === 'ZeroRated' && this.modalLine.taxMode !== 'Inclusive') this.modalLine.taxMode = 'ZeroRated';
     this.recalcLine(this.modalLine);
   }
 
@@ -571,11 +620,8 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (!this.modalLine.quantity || (this.modalLine.quantity ?? 0) <= 0) { this.error = 'Please enter a valid Quantity.'; return; }
     if (!this.modalLine.unitPrice || (this.modalLine.unitPrice ?? 0) <= 0) { this.error = 'Please enter a Unit Price.'; return; }
     this.recalcLine(this.modalLine);
-    if (this.editingIndex !== null) {
-      this.lines[this.editingIndex] = { ...this.modalLine };
-    } else {
-      this.lines.push({ ...this.modalLine });
-    }
+    if (this.editingIndex !== null) this.lines[this.editingIndex] = { ...this.modalLine };
+    else this.lines.push({ ...this.modalLine });
     this.closeModal();
   }
 
@@ -587,6 +633,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     this.recalcLine(this.modalLine);
     this.lines.push({ ...this.modalLine });
     this.modalLine = this.emptyLine();
+    this.modalLine.taxMode = this.defaultLineTaxMode;
     if (this.gstPct > 0) this.modalLine.taxRate = this.gstPct;
   }
 
@@ -606,14 +653,13 @@ export class PurchaseOrderFormComponent implements OnInit {
       ['Tax Amt', line.taxAmt?.toFixed(2)],
       ['Line Total', line.lineTotal?.toFixed(2)],
       ['Budget', line.budget],
-      ['Remarks', line.remarks],
+      ['Remarks', line.remarks]
     ];
     const html = rows.filter(([, v]) => v != null && v !== '' && v !== '—')
       .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
     Swal.fire({ title: line.itemName || 'Line Detail', html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#16a34a', width: 500, showCloseButton: true });
   }
 
-  // ── Tax recalc ────────────────────────────────────────
   recalcLine(line: POLine): void {
     const base = (line.quantity ?? 0) * (line.unitPrice ?? 0) * (1 - (line.discountPct ?? 0) / 100);
     if (line.taxMode === 'Inclusive') {
@@ -628,7 +674,6 @@ export class PurchaseOrderFormComponent implements OnInit {
     }
   }
 
-  // ── Wizard navigation ─────────────────────────────────
   poGo(step: number): void {
     this.error = '';
     const next = this.poStep + step;
@@ -647,19 +692,10 @@ export class PurchaseOrderFormComponent implements OnInit {
     this.poStep = Math.max(0, Math.min(next, this.poSteps.length - 1));
   }
 
-  // ── Totals ────────────────────────────────────────────
-  get subTotal(): number {
-    return this.lines.reduce((s, l) => s + (l.quantity ?? 0) * (l.unitPrice ?? 0), 0);
-  }
-  get lineDiscountTotal(): number {
-    return this.lines.reduce((s, l) => s + (l.quantity ?? 0) * (l.unitPrice ?? 0) * ((l.discountPct ?? 0) / 100), 0);
-  }
-  get totalLineTax(): number {
-    return this.lines.reduce((s, l) => s + (l.taxAmt ?? 0), 0);
-  }
-  get lineGrandTotal(): number {
-    return this.lines.reduce((s, l) => s + (l.lineTotal ?? 0), 0);
-  }
+  get subTotal(): number { return this.lines.reduce((s, l) => s + (l.quantity ?? 0) * (l.unitPrice ?? 0), 0); }
+  get lineDiscountTotal(): number { return this.lines.reduce((s, l) => s + (l.quantity ?? 0) * (l.unitPrice ?? 0) * ((l.discountPct ?? 0) / 100), 0); }
+  get totalLineTax(): number { return this.lines.reduce((s, l) => s + (l.taxAmt ?? 0), 0); }
+  get lineGrandTotal(): number { return this.lines.reduce((s, l) => s + (l.lineTotal ?? 0), 0); }
   get shippingWithTax(): number {
     const ship = this.shipping ?? 0;
     return +(ship + ship * (this.gstPct / 100)).toFixed(2);
@@ -672,9 +708,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     const baseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
     return !!this.currencyId && !!baseCurrencyId && this.currencyId !== baseCurrencyId;
   }
-  get netTotalBase(): number {
-    return +(this.netTotal * (this.fxRate ?? 1)).toFixed(2);
-  }
+  get netTotalBase(): number { return +(this.netTotal * (this.fxRate ?? 1)).toFixed(2); }
   get approvalStatusLabel(): string { return STATUS_MAP[this.approvalStatus] ?? 'Pending'; }
 
   getCurrencyCode(): string {
@@ -685,11 +719,21 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   getLabel(opts: any[], val: any): string { return opts.find(o => o.value === val)?.label ?? '—'; }
 
-  // ── Payload builder ───────────────────────────────────
+  private resolvePurchaseOrderNo(): string {
+    const current = (this.purchaseOrderNo || '').trim();
+    if (this.isEdit && current) return current;
+    if (!current || current === this.suggestedPoNo) {
+      this.purchaseOrderNo = this.docNoSvc.reserveNextNumber('PO', this.companyId || undefined);
+      return this.purchaseOrderNo;
+    }
+    return current;
+  }
+
   private buildPayload(statusOverride?: number): any {
+    const finalPoNo = this.resolvePurchaseOrderNo();
     const locationName = this.getLabel(this.locationOptions, this.locationId);
     const poLinesData = this.lines.map(l => ({
-      __fromPR: !!(l.prNumber),
+      __fromPR: !!l.prNumber,
       prNo: l.prNumber,
       prId: l.prId ?? null,
       itemId: l.itemId,
@@ -727,7 +771,7 @@ export class PurchaseOrderFormComponent implements OnInit {
       SubTotal: +this.lineGrandTotal.toFixed(2),
       NetTotal: this.netTotal,
       PoLines: JSON.stringify(poLinesData),
-      PurchaseOrderNo: this.purchaseOrderNo || 'PO-00000',
+      PurchaseOrderNo: finalPoNo,
       IsActive: true,
       CreatedBy: this.loginUserId ?? 0,
       UpdatedBy: this.loginUserId ?? 0,
@@ -736,9 +780,9 @@ export class PurchaseOrderFormComponent implements OnInit {
     };
   }
 
-  // ── Save Draft ────────────────────────────────────────
   saveDraft(): void {
-    this.saving = true; this.error = '';
+    this.saving = true;
+    this.error = '';
     const payload = { ...this.buildPayload(0), ApprovalStatus: 0 };
     const obs$ = this.draftId
       ? this.svc.updatePurchaseOrderDraft({ Id: this.draftId, ...payload })
@@ -757,9 +801,9 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
-  // ── Submit ────────────────────────────────────────────
   submit(): void {
-    this.error = ''; this.saving = true;
+    this.error = '';
+    this.saving = true;
     this.svc.checkPeriodLock(this.poDate).subscribe({
       next: (res: any) => {
         const d = res?.data ?? res ?? {};
@@ -797,23 +841,28 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
-  // ── Approve / Reject ──────────────────────────────────
   approve(status: 2 | 3): void {
     if (!this.id) return;
     const action = status === 2 ? 'Approve' : 'Reject';
     Swal.fire({
-      title: `${action} PO?`, text: `${action} purchase order ${this.purchaseOrderNo}?`,
-      icon: 'question', showCancelButton: true, confirmButtonText: action,
-      confirmButtonColor: '#16a34a', cancelButtonColor: '#dc2626'
+      title: `${action} PO?`,
+      text: `${action} purchase order ${this.purchaseOrderNo}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: action,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626'
     }).then(r => {
       if (!r.isConfirmed) return;
-      this.saving = true; this.error = '';
+      this.saving = true;
+      this.error = '';
       const req$ = status === 2
         ? this.svc.approvePurchaseOrder(this.id!, this.netTotal)
         : this.svc.rejectPurchaseOrder(this.id!, this.netTotal);
       req$.subscribe({
         next: () => {
-          this.saving = false; this.approvalStatus = status;
+          this.saving = false;
+          this.approvalStatus = status;
           Swal.fire({ icon: status === 2 ? 'success' : 'info', title: status === 2 ? 'Approved!' : 'Rejected', text: `PO ${status === 2 ? 'approved' : 'rejected'} successfully.`, confirmButtonColor: '#16a34a' });
         },
         error: (err: any) => {
@@ -825,14 +874,17 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
-  // ── Navigation / Leave guard ──────────────────────────
   async back(): Promise<void> {
     if (!this.isEdit && this.isDirty) {
       const result = await Swal.fire({
-        icon: 'question', title: 'Leave this page?',
+        icon: 'question',
+        title: 'Leave this page?',
         text: 'You have unsaved changes. Save as draft before leaving?',
-        showCancelButton: true, showDenyButton: true,
-        confirmButtonText: 'Save as Draft', denyButtonText: 'Discard', cancelButtonText: 'Stay',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Save as Draft',
+        denyButtonText: 'Discard',
+        cancelButtonText: 'Stay',
         confirmButtonColor: '#16a34a'
       });
       if (result.isConfirmed) { this.saveDraft(); return; }
@@ -845,7 +897,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   private goToList(): void { this.router.navigate(['/app/purchase/orders']); }
 
   get title(): string {
-    if (this.isEdit) return `Edit PO${this.purchaseOrderNo ? ' – ' + this.purchaseOrderNo : ''}`;
+    if (this.isEdit) return `Edit PO${this.purchaseOrderNo ? ' - ' + this.purchaseOrderNo : ''}`;
     if (this.draftId) return 'Edit PO Draft';
     if (this.fromPrId || this.fromReorderPrId || this.fromAlertPrId) return 'New PO from PR';
     return 'New Purchase Order';

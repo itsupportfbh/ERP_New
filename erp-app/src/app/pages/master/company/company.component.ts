@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
+import { DocumentNumberService } from '../../../core/services/document-number.service';
 
 type CompanyTab = 'general' | 'financeTax' | 'defaults' | 'numberSeries' | 'adminUser' | 'audit';
 
@@ -67,7 +68,11 @@ export class CompanyComponent implements OnInit {
   userId: number = 0;
   functionId = 'company';
 
-  constructor(private masterSvc: MasterService, private permissionService: PermissionService) {
+  constructor(
+    private masterSvc: MasterService,
+    private permissionService: PermissionService,
+    private docNoSvc: DocumentNumberService
+  ) {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
   }
@@ -239,6 +244,12 @@ export class CompanyComponent implements OnInit {
   save(): void {
     if (!this.general.name?.trim()) { this.message = 'Company Name is required.'; this.isError = true; this.activeTab = 'general'; return; }
     if (!this.general.code?.trim()) { this.message = 'Company Code is required.'; this.isError = true; this.activeTab = 'general'; return; }
+    const normalizedSeries = this.docNoSvc.normalizeSeries(this.numberSeries);
+    if (!normalizedSeries.length) { this.message = 'At least one valid number series is required.'; this.isError = true; this.activeTab = 'numberSeries'; return; }
+    const hasDuplicateDocument = new Set(normalizedSeries.map(x => x.document.toLowerCase())).size !== normalizedSeries.length;
+    if (hasDuplicateDocument) { this.message = 'Duplicate document rows found in number series.'; this.isError = true; this.activeTab = 'numberSeries'; return; }
+    const hasDuplicatePrefix = new Set(normalizedSeries.map(x => x.prefix.toLowerCase())).size !== normalizedSeries.length;
+    if (hasDuplicatePrefix) { this.message = 'Duplicate prefixes are not allowed in number series.'; this.isError = true; this.activeTab = 'numberSeries'; return; }
 
     const userId = Number(localStorage.getItem('id') || 0);
     const payload: any = {
@@ -248,7 +259,7 @@ export class CompanyComponent implements OnInit {
       general: { ...this.general, createdBy: userId },
       financeTax: { ...this.financeTax },
       defaults: { ...this.defaults },
-      numberSeries: this.numberSeries.map(x => ({ document: (x.document || '').trim(), prefix: (x.prefix || '').trim(), nextNo: Number(x.nextNo || 1), reset: !!x.reset })),
+      numberSeries: normalizedSeries,
       integrations: { ...this.integrations },
       initialAdminUser: { ...this.adminUser, password: (this.isEditMode && !this.adminUser.password) ? null : this.adminUser.password },
       logoBase64: this.logoPreview
@@ -264,6 +275,14 @@ export class CompanyComponent implements OnInit {
         this.saving = false;
         this.message = res?.message || (this.isEditMode ? 'Company updated.' : 'Company created.');
         this.isError = false;
+        const currentCompanyId = Number(localStorage.getItem('companyId') || 0);
+        const affectedCompanyId = this.isEditMode ? this.selectedId : currentCompanyId;
+        if (affectedCompanyId) {
+          this.docNoSvc.cacheCompanySeries(affectedCompanyId, normalizedSeries);
+        }
+        if (this.financeTax?.countryId) {
+          localStorage.setItem('companyCountryId', String(this.financeTax.countryId));
+        }
         this.auditTrail.unshift({ date: new Date().toLocaleString(), user: String(userId), change: this.isEditMode ? 'Company updated' : 'Company created' });
         this.activeTab = 'audit';
         setTimeout(() => { this.cancel(); this.load(); }, 1500);
