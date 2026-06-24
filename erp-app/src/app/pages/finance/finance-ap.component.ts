@@ -305,7 +305,7 @@ export class FinanceApComponent implements OnInit {
             paidAmount:  this.money(x, ['paid','Paid','paidAmount','PaidAmount']),
             debitNoteAmount: this.money(x, ['debitNote','DebitNote','debitNoteAmount','DebitNoteAmount']),
             advanceAmount:   this.money(x, ['advance','Advance','advanceAppliedAmount','AdvanceAppliedAmount']),
-            payableAfterAdvance: this.money(x, ['outstanding','Outstanding','balance','Balance','netPayableAmount','NetPayableAmount']),
+            payableAfterAdvance: this.money(x, ['outstandingAmount','OutstandingAmount','outstanding','Outstanding','balance','Balance','netPayableAmount','NetPayableAmount']),
             currencyName: x.currencyName ?? x.CurrencyName ?? 'SGD',
             fxRate: Number(x.fxRate ?? x.FxRate ?? 1) || 1,
             isSelected: false
