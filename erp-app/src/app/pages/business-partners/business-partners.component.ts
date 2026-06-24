@@ -1,6 +1,5 @@
-﻿import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { Router } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { RowAction, TableColumn, SortState } from '../../shared/components/data-table/data-table.component';
 import { BusinessPartnersService } from './business-partners.service';
@@ -23,6 +22,7 @@ export class BusinessPartnersComponent implements OnInit {
   pageSize = 10;
   sort: SortState = { key: '', dir: 'asc' };
   allData: any[] = [];
+  filteredData: any[] = [];
   tableData: any[] = [];
   selectedRows: any[] = [];
 
@@ -31,11 +31,11 @@ export class BusinessPartnersComponent implements OnInit {
     suppliers: 'bp-supplier',
     users: 'users'
   };
-  private loginUserId: number = 0;
+  private loginUserId = 0;
   tabPermissions: Record<PartnerTab, FunctionPermission>;
 
   private readonly allUserRowActions: RowAction[] = [
-    { key: 'edit',   label: 'Edit',   icon: 'edit',   btnClass: 'info' },
+    { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'info' },
     { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' }
   ];
 
@@ -76,7 +76,7 @@ export class BusinessPartnersComponent implements OnInit {
     this.tabPermissions = {
       customers: this.permissionService.getEmptyPermission('bp-customer'),
       suppliers: this.permissionService.getEmptyPermission('bp-supplier'),
-      users:     this.permissionService.getEmptyPermission('users')
+      users: this.permissionService.getEmptyPermission('users')
     };
   }
 
@@ -94,13 +94,13 @@ export class BusinessPartnersComponent implements OnInit {
 
   get rowActions(): RowAction[] {
     return this.allUserRowActions.filter(a =>
-      (a.key === 'edit'   && this.canEdit()) ||
+      (a.key === 'edit' && this.canEdit()) ||
       (a.key === 'delete' && this.canDelete())
     );
   }
 
   canCreate(): boolean { return this.permissionService.hasCreate(this.tabPermissions[this.activeTab]); }
-  canEdit():   boolean { return this.permissionService.hasEdit(this.tabPermissions[this.activeTab]); }
+  canEdit(): boolean { return this.permissionService.hasEdit(this.tabPermissions[this.activeTab]); }
   canDelete(): boolean { return this.permissionService.hasDelete(this.tabPermissions[this.activeTab]); }
 
   private loadAllTabPermissions(): void {
@@ -147,12 +147,14 @@ export class BusinessPartnersComponent implements OnInit {
     request.subscribe({
       next: response => {
         this.allData = this.partners.unwrapRows(response).map(row => this.normalizeRow(row));
+        this.filteredData = [...this.allData];
         this.loading = false;
         this.applyView();
       },
       error: () => {
         this.loading = false;
         this.allData = [];
+        this.filteredData = [];
         this.tableData = [];
         this.error = `Unable to load ${this.activeTab.replace('-', ' ')} from API.`;
         void Swal.fire('Load Failed', this.error, 'error');
@@ -174,8 +176,12 @@ export class BusinessPartnersComponent implements OnInit {
       });
     }
 
+    this.filteredData = rows;
+    const totalPages = Math.max(1, Math.ceil(this.filteredData.length / this.pageSize));
+    if (this.currentPage > totalPages) this.currentPage = totalPages;
+
     const start = (this.currentPage - 1) * this.pageSize;
-    this.tableData = rows.slice(start, start + this.pageSize);
+    this.tableData = this.filteredData.slice(start, start + this.pageSize);
   }
 
   onSearch(): void {
@@ -195,7 +201,7 @@ export class BusinessPartnersComponent implements OnInit {
   }
 
   onPageSize(size: number): void {
-    this.pageSize = size;
+    this.pageSize = Number(size);
     this.currentPage = 1;
     this.applyView();
   }
@@ -284,7 +290,7 @@ export class BusinessPartnersComponent implements OnInit {
       return {
         ...row,
         customerId: row?.customerId ?? row?.CustomerId ?? row?.id ?? row?.Id,
-         kycId: row?.kycId ?? row?.KycId ?? row?.id ?? row?.Id ?? null,
+        kycId: row?.kycId ?? row?.KycId ?? row?.id ?? row?.Id ?? null,
         customerName: row?.customerName ?? row?.CustomerName ?? row?.name ?? '',
         customerCode: row?.customerCode ?? row?.CustomerCode ?? '',
         customerGroupName: row?.customerGroupName ?? row?.CustomerGroupName ?? '',

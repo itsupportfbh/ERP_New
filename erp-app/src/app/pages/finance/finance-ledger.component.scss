@@ -5,11 +5,16 @@ $border:    #e7e9ee;
 $muted:     #6c757d;
 $row-hover: #f5f9fb;
 
-:host { display: block; }
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
-.ledger-page {
-  display: flex; flex-direction: column; gap: 16px;
-  padding: 16px 16px 40px;
+/* Filter bar inside card */
+.gl-filter-bar {
+  display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+  padding: 10px 16px; border-bottom: 1px solid $border; background: #fafafa; flex-shrink: 0;
+}
+.gl-filter-field {
+  display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: $muted;
+  input { height: 32px; border: 1px solid $border; border-radius: 6px; padding: 0 8px; font-size: 13px; }
 }
 
 /* ── Header ── */

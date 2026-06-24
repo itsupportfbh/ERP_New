@@ -1,67 +1,62 @@
-<div class="ledger-page">
+<div class="list-page">
+  <div class="list-card">
 
-  <!-- Header -->
-  <div class="gl-head">
-    <div class="gl-head-left">
-      <div class="gl-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
+    <!-- Header -->
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">General Ledger</h3>
+          <p class="list-card-sub">Account balances &amp; movements &nbsp;·&nbsp; <strong>{{ baseCurrency }}</strong></p>
+        </div>
       </div>
-      <div>
-        <h2>General Ledger</h2>
-        <p>Account balances &amp; movements &nbsp;·&nbsp; <strong class="currency-tag">{{ baseCurrency }}</strong></p>
+      <div class="list-card-actions">
+        <button class="panel-toggle-btn" type="button" (click)="showFilter = !showFilter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:13px;height:13px">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+          </svg>
+          Filter
+        </button>
       </div>
     </div>
-    <button class="gl-filter-btn" type="button" (click)="showFilter = !showFilter" title="Date Filter">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
-      </svg>
-    </button>
-  </div>
 
-  <!-- Filter Popup -->
-  <div class="filter-popup" *ngIf="showFilter">
-    <div class="filter-row">
-      <label class="filter-field">
+    <!-- Date Filter Row -->
+    <div class="gl-filter-bar" *ngIf="showFilter">
+      <label class="gl-filter-field">
         <span>From Date</span>
         <input type="date" [(ngModel)]="fromDate">
       </label>
-      <label class="filter-field">
+      <label class="gl-filter-field">
         <span>To Date</span>
         <input type="date" [(ngModel)]="toDate">
       </label>
-      <button class="gl-btn-primary" type="button" (click)="load()">Apply</button>
-      <button class="gl-btn-outline" type="button" (click)="showFilter = false">Cancel</button>
+      <button class="list-add-btn" type="button" (click)="load()">Apply</button>
+      <button class="panel-toggle-btn" type="button" (click)="showFilter = false">Cancel</button>
     </div>
-  </div>
 
-  <!-- Controls: Show entries (left) + Search (right) -->
-  <div class="gl-controls">
-    <div class="gl-show-row">
-      <span>Show</span>
-      <div class="gl-select-wrap">
-        <select [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
+    <!-- Show entries + Search -->
+    <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
           <option [ngValue]="10">10</option>
           <option [ngValue]="25">25</option>
           <option [ngValue]="50">50</option>
           <option [ngValue]="9999">All</option>
         </select>
-        <span class="select-arrow">&#9660;</span>
+        entries
       </div>
-      <span>entries</span>
+      <input class="table-search-input" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
     </div>
-    <div class="gl-search-wrap">
-      <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input class="gl-search" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
-    </div>
-  </div>
 
-  <!-- Table Card -->
-  <div class="gl-table-card">
+    <!-- Loading -->
     <div class="gl-loading" *ngIf="loading">Loading...</div>
+
+    <!-- Table -->
     <div class="gl-table-wrap" *ngIf="!loading">
       <table class="gl-table">
         <thead>
@@ -119,7 +114,7 @@
       </table>
     </div>
 
-    <!-- Pagination Footer -->
+    <!-- Pagination -->
     <div class="gl-pager" *ngIf="displayRows.length > 0 && !loading">
       <span class="pager-info">Showing {{ pageFrom }}-{{ pageTo }} of {{ displayRows.length }} entries</span>
       <div class="pager-btns">
@@ -132,6 +127,6 @@
         <button class="pager-btn" type="button" (click)="setPage(currentPage + 1)" [disabled]="currentPage === totalPages">&#8250;</button>
       </div>
     </div>
-  </div>
 
+  </div>
 </div>

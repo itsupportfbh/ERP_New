@@ -1,13 +1,33 @@
-<div class="dt-pg">
-  <div class="dt-card">
-    <div class="dt-card-head"><h2>Return / Credit Notes</h2></div>
+<div class="list-page">
+  <div class="list-card">
+
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Return / Credit Notes</h3>
+          <p class="list-card-sub">Manage returns and credit adjustments</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <button *ngIf="perm.canCreate(fnId)" class="list-add-btn" (click)="create()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          New CN
+        </button>
+      </div>
+    </div>
+
     <div class="dt-controls">
       <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
       <div class="dt-right">
         <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="CN number / DO / customer / status"/></div>
-        <button *ngIf="perm.canCreate(fnId)" class="mbtn-add" (click)="create()">Add</button>
       </div>
     </div>
+
     <div class="dt-table-wrap">
       <table class="dt-table">
         <thead><tr>
@@ -41,20 +61,14 @@
       </table>
     </div>
     <div class="dt-footer">{{ filtered.length }} total</div>
+
   </div>
 
   <!-- View details modal -->
   <erp-doc-view-modal
-    [open]="showView"
-    [loading]="viewLoading"
-    [title]="viewTitle"
-    [subtitle]="viewSubtitle"
-    [info]="viewInfo"
-    [columns]="lineColumns"
-    [lines]="viewLines"
-    [totals]="viewTotals"
-    [showPrint]="false"
-    (close)="showView=false">
+    [open]="showView" [loading]="viewLoading" [title]="viewTitle" [subtitle]="viewSubtitle"
+    [info]="viewInfo" [columns]="lineColumns" [lines]="viewLines" [totals]="viewTotals"
+    [showPrint]="false" (close)="showView=false">
   </erp-doc-view-modal>
 
   <!-- Delete confirm -->

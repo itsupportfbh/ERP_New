@@ -5,7 +5,7 @@ $border:    #e7e9ee;
 $muted:     #6c757d;
 $row-hover: #f5f9fb;
 
-:host { display: block; }
+:host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
 .coa-page {
   display: flex; flex-direction: column; gap: 16px;

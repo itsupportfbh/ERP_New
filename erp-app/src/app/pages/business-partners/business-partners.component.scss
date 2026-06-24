@@ -1,19 +1,19 @@
-:host { display: block; }
-
-.page-header {
-  justify-content: flex-end;
+:host {
+  display: block;
+  flex: 1 0 auto;
+  min-height: 100%;
+  overflow: visible;
 }
 
-.filter-bar {
-  padding: 12px 14px;
+.list-page {
+  flex: 0 0 auto;
+  min-height: 100%;
+  overflow: visible;
+  padding-bottom: 16px;
 }
 
-.table-section {
-  padding: 0;
-}
-
-.error-text {
-  margin-top: 8px;
-  color: var(--danger);
-  font-size: 12px;
+.list-card {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
 }

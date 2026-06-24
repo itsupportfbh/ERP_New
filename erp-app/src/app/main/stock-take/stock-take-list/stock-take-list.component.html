@@ -1,23 +1,46 @@
-<div *ngIf="isPermissionLoaded; else loadingTemplate" class="page-container">
+<div *ngIf="isPermissionLoaded; else loadingTemplate" class="list-page">
   <ng-container *ngIf="canView(); else noAccessTemplate">
-    <div class="page-header">
-      <h2>Stock Take</h2>
-      <div class="btn-group">
-        <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="openCreate()" [disabled]="isPeriodLocked"
-          [attr.title]="isPeriodLocked ? (periodName ? 'Period ' + periodName + ' is locked' : 'Period is locked') : 'Create new stock take'">
-          + Add
-        </button>
-      </div>
-    </div>
+    <div class="list-card">
 
-    <div class="card table-section">
+      <div class="list-card-head">
+        <div class="list-card-title-block">
+          <div class="list-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="list-card-title">Stock Take</h3>
+            <p class="list-card-sub">Conduct and review physical stock counts</p>
+          </div>
+        </div>
+        <div class="list-card-actions">
+          <button class="list-add-btn" *ngIf="canCreate()" (click)="openCreate()" [disabled]="isPeriodLocked"
+            [attr.title]="isPeriodLocked ? (periodName ? 'Period ' + periodName + ' is locked' : 'Period is locked') : 'Create new stock take'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add
+          </button>
+        </div>
+      </div>
+
       <div class="table-search-bar">
+        <div class="tsb-left">
+          Show
+          <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+            <option [ngValue]="5">5</option>
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+          </select>
+          entries
+        </div>
         <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search Warehouse / Supplier / Status"/>
       </div>
       <erp-table
         [columns]="columns"
         [data]="tableData"
         [loading]="false"
+        [showControls]="false"
         [rowActions]="rowActions"
         (actionClick)="onAction($event)">
       </erp-table>
@@ -28,6 +51,7 @@
         (pageChange)="onPageChange($event)"
         (pageSizeChange)="onPageSizeChange($event)">
       </erp-pager>
+
     </div>
   </ng-container>
 </div>
@@ -35,110 +59,54 @@
 <!-- Lines Modal -->
 <div *ngIf="showLinesModal" (click)="closeLinesModal()"
     style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; display:flex; align-items:center; justify-content:center;">
-
-    <!-- Modal Card -->
     <div (click)="$event.stopPropagation()"
         style="width:800px; max-width:95vw; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.25);">
-
-        <!-- Header -->
-        <div
-            style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7;">
             <h3 style="margin:0; font-size:20px; line-height:1.2; font-weight:700; color:#374151;">Stock Take Lines</h3>
-            <button (click)="closeLinesModal()" aria-label="Close"
-                style="border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">×</button>
+            <button (click)="closeLinesModal()" style="border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#6b7280;">×</button>
         </div>
-
-        <!-- Body -->
         <div style="padding:16px 20px;">
             <div style="max-height:60vh; overflow:auto; border:1px solid #eef2f7; border-radius:10px;">
                 <table style="width:100%; border-collapse:collapse; font-size:14px; color:#111827;">
                     <thead>
                         <tr style="background:#2E5F73; color:#fff;">
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Location</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Supplier</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Item</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Scan/Barcode</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Available<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Accepted Qty<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Faulty Qty<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;white-space:nowrap">Total Qty<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Variance</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Reason</th>
-                            <th style="padding:10px 12px; text-align:left; font-weight:600;">Remarks</th>
+                            <th style="padding:10px 12px;">Location</th><th style="padding:10px 12px;">Supplier</th><th style="padding:10px 12px;">Item</th>
+                            <th style="padding:10px 12px;">Scan/Barcode</th>
+                            <th style="padding:10px 12px;">Available<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
+                            <th style="padding:10px 12px;white-space:nowrap">Accepted Qty<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
+                            <th style="padding:10px 12px;white-space:nowrap">Faulty Qty<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
+                            <th style="padding:10px 12px;white-space:nowrap">Total Qty<small class="d-block" style="font-size:10px;color:#dbeafe;">Base UOM</small></th>
+                            <th style="padding:10px 12px;">Variance</th><th style="padding:10px 12px;">Reason</th><th style="padding:10px 12px;">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let l of modalLines; let i = index"
-                            [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'"
-                            style="border-bottom:1px solid #f1f5f9;">
-                            <td style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ getBinName(l.binId) }}
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.supplierName || 'ALL' }}
-                            </td>
-                            <td style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ getItemName(l.itemId) }}
-                            </td>
-                            <td style="padding:10px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:420px;">
-                                {{ l.barcode || '-' }}
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.onHand || 0 }}
-                                <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small>
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.countedQty || 0 }}
-                                <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small>
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.badCountedQty || 0 }}
-                                <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small>
-                            </td>
-                            <td style="padding:10px 12px;">
-                                {{ l.totalQty || 0 }}
-                                <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small>
-                            </td>
-                            <td style="padding:10px 12px;" [ngClass]="l.variance >= 0 ? 'text-success' : 'text-danger'">
-                                {{ l.variance }}
-                            </td>
-                            <td style="padding:16px 2px;" class="reason-cell">
-                                <span class="reason-text">{{ getReason(l.reasonId) }}</span>
-                            </td>
-                            <td style="padding:10px 12px;" class="reason-cell">
-                                <span class="reason-text" [title]="l.remarks">{{ l.remarks || '-' }}</span>
-                            </td>
+                        <tr *ngFor="let l of modalLines; let i = index" [style.background]="i % 2 === 0 ? '#fcfdff' : '#ffffff'" style="border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:10px 12px;">{{ getBinName(l.binId) }}</td>
+                            <td style="padding:10px 12px;">{{ l.supplierName || 'ALL' }}</td>
+                            <td style="padding:10px 12px;">{{ getItemName(l.itemId) }}</td>
+                            <td style="padding:10px 12px;">{{ l.barcode || '-' }}</td>
+                            <td style="padding:10px 12px;">{{ l.onHand || 0 }} <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small></td>
+                            <td style="padding:10px 12px;">{{ l.countedQty || 0 }} <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small></td>
+                            <td style="padding:10px 12px;">{{ l.badCountedQty || 0 }} <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small></td>
+                            <td style="padding:10px 12px;">{{ l.totalQty || 0 }} <small style="color:#6b7280;">{{ l.baseUomName || '' }}</small></td>
+                            <td style="padding:10px 12px;" [ngClass]="l.variance >= 0 ? 'text-success' : 'text-danger'">{{ l.variance }}</td>
+                            <td style="padding:16px 2px;" class="reason-cell"><span class="reason-text">{{ getReason(l.reasonId) }}</span></td>
+                            <td style="padding:10px 12px;" class="reason-cell"><span class="reason-text" [title]="l.remarks">{{ l.remarks || '-' }}</span></td>
                         </tr>
-                        <tr *ngIf="!modalLines?.length">
-                            <td colspan="11" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td>
-                        </tr>
+                        <tr *ngIf="!modalLines?.length"><td colspan="11" style="padding:14px 12px; text-align:center; color:#6b7280;">No lines</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <!-- Footer -->
         <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid #eef2f7;">
-            <button (click)="closeLinesModal()"
-                style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">
-                Close
-            </button>
+            <button (click)="closeLinesModal()" style="background:#2E5F73; color:#fff; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer;">Close</button>
         </div>
     </div>
 </div>
 
 <ng-template #loadingTemplate>
-  <div class="content-wrapper p-0">
-    <div class="content-body">
-      <div class="alert alert-info mt-2">Loading permission...</div>
-    </div>
-  </div>
+  <div class="content-wrapper p-0"><div class="content-body"><div class="alert alert-info mt-2">Loading permission...</div></div></div>
 </ng-template>
-
 <ng-template #noAccessTemplate>
-  <div class="content-wrapper p-0">
-    <div class="content-body">
-      <div class="alert alert-warning mt-2">You do not have permission to view this screen.</div>
-    </div>
-  </div>
+  <div class="content-wrapper p-0"><div class="content-body"><div class="alert alert-warning mt-2">You do not have permission to view this screen.</div></div></div>
 </ng-template>

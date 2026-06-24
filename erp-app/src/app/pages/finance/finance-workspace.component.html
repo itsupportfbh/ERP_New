@@ -1,32 +1,40 @@
 <div class="fin-workspace" *ngIf="config">
 
-  <!-- ── Standard Page Header ── -->
-  <div class="fw-page-head" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close' && config.key !== 'reports' && config.key !== 'year-end-close'">
-    <div class="fw-head-left">
-      <h2>{{ config.title }}</h2>
-      <p>{{ config.subtitle }}</p>
+  <!-- ── Standard Page (Journal, Vouchers, etc.) ── -->
+  <ng-container *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close' && config.key !== 'reports' && config.key !== 'year-end-close'">
+  <div class="list-page">
+  <div class="list-card">
+
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">{{ config.title }}</h3>
+          <p class="list-card-sub">{{ config.subtitle }}</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <select class="tsb-page-select" *ngIf="config.key === 'journal'"
+                [(ngModel)]="journalTypeFilter" (change)="applyFilter()" style="height:36px;border-radius:8px;padding:0 10px;font-size:13px">
+          <option value="">All Types</option>
+          <option *ngFor="let t of journalTypeOptions" [value]="t">{{ t }}</option>
+        </select>
+        <button class="panel-toggle-btn" type="button"
+          *ngIf="config.actions.includes('import')" (click)="run('import', {})">
+          Import
+        </button>
+        <button class="list-add-btn" type="button"
+          *ngIf="config.actions.includes('create')" (click)="openCreate()" [disabled]="disableCreateButton">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          New {{ config.title }}
+        </button>
+      </div>
     </div>
-    <div class="fw-head-right">
-      <!-- Journal-specific Type filter -->
-      <select class="fw-type-select" *ngIf="config.key === 'journal'"
-              [(ngModel)]="journalTypeFilter" (change)="applyFilter()">
-        <option value="">All</option>
-        <option *ngFor="let t of journalTypeOptions" [value]="t">{{ t }}</option>
-      </select>
-      <erp-input placeholder="Search..." [(ngModel)]="search" (ngModelChange)="applyFilter()"></erp-input>
-      <button class="fw-btn fw-btn-outline" type="button" (click)="load()">
-        &#8635; Refresh
-      </button>
-      <button class="fw-btn fw-btn-outline" type="button"
-        *ngIf="config.actions.includes('import')" (click)="run('import', {})">
-        Import
-      </button>
-      <button class="fw-btn fw-btn-primary" type="button"
-        *ngIf="config.actions.includes('create')" (click)="openCreate()" [disabled]="disableCreateButton">
-        + New {{ config.title }}
-      </button>
-    </div>
-  </div>
 
   <!-- ── General Ledger Header ── -->
   <div class="gl-card" *ngIf="config.key === 'general-ledger'">
@@ -290,29 +298,33 @@
     </div>
   </div>
 
-  <!-- ── Data Table ── -->
-  <div class="fw-table-card" *ngIf="config.key !== 'general-ledger' && config.key !== 'period-close' && config.key !== 'reports' && config.key !== 'year-end-close'">
+    <!-- Search bar -->
+    <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
+      <input class="table-search-input" type="text" placeholder="Search..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+
+    <!-- Table -->
     <erp-table
       [columns]="columns"
       [data]="filtered"
       [loading]="loading"
+      [showControls]="false"
       [rowActions]="rowActions"
       (rowClick)="onRowClick($event)"
       (actionClick)="onAction($event)">
     </erp-table>
 
-    <!-- Journal batch Post button -->
-    <div class="fw-post-footer" *ngIf="config.key === 'journal'">
-      <button class="fw-btn fw-btn-primary fw-post-btn" type="button"
-        [disabled]="loading || !filtered.length"
-        (click)="postJournals()">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"
-             stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-          <polyline points="4 10 8 14 16 6"></polyline>
-        </svg>
-        Post
-      </button>
-    </div>
-  </div>
+  </div><!-- /.list-card -->
+  </div><!-- /.list-page -->
+  </ng-container>
 
 </div>

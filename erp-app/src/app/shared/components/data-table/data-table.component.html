@@ -8,8 +8,8 @@
   <div class="dt-controls" *ngIf="showControls">
     <div class="dt-show-wrap">
       <label class="dt-show-lbl">Show</label>
-      <select class="dt-show-sel" [value]="pageSizeInternal" (change)="onPageSizeChange($event)">
-        <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+      <select class="dt-show-sel" [(ngModel)]="pageSizeInternal" name="pageSizeInternal" (ngModelChange)="onPageSizeChangeVal($event)">
+        <option *ngFor="let s of pageSizeOptions" [ngValue]="s">{{ s }}</option>
       </select>
       <label class="dt-show-lbl">entries</label>
     </div>

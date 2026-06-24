@@ -1,13 +1,37 @@
-<div class="page-container item-master-no-lock">
-  <div class="page-header">
-    <h2>Item Master</h2>
-    <div class="btn-group">
-      <button class="btn btn-primary btn-sm" *ngIf="canCreate()" (click)="goToCreateItem()">+ Create Item</button>
-    </div>
-  </div>
+<div class="list-page item-master-no-lock">
+  <div class="list-card">
 
-  <div class="card table-section">
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Item Master</h3>
+          <p class="list-card-sub">Manage product catalogue and inventory items</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <button class="list-add-btn" *ngIf="canCreate()" (click)="goToCreateItem()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Create Item
+        </button>
+      </div>
+    </div>
+
     <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
       <input class="table-search-input" type="text" [(ngModel)]="searchValue" (ngModelChange)="applyFilter()" placeholder="Search Item / SKU / Category / UOM"/>
     </div>
     <erp-table
@@ -26,6 +50,7 @@
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)">
     </erp-pager>
+
   </div>
 </div>
 
@@ -51,18 +76,14 @@
 
     <!-- Body -->
     <div style="flex:1;overflow:auto;padding:16px 20px">
-
-      <!-- Warehouse tab -->
       <div *ngIf="activeTab==='warehouse'">
         <table class="dt-table" style="width:100%">
-          <thead>
-            <tr>
-              <th>WAREHOUSE</th><th>BIN</th>
-              <th style="text-align:right">ON HAND</th><th style="text-align:right">RESERVED</th><th style="text-align:right">AVAILABLE</th>
-              <th style="text-align:right">MIN</th><th style="text-align:right">MAX</th><th style="text-align:right">REORDER</th>
-              <th style="text-align:right">LEAD (DAYS)</th><th>BATCH</th><th>SERIAL</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>WAREHOUSE</th><th>BIN</th>
+            <th style="text-align:right">ON HAND</th><th style="text-align:right">RESERVED</th><th style="text-align:right">AVAILABLE</th>
+            <th style="text-align:right">MIN</th><th style="text-align:right">MAX</th><th style="text-align:right">REORDER</th>
+            <th style="text-align:right">LEAD (DAYS)</th><th>BATCH</th><th>SERIAL</th>
+          </tr></thead>
           <tbody>
             <tr *ngFor="let r of warehouseRows">
               <td>{{ r.warehouseName }}</td><td>{{ r.binName || '-' }}</td>
@@ -76,34 +97,24 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Supplier tab -->
       <div *ngIf="activeTab==='supplier'">
         <table class="dt-table" style="width:100%">
           <thead><tr><th>SUPPLIER</th><th style="text-align:right">PRICE</th><th>BARCODE</th></tr></thead>
           <tbody>
-            <tr *ngFor="let r of supplierRows">
-              <td>{{ r.supplierName }}</td><td style="text-align:right">{{ r.price }}</td><td>{{ r.barcode || '-' }}</td>
-            </tr>
+            <tr *ngFor="let r of supplierRows"><td>{{ r.supplierName }}</td><td style="text-align:right">{{ r.price }}</td><td>{{ r.barcode || '-' }}</td></tr>
             <tr *ngIf="!supplierRows?.length"><td colspan="3" class="dt-empty">No supplier data.</td></tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Audit tab -->
       <div *ngIf="activeTab==='audit'">
         <table class="dt-table" style="width:100%">
           <thead><tr><th>USER</th><th>ACTION</th><th>OCCURRED (UTC)</th></tr></thead>
           <tbody>
             <tr *ngFor="let r of auditRows">
               <td>{{ r.userName }}</td>
-              <td>
-                <span style="display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600"
-                  [style.background]="(r.action||'').toUpperCase()==='CREATE' ? '#e6f9f0' : (r.action||'').toUpperCase()==='DELETE' ? '#fef2f2' : '#fff7e6'"
-                  [style.color]="(r.action||'').toUpperCase()==='CREATE' ? 'var(--success)' : (r.action||'').toUpperCase()==='DELETE' ? 'var(--danger)' : 'var(--warning)'">
-                  {{ (r.action || '').toUpperCase() }}
-                </span>
-              </td>
+              <td><span style="display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600"
+                [style.background]="(r.action||'').toUpperCase()==='CREATE' ? '#e6f9f0' : (r.action||'').toUpperCase()==='DELETE' ? '#fef2f2' : '#fff7e6'"
+                [style.color]="(r.action||'').toUpperCase()==='CREATE' ? 'var(--success)' : (r.action||'').toUpperCase()==='DELETE' ? 'var(--danger)' : 'var(--warning)'">{{ (r.action || '').toUpperCase() }}</span></td>
               <td>{{ r.occurredAtUtc | date:'yyyy-MM-dd HH:mm':'UTC' }} UTC</td>
             </tr>
             <tr *ngIf="!auditRows?.length"><td colspan="3" class="dt-empty">No audit data.</td></tr>

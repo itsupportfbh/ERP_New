@@ -49,7 +49,7 @@ export class DataTableComponent implements OnChanges {
   currentPage = 1;
   pageSizeInternal = 10;
   searchQuery = '';
-  pageSizeOptions = [5, 10, 25, 50, 100];
+  pageSizeOptions = [10, 25, 50, 100];
 
   ngOnChanges(): void {
     this.selectedRows.clear();
@@ -86,6 +86,7 @@ export class DataTableComponent implements OnChanges {
 
   onPageChange(p: number): void { if (p >= 1 && p <= this.totalPages) this.currentPage = p; }
   onPageSizeChange(e: Event): void { this.pageSizeInternal = Number((e.target as HTMLSelectElement).value); this.currentPage = 1; }
+  onPageSizeChangeVal(val: number): void { this.pageSizeInternal = val; this.currentPage = 1; }
   onSearch(e: Event): void { this.searchQuery = (e.target as HTMLInputElement).value; this.currentPage = 1; }
 
   /** Total visible columns including optional checkbox and action columns */
