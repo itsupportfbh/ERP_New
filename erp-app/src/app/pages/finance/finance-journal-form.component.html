@@ -57,10 +57,14 @@
               <input class="cell-input" type="text" [(ngModel)]="line.lineDescription" placeholder="Line description">
             </td>
             <td>
-              <select class="cell-select" [(ngModel)]="line.ledgerId">
-                <option [ngValue]="null" disabled>Select account...</option>
-                <option *ngFor="let a of accounts" [ngValue]="a.id">{{ a.label }}</option>
-              </select>
+              <erp-dropdown
+                class="cell-erp-dd"
+                [items]="accounts"
+                bindValue="id"
+                bindLabel="label"
+                [(ngModel)]="line.ledgerId"
+                placeholder="Select account...">
+              </erp-dropdown>
             </td>
             <td>
               <input class="cell-input num-input" type="number" min="0" [(ngModel)]="line.debit"
@@ -153,7 +157,7 @@
   <div class="journal-footer">
     <button class="btn-cancel" type="button" (click)="cancel()">Cancel</button>
     <button class="btn-submit" type="button" (click)="submit()"
-      [disabled]="saving || !isBalanced || !hasValidLines || !permission?.submit">
+      [disabled]="saving || !isBalanced || !hasValidLines">
       {{ saving ? 'Saving...' : 'Submit Journal' }}
     </button>
   </div>

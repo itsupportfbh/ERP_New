@@ -139,7 +139,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
       label: 'Financial',
       icon: 'finance',
       children: [
-        { label: 'Dashboard',           icon: 'circle',  route: '/app/finance',                   permId: 'finance-dashboard' },
         { label: 'General Ledger',      icon: 'ledger',  route: '/app/finance/general-ledger',    permId: 'ledger' },
         { label: 'Chart of Account',    icon: 'ledger',  route: '/app/finance/chart-of-accounts', permId: 'coa' },
         { label: 'Journal',             icon: 'journal', route: '/app/finance/journal',           permId: 'journal' },

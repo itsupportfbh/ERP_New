@@ -2,6 +2,7 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { SharedModule } from '../../shared/shared.module';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
@@ -16,7 +17,7 @@ interface JournalLine {
 @Component({
   selector: 'erp-finance-journal-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './finance-journal-form.component.html',
   styleUrls: ['./finance-journal-form.component.scss']
 })

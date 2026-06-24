@@ -513,6 +513,52 @@ export class FinanceWorkspaceComponent implements OnInit {
     if (this.config.actions.includes('update')) this.openEdit(row);
   }
 
+  canPost(): boolean {
+    return this.permissionService.hasPost(this.permission);
+  }
+
+  postJournals(): void {
+    if (!this.canPost()) {
+      Swal.fire('Permission Denied', 'You do not have post permission.', 'warning');
+      return;
+    }
+
+    if (this.isCurrentPeriodLocked) {
+      Swal.fire('Period Locked', 'The current period is locked. Cannot post journals.', 'warning');
+      return;
+    }
+
+    const ids = (this.filtered || []).map((r: any) => r.id).filter((id: any) => !!id);
+
+    if (!ids.length) {
+      Swal.fire('No Journals', 'No journals available to post.', 'info');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Post Journals?',
+      text: `This will post ${ids.length} journal(s) to the General Ledger.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Post',
+      confirmButtonColor: '#0e4a60'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.loading = true;
+      this.finance.run(this.config.endpoint, 'post', { ids }).subscribe({
+        next: () => {
+          this.loading = false;
+          Swal.fire('Success', 'Journals posted to General Ledger successfully.', 'success');
+          this.load();
+        },
+        error: (err: any) => {
+          this.loading = false;
+          this.error = err?.error?.message || err?.message || 'Unable to post journals.';
+        }
+      });
+    });
+  }
+
   onAction(e: { action: string; row: any }): void {
     const action = e.action as FinanceActionKey;
     if (action === 'update') this.openEdit(e.row);
@@ -532,26 +578,41 @@ export class FinanceWorkspaceComponent implements OnInit {
   }
 
   run(action: FinanceActionKey, row: any): void {
-    if (!confirm(`${this.label(action)} this ${this.config.title} record?`)) return;
-    const payload = this.actionPayload(action, row);
-    this.finance.run(this.config.endpoint, action, payload).subscribe({
-      next: res => {
-        if (action === 'export') {
-          this.downloadBlob(res, `${this.config.key}-${this.toDateString(new Date())}.xlsx`);
-          this.message = 'Export downloaded.';
-        } else if (action === 'preview') {
-          const list = this.finance.unwrap(res);
-          const one = this.finance.unwrapOne(res);
-          this.rows = (list.length ? list : (Array.isArray(one) ? one : [one])).filter((item: any) => item && Object.keys(item).length).map((item: any) => this.normalizeRow(item));
-          this.applyFilter();
-          this.message = 'Preview loaded.';
-        } else {
-          this.message = `${this.label(action)} completed.`;
-          this.load();
-        }
-      },
-      error: err => { this.error = err?.error?.message || `${this.label(action)} failed.`; }
-    });
+    const noConfirmActions = ['export', 'preview', 'email'];
+    const doRun = () => {
+      const payload = this.actionPayload(action, row);
+      this.finance.run(this.config.endpoint, action, payload).subscribe({
+        next: res => {
+          if (action === 'export') {
+            this.downloadBlob(res, `${this.config.key}-${this.toDateString(new Date())}.xlsx`);
+            this.message = 'Export downloaded.';
+          } else if (action === 'preview') {
+            const list = this.finance.unwrap(res);
+            const one = this.finance.unwrapOne(res);
+            this.rows = (list.length ? list : (Array.isArray(one) ? one : [one])).filter((item: any) => item && Object.keys(item).length).map((item: any) => this.normalizeRow(item));
+            this.applyFilter();
+            this.message = 'Preview loaded.';
+          } else {
+            this.message = `${this.label(action)} completed.`;
+            this.load();
+          }
+        },
+        error: err => { this.error = err?.error?.message || `${this.label(action)} failed.`; }
+      });
+    };
+
+    if (noConfirmActions.includes(action)) {
+      doRun();
+    } else {
+      Swal.fire({
+        title: `${this.label(action)}?`,
+        text: `Are you sure you want to ${this.label(action).toLowerCase()} this ${this.config.title}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes',
+        confirmButtonColor: '#0e4a60'
+      }).then(result => { if (result.isConfirmed) doRun(); });
+    }
   }
 
   resetForm(): void {

@@ -246,11 +246,10 @@ export const FINANCE_PAGES: FinancePageConfig[] = [
       { key: 'entryType', header: 'Entry Type' },
       { key: 'recurringFrequency', header: 'Frequency' },
       { key: 'totalDebit', header: 'Debit', type: 'number', align: 'right' },
-      { key: 'totalCredit', header: 'Credit', type: 'number', align: 'right' },
-      { key: 'status', header: 'Status', type: 'badge' }
+      { key: 'totalCredit', header: 'Credit', type: 'number', align: 'right' }
     ],
-    searchKeys: ['journalNo', 'description', 'status', 'entryType'],
-    actions: ['create', 'post'],
+    searchKeys: ['journalNo', 'description', 'entryType'],
+    actions: ['create'],
     formFields: [
       { key: 'journalDate', label: 'Journal Date', type: 'date' },
       { key: 'description', label: 'Description', type: 'textarea' },
