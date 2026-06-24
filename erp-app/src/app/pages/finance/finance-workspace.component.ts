@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 })
 export class FinanceWorkspaceComponent implements OnInit {
   config!: FinancePageConfig;
+  isCurrentPeriodLocked = false;
   loading = false;
   saving = false;
   error = '';
@@ -123,6 +124,10 @@ export class FinanceWorkspaceComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.periodLockState.currentState$.subscribe(state => {
+      this.isCurrentPeriodLocked = !!state?.isLocked;
+    });
+
     this.route.paramMap.subscribe(params => {
       const key = this.route.snapshot.data['section'] || params.get('section') || 'chart-of-accounts';
       this.config = FINANCE_PAGES.find(p => p.key === key) || FINANCE_PAGES[0];
@@ -165,6 +170,10 @@ export class FinanceWorkspaceComponent implements OnInit {
         label: this.label(action),
         btnClass: action === 'delete' ? 'danger' : action === 'post' || action === 'pay' || action === 'reconcile' || action === 'email' ? 'success' : 'warning'
       }));
+  }
+
+  get disableCreateButton(): boolean {
+    return this.isCurrentPeriodLocked && this.config.actions.includes('create');
   }
 
   get ledgerSummaryRows(): any[] {
@@ -237,6 +246,7 @@ export class FinanceWorkspaceComponent implements OnInit {
   }
 
   openCreate(): void {
+    if (this.disableCreateButton) return;
     if (this.config.key === 'journal') {
       this.router.navigate(['/app/finance/create-journal']);
       return;

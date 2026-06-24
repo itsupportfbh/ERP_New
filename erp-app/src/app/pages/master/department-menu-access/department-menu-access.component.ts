@@ -102,7 +102,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
   }
 
   loadDepartments(): void {
-    this.service.getDepartments(this.companyId).subscribe({
+    this.service.getDepartments(0).subscribe({
       next: (res: ApiResponse<DepartmentDto[]>) => {
         const raw = Array.isArray(res)
           ? res

@@ -136,8 +136,8 @@
     <h2 class="company-title">Select Company</h2>
     <p class="company-sub">Your account is linked to multiple companies. Please select one to continue.</p>
     <div class="company-list">
-      <label class="company-item" *ngFor="let c of companies" [class.selected]="selectedCompanyId === c.companyId">
-        <input type="radio" name="company" [value]="c.companyId" [(ngModel)]="selectedCompanyId"/>
+      <label class="company-item" *ngFor="let c of companies" [class.selected]="selectedCompanyId === c.id">
+        <input type="radio" name="company" [value]="c.id" [(ngModel)]="selectedCompanyId"/>
         <span class="company-name">{{ c.companyName }}</span>
       </label>
     </div>

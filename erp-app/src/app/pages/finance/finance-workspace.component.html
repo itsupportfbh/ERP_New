@@ -22,7 +22,7 @@
         Import
       </button>
       <button class="fw-btn fw-btn-primary" type="button"
-        *ngIf="config.actions.includes('create')" (click)="openCreate()">
+        *ngIf="config.actions.includes('create')" (click)="openCreate()" [disabled]="disableCreateButton">
         + New {{ config.title }}
       </button>
     </div>

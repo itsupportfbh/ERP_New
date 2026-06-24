@@ -23,11 +23,11 @@
         </div>
       </div>
       <div class="list-card-actions">
-        <button class="panel-toggle-btn" *ngIf="perm.canApprove(fnId) || perm.canReject(fnId)" (click)="showApprovals = true">
+        <button class="panel-toggle-btn" *ngIf="perm.canApprove(fnId) || perm.canReject(fnId)" (click)="showApprovals = true" [disabled]="true">
           &#10003; Approvals
           <span class="badge-pill warn" *ngIf="approvalCount > 0">{{ approvalCount }}</span>
         </button>
-        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showAlerts = true; loadPendingPrCount()">
+        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showAlerts = true; loadPendingPrCount()" [disabled]="true">
           &#128276; Alerts
           <span class="badge-pill danger" *ngIf="pendingPrCount > 0">{{ pendingPrCount }}</span>
         </button>
