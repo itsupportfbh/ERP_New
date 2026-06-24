@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
+import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 
 @Component({
   selector: 'erp-finance-daybook',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FinanceReportsHubComponent],
   templateUrl: './finance-daybook.component.html',
   styleUrls: ['./finance-daybook.component.scss']
 })
@@ -18,11 +19,18 @@ export class FinanceDaybookComponent implements OnInit {
   fromDate = '';
   toDate = '';
   search = '';
+  viewMode: 'detailed' | 'summary' = 'detailed';
+
+  showModal = true;
+  modalFrom = '';
+  modalTo = '';
 
   rows: any[] = [];
   filtered: any[] = [];
 
   summary = { totalDebit: 0, totalCredit: 0, net: 0, transactions: 0 };
+  get netType(): 'Dr' | 'Cr' { return this.summary.net >= 0 ? 'Dr' : 'Cr'; }
+  get netAbs(): number { return Math.abs(this.summary.net); }
 
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly monthAgo = (() => {
@@ -32,9 +40,20 @@ export class FinanceDaybookComponent implements OnInit {
   constructor(private finance: FinanceService) {}
 
   ngOnInit(): void {
-    this.fromDate = this.monthAgo;
-    this.toDate = this.today;
+    this.modalFrom = this.monthAgo;
+    this.modalTo = this.today;
+  }
+
+  viewDaybook(): void {
+    if (!this.modalFrom || !this.modalTo) return;
+    this.fromDate = this.modalFrom;
+    this.toDate = this.modalTo;
+    this.showModal = false;
     this.load();
+  }
+
+  cancelModal(): void {
+    this.showModal = false;
   }
 
   load(): void {
@@ -74,6 +93,38 @@ export class FinanceDaybookComponent implements OnInit {
     this.summary.totalDebit   = this.rows.reduce((s, r) => s + (Number(r.debit)  || 0), 0);
     this.summary.totalCredit  = this.rows.reduce((s, r) => s + (Number(r.credit) || 0), 0);
     this.summary.net = this.summary.totalDebit - this.summary.totalCredit;
+  }
+
+  exportExcel(): void {
+    const header = ['Date', 'Voucher No', 'Type', 'Account', 'Debit', 'Credit', 'Running Balance'];
+    let running = 0;
+    const data = [header, ...this.filtered.map(r => {
+      running += (r.debit || 0) - (r.credit || 0);
+      return [r.postingDate, r.voucherNo, r.voucherType, r.accountName,
+        (r.debit || 0).toFixed(2), (r.credit || 0).toFixed(2), running.toFixed(2)];
+    })];
+    const csv = data.map(row => row.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Daybook.csv'; a.click();
+  }
+
+  voucherTypeClass(type: string): string {
+    const t = String(type).toLowerCase();
+    if (t.includes('supplier') && t.includes('payment')) return 'badge-sup-pay';
+    if (t.includes('supplier') && t.includes('invoice')) return 'badge-sup-inv';
+    if (t.includes('supplier') && t.includes('debit'))   return 'badge-sup-dn';
+    if (t.includes('sales') || t.includes('customer'))   return 'badge-sales';
+    if (t.includes('journal')) return 'badge-journal';
+    if (t.includes('bank')) return 'badge-bank';
+    return 'badge-other';
+  }
+
+  get runningRows(): any[] {
+    let balance = 0;
+    return this.filtered.map(r => {
+      balance += (r.debit || 0) - (r.credit || 0);
+      return { ...r, _running: balance };
+    });
   }
 
   private normalize(r: any): any {

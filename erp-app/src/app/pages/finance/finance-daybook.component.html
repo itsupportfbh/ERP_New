@@ -1,116 +1,91 @@
-<div class="db-page">
+<erp-finance-reports-hub></erp-finance-reports-hub>
 
-  <!-- Page Header -->
-  <div class="db-page-head">
-    <div>
-      <h2>Daybook</h2>
-      <p>Daily accounting transaction report</p>
+<!-- Date Picker Modal -->
+<div class="modal-overlay" *ngIf="showModal" (click)="cancelModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <h4 class="modal-title">Daybook – Select Period</h4>
+    <p class="modal-sub">Choose From Date and To Date to view transactions.</p>
+    <div class="modal-fields">
+      <label class="modal-field">
+        <span>From Date</span>
+        <input type="date" [(ngModel)]="modalFrom">
+      </label>
+      <label class="modal-field">
+        <span>To Date</span>
+        <input type="date" [(ngModel)]="modalTo">
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" type="button" (click)="cancelModal()">Cancel</button>
+      <button class="btn-view" type="button" (click)="viewDaybook()" [disabled]="!modalFrom || !modalTo">View Daybook</button>
     </div>
   </div>
+</div>
 
-  <!-- Alerts -->
-  <div class="db-alert db-success" *ngIf="message">{{ message }}</div>
-  <div class="db-alert db-danger"  *ngIf="error">{{ error }}</div>
-
-  <!-- Filter Bar -->
-  <div class="db-filter-bar">
-    <label class="db-filter-field">
-      <span>From Date</span>
-      <input type="date" [(ngModel)]="fromDate">
-    </label>
-    <label class="db-filter-field">
-      <span>To Date</span>
-      <input type="date" [(ngModel)]="toDate">
-    </label>
-    <button class="db-btn db-btn-primary" type="button" (click)="load()" [disabled]="loading">
-      {{ loading ? 'Loading...' : 'Run Report' }}
-    </button>
-    <div class="db-search-wrap">
-      <input class="db-search" type="text" placeholder="Search voucher, account..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
-    </div>
-  </div>
+<!-- Main content (shown after modal) -->
+<div class="db-page" *ngIf="!showModal">
 
   <!-- Summary Cards -->
-  <div class="db-summary-grid">
-    <div class="db-sum-card db-sum-txn">
-      <span class="db-sum-icon">&#9636;</span>
-      <span class="db-sum-body">
-        <span class="db-sum-label">Transactions</span>
-        <strong class="db-sum-val">{{ summary.transactions }}</strong>
-      </span>
+  <div class="sum-row">
+    <div class="sum-card sum-debit">
+      <div class="sum-icon-wrap debit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+      <div><div class="sum-lbl">Total Debit</div><div class="sum-val">{{ summary.totalDebit | number:'1.2-2' }}</div></div>
     </div>
-    <div class="db-sum-card db-sum-debit">
-      <span class="db-sum-icon">&#8593;</span>
-      <span class="db-sum-body">
-        <span class="db-sum-label">Total Debit</span>
-        <strong class="db-sum-val debit">{{ summary.totalDebit | number:'1.2-2' }}</strong>
-      </span>
+    <div class="sum-card sum-credit">
+      <div class="sum-icon-wrap credit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <div><div class="sum-lbl">Total Credit</div><div class="sum-val">{{ summary.totalCredit | number:'1.2-2' }}</div></div>
     </div>
-    <div class="db-sum-card db-sum-credit">
-      <span class="db-sum-icon">&#8595;</span>
-      <span class="db-sum-body">
-        <span class="db-sum-label">Total Credit</span>
-        <strong class="db-sum-val credit">{{ summary.totalCredit | number:'1.2-2' }}</strong>
-      </span>
-    </div>
-    <div class="db-sum-card db-sum-net">
-      <span class="db-sum-icon">&#8597;</span>
-      <span class="db-sum-body">
-        <span class="db-sum-label">Net</span>
-        <strong class="db-sum-val" [class.net-zero]="summary.net === 0" [class.net-nonzero]="summary.net !== 0">
-          {{ summary.net | number:'1.2-2' }}
-        </strong>
-      </span>
+    <div class="sum-card sum-net">
+      <div class="sum-icon-wrap net-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div><div class="sum-lbl">Net Movement</div><div class="sum-val">{{ netAbs | number:'1.2-2' }} <span class="net-type">{{ netType }}</span></div></div>
     </div>
   </div>
 
-  <!-- Table -->
-  <div class="db-card">
-    <div class="db-loading" *ngIf="loading">Loading daybook entries...</div>
-    <div class="db-table-wrap" *ngIf="!loading">
+  <!-- Table Card -->
+  <div class="table-card">
+    <div class="table-header-row">
+      <span class="table-title">Daybook Transactions</span>
+      <div class="table-actions">
+        <span class="view-label">View:</span>
+        <button class="view-btn" [class.active]="viewMode === 'detailed'" type="button" (click)="viewMode = 'detailed'">Detailed</button>
+        <button class="view-btn" [class.active]="viewMode === 'summary'"  type="button" (click)="viewMode = 'summary'">Summary</button>
+        <button class="btn-export" type="button" (click)="exportExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
+    <div class="rpt-error" *ngIf="error">{{ error }}</div>
+
+    <div class="table-wrap" *ngIf="!loading">
       <table class="db-table">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Voucher No</th>
-            <th>Type</th>
-            <th>Account Code</th>
-            <th>Account Name</th>
-            <th>Description</th>
-            <th class="right">Debit</th>
-            <th class="right">Credit</th>
+            <th>DATE</th><th>VOUCHER NO</th><th>TYPE</th><th>ACCOUNT</th>
+            <th class="num">DEBIT</th><th class="num">CREDIT</th><th class="num">RUNNING BALANCE</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of filtered" class="db-row">
-            <td class="date-cell">{{ row.postingDate | date:'dd-MMM-yyyy' }}</td>
-            <td class="voucher-cell">{{ row.voucherNo }}</td>
-            <td class="type-cell">
-              <span class="type-tag" *ngIf="row.voucherType">{{ row.voucherType }}</span>
-            </td>
-            <td class="code-cell">{{ row.accountCode }}</td>
-            <td class="account-cell">{{ row.accountName }}</td>
-            <td class="desc-cell">{{ row.description }}</td>
-            <td class="right" [class.debit-amt]="row.debit > 0">
-              {{ row.debit > 0 ? (row.debit | number:'1.2-2') : '' }}
-            </td>
-            <td class="right" [class.credit-amt]="row.credit > 0">
-              {{ row.credit > 0 ? (row.credit | number:'1.2-2') : '' }}
-            </td>
+          <tr *ngFor="let r of runningRows">
+            <td>{{ r.postingDate | date:'yyyy-MM-dd' }}</td>
+            <td class="voucher-link">{{ r.voucherNo }}</td>
+            <td><span class="type-badge" [ngClass]="voucherTypeClass(r.voucherType)">{{ r.voucherType }}</span></td>
+            <td>{{ r.accountName }}</td>
+            <td class="num debit-val">{{ r.debit ? (r.debit | number:'1.2-2') : '–' }}</td>
+            <td class="num credit-val">{{ r.credit ? (r.credit | number:'1.2-2') : '–' }}</td>
+            <td class="num balance-val"><strong>{{ r._running | number:'1.2-2' }}</strong></td>
           </tr>
-
-          <!-- Totals Row -->
-          <tr class="db-totals-row" *ngIf="filtered.length > 0">
-            <td colspan="6" class="totals-label">Total</td>
-            <td class="right totals-debit">{{ summary.totalDebit | number:'1.2-2' }}</td>
-            <td class="right totals-credit">{{ summary.totalCredit | number:'1.2-2' }}</td>
-          </tr>
-
-          <tr *ngIf="filtered.length === 0 && !loading">
-            <td colspan="8" class="db-empty">No daybook entries found for the selected period.</td>
+          <tr *ngIf="!filtered.length">
+            <td colspan="7" class="no-data">No transactions found for selected period.</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="table-footer" *ngIf="!loading && filtered.length">
+      Showing {{ filtered.length }} voucher{{ filtered.length !== 1 ? 's' : '' }} &nbsp;·&nbsp; Debit and credit totals must match for the day.
     </div>
   </div>
 

@@ -79,6 +79,9 @@ import { FinanceYearEndCloseComponent } from './pages/finance/finance-year-end-c
 import { FinanceBankReconComponent } from './pages/finance/finance-bank-recon.component';
 import { FinanceDaybookComponent } from './pages/finance/finance-daybook.component';
 import { FinanceCollectionForecastComponent } from './pages/finance/finance-collection-forecast.component';
+import { FinanceArapAgingComponent } from './pages/finance/finance-arap-aging.component';
+import { FinanceGstDetailComponent } from './pages/finance/finance-gst-detail.component';
+import { FinanceReportsHubComponent } from './pages/finance/finance-reports-hub.component';
 import { FinanceInvoiceEmailComponent } from './pages/finance/finance-invoice-email.component';
 import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobile-receiving.component';
 import { DepartmentMenuAccessComponent } from './pages/master/department-menu-access/department-menu-access.component';
@@ -217,6 +220,9 @@ const routes: Routes = [
       { path: 'finance/daybook',                 component: FinanceDaybookComponent },
       { path: 'finance/collection-forecast',     component: FinanceCollectionForecastComponent },
       { path: 'finance/invoice-email',           component: FinanceInvoiceEmailComponent },
+      { path: 'finance/arap-aging',              component: FinanceArapAgingComponent },
+      { path: 'finance/gst-detail',              component: FinanceGstDetailComponent },
+      { path: 'finance/reports',                 component: FinanceReportsHubComponent },
       { path: 'finance/:section',                component: FinanceWorkspaceComponent },
       { path: 'financial/dashboard',           component: FinanceDashboardComponent },
       { path: 'financial/ChartOfAccount',      component: FinanceCoaComponent },

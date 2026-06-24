@@ -1,111 +1,107 @@
+<erp-finance-reports-hub></erp-finance-reports-hub>
+
 <div class="pl-page">
 
   <!-- Header -->
   <div class="rpt-head">
-    <div class="rpt-head-left">
-      <div class="rpt-icon">&#128200;</div>
-      <div>
-        <h2>Profit &amp; Loss</h2>
-        <p>Income and expense statement</p>
-      </div>
+    <h4 class="rpt-title">Profit &amp; Loss</h4>
+    <div class="rpt-actions">
+      <button class="btn-export btn-excel" type="button" (click)="exportExcel()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Export Excel
+      </button>
+      <button class="btn-export btn-pdf" type="button" (click)="exportPdf()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export PDF
+      </button>
     </div>
   </div>
 
   <!-- Summary Cards -->
-  <div class="sum-grid">
-    <div class="sum-card sum-c3">
-      <div class="sum-icon">&#8595;</div>
-      <div>
-        <span class="sum-label">Total Expense</span>
-        <strong class="sum-val">{{ totalExpense | number:'1.2-2' }}</strong>
-      </div>
+  <div class="sum-row">
+    <div class="sum-card sum-expense">
+      <div class="sum-icon-wrap expense-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+      <div><div class="sum-lbl">Total Expense</div><div class="sum-val">{{ totalExpense | number:'1.2-2' }}</div></div>
     </div>
-    <div class="sum-card sum-c2">
-      <div class="sum-icon">&#8593;</div>
-      <div>
-        <span class="sum-label">Total Revenue</span>
-        <strong class="sum-val">{{ totalIncome | number:'1.2-2' }}</strong>
-      </div>
+    <div class="sum-card sum-sales">
+      <div class="sum-icon-wrap sales-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <div><div class="sum-lbl">Total Sales</div><div class="sum-val">{{ totalIncome | number:'1.2-2' }}</div></div>
     </div>
-    <div class="sum-card" [ngClass]="netProfit >= 0 ? 'sum-c1' : 'sum-c3'">
-      <div class="sum-icon">&#36;</div>
+    <div class="sum-card sum-net">
+      <div class="sum-icon-wrap net-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div>
-        <span class="sum-label">{{ netProfit >= 0 ? 'Net Profit' : 'Net Loss' }}</span>
-        <strong class="sum-val">{{ netProfit | number:'1.2-2' }}</strong>
+        <div class="sum-lbl">Net Profit</div>
+        <div class="sum-val" [class.text-profit]="netProfit >= 0" [class.text-loss]="netProfit < 0">{{ netProfit | number:'1.2-2' }}</div>
       </div>
     </div>
   </div>
 
-  <!-- Date Filter -->
-  <div class="rpt-filter-bar">
-    <label class="filter-lbl">
-      <span>From Date</span>
-      <input type="date" [(ngModel)]="fromDate">
-    </label>
-    <label class="filter-lbl">
-      <span>To Date</span>
-      <input type="date" [(ngModel)]="toDate">
-    </label>
-    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()">Run Report</button>
-  </div>
+  <div class="rpt-error" *ngIf="error">{{ error }}</div>
+  <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
 
-  <div class="rpt-alert rpt-danger" *ngIf="error">{{ error }}</div>
-  <div class="rpt-loading" *ngIf="loading">Loading...</div>
-
-  <!-- Two Column Layout -->
-  <div class="two-col-card rpt-card" *ngIf="!loading">
+  <!-- Two Column -->
+  <div class="two-col-card" *ngIf="!loading">
+    <!-- Purchase / Expense -->
     <div class="col-section">
-      <div class="col-header expense-hdr">Expense Accounts</div>
-      <div class="acc-list">
-        <div class="acc-row" *ngFor="let row of expenseRows">
+      <div class="col-head">Purchase Accounts</div>
+      <ul class="acc-list">
+        <li class="acc-item"
+            *ngFor="let r of expenseRows"
+            [class.group-header]="isGroupHeader(r.accountCode || r.headCode)"
+            [ngClass]="'indent-' + indentLevel(r.accountCode || r.headCode)">
           <div class="acc-left">
             <span class="drag-icon">&#9776;</span>
-            <span class="acc-name">{{ row.accountName }}</span>
-            <span class="acc-code" *ngIf="row.accountCode">{{ row.accountCode }}</span>
+            <div class="acc-text">
+              <span class="acc-name">{{ r.accountName || r.headName }}</span>
+              <span class="acc-code" *ngIf="r.accountCode || r.headCode">{{ r.accountCode || r.headCode }}</span>
+            </div>
           </div>
           <div class="acc-right">
-            <span class="acc-amt">{{ (row.amount || 0) | number:'1.2-2' }}</span>
-            <span class="avatar avatar-red">{{ initials(row.accountName) }}</span>
+            <span class="acc-amt">{{ (r.amount || r.purchase || 0) | number:'1.2-2' }}</span>
+            <span class="avatar" [style.background]="avatarColor(r.accountName || r.headName)">{{ initials(r.accountName || r.headName) }}</span>
           </div>
-        </div>
-        <div class="acc-empty" *ngIf="expenseRows.length === 0">No expense data.</div>
-        <div class="total-row" *ngIf="expenseRows.length > 0">
-          <strong>Total Expenses</strong>
-          <strong>{{ totalExpense | number:'1.2-2' }}</strong>
-        </div>
+        </li>
+        <li class="acc-empty" *ngIf="!expenseRows.length">No purchase data.</li>
+      </ul>
+      <div class="col-total col-total-expense">
+        <span>Total</span><span>{{ totalExpense | number:'1.2-2' }}</span>
       </div>
     </div>
 
     <div class="col-divider"></div>
 
+    <!-- Sales / Income -->
     <div class="col-section">
-      <div class="col-header income-hdr">Revenue Accounts</div>
-      <div class="acc-list">
-        <div class="acc-row" *ngFor="let row of incomeRows">
+      <div class="col-head">Sales Accounts</div>
+      <ul class="acc-list">
+        <li class="acc-item"
+            *ngFor="let r of incomeRows"
+            [class.group-header]="isGroupHeader(r.accountCode || r.headCode)"
+            [ngClass]="'indent-' + indentLevel(r.accountCode || r.headCode)">
           <div class="acc-left">
             <span class="drag-icon">&#9776;</span>
-            <span class="acc-name">{{ row.accountName }}</span>
-            <span class="acc-code" *ngIf="row.accountCode">{{ row.accountCode }}</span>
+            <div class="acc-text">
+              <span class="acc-name">{{ r.accountName || r.headName }}</span>
+              <span class="acc-code" *ngIf="r.accountCode || r.headCode">{{ r.accountCode || r.headCode }}</span>
+            </div>
           </div>
           <div class="acc-right">
-            <span class="acc-amt">{{ (row.amount || 0) | number:'1.2-2' }}</span>
-            <span class="avatar avatar-teal">{{ initials(row.accountName) }}</span>
+            <span class="acc-amt">{{ (r.amount || r.sales || 0) | number:'1.2-2' }}</span>
+            <span class="avatar" [style.background]="avatarColor(r.accountName || r.headName)">{{ initials(r.accountName || r.headName) }}</span>
           </div>
-        </div>
-        <div class="acc-empty" *ngIf="incomeRows.length === 0">No revenue data.</div>
-        <div class="total-row" *ngIf="incomeRows.length > 0">
-          <strong>Total Revenue</strong>
-          <strong>{{ totalIncome | number:'1.2-2' }}</strong>
-        </div>
+        </li>
+        <!-- Net Loss row on sales side -->
+        <li class="acc-item net-row-item" *ngIf="netProfit < 0">
+          <div class="acc-left"><div class="acc-text"><span class="acc-name">Net Loss</span></div></div>
+          <div class="acc-right"><span class="acc-amt">{{ (-netProfit) | number:'1.2-2' }}</span></div>
+        </li>
+        <li class="acc-empty" *ngIf="!incomeRows.length && netProfit >= 0">No sales data.</li>
+      </ul>
+      <div class="col-total col-total-sales">
+        <span>Total</span>
+        <span>{{ (netProfit < 0 ? totalExpense : totalIncome) | number:'1.2-2' }}</span>
       </div>
     </div>
-  </div>
-
-  <!-- Net Profit/Loss Row -->
-  <div class="net-row rpt-card" *ngIf="!loading && (incomeRows.length > 0 || expenseRows.length > 0)"
-    [ngClass]="netProfit >= 0 ? 'net-profit' : 'net-loss'">
-    <strong>{{ netProfit >= 0 ? 'Net Profit' : 'Net Loss' }}</strong>
-    <strong>{{ netProfit | number:'1.2-2' }}</strong>
   </div>
 
 </div>
