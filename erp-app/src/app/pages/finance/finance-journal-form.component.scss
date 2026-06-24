@@ -243,6 +243,19 @@ $success:    #16a34a;
 .num-input { text-align: right; }
 .del-cell  { text-align: center; }
 
+.cell-erp-dd {
+  display: block;
+  width: 100%;
+
+  ::ng-deep .field-wrap { margin: 0; }
+  ::ng-deep .field-label { display: none; }
+  ::ng-deep .dd-trigger {
+    height: 34px;
+    font-size: 12.5px;
+    border-radius: 6px;
+  }
+}
+
 .del-btn {
   width: 28px;
   height: 28px;
