@@ -113,7 +113,13 @@ export class SupplierInvoiceListComponent implements OnInit {
       grnNos: r.grnNos ?? r.grnNo ?? '',
       invoiceDate: r.invoiceDate,
       amount: Number(r.amount ?? r.netTotal ?? r.totalAmount ?? 0),
-      baseAmount: Number(r.baseAmount ?? r.amount ?? 0),
+      baseAmount: (() => {
+        const stored = Number(r.baseAmount ?? 0);
+        if (stored > 0) return stored;
+        const amt = Number(r.amount ?? r.netTotal ?? r.totalAmount ?? 0);
+        const fx = Number(r.fxRate ?? r.FxRate ?? 1) || 1;
+        return +(amt * fx).toFixed(2);
+      })(),
       isOverseas: !!(r.isOverseas || r.IsOverseas),
       numStatus,
       isPostedFlag: isPosted,
