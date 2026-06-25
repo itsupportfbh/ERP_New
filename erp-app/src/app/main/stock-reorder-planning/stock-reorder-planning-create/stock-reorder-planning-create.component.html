@@ -3,7 +3,6 @@
   <div class="page-header">
     <h2>{{ stockReorderId ? 'Edit Stock Reorder Planning' : 'Create Stock Reorder Planning' }}</h2>
     <div class="btn-group">
-      <button class="btn btn-primary btn-sm" type="button" (click)="saveDraft(1)" [disabled]="isBusy">Save Draft</button>
       <button class="btn btn-primary btn-sm" type="button" (click)="onSuggestPO()" [disabled]="isBusy">Suggest PO</button>
       <button class="btn btn-outline btn-sm" type="button" (click)="onCancel()">← Back</button>
     </div>
@@ -55,14 +54,6 @@
           <input type="checkbox" [(ngModel)]="includeLeadTime" (change)="reloadCalculationsOnly()" />
           Include Lead Time
         </label>
-        <button class="btn btn-outline btn-sm rp-action-btn rp-run-btn" type="button"
-          (click)="runSuggestion()" [disabled]="loading || rows.length === 0">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" class="rp-run-icon">
-            <circle cx="10" cy="10" r="7"/>
-            <polyline points="8 7 13 10 8 13"/>
-          </svg>
-          Run Suggestion
-        </button>
       </div>
 
     </div>

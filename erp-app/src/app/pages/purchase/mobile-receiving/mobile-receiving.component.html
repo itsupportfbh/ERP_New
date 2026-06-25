@@ -71,8 +71,19 @@
 
         <div class="mr-field mr-field-grow">
           <label class="mr-field-label">Barcode</label>
-          <input #barcodeInput class="mr-input" [(ngModel)]="mrBarcode"
-            (keydown.enter)="addScan()" placeholder="Scan or type barcode…" autofocus />
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input #barcodeInput class="mr-input" [(ngModel)]="mrBarcode"
+              (keydown.enter)="addScan()" placeholder="Scan or type barcode…" autofocus
+              autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
+              style="flex:1;min-width:0;" />
+            <button type="button" class="mr-cam-btn" (click)="startCameraScanner()" title="Scan with camera"
+              style="flex-shrink:0;width:40px;height:40px;border-radius:8px;border:1.5px solid var(--primary,#0e4a60);background:#fff;color:var(--primary,#0e4a60);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div class="mr-field mr-field-sm">
@@ -180,4 +191,41 @@
     </div>
 
   </div>
+</div>
+
+<!-- CAMERA SCANNER OVERLAY -->
+<div *ngIf="showCameraScanner"
+     style="position:fixed;inset:0;z-index:2000;background:#000;display:flex;flex-direction:column;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(0,0,0,.7);">
+    <span style="color:#fff;font-size:15px;font-weight:700;">Scan Barcode</span>
+    <button (click)="stopCameraScanner()"
+      style="border:0;background:rgba(255,255,255,.2);color:#fff;width:34px;height:34px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      &#215;
+    </button>
+  </div>
+
+  <!-- Video feed -->
+  <div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+    <video #scanVideo autoplay playsinline muted
+      style="width:100%;height:100%;object-fit:cover;"></video>
+
+    <!-- Scan guide box -->
+    <div style="position:absolute;width:260px;height:180px;border:3px solid #0e4a60;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;">
+      <div style="position:absolute;top:-3px;left:-3px;width:28px;height:28px;border-top:4px solid #4fc3f7;border-left:4px solid #4fc3f7;border-radius:10px 0 0 0;"></div>
+      <div style="position:absolute;top:-3px;right:-3px;width:28px;height:28px;border-top:4px solid #4fc3f7;border-right:4px solid #4fc3f7;border-radius:0 10px 0 0;"></div>
+      <div style="position:absolute;bottom:-3px;left:-3px;width:28px;height:28px;border-bottom:4px solid #4fc3f7;border-left:4px solid #4fc3f7;border-radius:0 0 0 10px;"></div>
+      <div style="position:absolute;bottom:-3px;right:-3px;width:28px;height:28px;border-bottom:4px solid #4fc3f7;border-right:4px solid #4fc3f7;border-radius:0 0 10px 0;"></div>
+    </div>
+  </div>
+
+  <!-- Error / hint -->
+  <div style="padding:16px;background:rgba(0,0,0,.7);text-align:center;">
+    <p *ngIf="cameraError" style="color:#f87171;margin:0;font-size:13px;">{{ cameraError }}</p>
+    <p *ngIf="!cameraError" style="color:rgba(255,255,255,.75);margin:0;font-size:13px;">
+      Point camera at barcode — detected automatically
+    </p>
+  </div>
+
 </div>

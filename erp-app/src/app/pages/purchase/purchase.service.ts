@@ -393,4 +393,7 @@ export class PurchaseService {
     fd.append('Module', 'PIN');
     return this.http.post(`${this.api}/Ocr/extract-groq-multi`, fd);
   }
+  getStockAlerts(companyId: number): Observable<any> {
+    return this.http.get(`${this.api}/Dashboard/StockAlerts`, { params: { companyId } });
+  }
 }

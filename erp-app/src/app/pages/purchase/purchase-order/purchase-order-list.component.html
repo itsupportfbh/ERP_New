@@ -31,6 +31,10 @@
           &#128276; Alerts
           <span class="badge-pill danger" *ngIf="pendingPrCount > 0">{{ pendingPrCount }}</span>
         </button>
+        <button class="panel-toggle-btn" (click)="showLowStockPanel = true; loadLowStockAlerts()">
+          &#9888; Low Stock
+          <span class="badge-pill danger" *ngIf="lowStockCount > 0">{{ lowStockCount }}</span>
+        </button>
         <button class="panel-toggle-btn draft-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()" [disabled]="isCurrentPeriodLocked">
           &#128190; Drafts
           <span class="badge-pill info" *ngIf="draftCount > 0">{{ draftCount }}</span>
@@ -135,6 +139,123 @@
     <div style="display:flex;justify-content:flex-end;padding:12px 16px;border-top:1px solid #e2e8f0;background:#f8fafc;">
       <button (click)="showAlerts = false"
         style="background:var(--primary,#0e4a60);color:#fff;border:0;border-radius:8px;padding:8px 20px;font-weight:600;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOW STOCK PANEL -->
+<div *ngIf="showLowStockPanel"
+     (click)="showLowStockPanel = false"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:640px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);display:flex;flex-direction:column;max-height:80vh;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#92400e;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div>
+          <h3 style="margin:0;font-size:17px;font-weight:700;color:#fff;">Low Stock Items</h3>
+          <p style="margin:2px 0 0;font-size:12px;color:rgba(255,255,255,.75);">
+            {{ lowStockLoading ? 'Loading…' : (lowStockAlerts.length + ' item' + (lowStockAlerts.length !== 1 ? 's' : '') + ' need restocking') }}
+          </p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button (click)="loadLowStockAlerts()" [disabled]="lowStockLoading"
+          style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;line-height:1;">&#8635;</button>
+        <button (click)="showLowStockPanel = false"
+          style="border:0;background:rgba(255,255,255,.15);color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&#215;</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:14px 16px;">
+      <div *ngIf="lowStockLoading"
+           style="text-align:center;padding:40px 20px;color:#6b7280;font-size:14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0e4a60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin-bottom:10px;animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <div>Loading low stock items…</div>
+      </div>
+      <div *ngIf="!lowStockLoading && !lowStockAlerts.length"
+           style="text-align:center;padding:40px 20px;color:#6b7280;font-size:14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;margin-bottom:10px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div>All stock levels are healthy!</div>
+      </div>
+      <div *ngFor="let a of lowStockAlerts"
+           style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:10px;"
+           [style.background]="a.issue === 'Zero Stock' ? '#fef2f2' : '#fffbeb'"
+           [style.border]="a.issue === 'Zero Stock' ? '1px solid #fecaca' : '1px solid #fde68a'">
+        <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;"
+             [style.background]="a.issue === 'Zero Stock' ? '#dc2626' : '#d97706'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;color:#1f2937;">{{ a.sku || '—' }}</div>
+          <div style="font-size:11px;margin-top:2px;"
+               [style.color]="a.issue === 'Zero Stock' ? '#dc2626' : '#d97706'">
+            {{ a.issue }} &nbsp;·&nbsp; On Hand: {{ a.qty }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+      <button (click)="goToStockReorder()"
+        style="background:#92400e;color:#fff;border:0;border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14"/></svg>
+        Create Reorder Plan
+      </button>
+      <button (click)="showLowStockPanel = false"
+        style="background:var(--primary,#0e4a60);color:#fff;border:0;border-radius:8px;padding:8px 20px;font-weight:600;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR CODE MODAL -->
+<div *ngIf="showQrModal"
+     (click)="showQrModal = false"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;display:flex;align-items:center;justify-content:center;">
+  <div (click)="$event.stopPropagation()"
+       style="width:340px;max-width:95vw;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--primary,#0e4a60);">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#fff;">Mobile Receiving QR</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;">{{ qrPoNo }}</div>
+      </div>
+      <button (click)="showQrModal = false"
+        style="border:0;background:rgba(255,255,255,.15);color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#215;</button>
+    </div>
+    <!-- QR image -->
+    <div style="padding:24px;text-align:center;">
+      <div *ngIf="qrLoading" style="padding:40px 0;color:#6b7280;font-size:13px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0e4a60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             style="width:36px;height:36px;margin-bottom:10px;animation:spin 1s linear infinite;">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <div>Generating QR...</div>
+      </div>
+      <div *ngIf="!qrLoading && qrSrc">
+        <img [src]="qrSrc" alt="QR Code" style="width:200px;height:200px;border:1px solid #e5e7eb;border-radius:8px;padding:8px;" />
+        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">Scan to open Mobile Receiving for this PO</p>
+      </div>
+      <div *ngIf="!qrLoading && !qrSrc" style="padding:20px 0;color:#dc2626;font-size:13px;">
+        Failed to generate QR code.
+      </div>
+    </div>
+    <!-- Footer -->
+    <div style="display:flex;gap:8px;padding:12px 20px;border-top:1px solid #e5e7eb;background:#f8fafc;justify-content:flex-end;flex-wrap:wrap;">
+      <button (click)="shareQrWhatsApp()" [disabled]="!qrPayloadUrl"
+        style="background:#25D366;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px;">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+        </svg>
+        WhatsApp
+      </button>
+      <button (click)="downloadQr()" [disabled]="!qrSrc"
+        style="background:var(--primary,#0e4a60);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download
+      </button>
+      <button (click)="showQrModal = false"
+        style="background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:13px;">Close</button>
     </div>
   </div>
 </div>

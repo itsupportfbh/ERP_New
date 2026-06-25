@@ -392,7 +392,22 @@
           </table>
         </div>
       </div>
-
+ <!-- Stock Alerts -->
+      <div class="section-card" *ngIf="stockAlerts.length > 0">
+        <h6 class="section-title">&#9888; Low Stock Alerts</h6>
+        <div class="table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>SKU</th><th>Issue</th><th>Qty</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let a of stockAlerts">
+                <td>{{ a.sku }}</td>
+                <td><span [ngClass]="alertClass(a.issue)">{{ a.issue }}</span></td>
+                <td>{{ a.qty }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </ng-container>
 
@@ -439,7 +454,21 @@
         </table>
       </div>
     </div>
-
+ <div class="section-card" *ngIf="stockAlerts.length > 0">
+      <h6 class="section-title">&#9888; Low Stock Alerts</h6>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>SKU</th><th>Issue</th><th>Qty</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let a of stockAlerts">
+              <td>{{ a.sku }}</td>
+              <td><span [ngClass]="alertClass(a.issue)">{{ a.issue }}</span></td>
+              <td>{{ a.qty }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </ng-container>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->

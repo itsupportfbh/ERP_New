@@ -28,6 +28,12 @@ export class PurchaseOrderListComponent implements OnInit {
   showAlerts = false;
   alertsLoading = false;
 
+  // Low stock alerts
+  lowStockAlerts: any[] = [];
+  lowStockCount = 0;
+  showLowStockPanel = false;
+  lowStockLoading = false;
+
   // Approvals panel
   showApprovals = false;
 
@@ -59,6 +65,13 @@ export class PurchaseOrderListComponent implements OnInit {
     this.toastTimer = setTimeout(() => { this.toastMsg = ''; }, 3500);
   }
 
+  // QR code modal
+  showQrModal = false;
+  qrPoNo = '';
+  qrSrc = '';
+  qrPayloadUrl = '';
+  qrLoading = false;
+
   // Lines detail modal
   showLinesModal = false;
   modalRow: any = null;
@@ -84,6 +97,7 @@ export class PurchaseOrderListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
+    { key: 'qr',    label: 'QR Code',        btnClass: 'default', icon: 'qr'    },
     { key: 'email',  label: 'Email Supplier', btnClass: 'default', icon: 'email'  },
     { key: 'print',  label: 'Print',          btnClass: 'default', icon: 'print'  },
     { key: 'edit',   label: 'Edit',           btnClass: 'default', icon: 'edit'   },
@@ -123,6 +137,7 @@ export class PurchaseOrderListComponent implements OnInit {
     this.load();
     this.loadPendingPrCount();
     this.loadDrafts();
+    this.loadLowStockAlerts();
   }
 
   load(): void {
@@ -191,6 +206,24 @@ export class PurchaseOrderListComponent implements OnInit {
       next: res => { this.drafts = this.svc.unwrap(res); this.draftsLoading = false; },
       error: () => { this.drafts = []; this.draftsLoading = false; }
     });
+  }
+
+  loadLowStockAlerts(): void {
+    this.lowStockLoading = true;
+    const companyId = Number(localStorage.getItem('companyId')) || 0;
+    this.svc.getStockAlerts(companyId).subscribe({
+      next: res => {
+        this.lowStockAlerts = this.svc.unwrap(res);
+        this.lowStockCount = this.lowStockAlerts.length;
+        this.lowStockLoading = false;
+      },
+      error: () => { this.lowStockAlerts = []; this.lowStockCount = 0; this.lowStockLoading = false; }
+    });
+  }
+
+  goToStockReorder(): void {
+    this.showLowStockPanel = false;
+    this.router.navigate(['/app/inventory/create-stockreorderplanning']);
   }
 
   openDraft(draft: any): void {
@@ -265,31 +298,85 @@ export class PurchaseOrderListComponent implements OnInit {
     if (e.action === 'edit')    this.router.navigate(['/app/purchase/orders', e.row.id]);
     if (e.action === 'approve') this.approveReject(e.row, 2);
     if (e.action === 'reject')  this.approveReject(e.row, 3);
+    if (e.action === 'qr')      this.showQr(e.row);
     if (e.action === 'email')   this.emailSupplier(e.row);
     if (e.action === 'print')   this.printPo(e.row);
     if (e.action === 'delete')  this.delete(e.row);
   }
 
+  showQr(row: any): void {
+    const poNo = row.purchaseOrderNo ?? row.pO_No ?? '';
+    this.qrPoNo = poNo;
+    this.qrSrc = '';
+    this.qrPayloadUrl = '';
+    this.qrLoading = true;
+    this.showQrModal = true;
+    this.svc.getPurchaseOrderQr(poNo).subscribe({
+      next: (res: any) => {
+        this.qrSrc = res?.qrCodeSrcBase64 ?? res?.QrCodeSrcBase64 ?? '';
+        this.qrPayloadUrl = res?.qrPayloadUrl ?? res?.QrPayloadUrl ?? '';
+        this.qrLoading = false;
+      },
+      error: () => { this.qrLoading = false; }
+    });
+  }
+
+  downloadQr(): void {
+    if (!this.qrSrc) return;
+    const a = document.createElement('a');
+    a.href = this.qrSrc;
+    a.download = `${this.qrPoNo}-QR.png`;
+    a.click();
+  }
+
+  shareQrWhatsApp(): void {
+    if (!this.qrPayloadUrl) return;
+    const text = encodeURIComponent(`Purchase Order ${this.qrPoNo} - Mobile Receiving:\n${this.qrPayloadUrl}`);
+    const a = document.createElement('a');
+    a.href = `https://web.whatsapp.com/send?text=${text}`;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   printPo(row: any): void {
     if (!this.perm.canPrint(this.fnId)) return;
+    const poNo = row.purchaseOrderNo ?? row.pO_No ?? '';
     this.svc.getPurchaseOrderById(row.id).subscribe({
       next: res => {
         const po = this.svc.unwrapOne(res);
         let lines: any[] = [];
         try { lines = Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); } catch { lines = []; }
-        const html = this.buildPoPrintHtml(po, lines, row);
-        const w = window.open('', '_blank', 'width=1050,height=800');
-        if (!w) return;
-        w.document.write(html);
-        w.document.close();
-        w.focus();
-        setTimeout(() => { w.print(); }, 700);
+
+        // Fetch QR code then open print window
+        this.svc.getPurchaseOrderQr(poNo).subscribe({
+          next: (qrRes: any) => {
+            const qrSrc: string = qrRes?.qrCodeSrcBase64 ?? qrRes?.QrCodeSrcBase64 ?? '';
+            const html = this.buildPoPrintHtml(po, lines, row, qrSrc);
+            this.openPrintWindow(html);
+          },
+          error: () => {
+            const html = this.buildPoPrintHtml(po, lines, row, '');
+            this.openPrintWindow(html);
+          }
+        });
       },
       error: () => {}
     });
   }
 
-  private buildPoPrintHtml(po: any, lines: any[], row?: any): string {
+  private openPrintWindow(html: string): void {
+    const w = window.open('', '_blank', 'width=1050,height=800');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 700);
+  }
+
+  private buildPoPrintHtml(po: any, lines: any[], row?: any, qrSrc = ''): string {
     const fmt = (d: any) => {
       if (!d) return '—';
       try { const dt = new Date(d); return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`; }
@@ -384,9 +471,12 @@ table.lines thead th:last-child{border-right:none;}
     <div class="co-name">Purchase Order</div>
     <div class="co-sub">Official Purchase Document</div>
   </div>
-  <div class="doc-title">
-    <h1>PURCHASE ORDER</h1>
-    <div class="doc-no">PO No: <span>${poNo}</span></div>
+  <div class="doc-title" style="display:flex;align-items:center;gap:16px;">
+    ${qrSrc ? `<div style="text-align:center;"><img src="${qrSrc}" style="width:72px;height:72px;display:block;" /><div style="font-size:9px;color:#9ca3af;margin-top:2px;">Scan to receive</div></div>` : ''}
+    <div>
+      <h1>PURCHASE ORDER</h1>
+      <div class="doc-no">PO No: <span>${poNo}</span></div>
+    </div>
   </div>
 </div>
 
@@ -499,6 +589,16 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       confirmButtonText: 'Yes, send it!'
     });
     if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Sending Email…',
+      html: 'Generating PDF and sending to supplier.<br/>Please wait.',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading()
+    });
+
     this.svc.emailSupplierPo(row.id).subscribe({
       next: () => {
         Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#16a34a' });
@@ -598,13 +698,23 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
         }
       });
     } else if (this.actionType === 'email-supplier') {
+      this.closeActionConfirm();
+      Swal.fire({
+        title: 'Sending Email…',
+        html: 'Generating PDF and sending to supplier.<br/>Please wait.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => Swal.showLoading()
+      });
       this.svc.emailSupplierPo(row.id).subscribe({
         next: () => {
-          this.actionLoading = false; this.closeActionConfirm();
+          this.actionLoading = false;
           Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#16a34a' });
         },
         error: err => {
-          this.actionLoading = false; this.actionError = err?.error?.message || 'Unable to send email.';
+          this.actionLoading = false;
+          this.actionError = err?.error?.message || 'Unable to send email.';
           Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' });
         }
       });
