@@ -113,10 +113,6 @@
     <button class="fw-btn fw-btn-primary" type="button" (click)="load()">Run Report</button>
   </div>
 
-  <!-- ── Alert Messages ── -->
-  <div class="fw-alert fw-success" *ngIf="message">{{ message }}</div>
-  <div class="fw-alert fw-danger"  *ngIf="error">{{ error }}</div>
-
   <!-- ── Inline Create / Edit Form ── -->
   <div class="fw-form-card" *ngIf="formOpen">
     <div class="fw-form-head">
@@ -146,6 +142,50 @@
       </button>
     </div>
   </div>
+
+  <!-- Search bar -->
+    <div class="table-search-bar">
+      <div class="tsb-left">
+        Show
+        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+        entries
+      </div>
+      <input class="table-search-input" type="text" placeholder="Search..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+    </div>
+
+    <!-- Table -->
+    <erp-table
+      [columns]="columns"
+      [data]="filtered"
+      [loading]="loading"
+      [showControls]="false"
+      [rowActions]="rowActions"
+      (rowClick)="onRowClick($event)"
+      (actionClick)="onAction($event)">
+    </erp-table>
+ <div class="fw-post-footer" *ngIf="config.key === 'journal'">
+      <button class="fw-btn fw-btn-primary fw-post-btn" type="button"
+        [disabled]="loading || !filtered.length"
+        (click)="postJournals()">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <polyline points="4 10 8 14 16 6"></polyline>
+        </svg>
+        Post
+      </button>
+  </div><!-- /.fw-post-footer -->
+
+  </div><!-- /.list-card -->
+  </div><!-- /.list-page -->
+  </ng-container>
+
+  <!-- ── Alert Messages (visible for all page types) ── -->
+  <div class="fw-alert fw-success" *ngIf="message">{{ message }}</div>
+  <div class="fw-alert fw-danger"  *ngIf="error">{{ error }}</div>
 
   <!-- ── Period Close Dashboard ── -->
   <div class="pc-card" *ngIf="config.key === 'period-close'">
@@ -297,45 +337,5 @@
       </erp-table>
     </div>
   </div>
-
-    <!-- Search bar -->
-    <div class="table-search-bar">
-      <div class="tsb-left">
-        Show
-        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
-          <option [ngValue]="10">10</option>
-          <option [ngValue]="25">25</option>
-          <option [ngValue]="50">50</option>
-        </select>
-        entries
-      </div>
-      <input class="table-search-input" type="text" placeholder="Search..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
-    </div>
-
-    <!-- Table -->
-    <erp-table
-      [columns]="columns"
-      [data]="filtered"
-      [loading]="loading"
-      [showControls]="false"
-      [rowActions]="rowActions"
-      (rowClick)="onRowClick($event)"
-      (actionClick)="onAction($event)">
-    </erp-table>
- <div class="fw-post-footer" *ngIf="config.key === 'journal'">
-      <button class="fw-btn fw-btn-primary fw-post-btn" type="button"
-        [disabled]="loading || !filtered.length"
-        (click)="postJournals()">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"
-             stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-          <polyline points="4 10 8 14 16 6"></polyline>
-        </svg>
-        Post
-      </button>
-  </div><!-- /.fw-post-footer -->
-
-  </div><!-- /.list-card -->
-  </div><!-- /.list-page -->
-  </ng-container>
 
 </div>

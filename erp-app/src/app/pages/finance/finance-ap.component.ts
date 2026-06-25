@@ -71,6 +71,7 @@ export class FinanceApComponent implements OnInit {
   // AP Aging
   agingRows: any[] = [];
   agingDetailRows: any[] = [];
+  agingDetailLoading = false;
   agingSummary = { total: 0, days0_30: 0, days31_60: 0, days61plus: 0 };
   agingFromDate = '';
   agingToDate = '';
@@ -603,16 +604,39 @@ export class FinanceApComponent implements OnInit {
     if (this.expandedSupplierAging.has(supplier)) {
       this.expandedSupplierAging.delete(supplier);
       this.agingDetailRows = [];
+      this.agingDetailLoading = false;
       return;
     }
     this.expandedSupplierAging.clear();
     this.expandedSupplierAging.add(supplier);
+    this.agingDetailRows = [];
+    this.agingDetailLoading = true;
+
     const row = this.agingRows.find(r => String(r.supplierName) === String(supplier));
-    const supplierId = row?.supplierId ?? row?.SupplierId;
-    if (!supplierId) { this.agingDetailRows = []; return; }
+    let supplierId: any = row?.supplierId ?? row?.SupplierId;
+    if (!supplierId) {
+      const found = this.suppliers.find((s: any) =>
+        String(s.name).toLowerCase().trim() === String(supplier).toLowerCase().trim());
+      supplierId = found?.id;
+    }
+    console.log('[AP Aging] expand supplier=', supplier, ' supplierId=', supplierId, ' dateRange=', this.agingDateRange());
+    if (!supplierId) {
+      console.warn('[AP Aging] supplierId not found for supplier:', supplier);
+      this.agingDetailLoading = false;
+      return;
+    }
     this.finance.list({ list: `/ApAging/supplierInvoices/${supplierId}` }, this.agingDateRange()).subscribe({
-      next: res => { this.agingDetailRows = this.finance.unwrap(res).map(detail => this.normalizeAgingDetail(detail)); },
-      error: () => { this.agingDetailRows = []; }
+      next: res => {
+        console.log('[AP Aging] supplierInvoices response:', res);
+        this.agingDetailRows = this.finance.unwrap(res).map(detail => this.normalizeAgingDetail(detail));
+        console.log('[AP Aging] agingDetailRows count:', this.agingDetailRows.length);
+        this.agingDetailLoading = false;
+      },
+      error: (err) => {
+        console.error('[AP Aging] supplierInvoices error:', err);
+        this.agingDetailRows = [];
+        this.agingDetailLoading = false;
+      }
     });
   }
 
@@ -874,8 +898,8 @@ export class FinanceApComponent implements OnInit {
 
   statusClass(status: string): string {
     const s = String(status || '').toLowerCase();
-    if (s === 'paid')    return 'badge-success';
-    if (s === 'partial') return 'badge-warning';
+    if (s === 'paid' || s === 'matched') return 'badge-success';
+    if (s === 'partial' || s === 'mismatch') return 'badge-warning';
     return 'badge-danger';
   }
 
@@ -973,6 +997,8 @@ export class FinanceApComponent implements OnInit {
       dueDate: row.dueDate ?? row.DueDate,
       originalAmount: this.money(row, ['originalAmount', 'OriginalAmount', 'amount', 'Amount', 'grandTotal', 'GrandTotal']),
       paidAmount: this.money(row, ['paidAmount', 'PaidAmount', 'paid', 'Paid']),
+      debitNoteAmount: this.money(row, ['debitNoteAmount', 'DebitNoteAmount', 'debitNote', 'DebitNote']),
+      advanceAmount: this.money(row, ['advanceAmount', 'AdvanceAmount', 'advance', 'Advance']),
       balance: this.money(row, ['balance', 'Balance', 'balanceAmount', 'BalanceAmount', 'outstandingAmount', 'OutstandingAmount']),
       currencyName: row.currencyName ?? row.CurrencyName ?? 'SGD'
     };

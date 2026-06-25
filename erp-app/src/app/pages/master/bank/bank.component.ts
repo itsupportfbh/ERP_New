@@ -89,7 +89,7 @@ export class BankComponent implements OnInit {
     this.form = {
       bankName: item.bankName || '',
       accountName: item.accountHolderName || item.accountName || '',
-      accountNumber: item.accountNumber || item.accountNo || '',
+      accountNumber: String(item.accountNumber || item.accountNo || ''),
       accountTypeId: item.accountTypeId || item.accountType || null,
       branch: item.branch || item.branchName || '',
       ifscSwift: item.ifscSwift || item.ifsc || item.swift || '',
@@ -109,6 +109,8 @@ export class BankComponent implements OnInit {
   clearForm(): void { this.form = { ...blank }; }
 
   onSubmit(): void {
+    this.message = '';
+    this.isError = false;
     if (!this.form.bankName?.trim()) { this.message = 'Bank Name is required.'; this.isError = true; return; }
     if (!this.form.accountName?.trim()) { this.message = 'Account Holder Name is required.'; this.isError = true; return; }
     if (!this.form.accountNumber?.trim()) { this.message = 'Account Number is required.'; this.isError = true; return; }
@@ -116,12 +118,15 @@ export class BankComponent implements OnInit {
     if (!this.form.currencyId) { this.message = 'Currency is required.'; this.isError = true; return; }
     if (!this.form.countryId) { this.message = 'Country is required.'; this.isError = true; return; }
     if (!this.form.contactEmail?.trim()) { this.message = 'Contact Email is required.'; this.isError = true; return; }
-    if (!this.form.budgetLineId) { this.message = 'Ledger Name is required.'; this.isError = true; return; }
+    if (!this.form.budgetLineId) { this.message = 'Ledger Account (Ledger Name) is required. Please select a ledger from the dropdown.'; this.isError = true; return; }
+
+    const rawAccNo = this.form.accountNumber.trim().replace(/\D/g, '');
+    const accountNo = rawAccNo ? Number(rawAccNo) : 0;
 
     const payload = {
       bankName: this.form.bankName.trim(),
       accountHolderName: this.form.accountName.trim(),
-      accountNo: this.form.accountNumber.trim(),
+      accountNo,
       accountType: Number(this.form.accountTypeId),
       branch: this.form.branch?.trim() || '',
       ifsc: this.form.ifscSwift?.trim() || '',

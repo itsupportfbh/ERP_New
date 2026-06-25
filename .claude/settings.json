@@ -14,7 +14,8 @@
       "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 03f9f9e:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
       "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 78ff235:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
       "Bash(xargs grep -l \"approvalLevelName\\\\|role.*dashboard\\\\|DashboardComponent\")",
-      "Bash(dir \"C:/Users/CCSPLNB03/source/repos/Unity_ERP/starter-kit/src/app/main/sample/\" /b)"
+      "Bash(dir \"C:/Users/CCSPLNB03/source/repos/Unity_ERP/starter-kit/src/app/main/sample/\" /b)",
+      "Bash(dotnet build *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

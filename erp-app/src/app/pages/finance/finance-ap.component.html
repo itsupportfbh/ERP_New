@@ -520,20 +520,27 @@
                       <th>Due Date</th>
                       <th class="right">Original</th>
                       <th class="right">Paid</th>
+                      <th class="right">Debit Note</th>
+                      <th class="right">Advance</th>
                       <th class="right">Balance</th>
                     </tr>
                   </thead>
                   <tbody>
+                    <tr *ngIf="agingDetailLoading">
+                      <td colspan="8" class="ap-empty">Loading...</td>
+                    </tr>
                     <tr *ngFor="let detail of agingDetailRows">
                       <td class="mono">{{ detail.invoiceNo || '-' }}</td>
                       <td>{{ detail.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                       <td>{{ detail.dueDate | date:'dd-MMM-yyyy' }}</td>
                       <td class="right">{{ detail.originalAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
                       <td class="right">{{ detail.paidAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.debitNoteAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.advanceAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
                       <td class="right teal-bold">{{ detail.balance | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
                     </tr>
-                    <tr *ngIf="agingDetailRows.length === 0">
-                      <td colspan="6" class="ap-empty">No invoice detail found.</td>
+                    <tr *ngIf="!agingDetailLoading && agingDetailRows.length === 0">
+                      <td colspan="8" class="ap-empty">No invoice detail found.</td>
                     </tr>
                   </tbody>
                 </table>

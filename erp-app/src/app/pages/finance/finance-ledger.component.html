@@ -15,7 +15,7 @@
         </div>
       </div>
       <div class="list-card-actions">
-        <button class="panel-toggle-btn" type="button" (click)="showFilter = !showFilter">
+        <button class="gl-btn-outline" type="button" (click)="showFilter = !showFilter" style="display:inline-flex;align-items:center;gap:6px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:13px;height:13px">
             <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
           </svg>
@@ -34,8 +34,8 @@
         <span>To Date</span>
         <input type="date" [(ngModel)]="toDate">
       </label>
-      <button class="list-add-btn" type="button" (click)="load()">Apply</button>
-      <button class="panel-toggle-btn" type="button" (click)="showFilter = false">Cancel</button>
+      <button class="gl-btn-primary" type="button" (click)="load()">Apply</button>
+      <button class="gl-btn-outline" type="button" (click)="showFilter = false">Cancel</button>
     </div>
 
     <!-- Show entries + Search -->
