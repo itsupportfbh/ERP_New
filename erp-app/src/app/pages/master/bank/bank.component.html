@@ -44,6 +44,7 @@
       <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Add' }} Bank</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
 
+        <div *ngIf="message" class="mf-alert" [class.is-error]="isError">{{ message }}</div>
         <div class="dt-form-grid">
           <div class="mf-group">
             <label class="mf-label">Bank Name <span style="color:red">*</span></label>
