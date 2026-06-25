@@ -151,13 +151,15 @@ export class DashboardComponent implements OnInit {
         go(this.svc.getOpenSalesOrders(c),        d => this.openSalesOrders  = arr(d));
         go(this.svc.getARAgingData(c),            d => this.arAging          = obj(d));
         break;
-      case 'procurement-manager':
+    case 'procurement-manager':
         go(this.svc.getPurchaseFlowDashboard(c),  d => this.purchaseFlow = obj(d));
         go(this.svc.getOpenPurchaseOrders(c),     d => this.openPOs      = arr(d));
+        go(this.svc.getStockAlerts(c),            d => this.stockAlerts  = arr(d));
         break;
       case 'procurement-executive':
         go(this.svc.getMyPurchaseRequests(c, this.userId), d => this.myPRs   = arr(d));
         go(this.svc.getOpenPurchaseOrders(c),              d => this.openPOs = arr(d));
+        go(this.svc.getStockAlerts(c),                     d => this.stockAlerts = arr(d));
         break;
       case 'inventory-manager':
       case 'inventory-execution':
@@ -326,8 +328,10 @@ export class DashboardComponent implements OnInit {
     return 'badge-sm-info';
   }
 
-  alertClass(issue: string): string {
-    return (issue || '').toLowerCase().includes('negative') ? 'badge-sm-danger' : 'badge-sm-warn';
+ alertClass(issue: string): string {
+    const s = (issue || '').toLowerCase();
+    if (s.includes('zero') || s.includes('negative')) return 'badge-sm-danger';
+    return 'badge-sm-warn';
   }
 
   prodStatusClass(status: string): string {

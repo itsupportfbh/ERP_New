@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import Swal from 'sweetalert2';
 import { ReceivingIntegrationService } from '../../../core/services/receiving-integration.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -19,9 +19,18 @@ type ScanRow = {
   templateUrl: './mobile-receiving.component.html',
   styleUrls: ['./mobile-receiving.component.scss']
 })
-export class MobileReceivingComponent implements OnInit {
+export class MobileReceivingComponent implements OnInit, OnDestroy {
   @ViewChild('barcodeInput') barcodeInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('scanVideo') scanVideo?: ElementRef<HTMLVideoElement>;
   readonly fnId = 'mobilereceiving';
+
+  // Camera scanner state
+  showCameraScanner = false;
+  cameraError = '';
+  private videoStream?: MediaStream;
+  private scanAnimFrame?: number;
+  readonly cameraSupported = typeof (window as any).BarcodeDetector !== 'undefined';
+
 
   mrPo = '';
   mrBarcode = '';
@@ -40,7 +49,8 @@ export class MobileReceivingComponent implements OnInit {
   constructor(
     private svc: PurchaseService,
     public perm: PermissionService,
-    private receivingSvc: ReceivingIntegrationService
+    private receivingSvc: ReceivingIntegrationService,
+    private zone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -74,12 +84,16 @@ export class MobileReceivingComponent implements OnInit {
       return;
     }
     this.error = '';
-    const poNo = this.mrPo.trim();
+    const poNo    = this.mrPo.trim();
     const barcode = this.mrBarcode.trim();
-    const qty = Number(this.mrQty || 0);
+    const qty     = Number(this.mrQty || 0);
+
+    // Clear the field immediately after capturing value
+    this.mrBarcode = '';
+    this.focusBarcode();
 
     if (!poNo || !barcode) { this.error = 'Enter PO number and barcode.'; return; }
-    if (!qty || qty <= 0) { this.error = 'Enter a valid quantity.'; return; }
+    if (!qty || qty <= 0)  { this.error = 'Enter a valid quantity.'; return; }
 
     const localErr = this.validateLocal(barcode, qty);
     if (localErr) { this.error = localErr; return; }
@@ -278,6 +292,83 @@ export class MobileReceivingComponent implements OnInit {
     return Math.min(100, +(((this.totalReceivedQty + this.queueTotalQty) / this.totalOrderedQty) * 100).toFixed(2));
   }
 
-  private focusBarcode(): void { setTimeout(() => this.barcodeInput?.nativeElement?.focus(), 50); }
+  private focusBarcode(): void {
+    setTimeout(() => {
+      const el = this.barcodeInput?.nativeElement;
+      if (!el) return;
+      el.value = '';         // clear DOM directly (browser form-restore bypass)
+      this.mrBarcode = '';   // keep model in sync
+      el.focus();
+    }, 50);
+  }
   trackBy(i: number): number { return i; }
+
+  ngOnDestroy(): void { this.stopCameraScanner(); }
+
+  // ── Camera scanning ──────────────────────────────────
+  async startCameraScanner(): Promise<void> {
+    this.cameraError = '';
+    this.showCameraScanner = true;
+
+    if (!this.cameraSupported) {
+      this.cameraError = 'BarcodeDetector not supported in this browser. Use Chrome on Android.';
+      return;
+    }
+
+    try {
+      this.videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+
+      // Wait for the video element to be rendered
+      setTimeout(() => {
+        const video = this.scanVideo?.nativeElement;
+        if (!video) return;
+        video.srcObject = this.videoStream!;
+        video.play();
+        video.addEventListener('playing', () => this.scanLoop(), { once: true });
+      }, 100);
+    } catch (e: any) {
+      this.cameraError = e?.message ?? 'Camera access denied.';
+    }
+  }
+
+  private async scanLoop(): Promise<void> {
+    const video = this.scanVideo?.nativeElement;
+    if (!video || !this.showCameraScanner) return;
+
+    const detector = new (window as any).BarcodeDetector({
+      formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'data_matrix']
+    });
+
+    const detect = async () => {
+      if (!this.showCameraScanner) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) {
+            const value = barcodes[0].rawValue;
+            this.zone.run(() => {
+              this.mrBarcode = value;
+              this.stopCameraScanner();
+              this.mrScanMessage = `Scanned: ${value}`;
+              this.focusBarcode();
+            });
+            return;
+          }
+        } catch {}
+      }
+      this.scanAnimFrame = requestAnimationFrame(detect);
+    };
+
+    this.scanAnimFrame = requestAnimationFrame(detect);
+  }
+
+  stopCameraScanner(): void {
+    this.showCameraScanner = false;
+    if (this.scanAnimFrame) { cancelAnimationFrame(this.scanAnimFrame); this.scanAnimFrame = undefined; }
+    if (this.videoStream) { this.videoStream.getTracks().forEach(t => t.stop()); this.videoStream = undefined; }
+    const video = this.scanVideo?.nativeElement;
+    if (video) { video.srcObject = null; }
+  }
 }
