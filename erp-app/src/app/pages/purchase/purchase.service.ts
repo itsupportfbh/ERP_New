@@ -181,10 +181,10 @@ export class PurchaseService {
     return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRNByPoId?poId=${poId}`);
   }
   getAvailableGRNsForPin(): Observable<any> {
-    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRN`);
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/AvailableForPinCreate`);
   }
   getAvailableGRNsForPinEdit(pinId: number | string): Observable<any> {
-    return this.http.get(`${this.api}/PurchaseGoodReceipt/GetAllGRN`);
+    return this.http.get(`${this.api}/PurchaseGoodReceipt/AvailableForPinEdit/${pinId}`);
   }
   createGRN(data: any): Observable<any> {
     return this.http.post(`${this.api}/PurchaseGoodReceipt/insertGRN`, data);

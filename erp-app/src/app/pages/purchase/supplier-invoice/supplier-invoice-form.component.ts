@@ -694,6 +694,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       TaxRate: this.taxRate,
       Tax: this.totalTax,
       Amount: this.grandTotal,
+      BaseAmount: +(this.grandTotal * (this.fxRate || 1)).toFixed(2),
       GrnNos: this.selectedGrnNos.join(','),
       Status: draft ? 0 : 1,
       LinesJson: JSON.stringify(linesData),
