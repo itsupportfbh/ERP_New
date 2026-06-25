@@ -42,10 +42,18 @@ export class StockTakeListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'view', label: 'View', btnClass: 'btn-outline-info' },
-    { key: 'edit', label: 'Edit', btnClass: 'btn-outline-primary' },
-    { key: 'delete', label: 'Delete', btnClass: 'btn-outline-danger' }
+    { key: 'view', label: 'View', icon: 'view', btnClass: 'btn-outline-info' },
+    { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'btn-outline-primary' },
+    { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'btn-outline-danger' },
+    { key: 'post', label: 'Post', icon: 'post', btnClass: 'btn-outline-success' }
   ];
+
+  /** Per-row action visibility: Post only for Approved; hide Edit/Delete once Posted. */
+  rowActionFilter = (action: string, row: any): boolean => {
+    if (action === 'post') return row?.status === 2;
+    if (action === 'edit' || action === 'delete') return row?.status !== 3;
+    return true;
+  };
 
   public searchValue = '';
   public ColumnMode = ColumnMode;
@@ -160,6 +168,19 @@ export class StockTakeListComponent implements OnInit {
     });
   }
 
+  /**
+   * Header supplier is blank when the stock take covers "ALL" suppliers (supplierId = 0);
+   * in that case the actual supplier(s) live on the line items.
+   */
+  private deriveSupplierFromLines(req: any): string {
+    const names = Array.from(
+      new Set((req?.lineItems || []).map((l: any) => l?.supplierName).filter((n: any) => !!n))
+    ) as string[];
+    if (names.length === 1) return names[0];
+    if (names.length > 1) return 'Multiple';
+    return '';
+  }
+
   canView(): boolean {
     return this.permissionService.hasView(this.permission);
   }
@@ -217,6 +238,7 @@ export class StockTakeListComponent implements OnInit {
     if (e.action === 'view') { this.openLinesModal(e.row); }
     else if (e.action === 'edit') { if (this.canEdit() && e.row.status !== 3) this.editStockTake(e.row); }
     else if (e.action === 'delete') { if (this.canDelete() && e.row.status !== 3) this.deleteStockTake(e.row.id); }
+    else if (e.action === 'post') { this.post(e.row); }
   }
 
 
@@ -229,8 +251,8 @@ export class StockTakeListComponent implements OnInit {
         this.rows = res.data.map((req: any) => {
           return {
             ...req,
-            takeTypeLabel: this.takeTypeMap[req.takeTypeId] ?? String(req.takeTypeId),
-            strategyName: this.takeTypeMap[req.takeTypeId] ?? String(req.takeTypeId ?? ''),
+            supplierName: req.supplierId ? (req.supplierName || this.deriveSupplierFromLines(req) || 'ALL') : 'ALL',
+            strategyName: req.strategyId ? (req.strategyName || 'ALL') : 'ALL',
             statusLabel: req.status === 1 ? 'Draft' : req.status === 2 ? 'Approved' : 'Posted'
           };
         });
@@ -383,7 +405,8 @@ export class StockTakeListComponent implements OnInit {
             Swal.fire({ icon: 'success', title: 'Posted', text: res.message || 'Inventory posted.' });
             // reflect Posted state
             row.status = 3;
-            this.rows = [...this.rows]; // trigger change detection
+            row.statusLabel = 'Posted';
+            this.applyFilter(); // rebuild tableData so the grid reflects Posted state
           } else {
             Swal.fire({ icon: 'error', title: 'Failed', text: res?.message || 'Post failed.' });
           }

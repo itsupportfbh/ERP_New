@@ -61,7 +61,7 @@
             <tr>
               <th style="width:14%">Item</th>
               <th style="width:12%">Description</th>
-              <th style="width:16%">Ledger Name</th>
+              <th style="width:16%;display:none">Ledger Name</th>
               <th style="width:9%">UOM</th>
               <th class="ta-right" style="width:6%">Qty</th>
               <th class="ta-right" style="width:8%">Unit Price</th>
@@ -80,7 +80,7 @@
                   placeholder="Select item…" (ngModelChange)="onItemSelect(l)"></erp-dropdown>
               </td>
               <td><input class="mf-input si-cell" [(ngModel)]="l.description" name="desc{{i}}" placeholder="-" /></td>
-              <td>
+              <td style="display:none">
                 <erp-dropdown [(ngModel)]="l.ledgerId"
                   [items]="ledgerOptions" bindLabel="label" bindValue="value"
                   placeholder="Select ledger…"></erp-dropdown>

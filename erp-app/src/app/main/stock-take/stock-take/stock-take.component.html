@@ -46,8 +46,9 @@
 
   <!-- Lines table -->
   <div class="card st-card">
-    <div class="table-search-bar">
+    <div class="table-search-bar" style="display:flex;align-items:center;justify-content:space-between">
       <span style="font-size:13px;font-weight:600;color:var(--text)">Stock Take Lines</span>
+      <span style="font-size:11px;font-style:italic;color:var(--muted)">Take stock in base UOM</span>
     </div>
     <div class="st-table-wrap">
       <table class="dt-table st-table">
@@ -55,12 +56,11 @@
           <col style="width:11%"><!-- Location -->
           <col style="width:7%"> <!-- Supplier -->
           <col style="width:11%"><!-- Item -->
-          <col style="width:8%"> <!-- Barcode -->
+          <col style="width:13%"><!-- Barcode -->
           <col style="width:6%"> <!-- Purchase UOM -->
           <col style="width:9%"> <!-- Accepted Qty -->
           <col style="width:5%"> <!-- Base UOM -->
           <col style="width:9%"> <!-- Faulty Qty -->
-          <col style="width:5%"> <!-- Base UOM -->
           <col style="width:11%"><!-- Reason -->
           <col style="width:18%"><!-- Remarks -->
         </colgroup>
@@ -74,24 +74,15 @@
             <th style="text-align:right">Accepted Qty</th>
             <th>Base UOM</th>
             <th style="text-align:right">Faulty Qty</th>
-            <th>Base UOM</th>
             <th>Reason</th>
             <th>Remarks</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let r of lines; let i = index">
-            <td>
-              <ng-select class="fc-ng-sm" [items]="LocationTypes" bindLabel="binName" bindValue="id"
-                [(ngModel)]="r.binId" placeholder="Location" [disabled]="true" appendTo="body">
-              </ng-select>
-            </td>
+            <td class="st-text">{{ r.binName || getBinName(r.binId) || '-' }}</td>
             <td class="st-text">{{ r.supplierName || 'ALL' }}</td>
-            <td>
-              <ng-select class="fc-ng-sm" [items]="itemList" bindLabel="itemName" bindValue="id"
-                [(ngModel)]="r.itemId" placeholder="Item" [disabled]="true" appendTo="body">
-              </ng-select>
-            </td>
+            <td class="st-text">{{ r.itemName || getItemName(r.itemId) || '-' }}</td>
             <td>
               <input class="fc-tbl-input" type="text" [(ngModel)]="r.barcode"
                 (ngModelChange)="onCheckReview()" placeholder="Barcode" />
@@ -109,7 +100,6 @@
                 (ngModelChange)="onUnCountChange(r)" min="0" step="0.0001" placeholder="0"
                 style="text-align:right" />
             </td>
-            <td class="st-uom">{{ r.baseUomName || '-' }}</td>
             <td>
               <erp-dropdown [(ngModel)]="r.reasonId" [name]="'reasonId_' + i"
                 [items]="reasonList" bindLabel="stockIssuesNames" bindValue="id"
@@ -122,7 +112,7 @@
             </td>
           </tr>
           <tr *ngIf="!lines.length">
-            <td colspan="11" class="dt-empty">
+            <td colspan="10" class="dt-empty">
               No items loaded. Select filters above and click Load Items.
             </td>
           </tr>
@@ -153,21 +143,20 @@
         <table class="dt-table st-table st-review-table">
           <colgroup>
             <col style="width:3%">  <!-- checkbox -->
-            <col style="width:8%">  <!-- Location -->
+            <col style="width:7%">  <!-- Location -->
             <col style="width:6%">  <!-- Supplier -->
-            <col style="width:9%">  <!-- Item -->
+            <col style="width:8%">  <!-- Item -->
             <col style="width:5%">  <!-- Barcode -->
-            <col style="width:5%">  <!-- Purchase Qty -->
             <col style="width:5%">  <!-- Purchase UOM -->
             <col style="width:5%">  <!-- OnHand -->
             <col style="width:4%">  <!-- Base UOM -->
-            <col style="width:5%">  <!-- OnHand Fault -->
-            <col style="width:5%">  <!-- Accepted Qty -->
-            <col style="width:5%">  <!-- Faulty Qty -->
-            <col style="width:5%">  <!-- Total Qty -->
-            <col style="width:5%">  <!-- Variance -->
+            <col style="width:6%">  <!-- OnHand Fault -->
+            <col style="width:6%">  <!-- Accepted Qty -->
+            <col style="width:6%">  <!-- Faulty Qty -->
+            <col style="width:6%">  <!-- Total Qty -->
+            <col style="width:6%">  <!-- Variance -->
             <col style="width:10%"> <!-- Reason -->
-            <col style="width:15%"> <!-- Remarks -->
+            <col style="width:13%"> <!-- Remarks -->
           </colgroup>
           <thead>
             <tr>
@@ -176,11 +165,10 @@
               <th>Supplier</th>
               <th>Item</th>
               <th>Barcode</th>
-              <th style="text-align:right">Purch Qty</th>
               <th>Purch UOM</th>
               <th style="text-align:right">OnHand</th>
               <th>Base UOM</th>
-              <th style="text-align:right">Fault</th>
+              <th style="text-align:right">OnHand Fault</th>
               <th style="text-align:right">Accepted</th>
               <th style="text-align:right">Faulty</th>
               <th style="text-align:right">Total</th>
@@ -198,7 +186,6 @@
               <td class="st-text">{{ r.supplierName || 'ALL' }}</td>
               <td class="st-text">{{ r.itemName || getItemName(r.itemId) }}</td>
               <td class="st-text">{{ r.barcode || '-' }}</td>
-              <td style="text-align:right">{{ toNum(r.purchaseQty) }}</td>
               <td class="st-uom">{{ r.purchaseUomName || '-' }}</td>
               <td style="text-align:right">{{ toNum(r.onHand) }}</td>
               <td class="st-uom">{{ r.baseUomName || '-' }}</td>
@@ -221,7 +208,7 @@
               </td>
             </tr>
             <tr *ngIf="!reviewRows.length">
-              <td colspan="16" class="dt-empty">No lines to review.</td>
+              <td colspan="15" class="dt-empty">No lines to review.</td>
             </tr>
           </tbody>
         </table>

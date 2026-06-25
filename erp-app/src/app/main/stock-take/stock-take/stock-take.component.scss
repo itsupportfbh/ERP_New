@@ -27,6 +27,14 @@
   font-size: 12px;
 }
 
+/* Higher specificity so UOM values (e.g. "LTR") never break onto two lines,
+   overriding `.st-table td { word-break: break-word }`. */
+.st-table td.st-uom {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
 .st-text {
   font-size: 12px;
   word-break: break-word;
@@ -77,6 +85,6 @@
 }
 
 .st-review-table {
-  th { font-size: 11px; padding: 8px 6px; }
+  th { font-size: 10px; padding: 8px 5px; }
   td { font-size: 11px; padding: 6px; }
 }
