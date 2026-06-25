@@ -80,7 +80,7 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
   ];
 
   rowActions: RowAction[] = [
-    { key: 'edit', label: 'Edit', btnClass: 'btn-outline-primary' }
+    { key: 'edit', label: 'Edit', btnClass: 'btn-outline-primary', icon: 'edit' }
   ];
 
   searchValue = '';
@@ -242,7 +242,8 @@ export class StockTransferListComponent implements OnInit, AfterViewInit, AfterV
     const toWarehouseIdNum   = this.toNum(api.toWarehouseId   ?? api.ToWarehouseId);
 
     const statusNum = Number(api.status ?? api.Status ?? 0);
-    const transferQtyNum = this.toNumOrNull(api.transferQty ?? api.TransferQty);
+    const rawQty = this.toNumOrNull(api.transferQty ?? api.TransferQty);
+    const transferQtyNum = rawQty !== null ? Math.abs(rawQty) : null;
 
     return {
       ...api,

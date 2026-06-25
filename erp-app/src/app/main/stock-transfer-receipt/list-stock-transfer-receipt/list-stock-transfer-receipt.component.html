@@ -60,41 +60,105 @@
 </div>
 
 <!-- Receive Modal -->
-<div class="rcm-backdrop" *ngIf="showReceiveModal" (click)="closeReceiveModal()">
-  <div class="rcm-modal" (click)="$event.stopPropagation()">
-    <div class="rcm-hdr">
-      <div class="rcm-hleft">
-        <div class="rcm-kicker">Transfer No</div>
-        <div class="rcm-no">{{ receiveForm?.transferNo }}</div>
-      </div>
-      <div class="rcm-hright">
-        <span class="rcm-pill" [class.ok]="receiveForm?.status === 'RECEIVED'">{{ receiveForm?.statusLabel }}</span>
-        <button class="rcm-x" type="button" (click)="closeReceiveModal()">&times;</button>
+<div class="transfer-modal-overlay" *ngIf="showReceiveModal" (click)="closeReceiveModal()">
+  <div class="transfer-modal-box rcv-box" (click)="$event.stopPropagation()">
+
+    <div class="transfer-modal-header">
+      <span class="transfer-modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E5F73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+        Receive Stock
+        <span *ngIf="receiveForm?.transferNo" style="font-size:12px;font-weight:400;color:#8d99ae">&#8212; {{ receiveForm?.transferNo }}</span>
+      </span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="rcv-status-pill"
+          [class.rcv-pill-transit]="receiveForm?.status === 'IN_TRANSIT'"
+          [class.rcv-pill-partial]="receiveForm?.status === 'PARTIAL_RECEIVED'">
+          {{ receiveForm?.statusLabel }}
+        </span>
+        <button class="transfer-modal-close" type="button" (click)="closeReceiveModal()">&#x2715;</button>
       </div>
     </div>
-    <div class="rcm-body" *ngIf="receiveForm as f">
-      <div class="rcm-grid">
-        <div class="rcm-field"><label class="rcm-lbl">SKU</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.sku" disabled /></div></div>
-        <div class="rcm-field"><label class="rcm-lbl">Item Name</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.name" disabled /></div></div>
-        <div class="rcm-field"><label class="rcm-lbl">From Warehouse</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.fromWarehouseName" disabled /></div></div>
-        <div class="rcm-field"><label class="rcm-lbl">To Warehouse</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.toWarehouseName" disabled /></div></div>
-        <div class="rcm-field"><label class="rcm-lbl">Planned Qty</label><div class="rcm-inpwrap"><input class="rcm-inp" [value]="f.plannedQty" disabled /></div></div>
-        <div class="rcm-field">
-          <label class="rcm-lbl">Receive Qty</label>
-          <div class="rcm-inpwrap">
-            <input class="rcm-inp" type="number" min="0" [max]="f.plannedQty" [(ngModel)]="f.receiveQty" (input)="recalcVariance()" [disabled]="f.status !== 'IN_TRANSIT'" />
-          </div>
-          <div class="rcm-meta">
-            <span class="rcm-variance" [class.bad]="f.variance !== 0">Variance: <b>{{ f.variance }}</b></span>
-            <div class="rcm-warn" *ngIf="f.receiveQty > f.plannedQty">Receive qty cannot exceed planned qty.</div>
+
+    <div class="transfer-modal-body" *ngIf="receiveForm as f">
+
+      <div class="transfer-modal-info">
+        <div class="transfer-info-chip">
+          <span class="chip-label">From Warehouse</span>
+          <span class="chip-value">{{ f.fromWarehouseName || '&#8212;' }}</span>
+        </div>
+        <div style="align-self:center;font-size:18px;color:#8d99ae">&#8594;</div>
+        <div class="transfer-info-chip">
+          <span class="chip-label">To Warehouse</span>
+          <span class="chip-value">{{ f.toWarehouseName || '&#8212;' }}</span>
+        </div>
+      </div>
+
+      <div class="rcv-info-row">
+        <div class="rcv-info-block">
+          <span class="rcv-info-label">SKU</span>
+          <span class="rcv-info-value">{{ f.sku || '&#8212;' }}</span>
+        </div>
+        <div class="rcv-info-block">
+          <span class="rcv-info-label">Item Name</span>
+          <span class="rcv-info-value">{{ f.name || '&#8212;' }}</span>
+        </div>
+        <div class="rcv-info-block">
+          <span class="rcv-info-label">Req. No</span>
+          <span class="rcv-info-value">{{ f.reqNo || '&#8212;' }}</span>
+        </div>
+      </div>
+
+      <div class="rcv-qty-grid">
+        <div class="rcv-qty-block">
+          <div class="rcv-info-label">Planned Qty</div>
+          <div class="rcv-qty-display">{{ f.plannedQty }}</div>
+        </div>
+        <div class="rcv-qty-block">
+          <div class="rcv-info-label">Already Received</div>
+          <div class="rcv-qty-display">{{ f.alreadyReceivedQty }}</div>
+        </div>
+        <div class="rcv-qty-block rcv-qty-block-highlight">
+          <div class="rcv-info-label">Remaining</div>
+          <div class="rcv-qty-display rcv-qty-highlight">{{ f.remainingQty }}</div>
+        </div>
+      </div>
+
+      <div class="rcv-receive-row">
+        <div class="rcv-receive-field">
+          <label class="rcv-lbl">Receive Qty <span style="color:#dc2626">*</span></label>
+          <input class="rcv-qty-input" type="number" min="0" [max]="f.remainingQty"
+            [(ngModel)]="f.receiveQty" (input)="recalcVariance()"
+            placeholder="Enter qty to receive..." />
+          <div class="rcv-variance" [class.rcv-variance-bad]="f.receiveQty > f.remainingQty">
+            <span *ngIf="f.receiveQty > f.remainingQty">Cannot exceed remaining qty ({{ f.remainingQty }})</span>
+            <span *ngIf="f.receiveQty <= f.remainingQty && f.receiveQty > 0">
+              Variance: <b>{{ f.variance >= 0 ? '+' : '' }}{{ f.variance }}</b>
+            </span>
           </div>
         </div>
-        <div class="rcm-field full"><label class="rcm-lbl">Remarks</label><div class="rcm-inpwrap"><input class="rcm-inp" placeholder="Damage / Short / Excess notes" [(ngModel)]="f.remarks" [disabled]="f.status !== 'IN_TRANSIT'" /></div></div>
+        <div class="rcv-receive-field">
+          <label class="rcv-lbl">Remarks</label>
+          <input class="rcv-qty-input" type="text" placeholder="Damage / Short / Excess notes..."
+            [(ngModel)]="f.remarks" />
+        </div>
       </div>
+
     </div>
-    <div class="rcm-ftr">
-      <button type="button" class="rcm-btn ghost" (click)="closeReceiveModal()">Back</button>
-      <button type="button" class="rcm-btn primary" *ngIf="canCreate()" (click)="confirmReceive()" [disabled]="!canConfirmReceive()">Confirm Receive</button>
+
+    <div class="transfer-modal-footer">
+      <button type="button" class="btn btn-outline btn-sm" (click)="closeReceiveModal()">Back</button>
+      <button type="button" class="btn btn-primary btn-sm" *ngIf="canCreate()"
+        [disabled]="!canConfirmReceive()" (click)="confirmReceive()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+        Confirm Receive
+      </button>
     </div>
+
   </div>
 </div>

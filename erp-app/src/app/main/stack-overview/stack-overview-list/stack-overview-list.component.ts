@@ -84,7 +84,7 @@ export class StackOverviewListComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'view', label: 'View', btnClass: 'btn-outline-info' }
+    { key: 'view', label: 'View', btnClass: 'btn-outline-info', icon: 'view' }
   ];
 
   selectedItem: ItemWarehouseRow | null = null;

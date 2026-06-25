@@ -1,179 +1,160 @@
-<!-- Back -->
+<div class="stc-page">
 
+  <!-- Back button -->
+  <button class="list-add-btn stc-back-btn" type="button" (click)="goToStockTransferList()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Stock Transfer List
+  </button>
 
-<div class="tw-page">
-<button class="tw-back-btn mb-3" type="button" (click)="goToStockTransferList()">
-  <i class="fas fa-arrow-left tw-back-ico" aria-hidden="true"></i>
-  <span>Go to Stock Transfer list</span>
-</button>
-  <div class="tw-card" *ngIf="header as h">
+  <div class="stc-card" *ngIf="header as h">
 
-    <!-- Header -->
-    <div class="tw-card-head">
-      <div class="tw-head-left">
-        <div class="tw-title-row">
-          <h4 class="tw-title mb-0">Transfer Details</h4>
+    <!-- Card Head -->
+    <div class="stc-head">
+      <div class="stc-head-left">
+        <div class="stc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </div>
+        <div>
+          <div class="stc-title-row">
+            <h3 class="stc-title">Transfer Details</h3>
+            <span class="stc-mode-badge" [class.stc-badge-edit]="isEditMode">
+              {{ isEditMode ? 'Edit Mode' : 'Create Mode' }}
+            </span>
+          </div>
+          <p class="stc-sub">Material Requisition based stock transfer</p>
+        </div>
+      </div>
 
-          <span class="tw-pill" [ngClass]="isEditMode ? 'tw-pill-warn' : 'tw-pill-info'">
-            {{ isEditMode ? 'Edit Mode' : 'Create Mode' }}
+      <div class="stc-metrics">
+        <div class="stc-metric">
+          <span class="stc-metric-lbl">Requested</span>
+          <span class="stc-metric-val">{{ requestedQty ?? 0 }}</span>
+        </div>
+        <div class="stc-metric-div"></div>
+        <div class="stc-metric">
+          <span class="stc-metric-lbl">Available</span>
+          <span class="stc-metric-val stc-avail">{{ totalAvailable ?? 0 }}</span>
+        </div>
+        <div class="stc-metric-div"></div>
+        <div class="stc-metric">
+          <span class="stc-metric-lbl">Max Transfer</span>
+          <span class="stc-metric-val stc-max">{{ maxQty }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info section -->
+    <div class="stc-section-label">Transfer Info</div>
+    <div class="stc-body">
+      <div class="stc-grid">
+
+        <div class="stc-field">
+          <label class="stc-lbl">Material Requisition</label>
+          <div class="stc-readonly">{{ h.reqNo || '—' }}</div>
+        </div>
+
+        <div class="stc-field">
+          <label class="stc-lbl">SKU</label>
+          <div class="stc-readonly">{{ h.sku || '—' }}</div>
+        </div>
+
+        <div class="stc-field">
+          <label class="stc-lbl">From Warehouse</label>
+          <div class="stc-readonly">{{ h.fromWarehouseName || '—' }}</div>
+        </div>
+
+        <div class="stc-field">
+          <label class="stc-lbl">To Warehouse</label>
+          <div class="stc-readonly">{{ h.toWarehouseName || '—' }}</div>
+        </div>
+
+        <div class="stc-field">
+          <label class="stc-lbl">Requested Qty</label>
+          <div class="stc-readonly">{{ requestedQty ?? 0 }}</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Editable section -->
+    <div class="stc-section-label">Transfer Entry</div>
+    <div class="stc-body stc-body-entry">
+      <div class="stc-grid">
+
+        <!-- To Bin -->
+        <div class="stc-field">
+          <label class="stc-lbl">To Bin</label>
+          <ng-select
+            [items]="toBinList"
+            bindLabel="binName"
+            bindValue="id"
+            placeholder="Select destination bin"
+            [(ngModel)]="toBinId"
+            [loading]="toBinLoading"
+            [disabled]="toBinLoading || !toBinList.length"
+            appendTo="body"
+            class="stc-select">
+          </ng-select>
+          <span class="stc-hint" *ngIf="header?.toWarehouseId && !toBinLoading && !toBinList.length">
+            No bins found for this warehouse
           </span>
         </div>
 
-        <div class="tw-sub">
-          Material Requisition based stock transfer
-        </div>
-      </div>
-
-      <div class="tw-head-right">
-        <div class="tw-metrics">
-          <div class="tw-metric">
-            <div class="tw-metric-label">Requested</div>
-            <div class="tw-metric-val">{{ requestedQty ?? 0 }}</div>
-          </div>
-          <div class="tw-metric-sep"></div>
-          <div class="tw-metric">
-            <div class="tw-metric-label">Available</div>
-            <div class="tw-metric-val">{{ totalAvailable ?? 0 }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Body -->
-    <div class="tw-card-body">
-      <div class="row g-3">
-
-        <!-- MRQ -->
-        <div class="col-12 col-md-6">
-          <label class="tw-label">Material Requisition</label>
-          <div class="tw-field">
-            <input class="form-control tw-input tw-readonly" [value]="h.reqNo" readonly />
-          </div>
-        </div>
-
-        <!-- SKU -->
-        <div class="col-12 col-md-6">
-          <label class="tw-label">SKU</label>
-          <div class="tw-field">
-            <input class="form-control tw-input tw-readonly" [value]="h.sku" readonly />
-          </div>
-        </div>
-
-        <!-- From Warehouse -->
-        <div class="col-12 col-md-6">
-          <label class="tw-label">From Warehouse</label>
-          <div class="tw-field">
-            <input class="form-control tw-input tw-readonly" [value]="h.fromWarehouseName" readonly />
-          </div>
-        </div>
-
-        <!-- To Warehouse -->
-        <div class="col-12 col-md-6">
-          <label class="tw-label">To Warehouse</label>
-          <div class="tw-field">
-            <input class="form-control tw-input tw-readonly" [value]="h.toWarehouseName" readonly />
-          </div>
-        </div>
-
-        <!-- Requested Qty -->
-        <div class="col-12 col-md-6">
-          <label class="tw-label">Requested Qty</label>
-          <div class="tw-field">
-            <input type="number" class="form-control tw-input tw-readonly" [(ngModel)]="requestedQty" readonly />
-          </div>
-        </div>
-
-        <!-- To Bin -->
-        <div class="col-12 col-md-6">
-          <div class="d-flex align-items-center justify-content-between">
-            <label class="tw-label mb-0">To Bin</label>
-
-            <span class="tw-mini" *ngIf="header?.toWarehouseId">
-              ToWarehouseId: <b>{{ header?.toWarehouseId }}</b>
-            </span>
-          </div>
-
-          <div class="tw-field tw-ng">
-            <ng-select
-              [items]="toBinList"
-              bindLabel="binName"
-              bindValue="id"
-              placeholder="Select To Bin"
-              [(ngModel)]="toBinId"
-              [loading]="toBinLoading"
-              [disabled]="toBinLoading || !toBinList.length"
-              appendTo="body">
-            </ng-select>
-          </div>
-
-          <div class="tw-help" *ngIf="header?.toWarehouseId && toBinList.length">
-            Warehouse bins loaded based on selected Warehouse.
-          </div>
-
-          <div class="tw-help" *ngIf="header?.toWarehouseId && !toBinLoading && !toBinList.length">
-            No bins found for selected Warehouse.
-          </div>
-        </div>
-
         <!-- Transfer Qty -->
-        <div class="col-12 col-md-6">
-          <div class="d-flex align-items-center justify-content-between">
-            <label class="tw-label mb-0">Transfer Qty</label>
-            <span class="tw-badge">
-              Max: {{ maxQty }}
-            </span>
+        <div class="stc-field">
+          <div class="stc-lbl-row">
+            <label class="stc-lbl">Transfer Qty</label>
+            <span class="stc-max-badge">Max: {{ maxQty }}</span>
           </div>
-
-          <div class="tw-field">
-            <input
-              type="number"
-              class="form-control tw-input"
-              [(ngModel)]="transferQty"
-              [min]="0"
-              [max]="maxQty"
-              placeholder="Enter qty" />
-          </div>
-
-          <div class="tw-inline-note">
-            <span class="tw-dot"></span>
-            Requested <b>{{ requestedQty ?? 0 }}</b>
-            <span class="mx-2">•</span>
-            Available <b>{{ totalAvailable ?? 0 }}</b>
-          </div>
-
-          <div class="tw-help" *ngIf="isEditMode && header?.transferQty == null">
-            DB TransferQty is NULL → showing 0
-          </div>
+          <input
+            type="number"
+            class="stc-input"
+            [(ngModel)]="transferQty"
+            [min]="0"
+            [max]="maxQty"
+            placeholder="Enter transfer quantity" />
         </div>
 
         <!-- Reason -->
-        <div class="col-12 col-md-6">
-          <label class="tw-label">Reason</label>
-          <div class="tw-field">
-            <input class="form-control tw-input" [(ngModel)]="reason" placeholder="Reason / remarks" />
-          </div>
+        <div class="stc-field stc-field-full">
+          <label class="stc-lbl">Reason / Remarks</label>
+          <input
+            type="text"
+            class="stc-input"
+            [(ngModel)]="reason"
+            placeholder="Optional remarks" />
         </div>
 
       </div>
     </div>
 
-    <!-- Footer (sticky-ish) -->
-    <div class="tw-card-foot">
-      <button class="tw-btn tw-btn-ghost" type="button" (click)="goBack()">
-        Back
+    <!-- Footer -->
+    <div class="stc-foot">
+      <button class="stc-btn stc-btn-ghost" type="button" (click)="goBack()">
+        Cancel
       </button>
-
       <button
-        class="tw-btn tw-btn-primary"
+        class="stc-btn stc-btn-primary"
         type="button"
         [disabled]="loading || maxQty === 0"
         (click)="submitTransferFinal()">
-
-        <span *ngIf="!loading">{{ isEditMode ? 'Update Transfer' : 'Submit Transfer' }}</span>
-        <span *ngIf="loading">{{ isEditMode ? 'Updating…' : 'Submitting…' }}</span>
+        <svg *ngIf="!loading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span class="stc-spinner" *ngIf="loading"></span>
+        <span>{{ loading ? (isEditMode ? 'Updating…' : 'Submitting…') : (isEditMode ? 'Update Transfer' : 'Submit Transfer') }}</span>
       </button>
     </div>
 
+  </div>
+
+  <!-- Loading skeleton -->
+  <div class="stc-card stc-loading-card" *ngIf="!header && loading">
+    <div class="stc-skeleton stc-sk-head"></div>
+    <div class="stc-body">
+      <div class="stc-skeleton stc-sk-row"></div>
+      <div class="stc-skeleton stc-sk-row"></div>
+    </div>
   </div>
 
 </div>

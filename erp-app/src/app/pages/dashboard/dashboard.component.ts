@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { DashboardService } from './dashboard.service';
+import { MaterialRequisitionService } from 'app/main/material-requisation/material-requisition.service';
 import Swal from 'sweetalert2';
 
 export interface KpiCard {
@@ -52,10 +54,21 @@ export class DashboardComponent implements OnInit {
   productionOrders: any[] = [];
   topRecipes: any[] = [];
 
-  private readonly companyId = Number(localStorage.getItem('companyId')) || 0;
-  private readonly userId    = Number(localStorage.getItem('id')) || 0;
+  readonly companyId = Number(localStorage.getItem('companyId')) || 0;
+  private readonly userId = Number(localStorage.getItem('id')) || 0;
 
-  constructor(private svc: DashboardService) {}
+  pendingMrRequests: any[] = [];
+  mrLoading = false;
+
+  constructor(
+    private svc: DashboardService,
+    private mrService: MaterialRequisitionService,
+    private router: Router
+  ) {}
+
+  goToMrList(): void {
+    this.router.navigate(['/app/inventory/list-material-requisition']);
+  }
 
   ngOnInit(): void {
     this.load();
@@ -82,6 +95,23 @@ export class DashboardComponent implements OnInit {
     });
 
     this.loadAdditional(role);
+
+    if (this.companyId === 1) {
+      this.loadPendingMrRequests();
+    }
+  }
+
+  loadPendingMrRequests(): void {
+    this.mrLoading = true;
+    this.mrService.GetMaterialRequest().subscribe({
+      next: (res: any) => {
+        const list: any[] = res?.data ?? res ?? [];
+        this.pendingMrRequests = (Array.isArray(list) ? list : [])
+          .filter((x: any) => Number(x.companyId ?? 0) !== 1 && (x.status ?? 0) === 1);
+        this.mrLoading = false;
+      },
+      error: () => { this.mrLoading = false; }
+    });
   }
 
   private resetAdditional(): void {

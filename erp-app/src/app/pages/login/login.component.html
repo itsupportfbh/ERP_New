@@ -135,11 +135,14 @@
   <div class="company-modal">
     <h2 class="company-title">Select Company</h2>
     <p class="company-sub">Your account is linked to multiple companies. Please select one to continue.</p>
-    <div class="company-list">
-      <label class="company-item" *ngFor="let c of companies" [class.selected]="selectedCompanyId === c.id">
-        <input type="radio" name="company" [value]="c.id" [(ngModel)]="selectedCompanyId"/>
-        <span class="company-name">{{ c.companyName }}</span>
-      </label>
+    <div class="company-select-wrap">
+      <select class="company-select" [(ngModel)]="selectedCompanyId">
+        <option [ngValue]="null" disabled>-- Select a company --</option>
+        <option *ngFor="let c of companies" [ngValue]="c.id">{{ c.companyName }}</option>
+      </select>
+      <svg class="company-select-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="5 8 10 13 15 8"/>
+      </svg>
     </div>
     <div class="f-error" *ngIf="error" style="margin-top:12px">{{ error }}</div>
     <button class="btn-login" [disabled]="loading || !selectedCompanyId" (click)="selectCompany()">

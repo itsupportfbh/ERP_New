@@ -164,7 +164,7 @@ export class ListStockTransferReceiptComponent implements OnInit {
   ];
 
   rowActions: RowAction[] = [
-    { key: 'receive', label: 'Receive', btnClass: 'btn-outline-primary' }
+    { key: 'receive', label: 'Receive', icon: 'truck', btnClass: 'btn-outline-primary' }
   ];
 
   pageSize = 10;
@@ -362,27 +362,21 @@ export class ListStockTransferReceiptComponent implements OnInit {
         const list: TransferDetailDto[] = res?.data ?? [];
 
         this.rows = list.map((d, idx) => {
-          const requested = Number(d.requestQty ?? 0);
+          // Use ABS(transferQty) as the definitive planned qty (requestQty from SQL can be 0)
+          const planned = Math.abs(Number(d.transferQty ?? 0)) || Number(d.requestQty ?? 0);
 
-          // ✅ planned qty prefer abs(transferQty), else fallback requested
-          const planned = Math.abs(Number(d.transferQty ?? 0)) || requested;
-
-          // ✅ pick received qty from API (supports multiple key names)
+          // pick received qty from API (supports multiple key names)
           let received = this.pickReceivedQty(d);
 
-          // ✅ OPTIONAL FALLBACK:
-          // If API doesn't send received qty but you store it in transferQty negative for received,
-          // use abs(transferQty) ONLY when status says received and received is 0.
-          // Remove this block if not applicable to your backend.
           const backendStatus = Number(d.status ?? 0);
           if (received === 0 && backendStatus === 3) {
-            received = Math.abs(Number(d.transferQty ?? 0));
+            received = planned;
           }
 
-          // ✅ derive status by requested vs received (your requested logic)
-          const st = this.deriveStatusByQty(requested, received);
+          // derive status using planned qty (not requestQty which can be 0)
+          const st = this.deriveStatusByQty(planned, received);
 
-          const remaining = Math.max(0, requested - received);
+          const remaining = Math.max(0, planned - received);
 
           return {
             gridKey: `${d.transferNo || 'TR'}-${d.stockId}-${idx}`,
@@ -406,7 +400,7 @@ export class ListStockTransferReceiptComponent implements OnInit {
             binName: String(d.binName ?? ''),
             toBinName: String(d.toBinName ?? ''),
 
-            requestQty: requested,
+            requestQty: planned,
             plannedQty: planned,
             receivedQty: received,
             remainingQty: remaining,
