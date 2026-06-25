@@ -133,7 +133,7 @@
               <th class="col-tax">Tax Mode</th>
               <th class="col-amt num-cell">Tax Amt</th>
               <th class="col-amt num-cell">Grand Total</th>
-              <th class="col-ledger">Ledger</th>
+              <th class="col-ledger" style="display:none">Ledger</th>
               <th class="col-match">Match</th>
             </tr>
           </thead>
@@ -159,7 +159,7 @@
               </td>
               <td class="num-cell">{{ l.taxAmt | number:'1.2-2' }}</td>
               <td class="num-cell grand-col">{{ l.lineGrandTotal | number:'1.2-2' }}</td>
-              <td>
+              <td class="col-ledger" style="display:none">
                 <erp-dropdown [options]="ledgerOptions" [(ngModel)]="l.budgetLineId" [disabled]="isGlPosted" placeholder="Ledger"></erp-dropdown>
               </td>
               <td class="match-cell">
