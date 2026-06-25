@@ -22,4 +22,10 @@ export class StockAdjustmentService {
     return this.http.get<any[]>(url);
   }
 
+  GetBinsByWarehouseAndItems(warehouseId: number, itemIds: number[]): Observable<any> {
+    const params = itemIds.map(id => `itemIds=${id}`).join('&');
+    const url = `${this.url}${StockAdjustmentAPIUrls.GetBinsByWarehouseAndItems}${warehouseId}?${params}`;
+    return this.http.get<any>(url);
+  }
+
 }

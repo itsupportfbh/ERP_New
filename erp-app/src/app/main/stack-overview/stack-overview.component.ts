@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { StackOverviewService } from './stack-overview.service';
 import { MaterialRequisitionService } from '../material-requisation/material-requisition.service';
+import { StockAdjustmentService } from '../stock-adjustment/stock-adjustment.service';
 
 /* ===================== STOCK API Interfaces ===================== */
 interface ApiItemRow {
@@ -121,6 +122,7 @@ interface MrListItem {
   mrqNo: string;
   outletId: number | null;
   display: string;
+  status?: number;
   isCompleted?: boolean;
   remainingQty?: number;
 }
@@ -173,6 +175,11 @@ export class StackOverviewComponent implements OnInit {
   shortageCount: number = 0;
   transferableLineCount: number = 0;
 
+  toBinList: Array<{ id: number; binName: string }> = [];
+  toBinLoading = false;
+
+  showTransferModal = false;
+
   loading = false;
   errorMsg: string | null = null;
   transferErrorText: string | null = null;
@@ -181,6 +188,7 @@ export class StackOverviewComponent implements OnInit {
     private warehouseService: WarehouseService,
     private stockService: StackOverviewService,
     private mrService: MaterialRequisitionService,
+    private stockAdjService: StockAdjustmentService,
     private router: Router
   ) {}
 
@@ -241,22 +249,23 @@ private loadMrList(): void {
 
         const completed = this.isMrCompleted(x);
         const remaining = this.calcMrRemaining(x);
+        const status = Number(x.status ?? x.Status ?? 0);
 
         return {
           id,
           mrqNo,
           outletId: outletId != null ? Number(outletId) : null,
           display: mrqNo,
+          status,
           isCompleted: completed,
           remainingQty: remaining
         };
       });
 
-      // âœ… Hide completed MRQ + already transferred MRQ
+      // Show only MRs with status = 1 (pending/new)
       this.mrList = list.filter(m =>
         Number(m.id) > 0 &&
-        !m.isCompleted &&
-        !this.transferredMrIds.has(Number(m.id))
+        m.status === 1
       );
 
       if (this.selectedMrId) {
@@ -562,6 +571,8 @@ this.destinationOutletName =
         this.destinationBinId = bId != null ? Number(bId) : null;
         this.destinationBinName = String(dto.binName ?? dto.BinName ?? '') || null;
 
+        this.loadDestinationBins();
+
         this.requesterName = String(dto.requesterName ?? dto.RequesterName ?? '');
         this.reqDate = String(dto.reqDate ?? dto.date ?? '');
 
@@ -621,6 +632,11 @@ onFromOutletChanged(fromId: any): void {
   this.applyGrid();
   this.rebuildFromOutletOptions();
   this.recalcMrAvailability();
+
+  if (idNum && this.selectedMrId && this.mrLines?.length) {
+    this.loadDestinationBins(idNum);
+    this.showTransferModal = true;
+  }
 }
   onTransferQtyChanged(line: MrLineVM): void {
     const v = Number(line.transferQty ?? 0);
@@ -773,50 +789,53 @@ private rebuildFromOutletOptions(): void {
   /* ===================== TRANSFER ===================== */
 
   canTransfer(): boolean {
+    return !!(
+      this.selectedMrId &&
+      this.destinationOutletId &&
+      this.selectedFromOutletId &&
+      this.destinationBinId &&
+      this.mrLines?.length &&
+      Number(this.totalRemainingQty ?? 0) > 0 &&
+      (this.mrLines || []).some(l => Number(l.transferQty ?? 0) > 0)
+    );
+  }
+
+  private validateTransfer(): boolean {
     this.transferErrorText = null;
 
     if (!this.selectedMrId) {
       this.transferErrorText = 'Select a Material Requisition.';
       return false;
     }
-
     if (!this.destinationOutletId) {
       this.transferErrorText = 'Destination outlet not found.';
       return false;
     }
-
     if (!this.selectedFromOutletId) {
       this.transferErrorText = 'Select From Outlet.';
       return false;
     }
-
     if (!this.destinationBinId) {
-      this.transferErrorText = 'Destination Bin not found.';
+      this.transferErrorText = 'Select a From Bin.';
       return false;
     }
-
     if (!this.mrLines?.length) {
       this.transferErrorText = 'No MR lines found.';
       return false;
     }
-
     if (Number(this.totalRemainingQty ?? 0) <= 0) {
       this.transferErrorText = 'No remaining qty to transfer.';
       return false;
     }
-
-    const anyTransfer = (this.mrLines || []).some(l => Number(l.transferQty ?? 0) > 0);
-
-    if (!anyTransfer) {
+    if (!(this.mrLines || []).some(l => Number(l.transferQty ?? 0) > 0)) {
       this.transferErrorText = 'Enter Transfer Qty for at least one line.';
       return false;
     }
-
     return true;
   }
 
   submitTransfer(): void {
-    if (!this.canTransfer()) return;
+    if (!this.validateTransfer()) return;
 
     const mrId = Number(this.selectedMrId ?? 0);
     const fromWarehouseID = Number(this.selectedFromOutletId ?? 0);
@@ -902,7 +921,8 @@ private rebuildFromOutletOptions(): void {
           ConversionFactor: Number(line.conversionFactor ?? 1),
 
           TransferNo: '',
-          isApproved: true,
+          Status: 1,
+          isApproved: false,
 
           CreatedBy: userId,
           CreatedDate: now,
@@ -914,7 +934,7 @@ private rebuildFromOutletOptions(): void {
           Sku: line.sku ?? match.sku ?? '',
           Remarks: '',
 
-          SupplierId: match.supplierId == null ? null : Number(match.supplierId),
+          SupplierId: Number(match.supplierId ?? 0),
           IsSupplierBased: false
         });
       }
@@ -929,27 +949,70 @@ private rebuildFromOutletOptions(): void {
       return;
     }
 
+    const companyId = Number(localStorage.getItem('companyId') ?? localStorage.getItem('CompanyId') ?? 0) || 0;
+
     this.loading = true;
 
     this.stockService.insertStock(payload).subscribe({
-      next: (_res: any) => {
-        this.loading = false;
+      next: (res: any) => {
+        const insertedIds: number[] = Array.isArray(res?.data) ? res.data : [];
 
-        const shortageMsg = shortageSkus.length
-          ? `\n\nShortage items kept pending: ${shortageSkus.map(x => x.sku).join(', ')}`
-          : '';
+        if (!insertedIds.length) {
+          this.loading = false;
+          Swal.fire({ icon: 'error', title: 'Insert Failed', text: 'No stock IDs returned from server.' });
+          return;
+        }
 
-        Swal.fire({
-          icon: 'success',
-          title: 'Transfer Created',
-          text: `Transfer created for ${payload.length} row(s).${shortageMsg}`,
-          confirmButtonColor: '#16a34a'
-        }).then(() => {
-          this.resetAll();
+        const approvePayload = insertedIds.map((stockId: number, i: number) => {
+          const p = payload[i];
+          return {
+            stockId,
+            itemId: p.ItemId,
+            warehouseId: p.FromWarehouseID,
+            binId: p.BinId ?? null,
+            toWarehouseId: p.ToWarehouseID,
+            toBinId: p.ToBinId,
+            transferQty: Math.round(p.TransferQty),
+            requestedQty: Math.round(p.RequestedQty ?? 0),
+            supplierId: p.SupplierId || null,
+            remarks: p.Remarks ?? null,
+            mrId,
+            reqNo: this.selectedMrNo ?? '',
+            sku: p.Sku ?? '',
+            companyId,
+            createdBy: userId,
+            updatedBy: userId
+          };
+        });
 
-          this.router.navigate(['/app/inventory/create-stocktransfer'], {
-            state: { mrId, toWarehouseID, fromWarehouseID, toBinId }
-          });
+        this.stockService.ApproveTransfersBulk(approvePayload).subscribe({
+          next: () => {
+            this.loading = false;
+
+            const shortageMsg = shortageSkus.length
+              ? `\n\nShortage items kept pending: ${shortageSkus.map(x => x.sku).join(', ')}`
+              : '';
+
+            this.showTransferModal = false;
+            Swal.fire({
+              icon: 'success',
+              title: 'Transfer Complete',
+              text: `${payload.length} item(s) transferred successfully.${shortageMsg}`,
+              confirmButtonColor: '#16a34a'
+            }).then(() => {
+              this.resetAll();
+              this.router.navigate(['/app/inventory/list-stocktransfer']);
+            });
+          },
+          error: (err) => {
+            this.loading = false;
+            console.error('Approve failed', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Approve Failed',
+              text: err?.error?.message || err?.error?.error || 'Stock inserted but approval failed.'
+            });
+          }
         });
       },
       error: (err) => {
@@ -972,6 +1035,35 @@ private rebuildFromOutletOptions(): void {
 
     const w = this.warehouses.find(x => Number(x.id) === Number(id));
     return w ? w.name : null;
+  }
+
+  loadDestinationBins(warehouseIdOverride?: number): void {
+    const whId = warehouseIdOverride ?? this.destinationOutletId;
+    if (!whId) { this.toBinList = []; return; }
+
+    const itemIds = (this.mrLines || [])
+      .map(l => Number(l.itemId))
+      .filter(id => id > 0);
+
+    if (!itemIds.length) { this.toBinList = []; return; }
+
+    this.toBinLoading = true;
+    this.destinationBinId = null;
+
+    this.stockAdjService.GetBinsByWarehouseAndItems(whId, itemIds).subscribe({
+      next: (res: any) => {
+        const data: any[] = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        this.toBinList = data.map((b: any) => ({
+          id: Number(b.id ?? b.Id),
+          binName: String(b.binName ?? b.BinName ?? b.name ?? b.Name ?? '')
+        }));
+        this.toBinLoading = false;
+      },
+      error: () => {
+        this.toBinLoading = false;
+        this.toBinList = [];
+      }
+    });
   }
 
   private resetAll(): void {
@@ -997,8 +1089,27 @@ private rebuildFromOutletOptions(): void {
     this.transferableLineCount = 0;
     this.transferErrorText = null;
 
+    this.toBinList = [];
+    this.toBinLoading = false;
+
+    this.showTransferModal = false;
+
     this.rebuildFromOutletOptions();
     this.applyGrid();
+  }
+
+  openTransferModal(): void {
+    if (this.selectedMrId && this.selectedFromOutletId) {
+      this.transferErrorText = null;
+      this.showTransferModal = true;
+    }
+  }
+
+  closeTransferModal(): void {
+    if (!this.loading) {
+      this.showTransferModal = false;
+      this.transferErrorText = null;
+    }
   }
 
   goToStockOverviewList(): void {

@@ -50,6 +50,56 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PENDING MATERIAL REQUESTS (Company 1 only)                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="mr-widget" *ngIf="companyId === 1" (click)="goToMrList()">
+    <div class="mr-widget-head">
+      <div class="mr-widget-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="2"/>
+          <line x1="9" y1="12" x2="15" y2="12"/>
+          <line x1="9" y1="16" x2="13" y2="16"/>
+        </svg>
+        Pending Material Requests
+        <span class="mr-badge" *ngIf="pendingMrRequests.length">{{ pendingMrRequests.length }}</span>
+      </div>
+      <span class="mr-sub">From other companies — click to view all</span>
+    </div>
+
+    <div *ngIf="mrLoading" class="no-data" style="padding:16px">Loading...</div>
+
+    <div *ngIf="!mrLoading && !pendingMrRequests.length" class="no-data" style="padding:16px">
+      No pending requests from other companies.
+    </div>
+
+    <div class="table-wrap" *ngIf="!mrLoading && pendingMrRequests.length">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Req No</th>
+            <th>Requester</th>
+            <th>Warehouse</th>
+            <th>Req Date</th>
+            <th style="text-align:center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of pendingMrRequests" class="mr-row">
+            <td style="font-weight:600">{{ r.reqNo }}</td>
+            <td>{{ r.requesterName || '—' }}</td>
+            <td>{{ r.outletName || '—' }}</td>
+            <td>{{ r.reqDate ? (r.reqDate | date:'dd MMM yyyy') : '—' }}</td>
+            <td style="text-align:center">
+              <span class="badge-sm-warn">Pending</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- ADMIN                                                                   -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <ng-container *ngIf="!loading && currentRole === 'admin'">

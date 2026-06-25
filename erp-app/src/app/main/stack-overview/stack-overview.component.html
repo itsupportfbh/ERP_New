@@ -1,4 +1,4 @@
-<div class="page-container">
+﻿<div class="page-container">
 
   <!-- Page Header -->
   <div class="page-header">
@@ -12,8 +12,7 @@
       </span>
     </h2>
     <div class="btn-group">
-      <button class="btn btn-primary btn-sm" type="button" [disabled]="!canTransfer()" (click)="submitTransfer()">Transfer</button>
-      <button class="btn btn-outline btn-sm" type="button" (click)="goToStockOverviewList()">← List</button>
+      <button class="btn btn-outline btn-sm" type="button" (click)="goToStockOverviewList()">&#8592; List</button>
     </div>
   </div>
 
@@ -25,13 +24,13 @@
         <div>
           <div class="im-sec-title">Options</div>
           <div class="im-sec-sub">
-            Select MRQ + Warehouse, system will auto bind destination.
-            <span *ngIf="loading" style="margin-left:8px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin"></i> Loading…</span>
+            Select MRQ + From Warehouse &#8212; Transfer popup opens automatically.
+            <span *ngIf="loading" style="margin-left:8px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin"></i> Loading&#8230;</span>
           </div>
         </div>
       </div>
 
-      <div class="form-row cols-3">
+      <div class="form-row cols-2">
         <div>
           <label class="fc-label">Material Requisition</label>
           <erp-dropdown [items]="mrList" bindLabel="display" bindValue="id"
@@ -42,10 +41,6 @@
         <div>
           <label class="fc-label">Destination Warehouse</label>
           <input class="fc-input" [value]="destinationOutletName || ''" readonly placeholder="Auto from MRQ" />
-        </div>
-        <div>
-          <label class="fc-label">Destination Bin</label>
-          <input class="fc-input" [value]="destinationBinName || ''" readonly placeholder="Auto from MRQ" />
         </div>
       </div>
 
@@ -67,15 +62,16 @@
               {{ item.name }} &mdash; Req: {{ item.reqQty }} / On Hand: {{ item.onHand }}
             </ng-template>
           </ng-select>
-          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Transfer will use selected From Warehouse.</small>
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">
+            Selecting a warehouse will open the Transfer popup.
+          </small>
         </div>
         <div>
           <label class="fc-label">Selected From Warehouse</label>
           <input class="fc-input" [value]="selectedFromOutletName || ''" readonly placeholder="Select From Warehouse" />
           <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">
-            This Warehouse stock rows will be shown below.
             <ng-container *ngIf="selectedFromOutletId && mrLines?.length">
-              &bull; Transferable Lines: <b>{{ transferableLineCount }}</b>
+              Transferable Lines: <b>{{ transferableLineCount }}</b>
             </ng-container>
           </small>
         </div>
@@ -83,9 +79,6 @@
 
       <div *ngIf="!loading && errorMsg" style="margin-top:10px;padding:8px 12px;border-radius:var(--radius);background:#fef2f2;border:1px solid #fca5a5;color:var(--danger);font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px">
         <i class="fas fa-exclamation-triangle"></i> {{ errorMsg }}
-      </div>
-      <div *ngIf="!loading && transferErrorText" style="margin-top:8px;padding:8px 12px;border-radius:var(--radius);background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px">
-        <i class="fas fa-info-circle"></i> {{ transferErrorText }}
       </div>
     </div>
   </div>
@@ -95,7 +88,7 @@
     <div class="table-search-bar">
       <span style="font-size:13px;font-weight:600;color:var(--text)">
         Stock in selected Warehouse
-        <span *ngIf="selectedFromOutletName" style="font-weight:400;color:var(--text-muted)"> — {{ selectedFromOutletName }}</span>
+        <span *ngIf="selectedFromOutletName" style="font-weight:400;color:var(--text-muted)"> &#8212; {{ selectedFromOutletName }}</span>
       </span>
       <span *ngIf="filteredRows?.length" style="font-size:12px;color:var(--text-muted);margin-left:auto">{{ filteredRows.length }} row(s)</span>
     </div>
@@ -141,3 +134,121 @@
   </div>
 
 </div>
+
+<!-- Transfer Popup Modal -->
+<div class="transfer-modal-overlay" *ngIf="showTransferModal" (click)="closeTransferModal()">
+  <div class="transfer-modal-box" (click)="$event.stopPropagation()">
+
+    <div class="transfer-modal-header">
+      <span class="transfer-modal-title">
+        <i class="fas fa-exchange-alt" style="color:#2E5F73"></i>
+        Transfer Stock
+        <span *ngIf="selectedMrNo" style="font-size:12px;font-weight:400;color:#8d99ae">&#8212; {{ selectedMrNo }}</span>
+      </span>
+      <button class="transfer-modal-close" type="button" (click)="closeTransferModal()">&#x2715;</button>
+    </div>
+
+    <div class="transfer-modal-body">
+
+      <div class="transfer-modal-info">
+        <div class="transfer-info-chip">
+          <span class="chip-label">From Warehouse</span>
+          <span class="chip-value">{{ selectedFromOutletName || '&#8212;' }}</span>
+        </div>
+        <div style="align-self:center;font-size:18px;color:#8d99ae">&#8594;</div>
+        <div class="transfer-info-chip">
+          <span class="chip-label">To Warehouse</span>
+          <span class="chip-value">{{ destinationOutletName || '&#8212;' }}</span>
+        </div>
+        <div class="transfer-info-chip" style="margin-left:auto" *ngIf="transferableLineCount">
+          <span class="chip-label">Transferable</span>
+          <span class="chip-value" style="color:#16a34a">{{ transferableLineCount }} line(s)</span>
+        </div>
+      </div>
+
+      <div class="transfer-modal-bin-row">
+        <label>From Bin <span style="color:#dc2626">*</span></label>
+        <ng-select
+          [items]="toBinList"
+          bindLabel="binName"
+          bindValue="id"
+          placeholder="Select bin..."
+          [(ngModel)]="destinationBinId"
+          (ngModelChange)="transferErrorText = null"
+          [loading]="toBinLoading"
+          [disabled]="toBinLoading"
+          appendTo="body">
+        </ng-select>
+        <small *ngIf="!toBinLoading && !toBinList.length" style="font-size:11px;color:#ea5455;margin-top:3px;display:block">
+          No bins found for this item in the selected warehouse.
+        </small>
+      </div>
+
+      <div class="transfer-modal-items-header">
+        <i class="fas fa-list-ul" style="color:#2E5F73"></i>
+        Items to Transfer
+        <span *ngIf="shortageCount" style="font-size:10px;font-weight:600;color:#ea5455;margin-left:4px">({{ shortageCount }} shortage)</span>
+      </div>
+
+      <table class="transfer-modal-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>SKU</th>
+            <th style="text-align:right">Remaining</th>
+            <th style="text-align:right">Available</th>
+            <th style="text-align:right">Max</th>
+            <th style="text-align:right">Transfer Qty</th>
+            <th style="text-align:center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of mrLines; trackBy: trackByMrLine">
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.itemName }}</td>
+            <td style="color:#8d99ae;white-space:nowrap">{{ l.sku }}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums">{{ l.remainingQty }}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums">{{ l.availQty }}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#2E5F73">{{ l.maxTransferQty }}</td>
+            <td style="text-align:right">
+              <input type="number"
+                [(ngModel)]="l.transferQty"
+                (change)="onTransferQtyChanged(l)"
+                [min]="0"
+                [max]="l.maxTransferQty"
+                [disabled]="l.status === 'SHORT'" />
+            </td>
+            <td style="text-align:center">
+              <span class="modal-status-badge"
+                [class.status-ready]="l.status === 'READY'"
+                [class.status-partial]="l.status === 'PARTIAL'"
+                [class.status-short]="l.status === 'SHORT'">
+                {{ l.status }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="!mrLines?.length">
+            <td colspan="7" style="text-align:center;color:#adb5bd;padding:20px">No items found.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="transferErrorText" style="margin-top:10px;padding:8px 12px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:12px;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-info-circle"></i> {{ transferErrorText }}
+      </div>
+
+    </div>
+
+    <div class="transfer-modal-footer">
+      <button class="btn btn-outline btn-sm" type="button" (click)="closeTransferModal()" [disabled]="loading">Cancel</button>
+      <button class="btn btn-primary btn-sm" type="button" [disabled]="!canTransfer() || loading" (click)="submitTransfer()">
+        <i class="fas fa-circle-notch fa-spin" *ngIf="loading"></i>
+        <i class="fas fa-exchange-alt" *ngIf="!loading"></i>
+        {{ loading ? 'Transferring...' : 'Transfer' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+

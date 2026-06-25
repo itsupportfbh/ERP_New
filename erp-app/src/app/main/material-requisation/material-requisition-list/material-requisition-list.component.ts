@@ -327,6 +327,22 @@ getStatusClass(status?: number | null): string {
         this.currentPage = 1;
         this.applyPage();
         this.loading = false;
+
+        if (this.companyId === 1) {
+          const otherPending = this.rows.filter(r => r.companyId !== 1 && r.status === 1);
+          if (otherPending.length > 0 && !sessionStorage.getItem('mr_alert_shown')) {
+            sessionStorage.setItem('mr_alert_shown', '1');
+            Swal.fire({
+              icon: 'info',
+              title: 'Pending Material Requests',
+              html: `<b>${otherPending.length}</b> pending request(s) from other companies are awaiting action.`,
+              confirmButtonText: 'View',
+              showCancelButton: true,
+              cancelButtonText: 'Dismiss',
+              confirmButtonColor: '#2E5F73'
+            });
+          }
+        }
       },
       error: (err) => {
         this.rows = [];
