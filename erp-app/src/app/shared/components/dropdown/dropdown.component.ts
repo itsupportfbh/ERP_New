@@ -24,6 +24,8 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
   @Input() required = false;
   @Input() disabled = false;
   @Input() errorMsg = '';
+  /** Optional minimum width (px) for the dropdown panel. Useful for long labels. */
+  @Input() menuMinWidth = 0;
 
   @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
 
@@ -93,10 +95,15 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
     const spaceBelow = window.innerHeight - r.bottom;
     const openUp = spaceBelow < menuH + 8 && r.top > menuH;
 
+    // Widen the panel when requested, but keep it inside the viewport.
+    const desiredWidth = this.menuMinWidth > 0 ? Math.max(r.width, this.menuMinWidth) : r.width;
+    const maxRight = window.innerWidth - 8;
+    const left = (r.left + desiredWidth > maxRight) ? Math.max(8, maxRight - desiredWidth) : r.left;
+
     this.menuStyle = {
       position: 'fixed',
-      left:  `${r.left}px`,
-      width: `${r.width}px`,
+      left:  `${left}px`,
+      width: `${desiredWidth}px`,
       zIndex: '9999',
       ...(openUp
         ? { bottom: `${window.innerHeight - r.top + 2}px`, top: 'auto' }

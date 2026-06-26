@@ -602,7 +602,7 @@ export class PartnerFormComponent implements OnInit {
     const userId = Number(localStorage.getItem('id')) || null;
     return {
       ...this.supplier,
-      id: this.toNumber(this.supplier.id),
+      id: this.toNumber(this.supplier.id) ?? 0,
       leadTime: this.toNumber(this.supplier.leadTime),
       statusId: this.toNumber(this.supplier.statusId),
       countryId: this.toNumber(this.supplier.countryId),

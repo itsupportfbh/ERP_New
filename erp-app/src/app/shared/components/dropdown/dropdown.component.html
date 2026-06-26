@@ -24,6 +24,7 @@
       <div class="dd-item"
            *ngFor="let opt of filteredOptions"
            [class.selected]="sameValue(opt.value, value)"
+           [title]="opt.label"
            (mousedown)="select(opt, $event)">
         {{ opt.label }}
       </div>
