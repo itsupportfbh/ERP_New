@@ -50,7 +50,7 @@
       <erp-input label="Contact Number" [(ngModel)]="customer.phone"></erp-input>
     </div>
     <div class="form-row cols-3 block-gap">
-      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
+      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
     </div>
     <div class="wizard-inline-actions">
       <button class="btn btn-primary btn-sm" (click)="nextCustomerStep()">Next</button>
@@ -156,7 +156,7 @@
       <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="supplier.currencyId" (ngModelChange)="onSupplierCurrencyChange($event)"></erp-dropdown>
       <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="supplier.incotermsId"></erp-dropdown>
 
-      <erp-dropdown label="Ledger Name / Account" [options]="ledgerOptions" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
+      <erp-dropdown label="Ledger Name / Account" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
       <erp-input label="Contact Name" [(ngModel)]="supplier.contact"></erp-input>
       <erp-input label="Email" type="email" [(ngModel)]="supplier.email"></erp-input>
       <erp-input label="Phone" [(ngModel)]="supplier.phone"></erp-input>
