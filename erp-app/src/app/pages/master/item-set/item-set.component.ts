@@ -28,7 +28,7 @@ export class ItemSetComponent implements OnInit {
     this.masterSvc.getChartOfAccounts().subscribe({
       next: (res: any) => {
         const list = res?.data || res || [];
-        this.budgetLines = list.map((x: any) => ({ id: Number(x.id), label: `${x.headCode} - ${x.headName}` }));
+        this.budgetLines = list.map((x: any) => ({ id: Number(x.headCode), label: `${x.headCode} - ${x.headName}` }));
       },
       error: () => {}
     });
@@ -54,7 +54,7 @@ export class ItemSetComponent implements OnInit {
   edit(item: any): void {
     this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id;
     const ids = (item.items || item.itemSetItems || []).map((x: any) => Number(x.itemId || x.id));
-    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesBudgetLineId ?? null, selectedItemIds: ids };
+    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesParentHeadCode ?? item.salesBudgetLineId ?? null, selectedItemIds: ids };
     this.message = '';
   }
 
@@ -66,7 +66,7 @@ export class ItemSetComponent implements OnInit {
     const userId = Number(localStorage.getItem('id') || 0);
     const payload = {
       setName: this.form.setName,
-      salesBudgetLineId: this.form.salesBudgetLineId,
+      salesParentHeadCode: this.form.salesBudgetLineId,
       createdBy: userId,
       updatedBy: userId,
       isActive: true,
