@@ -78,7 +78,7 @@ export class WarehouseComponent implements OnInit {
     if (!this.form.name?.trim()) { this.message = 'Name is required.'; this.isError = true; return; }
     if (!this.form.locationId) { this.message = 'Location is required.'; this.isError = true; return; }
     const payload = {
-      id: this.selectedId,
+      id: this.selectedId ?? 0,
       name: this.form.name.trim(),
       code: this.form.code?.trim() || '',
       phone: this.form.phone?.trim() || '',

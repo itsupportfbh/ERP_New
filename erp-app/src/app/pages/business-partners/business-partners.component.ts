@@ -294,9 +294,9 @@ export class BusinessPartnersComponent implements OnInit {
         customerName: row?.customerName ?? row?.CustomerName ?? row?.name ?? '',
         customerCode: row?.customerCode ?? row?.CustomerCode ?? '',
         customerGroupName: row?.customerGroupName ?? row?.CustomerGroupName ?? '',
-        contactPerson: row?.contactPerson ?? row?.ContactPerson ?? row?.contact ?? '',
+        contactPerson: row?.contactPerson ?? row?.ContactPerson ?? row?.pointOfContactPerson ?? row?.PointOfContactPerson ?? row?.contact ?? '',
         email: row?.email ?? row?.Email ?? '',
-        phone: row?.phone ?? row?.Phone ?? '',
+        phone: row?.phone ?? row?.Phone ?? row?.contactNumber ?? row?.ContactNumber ?? '',
         statusName: row?.statusName ?? row?.StatusName ?? (row?.isActive === false ? 'Inactive' : 'Active')
       };
     }
