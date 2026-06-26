@@ -5,6 +5,10 @@
       <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
       <div class="dt-right">
         <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Batch / plan / outlet / status"/></div>
+        <button class="pp-bell pp-bell-plan" type="button" title="Production Plans ready for Batch Production" (click)="openPlanAlerts()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2a5 5 0 0 0-5 5c0 4-1.5 5.5-2 6h14c-.5-.5-2-2-2-6a5 5 0 0 0-5-5z"/><path d="M8.5 17a1.8 1.8 0 0 0 3 0"/></svg>
+          <span class="pp-bell-badge plan" *ngIf="planAlertCount > 0">{{ planAlertCount }}</span>
+        </button>
         <button class="mbtn-add" (click)="create()">Add</button>
       </div>
     </div>
@@ -56,6 +60,41 @@
     (print)="printActive()"
     (close)="showView=false">
   </erp-doc-view-modal>
+
+  <!-- Production Plans ready for Batch Production modal -->
+  <div class="pp-alert-overlay" *ngIf="showPlanAlertModal" (click)="closePlanAlertModal()">
+    <div class="pp-alert-modal" (click)="$event.stopPropagation()">
+      <div class="pp-alert-head">
+        <h3>Production Plans Ready for Batch Production</h3>
+        <div class="pp-alert-head-right">
+          <input class="pp-alert-search" type="search" [(ngModel)]="planAlertSearch" name="planSearch" placeholder="Search Plan / SO"/>
+          <button class="pp-alert-refresh" (click)="loadPlanAlerts()">Refresh</button>
+          <button class="pp-alert-x" (click)="closePlanAlertModal()" aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="pp-alert-body">
+        <table class="pp-alert-table">
+          <thead><tr>
+            <th>PLAN NO</th><th>SO NO</th><th>PLAN DATE</th><th class="ta-c">ACTION</th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let p of filteredPlanAlertList()">
+              <td class="pp-plan">{{ p.productionPlanNo || p.id }}</td>
+              <td>{{ p.salesOrderNo || ('SOID:' + (p.salesOrderId || '')) }}</td>
+              <td>{{ p.planDate ? (p.planDate | date:'dd-MM-yyyy') : '—' }}</td>
+              <td class="ta-c">
+                <button class="pp-approve" (click)="batchForPlan(p.id); $event.stopPropagation()">Create Batch</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredPlanAlertList().length === 0"><td colspan="4" class="pp-alert-empty">No plans ready for batch production</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pp-alert-foot">
+        <button class="pp-alert-close" (click)="closePlanAlertModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Delete confirm -->
   <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
