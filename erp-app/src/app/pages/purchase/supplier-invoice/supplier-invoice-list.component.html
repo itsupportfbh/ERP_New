@@ -104,14 +104,19 @@
               </span>
             </td>
             <td>
-              <span class="si-status-pill"
-                [class.posted]="isPosted(row)"
-                [class.pending]="!isPosted(row) && row.numStatus === 1"
-                [class.approved]="!isPosted(row) && row.numStatus === 2"
+              <span *ngIf="!isPosted(row)" class="si-status-pill"
+                [class.pending]="row.numStatus === 1"
+                [class.approved]="row.numStatus === 2"
                 [class.rejected]="row.numStatus === 3"
-                [class.draft]="!isPosted(row) && row.numStatus === 0">
+                [class.draft]="row.numStatus === 0">
                 {{ row.statusLabel }}
               </span>
+              <div *ngIf="row.typeLabel" style="font-size:10px;color:#92400e;background:rgba(251,191,36,0.18);border-radius:10px;padding:1px 7px;margin-top:3px;display:inline-block;font-weight:600;">
+                {{ row.typeLabel }}
+              </div>
+              <div *ngIf="row.linkedWithInvoiceNo" style="font-size:10px;color:#6366f1;margin-top:2px;" title="Linked to another partial invoice">
+                &#128279; {{ row.linkedWithInvoiceNo }}
+              </div>
             </td>
             <td>
               <button class="si-match-btn"
@@ -479,7 +484,7 @@
           <div class="match-row">
             <span class="mk">Match</span>
             <span class="mv" [style.color]="threeWay.pinMatch ? '#1a7a4a' : '#b91c1c'" style="font-weight:700;">
-              {{ threeWay.pinMatch ? '✓ Matched' : '⚠ Mismatch' }}
+              {{ threeWay.pinMatch ? (threeWay.isPartialInvoice ? '✓ Partial Invoice' : '✓ Matched') : '⚠ Mismatch' }}
             </span>
           </div>
         </div>
@@ -487,7 +492,8 @@
 
       <!-- Overall status -->
       <div class="match-status-bar" [class.ok]="threeWay.pinMatch" [class.mm]="!threeWay.pinMatch">
-        <span *ngIf="threeWay.pinMatch">&#10003; 3-Way Match OK — PO, GRN and Invoice quantities match</span>
+        <span *ngIf="threeWay.pinMatch && !threeWay.isPartialInvoice">&#10003; 3-Way Match OK — PO, GRN and Invoice quantities match</span>
+        <span *ngIf="threeWay.pinMatch && threeWay.isPartialInvoice">&#10003; Partial Invoice — {{ threeWay.mismatchLabel || 'Invoice qty is within GRN qty' }}</span>
         <span *ngIf="!threeWay.pinMatch">&#9651; Mismatch — Invoice qty does not match GRN/PO. Review before posting.</span>
       </div>
     </div>

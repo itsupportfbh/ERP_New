@@ -421,6 +421,79 @@ export class DeliveryOrderFormComponent implements OnInit {
     return m ? `${m[1]}:${m[2]}` : '';
   }
 
+  submitDo(): void {
+    if (!this.id) return;
+    void Swal.fire({
+      title: 'Submit Delivery Order?',
+      text: 'This will submit the DO for approval.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Submit'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.saving = true;
+      this.svc.submitDeliveryOrder(this.id!).subscribe({
+        next: () => {
+          this.saving = false;
+          this.status = 1;
+          void Swal.fire({ icon: 'success', title: 'Submitted!', text: 'Delivery Order submitted for approval.', confirmButtonColor: '#16a34a' });
+        },
+        error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Submit failed.', 'error'); }
+      });
+    });
+  }
+
+  approve(): void {
+    if (!this.id) return;
+    void Swal.fire({
+      title: 'Approve Delivery Order?',
+      text: 'This will set the DO status to Approved.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Approve'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.saving = true;
+      this.svc.approveDeliveryOrder(this.id!).subscribe({
+        next: () => {
+          this.saving = false;
+          this.status = 2;
+          void Swal.fire({ icon: 'success', title: 'Approved!', text: 'Delivery Order approved.', confirmButtonColor: '#16a34a' });
+        },
+        error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Approve failed.', 'error'); }
+      });
+    });
+  }
+
+  post(): void {
+    if (!this.id) return;
+    void Swal.fire({
+      title: 'Post Delivery Order?',
+      text: 'Stock will be reduced. This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Post'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.saving = true;
+      this.svc.postDeliveryOrder(this.id!).subscribe({
+        next: () => {
+          this.saving = false;
+          this.status = 4;
+          this.isPosted = true;
+          void Swal.fire({ icon: 'success', title: 'Posted!', text: 'Delivery Order posted and stock reduced.', confirmButtonColor: '#16a34a' });
+        },
+        error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Post failed.', 'error'); }
+      });
+    });
+  }
+
   back(): void { this.router.navigate(['/app/sales/delivery-orders']); }
 
   get title(): string { return this.isEdit ? 'Edit Delivery Order' : 'Create Delivery Order'; }

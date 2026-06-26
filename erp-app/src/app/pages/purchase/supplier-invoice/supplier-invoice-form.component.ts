@@ -23,6 +23,8 @@ interface GrnHeader {
   fxRate: number;
   grnJson: any;
   poLines: any;
+  alreadyInvoicedJson: any;
+  totalInvoicedQty: number;
 }
 
 interface PinLine {
@@ -42,6 +44,7 @@ interface PinLine {
   dcNoteNo: string;
   remarks: string;
   matchStatus: 'OK' | 'Mismatch' | '';
+  isPartial: boolean;
 }
 
 @Component({
@@ -297,7 +300,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
       currencyName: g.currencyName ?? g.CurrencyName ?? '',
       fxRate: Number(g.fxRate ?? g.FxRate ?? 1),
       grnJson: g.gRNJson ?? g.GRNJson ?? g.grnJson ?? g.GrnJson,
-      poLines: g.poLines ?? g.PoLines ?? g.poLinesJson ?? g.PoLinesJson
+      poLines: g.poLines ?? g.PoLines ?? g.poLinesJson ?? g.PoLinesJson,
+      alreadyInvoicedJson: g.alreadyInvoicedJson ?? g.AlreadyInvoicedJson ?? null,
+      totalInvoicedQty: Number(g.totalInvoicedQty ?? g.TotalInvoicedQty ?? 0)
     };
   }
 
@@ -337,12 +342,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       if (currentSelected.length > 0) {
         const existingSupplier = currentSelected[0].supplierId;
         if (existingSupplier && g.supplierId && existingSupplier !== g.supplierId) {
-          Swal.fire({ icon: 'warning', title: 'Invalid', text: 'Multiple supplier GRNs cannot be combined into one invoice.', confirmButtonColor: '#16a34a' });
-          return;
-        }
-        const existingPoId = currentSelected[0].poId;
-        if (existingPoId && g.poId && existingPoId !== g.poId) {
-          Swal.fire({ icon: 'warning', title: 'Invalid', text: 'GRNs from different POs cannot be combined into one invoice (3-way match).', confirmButtonColor: '#16a34a' });
+          Swal.fire({ icon: 'warning', title: 'Invalid', text: 'All GRNs must be from the same supplier.', confirmButtonColor: '#16a34a' });
           return;
         }
       }
@@ -457,10 +457,22 @@ export class SupplierInvoiceFormComponent implements OnInit {
         }
       }
 
+      const alreadyInvoiced: { itemId: number; invoicedQty: number }[] =
+        this.safeJsonArray(g.alreadyInvoicedJson);
+      const totalInvoicedQty = g.totalInvoicedQty ?? 0;
+      const isSingleItem = grnItems.length === 1;
+
       grnItems.forEach((x: any) => {
         const itemId = x.itemId ?? null;
         const itemName = x.itemName ?? x.itemSearch ?? x.item ?? '';
-        const grnQty = Number(x.qtyReceived ?? x.qty ?? 0);
+        const rawGrnQty = Number(x.qtyReceived ?? x.qty ?? 0);
+        // Fix: use itemId != null (not truthy) to avoid skipping itemId=0
+        const perItemMatch = itemId != null
+          ? alreadyInvoiced.find(a => a.itemId === Number(itemId))?.invoicedQty
+          : undefined;
+        // Fallback: for single-item GRNs, use the total invoiced qty from backend
+        const invoicedAlready = perItemMatch ?? (isSingleItem ? totalInvoicedQty : 0);
+        const grnQty = Math.max(0, rawGrnQty - invoicedAlready);
         const unitPrice = Number(x.unitPrice ?? x.price ?? 0);
         const poLine = poItems.find((p: any) =>
           (itemId && Number(p.itemId) === Number(itemId)) ||
@@ -503,7 +515,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
           budgetLineId: ledgerId,
           dcNoteNo: '',
           remarks: '',
-          matchStatus: ''
+          matchStatus: '',
+          isPartial: false
         };
         this.recalcLine(line);
         line.matchStatus = this.calcMatchStatus(poQty, grnQty, grnQty);
@@ -515,9 +528,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
   }
 
   private calcMatchStatus(poQty: number, grnQty: number, invQty: number): 'OK' | 'Mismatch' | '' {
-    if (!poQty && !grnQty) return '';
-    if (!poQty) return grnQty === invQty ? 'OK' : 'Mismatch';
-    if (poQty === grnQty && grnQty === invQty) return 'OK';
+    if (!grnQty && !poQty) return '';
+    if (!invQty) return '';
+    const tol = 0.0001;
+    // OK if invoice qty is within remaining GRN qty (supports partial invoices)
+    if (invQty <= grnQty + tol) return 'OK';
     return 'Mismatch';
   }
 
@@ -535,6 +550,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       line.lineGrandTotal = +base.toFixed(2);
     }
     line.matchStatus = this.calcMatchStatus(line.poQty, line.grnQty, line.qty);
+    if (line.qty < line.grnQty) line.isPartial = true;
+    else if (line.qty >= line.grnQty) line.isPartial = false;
   }
 
   recalcLines(): void { this.lines.forEach(l => this.recalcLine(l)); }
@@ -557,7 +574,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
         this.currencyId = d.currencyId ?? null;
         this.fxRate = d.fxRate ?? 1;
         this.taxRate = d.taxRate ?? d.taxPct ?? 0;
-        this.isPartial = d.isPartial ?? false;
+        this.isPartial = d.isPartialInvoice ?? d.isPartial ?? false;
         this.isGlPosted = d.isGlPosted ?? d.glPosted ?? false;
         this.isOverseas = !!(d.isOverseas ?? d.IsOverseas);
         this.status = d.status ?? 'Draft';
@@ -599,7 +616,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       budgetLineId: l.budgetLineId ?? null,
       dcNoteNo: l.dcNoteNo ?? '',
       remarks: l.remarks ?? '',
-      matchStatus: this.calcMatchStatus(poQty, grnQty, qty)
+      matchStatus: this.calcMatchStatus(poQty, grnQty, qty),
+      isPartial: !!(l.isPartial ?? false)
     };
   }
 
@@ -682,7 +700,8 @@ export class SupplierInvoiceFormComponent implements OnInit {
       budgetLineId: l.budgetLineId,
       dcNoteNo: l.dcNoteNo,
       remarks: l.remarks,
-      matchStatus: l.matchStatus
+      matchStatus: l.matchStatus,
+      isPartial: l.isPartial
     }));
 
     const payload: any = {
@@ -700,7 +719,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       LinesJson: JSON.stringify(linesData),
       GrnId: this.selectedGrnIds[0] ?? null,
       GrnIds: this.selectedGrnIds,
-      IsPartial: this.isPartial,
+      IsPartialInvoice: this.lines.some(l => l.isPartial),
       CreatedBy: this.loginUserId ?? 0,
       UpdatedBy: this.loginUserId ?? 0,
       IsOverseas: this.isOverseas

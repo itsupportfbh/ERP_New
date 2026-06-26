@@ -15,7 +15,14 @@
       "Bash(git -C \"C:/Users/CCSPLNB03/source/repos/Unity_ERP\" show 78ff235:\"starter-kit/src/app/main/financial/period-close-fx/period-close-fx.component.ts\")",
       "Bash(xargs grep -l \"approvalLevelName\\\\|role.*dashboard\\\\|DashboardComponent\")",
       "Bash(dir \"C:/Users/CCSPLNB03/source/repos/Unity_ERP/starter-kit/src/app/main/sample/\" /b)",
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\ERP_New\\\\erp-app\\\\src\\\\app\\\\pages\\\\purchase\" -Depth 1)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(xargs grep -l \"erp-input\\\\|selector.*erp-input\")",
+      "Bash(xargs grep -n \"namespace\\\\|interface\")",
+      "Bash(grep -v \"//\\\\|AdjustStock\\\\|GetStock\")",
+      "Bash(grep -v \"//\\\\|comment\")",
+      "Bash(xargs grep -l \"class GrnForPinDto\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
@@ -24,7 +31,12 @@
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\Repositories",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_Lat\\FinanceApi\\Repositories",
-      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\ModelDTO"
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\ModelDTO",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_l\\FinanceApi\\Controllers",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\Repositories",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\ModelDTO",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_Lat\\FinanceApi\\ModelDTO",
+      "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\Services"
     ]
   }
 }

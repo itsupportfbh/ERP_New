@@ -66,13 +66,22 @@ export class RfqListComponent implements OnInit {
     this.loading = true;
     this.svc.getRfqs().subscribe({
       next: res => {
-        this.rows = this.svc.unwrap(res).map((r: any) => ({
-          ...r,
-          id: r.id ?? r.iD,
-          number: r.number ?? r.rfqNo ?? r.quotationNo,
-          customerName: r.customerName ?? r.supplierName,
-          statusLabel: r.status ?? r.statusLabel ?? 'Draft',
-        }));
+        this.rows = this.svc.unwrap(res).map((r: any) => {
+          let supplierNames = '';
+          try {
+            const sups: any[] = JSON.parse(r.suppliersJson || '[]');
+            supplierNames = sups.map(s => s.name).filter(Boolean).join(', ');
+          } catch { supplierNames = ''; }
+          return {
+            ...r,
+            id: r.id,
+            number: r.rfqNo ?? r.number ?? '',
+            customerName: supplierNames,
+            deliveryDate: r.validUntil ?? r.deliveryDate,
+            grandTotal: r.total ?? r.grandTotal ?? null,
+            statusLabel: r.status ?? 'Draft',
+          };
+        });
         this.applyFilter();
         this.loading = false;
       },
@@ -95,23 +104,22 @@ export class RfqListComponent implements OnInit {
   onRowClick(row: any): void { this.openLinesModal(row); }
 
   openLinesModal(row: any): void {
-    const raw = row?.rfqLines ?? row?.RfqLines ?? row?.lines ?? [];
-    const lines: any[] = Array.isArray(raw) ? raw : (() => { try { return JSON.parse(raw || '[]'); } catch { return []; } })();
-    this.modalLines = lines;
+    this.modalLines = [];
     this.modalRfqNo = row.number ?? '';
     this.modalSupplier = row.customerName ?? '';
     this.modalStatus = row.statusLabel ?? '';
     this.modalTotal = row.grandTotal ?? null;
-    if (!lines.length) {
-      this.svc.getRfqById(row.id).subscribe({
-        next: res => {
-          const d = this.svc.unwrapOne(res);
-          const r2 = d.rfqLines ?? d.RfqLines ?? d.lines ?? [];
-          this.modalLines = Array.isArray(r2) ? r2 : (() => { try { return JSON.parse(r2 || '[]'); } catch { return []; } })();
-        }
-      });
-    }
     this.showLinesModal = true;
+
+    // Always fetch fresh from API to get latest itemsJson
+    this.svc.getRfqById(row.id).subscribe({
+      next: res => {
+        const d = this.svc.unwrapOne(res);
+        try {
+          this.modalLines = JSON.parse(d.itemsJson || '[]');
+        } catch { this.modalLines = []; }
+      }
+    });
   }
 
   closeLinesModal(): void { this.showLinesModal = false; }
@@ -124,9 +132,24 @@ export class RfqListComponent implements OnInit {
   }
 
   async send(row: any): Promise<void> {
+    let suppliers: any[] = [];
+    try { suppliers = JSON.parse(row.suppliersJson || '[]'); } catch { suppliers = []; }
+
+    if (!suppliers.length) {
+      Swal.fire({ icon: 'warning', title: 'No Suppliers', text: 'Add at least one supplier with email/phone before sending.', confirmButtonColor: '#16a34a' });
+      return;
+    }
+
+    const hasContact = suppliers.some((s: any) => s.email?.trim() || s.phone?.trim());
+    if (!hasContact) {
+      Swal.fire({ icon: 'warning', title: 'No Contact Info', text: 'Suppliers have no email or phone. Edit the RFQ and fill in supplier contact details.', confirmButtonColor: '#16a34a' });
+      return;
+    }
+
+    const supplierList = suppliers.map((s: any) => `• ${s.name}${s.email ? ' (' + s.email + ')' : ''}${s.phone ? ' / ' + s.phone : ''}`).join('<br>');
     const result = await Swal.fire({
       title: 'Send RFQ?',
-      text: `Send RFQ ${row.number} to supplier?`,
+      html: `Send <b>${row.number}</b> via <b>${row.sendVia ?? 'Email'}</b> to:<br><br><div style="text-align:left;font-size:13px;color:#374151">${supplierList}</div>`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#16a34a',
@@ -134,10 +157,42 @@ export class RfqListComponent implements OnInit {
       confirmButtonText: 'Yes, send it!'
     });
     if (!result.isConfirmed) return;
-    this.svc.sendRfq({ ...row, status: 'Sent' }).subscribe({
-      next: () => {
+    const sendPayload = {
+      RfqNo: row.number,
+      ValidUntil: row.deliveryDate,
+      SendVia: row.sendVia ?? 'Email',
+      ItemsJson: row.itemsJson ?? '[]',
+      Suppliers: suppliers
+    };
+    Swal.fire({ title: 'Sending…', html: 'Sending RFQ to suppliers.<br/>Please wait.', allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+    this.svc.sendRfq(sendPayload).subscribe({
+      next: (res: any) => {
         this.load();
-        Swal.fire({ icon: 'success', title: 'Sent!', text: `RFQ ${row.number} sent to supplier.`, confirmButtonColor: '#16a34a' });
+        const data = res?.data ?? res;
+        const results: any[] = data?.results ?? [];
+        const sandboxResults = results.filter((r: any) => r.message?.toLowerCase().includes('sandbox'));
+        const hasSandbox = sandboxResults.length > 0;
+        const sent = data?.sentCount ?? 0;
+        const failed = data?.failedCount ?? 0;
+
+        if (hasSandbox) {
+          const sandboxNames = sandboxResults.map((r: any) => r.supplier).join(', ');
+          Swal.fire({
+            icon: 'warning',
+            title: 'WhatsApp Not Configured',
+            html: `WhatsApp is in <b>sandbox mode</b> — messages are logged but not delivered to the phone.<br><br>
+                   <b>To fix:</b> Add your Meta WhatsApp Business API credentials to <code>appsettings.json</code>:<br>
+                   <code style="font-size:12px">WhatsApp:AccessToken</code> and <code style="font-size:12px">WhatsApp:PhoneNumberId</code><br><br>
+                   <b>Tip:</b> Change <b>Send Via</b> to <b>Email</b> in the RFQ — email is already configured and will work immediately.`,
+            confirmButtonColor: '#16a34a'
+          });
+        } else if (failed === 0 && sent > 0) {
+          const detail = results.map((r: any) => `${r.supplier}: ${r.message}`).join('\n');
+          Swal.fire({ icon: 'success', title: 'Sent!', text: `RFQ ${row.number} sent to ${sent} supplier(s).\n${detail}`, confirmButtonColor: '#16a34a' });
+        } else {
+          const msgs = results.map((r: any) => `${r.supplier}: ${r.message}`).join('\n');
+          Swal.fire({ icon: 'warning', title: `Sent ${sent}, Failed ${failed}`, text: msgs || 'Some suppliers could not be reached.', confirmButtonColor: '#16a34a' });
+        }
       },
       error: err => {
         Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send RFQ.', confirmButtonColor: '#16a34a' });
@@ -176,7 +231,16 @@ export class RfqListComponent implements OnInit {
     this.actionLoading = true; this.actionError = '';
     const row = this.actionRow;
     if (this.actionType === 'send-rfq') {
-      this.svc.sendRfq({ ...row, status: 'Sent' }).subscribe({
+      let suppliers: any[] = [];
+      try { suppliers = JSON.parse(row.suppliersJson || '[]'); } catch { suppliers = []; }
+      const sendPayload = {
+        RfqNo: row.number,
+        ValidUntil: row.deliveryDate,
+        SendVia: row.sendVia ?? 'Email',
+        ItemsJson: row.itemsJson ?? '[]',
+        Suppliers: suppliers
+      };
+      this.svc.sendRfq(sendPayload).subscribe({
         next: () => {
           this.actionLoading = false; this.closeActionConfirm(); this.load();
           Swal.fire({ icon: 'success', title: 'Sent!', text: `RFQ ${row.number} sent to supplier.`, confirmButtonColor: '#16a34a' });

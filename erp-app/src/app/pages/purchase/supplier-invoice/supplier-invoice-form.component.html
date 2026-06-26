@@ -84,8 +84,8 @@
                 <line *ngIf="!allMatchOk" x1="8" y1="5" x2="8" y2="9"/>
                 <circle *ngIf="!allMatchOk" cx="8" cy="11.5" r="0.5" fill="currentColor"/>
               </svg>
-              <span *ngIf="allMatchOk">3-Way Match: All lines match (PO qty = GRN qty = Invoice qty)</span>
-              <span *ngIf="!allMatchOk">3-Way Match: {{ mismatchCount }} line(s) have qty mismatch — review before posting</span>
+              <span *ngIf="allMatchOk">3-Way Match: All lines OK</span>
+              <span *ngIf="!allMatchOk">3-Way Match: {{ mismatchCount }} line(s) exceed GRN qty — review before posting</span>
             </div>
           </div>
       </div>
@@ -97,15 +97,6 @@
       <div class="form-row cols-3 block-gap">
         <erp-input label="Tax %" type="number" [(ngModel)]="taxRate" (ngModelChange)="recalcLines()" [disabled]="isGlPosted" placeholder="0"></erp-input>
         <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="isGlPosted" *ngIf="fxRate !== 1"></erp-input>
-        <div class="toggle-field">
-          <label class="field-label">Partial Invoice</label>
-          <label class="toggle-chk">
-            <span class="toggle-box" [class.on]="isPartial" (click)="!isGlPosted && (isPartial = !isPartial)">
-              <svg *ngIf="isPartial" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.8,7.5 8.5,2"/></svg>
-            </span>
-            <span>{{ isPartial ? 'Yes – Partial' : 'No' }}</span>
-          </label>
-        </div>
       </div>
     </div>
 
@@ -128,6 +119,7 @@
               <th class="col-qty num-cell">PO Qty</th>
               <th class="col-qty num-cell">GRN Qty</th>
               <th class="col-qty num-cell">Inv Qty</th>
+              <th class="col-partial" *ngIf="!isGlPosted">Partial</th>
               <th class="col-price num-cell">Unit Price</th>
               <th class="col-disc num-cell">Disc %</th>
               <th class="col-tax">Tax Mode</th>
@@ -147,6 +139,9 @@
               <td class="num-cell grn-qty">{{ l.grnQty }}</td>
               <td class="num-cell">
                 <erp-input type="number" [(ngModel)]="l.qty" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0"></erp-input>
+              </td>
+              <td class="col-partial" *ngIf="!isGlPosted" style="text-align:center;">
+                <input type="checkbox" [(ngModel)]="l.isPartial" name="partial{{i}}" />
               </td>
               <td class="num-cell">
                 <erp-input type="number" [(ngModel)]="l.unitPrice" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0.00"></erp-input>
@@ -169,7 +164,7 @@
               </td>
             </tr>
             <tr *ngIf="!lines.length">
-              <td colspan="12" class="empty-lines">Select GRN(s) above to populate invoice lines with 3-way match data</td>
+              <td colspan="13" class="empty-lines">Select GRN(s) above to populate invoice lines with 3-way match data</td>
             </tr>
           </tbody>
           <tfoot *ngIf="lines.length">

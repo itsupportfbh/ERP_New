@@ -361,7 +361,7 @@ export class PurchaseService {
     return this.http.get(`${this.api}/FlagIssues/GetAllFlagissue`);
   }
   checkPeriodLock(date: string): Observable<any> {
-    return this.http.get(`${this.api}/PeriodClose/GetStatusForDate?date=${date}`);
+    return this.http.get(`${this.api}/PeriodClose/status?date=${date}`);
   }
   checkGstLock(date: string): Observable<any> {
     return this.http.get(`${this.api}/GstLock/Check/${date}`);
