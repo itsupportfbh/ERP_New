@@ -610,7 +610,7 @@ export class GrnFormComponent implements OnInit {
 
     obs$.subscribe({
       next: (res: any) => {
-        if (this.poId) this.svc.updateSoProcurementByPO(this.poId, 4).subscribe({ error: () => {} });
+        if (this.poId) this.svc.updateSoProcurementByPO(this.poId, 3).subscribe({ error: () => {} });
         this.saving = false;
 
         if (!this.isEdit) {

@@ -17,6 +17,15 @@
     <div class="do-title-right">
       <span class="do-status" *ngIf="isEdit">{{ statusLabel }}</span>
       <button class="btn btn-outline btn-sm" type="button" (click)="clear()" *ngIf="!isEdit">&#10005; Clear</button>
+      <button *ngIf="isEdit && perm.canEdit(fnId) && status === 0" class="btn btn-info btn-sm" type="button" [disabled]="saving" (click)="submitDo()">
+        &#9658; Submit
+      </button>
+      <button *ngIf="isEdit && perm.canEdit(fnId) && status === 1" class="btn btn-warning btn-sm" type="button" [disabled]="saving" (click)="approve()">
+        &#10003; Approve
+      </button>
+      <button *ngIf="isEdit && perm.canEdit(fnId) && status === 2" class="btn btn-success btn-sm" type="button" [disabled]="saving" (click)="post()">
+        &#128204; Post
+      </button>
       <button *ngIf="(isEdit && perm.canEdit(fnId)) || (!isEdit && perm.canCreate(fnId))" class="btn btn-primary btn-sm" type="button" [disabled]="saving || isPosted" (click)="submit()">
         &#128190; {{ saving ? 'Saving…' : (isEdit ? 'Update DO' : 'Save DO') }}
       </button>
@@ -170,6 +179,15 @@
   <!-- Footer -->
   <div class="do-foot">
     <button class="btn btn-outline btn-sm" type="button" (click)="back()">Cancel</button>
+    <button *ngIf="isEdit && perm.canEdit(fnId) && status === 0" class="btn btn-info" type="button" [disabled]="saving" (click)="submitDo()">
+      &#9658; Submit
+    </button>
+    <button *ngIf="isEdit && perm.canEdit(fnId) && status === 1" class="btn btn-warning" type="button" [disabled]="saving" (click)="approve()">
+      &#10003; Approve
+    </button>
+    <button *ngIf="isEdit && perm.canEdit(fnId) && status === 2" class="btn btn-success" type="button" [disabled]="saving" (click)="post()">
+      &#128204; Post
+    </button>
     <button class="btn btn-primary" type="button" [disabled]="saving || isPosted" (click)="submit()">
       {{ saving ? 'Saving…' : (isEdit ? 'Update DO' : 'Save DO') }}
     </button>

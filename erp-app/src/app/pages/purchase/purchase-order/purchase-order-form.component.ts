@@ -829,7 +829,7 @@ export class PurchaseOrderFormComponent implements OnInit {
         this.markClean();
         if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
         const savedId = this.id ?? this.svc.unwrapOne(res)?.id ?? this.svc.unwrapOne(res)?.iD ?? null;
-        if (savedId) this.svc.updateSoProcurementByPO(Number(savedId), 3).subscribe({ error: () => {} });
+        if (savedId) this.svc.updateSoProcurementByPO(Number(savedId), 2).subscribe({ error: () => {} });
         Swal.fire({ icon: 'success', title: 'Submitted!', text: this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', confirmButtonColor: '#16a34a' })
           .then(() => this.goToList());
       },

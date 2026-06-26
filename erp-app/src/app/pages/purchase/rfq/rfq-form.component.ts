@@ -1,22 +1,23 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import Swal from 'sweetalert2';
 
-interface RfqLine {
+interface RfqSupplier {
+  supplierId: number | null;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface RfqItem {
   itemId: number | null;
   itemCode: string;
   itemName: string;
   uomId: number | null;
+  uomName: string;
   quantity: number | null;
-  unitPrice: number | null;
-  discountPct: number | null;
-  taxCodeId: number | null;
-  taxMode: 'Exclusive' | 'Inclusive' | 'Zero';
-  lineNet: number;
-  lineTax: number;
-  lineTotal: number;
-  description: string;
+  remarks: string;
 }
 
 @Component({
@@ -31,38 +32,30 @@ export class RfqFormComponent implements OnInit {
   loading = false;
   saving = false;
   error = '';
-  successMsg = '';
 
-  // Header
+  // Header fields
   rfqNumber = '';
-  supplierId: number | null = null;
-  currencyId: number | null = null;
-  paymentTermId: number | null = null;
-  fxRate: number = 1;
-  deliveryDate = '';
-  deliveryTo = '';
+  validUntil = '';
+  sendVia = 'Email';
   remarks = '';
   status = 'Draft';
-  needsHodApproval = false;
 
-  // Lines
-  items: RfqLine[] = [];
+  // Suppliers list
+  suppliers: RfqSupplier[] = [];
 
-  // Dropdowns
+  // Items list
+  items: RfqItem[] = [];
+
+  // Dropdown options
   supplierOptions: any[] = [];
-  currencyOptions: any[] = [];
-  paymentTermOptions: any[] = [];
   itemOptions: any[] = [];
   uomOptions: any[] = [];
-  taxCodeOptions: any[] = [];
 
-  taxModeOptions = [
-    { label: 'Exclusive', value: 'Exclusive' },
-    { label: 'Inclusive', value: 'Inclusive' },
-    { label: 'Zero',      value: 'Zero' }
+  sendViaOptions = [
+    { label: 'Email',     value: 'Email' },
+    { label: 'WhatsApp',  value: 'WhatsApp' },
+    { label: 'Both',      value: 'Both' }
   ];
-
-  loginUserId = Number(localStorage.getItem('id')) || null;
 
   constructor(
     private svc: PurchaseService,
@@ -81,27 +74,21 @@ export class RfqFormComponent implements OnInit {
   loadLookups(): void {
     this.svc.getSuppliers().subscribe(r =>
       this.supplierOptions = this.svc.unwrap(r).map((s: any) => ({
-        label: s.supplierName ?? s.name, value: s.id
-      })));
-    this.svc.getCurrencies().subscribe(r =>
-      this.currencyOptions = this.svc.unwrap(r).map((c: any) => ({
-        label: `${c.currencyCode ?? c.code ?? c.currency ?? ''} - ${c.currencyName ?? c.name ?? ''}`.replace(/^-\s*|-\s*$/, '').trim(), value: c.id ?? c.iD
-      })));
-    this.svc.getPaymentTerms().subscribe(r =>
-      this.paymentTermOptions = this.svc.unwrap(r).map((p: any) => ({
-        label: p.termName ?? p.paymentTermsName ?? p.name, value: p.id
+        label: s.supplierName ?? s.name,
+        value: s.id,
+        raw: s
       })));
     this.svc.getItems().subscribe(r =>
       this.itemOptions = this.svc.unwrap(r).map((i: any) => ({
-        label: `${i.itemCode ?? ''} - ${i.itemName ?? i.name}`, value: i.id, raw: i
+        label: `${i.itemCode ?? ''} - ${i.itemName ?? i.name}`,
+        value: i.id,
+        raw: i
       })));
     this.svc.getUOMs().subscribe(r =>
       this.uomOptions = this.svc.unwrap(r).map((u: any) => ({
-        label: u.uomName ?? u.name, value: u.id
-      })));
-    this.svc.getTaxCodes().subscribe(r =>
-      this.taxCodeOptions = this.svc.unwrap(r).map((t: any) => ({
-        label: `${t.taxCode ?? t.code ?? t.taxName ?? t.name ?? ''} (${t.taxRate ?? t.rate ?? t.percentage ?? 0}%)`, value: t.id ?? t.iD, raw: t
+        label: u.uomName ?? u.name,
+        value: u.id,
+        raw: u
       })));
   }
 
@@ -110,18 +97,34 @@ export class RfqFormComponent implements OnInit {
     this.svc.getRfqById(this.id!).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
-        this.rfqNumber = d.number ?? d.rfqNumber ?? '';
-        this.supplierId = d.customerId ?? d.supplierId ?? null;
-        this.currencyId = d.currencyId ?? null;
-        this.paymentTermId = d.paymentTermsId ?? d.paymentTermId ?? null;
-        this.fxRate = d.fxRate ?? 1;
-        this.deliveryDate = d.deliveryDate ? d.deliveryDate.substring(0, 10) : '';
-        this.deliveryTo = d.deliveryTo ?? '';
-        this.remarks = d.remarks ?? '';
+        this.rfqNumber = d.rfqNo ?? '';
+        this.validUntil = d.validUntil ? (d.validUntil as string).substring(0, 10) : '';
+        this.sendVia = d.sendVia ?? 'Email';
         this.status = d.status ?? 'Draft';
-        this.needsHodApproval = d.needsHodApproval ?? false;
-        const lines: any[] = Array.isArray(d.lines) ? d.lines : [];
-        this.items = lines.map((l: any) => this.mapLine(l));
+
+        try {
+          const sups: any[] = JSON.parse(d.suppliersJson || '[]');
+          this.suppliers = sups.map(s => ({
+            supplierId: null,
+            name: s.name ?? '',
+            email: s.email ?? '',
+            phone: s.phone ?? ''
+          }));
+        } catch { this.suppliers = []; }
+
+        try {
+          const its: any[] = JSON.parse(d.itemsJson || '[]');
+          this.items = its.map(i => ({
+            itemId: null,
+            itemCode: i.itemCode ?? '',
+            itemName: i.item ?? i.itemName ?? '',
+            uomId: null,
+            uomName: i.uom ?? '',
+            quantity: i.qty ?? i.quantity ?? null,
+            remarks: i.remarks ?? ''
+          }));
+        } catch { this.items = []; }
+
         if (!this.items.length) this.addItem();
         this.loading = false;
       },
@@ -129,126 +132,79 @@ export class RfqFormComponent implements OnInit {
     });
   }
 
-  private mapLine(l: any): RfqLine {
-    const qty = l.qty ?? l.quantity ?? 0;
-    const price = l.unitPrice ?? 0;
-    const disc = l.discountPct ?? 0;
-    const lineNet = qty * price * (1 - disc / 100);
-    const lineTax = l.taxMode === 'Exclusive' ? (l.lineTax ?? 0) : 0;
-    return {
-      itemId: l.itemId ?? null,
-      itemCode: l.itemCode ?? '',
-      itemName: l.itemName ?? l.description ?? '',
-      uomId: l.uomId ?? null,
-      quantity: qty,
-      unitPrice: price,
-      discountPct: disc,
-      taxCodeId: l.taxCodeId ?? null,
-      taxMode: l.taxMode ?? 'Exclusive',
-      lineNet: l.lineNet ?? lineNet,
-      lineTax: l.lineTax ?? lineTax,
-      lineTotal: l.lineTotal ?? (lineNet + lineTax),
-      description: l.description ?? ''
-    };
+  addSupplier(): void {
+    this.suppliers.push({ supplierId: null, name: '', email: '', phone: '' });
+  }
+
+  removeSupplier(i: number): void { this.suppliers.splice(i, 1); }
+
+  onSupplierSelect(sup: RfqSupplier): void {
+    const found = this.supplierOptions.find(o => o.value === sup.supplierId);
+    if (found?.raw) {
+      sup.name  = found.raw.supplierName ?? found.raw.name ?? sup.name;
+      sup.email = found.raw.email ?? found.raw.supplierEmail ?? '';
+      sup.phone = found.raw.phone ?? found.raw.contactNo ?? found.raw.mobile ?? '';
+    }
   }
 
   addItem(): void {
-    this.items.push({
-      itemId: null, itemCode: '', itemName: '',
-      uomId: null, quantity: null, unitPrice: null, discountPct: null,
-      taxCodeId: null, taxMode: 'Exclusive',
-      lineNet: 0, lineTax: 0, lineTotal: 0, description: ''
-    });
+    this.items.push({ itemId: null, itemCode: '', itemName: '', uomId: null, uomName: '', quantity: null, remarks: '' });
   }
 
   removeItem(i: number): void { this.items.splice(i, 1); }
 
-  onCurrencyChange(): void {
-    const baseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
-    if (!this.currencyId || !baseCurrencyId || this.currencyId === baseCurrencyId) {
-      this.fxRate = 1;
-      return;
-    }
-    const today = new Date().toISOString().substring(0, 10);
-    this.svc.getExchangeRate(this.currencyId, baseCurrencyId, today).subscribe({
-      next: (res: any) => {
-        const rate = res?.data?.rate ?? res?.data?.exchangeRate ?? res?.rate ?? res?.exchangeRate ?? (typeof res === 'number' ? res : null);
-        if (rate && Number(rate) > 0) this.fxRate = Number(rate);
-      },
-      error: () => {}
-    });
-  }
-
-  onItemSelect(item: RfqLine): void {
+  onItemSelect(item: RfqItem): void {
     const found = this.itemOptions.find(o => o.value === item.itemId);
     if (found?.raw) {
       item.itemCode = found.raw.itemCode ?? '';
-      item.itemName = found.raw.itemName ?? found.label;
-      if (found.raw.uomId) item.uomId = found.raw.uomId;
+      item.itemName = found.raw.itemName ?? found.raw.name ?? '';
+      if (found.raw.uomId) {
+        item.uomId = found.raw.uomId;
+        const uom = this.uomOptions.find(u => u.value === found.raw.uomId);
+        item.uomName = uom?.label ?? '';
+      }
     }
   }
 
-  recalcLine(item: RfqLine): void {
-    const qty = item.quantity ?? 0;
-    const price = item.unitPrice ?? 0;
-    const disc = item.discountPct ?? 0;
-    item.lineNet = qty * price * (1 - disc / 100);
-    // Tax rate lookup
-    const taxFound = this.taxCodeOptions.find(t => t.value === item.taxCodeId);
-    const taxRate = taxFound?.raw?.taxRate ?? 0;
-    if (item.taxMode === 'Exclusive') {
-      item.lineTax = item.lineNet * (taxRate / 100);
-      item.lineTotal = item.lineNet + item.lineTax;
-    } else if (item.taxMode === 'Inclusive') {
-      item.lineTax = item.lineNet - item.lineNet / (1 + taxRate / 100);
-      item.lineTotal = item.lineNet;
-    } else {
-      item.lineTax = 0;
-      item.lineTotal = item.lineNet;
-    }
+  onUomSelect(item: RfqItem): void {
+    const found = this.uomOptions.find(u => u.value === item.uomId);
+    item.uomName = found?.raw?.uomName ?? found?.label ?? '';
   }
-
-  get subTotal(): number { return this.items.reduce((s, i) => s + i.lineNet, 0); }
-  get totalTax(): number { return this.items.reduce((s, i) => s + i.lineTax, 0); }
-  get grandTotal(): number { return this.items.reduce((s, i) => s + i.lineTotal, 0); }
 
   save(): void {
-    if (!this.supplierId) { this.error = 'Please select a Supplier.'; return; }
-    if (!this.deliveryDate) { this.error = 'Please set a Valid Until date.'; return; }
-    const invalid = this.items.some(i => !i.itemId || !i.quantity);
-    if (invalid) { this.error = 'Each line needs an Item and Quantity.'; return; }
+    if (!this.suppliers.length || this.suppliers.every(s => !s.name.trim())) {
+      this.error = 'Add at least one supplier.'; return;
+    }
+    if (!this.validUntil) { this.error = 'Set a Valid Until date.'; return; }
+    if (!this.items.length || this.items.some(i => !i.itemName.trim() || !i.quantity)) {
+      this.error = 'Each item needs a name and quantity.'; return;
+    }
 
     this.saving = true;
     this.error = '';
 
     const payload = {
-      Number: this.rfqNumber || 'RFQ-00000',
+      RfqNo: this.rfqNumber || '',
+      ValidUntil: this.validUntil,
+      SendVia: this.sendVia,
       Status: this.status,
-      CustomerId: this.supplierId,
-      CurrencyId: this.currencyId ?? 0,
-      FxRate: this.fxRate ?? 1,
-      PaymentTermsId: this.paymentTermId ?? 0,
-      DeliveryDate: this.deliveryDate,
-      Remarks: this.remarks,
-      DeliveryTo: this.deliveryTo,
-      Subtotal: this.subTotal,
-      TaxAmount: this.totalTax,
-      Rounding: 0,
-      GrandTotal: this.grandTotal,
-      NeedsHodApproval: this.needsHodApproval,
-      Lines: this.items.map(i => ({
-        ItemId: i.itemId,
-        UomId: i.uomId,
-        Qty: i.quantity ?? 0,
-        UnitPrice: i.unitPrice ?? 0,
-        DiscountPct: i.discountPct ?? 0,
-        TaxMode: i.taxMode,
-        TaxCodeId: i.taxCodeId,
-        LineNet: i.lineNet,
-        LineTax: i.lineTax,
-        LineTotal: i.lineTotal,
-        Description: i.description
-      }))
+      SuppliersJson: JSON.stringify(
+        this.suppliers
+          .filter(s => s.name.trim())
+          .map(s => ({ name: s.name.trim(), email: s.email.trim(), phone: s.phone.trim() }))
+      ),
+      ItemsJson: JSON.stringify(
+        this.items.map(i => ({
+          item: i.itemName.trim(),
+          itemCode: i.itemCode.trim(),
+          qty: i.quantity ?? 0,
+          uom: i.uomName,
+          remarks: i.remarks.trim()
+        }))
+      ),
+      QuotePricesJson: '{}',
+      WinnerLinesJson: '[]',
+      Total: 0
     };
 
     const obs$ = this.isEdit
@@ -260,8 +216,9 @@ export class RfqFormComponent implements OnInit {
         this.saving = false;
         const d = this.svc.unwrapOne(res);
         if (!this.isEdit && d?.id) {
-          this.id = d.id; this.isEdit = true;
-          this.rfqNumber = d.number ?? this.rfqNumber;
+          this.id = d.id;
+          this.isEdit = true;
+          this.rfqNumber = d.rfqNo ?? this.rfqNumber;
         }
         Swal.fire({ icon: 'success', title: 'Saved!', text: 'RFQ saved successfully.', confirmButtonColor: '#16a34a' });
       },
@@ -273,34 +230,9 @@ export class RfqFormComponent implements OnInit {
     });
   }
 
-  submit(): void {
-    this.status = 'Submitted';
-    this.save();
-  }
-
-  viewLineDetail(item: RfqLine): void {
-    this.showDetailSwal(item.itemName || 'Line Detail', [
-      ['Item Code', item.itemCode],
-      ['Item Name', item.itemName],
-      ['Quantity', item.quantity],
-      ['Unit Price', item.unitPrice != null ? Number(item.unitPrice).toFixed(2) : null],
-      ['Discount %', item.discountPct],
-      ['Tax Mode', item.taxMode],
-      ['Line Net', item.lineNet != null ? Number(item.lineNet).toFixed(2) : null],
-      ['Tax Amount', item.lineTax != null ? Number(item.lineTax).toFixed(2) : null],
-      ['Line Total', item.lineTotal != null ? Number(item.lineTotal).toFixed(2) : null],
-      ['Description', item.description],
-    ]);
-  }
-
-  private showDetailSwal(title: string, rows: [string, any][]): void {
-    const html = rows.filter(([, v]) => v != null && v !== '')
-      .map(([k, v]) => `<tr><td style="padding:5px 12px;color:#6b7280;font-size:12px;font-weight:600;white-space:nowrap;text-align:left;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:5px 12px;font-size:12px;text-align:left;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join('');
-    Swal.fire({ title, html: `<table style="width:100%;border-collapse:collapse">${html}</table>`, confirmButtonColor: '#16a34a', width: 500, showCloseButton: true });
-  }
+  submit(): void { this.status = 'Submitted'; this.save(); }
 
   back(): void { this.router.navigate(['/app/purchase/rfq']); }
   get today(): string { return new Date().toISOString().substring(0, 10); }
   get title(): string { return this.isEdit ? `Edit RFQ${this.rfqNumber ? ' – ' + this.rfqNumber : ''}` : 'New Request for Quotation'; }
-  getLabel(opts: any[], val: any): string { return opts.find(o => o.value === val)?.label ?? '—'; }
 }

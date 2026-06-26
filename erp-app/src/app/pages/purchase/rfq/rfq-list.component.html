@@ -71,10 +71,9 @@
             <tr style="background:var(--primary,#0e4a60);color:#fff;position:sticky;top:0;">
               <th style="padding:10px 12px;text-align:left;font-weight:600;">#</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;">Item</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;width:80px;">Item Code</th>
               <th style="padding:10px 12px;text-align:right;font-weight:600;width:80px;">Qty</th>
-              <th style="padding:10px 12px;text-align:right;font-weight:600;width:100px;">Unit Price</th>
-              <th style="padding:10px 12px;text-align:right;font-weight:600;width:100px;">Amount</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;">UOM</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;width:70px;">UOM</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;">Remarks</th>
             </tr>
           </thead>
@@ -83,15 +82,14 @@
                 [style.background]="i%2===0?'#fcfdff':'#ffffff'"
                 style="border-bottom:1px solid #f1f5f9;">
               <td style="padding:10px 12px;color:#9ca3af;">{{ i+1 }}</td>
-              <td style="padding:10px 12px;font-weight:600;">{{ l.itemName || l.itemSearch || l.itemCode || '—' }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ l.quantity ?? l.qty ?? 0 }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ (l.unitPrice | number:'1.2-2') || '—' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? 0) * (l.unitPrice ?? 0)) | number:'1.2-2' }}</td>
-              <td style="padding:10px 12px;">{{ l.uomName || l.uom || '—' }}</td>
+              <td style="padding:10px 12px;font-weight:600;">{{ l.item || l.itemName || '—' }}</td>
+              <td style="padding:10px 12px;color:#6b7280;">{{ l.itemCode || '—' }}</td>
+              <td style="padding:10px 12px;text-align:right;">{{ l.qty ?? l.quantity ?? 0 }}</td>
+              <td style="padding:10px 12px;">{{ l.uom || l.uomName || '—' }}</td>
               <td style="padding:10px 12px;color:#6b7280;">{{ l.remarks || '—' }}</td>
             </tr>
             <tr *ngIf="!modalLines?.length">
-              <td colspan="7" style="padding:20px;text-align:center;color:#6b7280;font-style:italic;">No lines found</td>
+              <td colspan="6" style="padding:20px;text-align:center;color:#6b7280;font-style:italic;">No lines found</td>
             </tr>
           </tbody>
         </table>

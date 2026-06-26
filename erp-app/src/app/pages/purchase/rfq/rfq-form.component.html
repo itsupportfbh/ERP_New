@@ -1,4 +1,6 @@
 <div class="rfq-page">
+
+  <!-- Page header -->
   <div class="page-header">
     <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
     <h2>{{ title }}</h2>
@@ -19,34 +21,89 @@
   </div>
 
   <div class="alert-error" *ngIf="error">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13.5" x2="10.01" y2="13.5"/></svg>
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/>
+      <line x1="10" y1="13.5" x2="10.01" y2="13.5"/>
+    </svg>
     {{ error }}
   </div>
-  <div class="alert-success" *ngIf="successMsg">&#10003; {{ successMsg }}</div>
 
   <ng-container *ngIf="!loading">
-    <!-- Header -->
+
+    <!-- RFQ Details -->
     <div class="card section-card">
       <div class="section-label">RFQ Details</div>
       <div class="form-row cols-3">
-        <erp-dropdown label="Supplier *" [options]="supplierOptions" [(ngModel)]="supplierId"
-          placeholder="Select supplier"></erp-dropdown>
-        <erp-input label="Valid Until *" type="date" [(ngModel)]="deliveryDate"></erp-input>
-        <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="currencyId"
-          (ngModelChange)="onCurrencyChange()" placeholder="Select currency"></erp-dropdown>
-      </div>
-      <div class="form-row cols-3">
-        <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="paymentTermId"
-          placeholder="Select terms"></erp-dropdown>
-        <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" placeholder="1.00"></erp-input>
-        <erp-input label="Deliver To" [(ngModel)]="deliveryTo" placeholder="Delivery location"></erp-input>
+        <erp-input label="RFQ No" [(ngModel)]="rfqNumber" placeholder="Auto-generated" [disabled]="isEdit"></erp-input>
+        <erp-input label="Valid Until *" type="date" [(ngModel)]="validUntil"></erp-input>
+        <erp-dropdown label="Send Via" [options]="sendViaOptions" [(ngModel)]="sendVia"></erp-dropdown>
       </div>
       <div class="form-row cols-1">
-        <erp-input label="Remarks" [(ngModel)]="remarks" placeholder="Notes"></erp-input>
+        <erp-input label="Remarks" [(ngModel)]="remarks" placeholder="Notes / instructions for suppliers"></erp-input>
       </div>
     </div>
 
-    <!-- Items / Lines -->
+    <!-- Suppliers -->
+    <div class="card section-card">
+      <div class="section-label-row">
+        <div class="section-label">Suppliers to Quote</div>
+        <button class="btn btn-outline btn-xs" (click)="addSupplier()">+ Add Supplier</button>
+      </div>
+
+      <div class="lines-table-wrap">
+        <table class="lines-table">
+          <colgroup>
+            <col style="width:28px">
+            <col style="min-width:180px">
+            <col style="min-width:180px">
+            <col style="width:160px">
+            <col style="width:140px">
+            <col style="width:30px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Select Supplier</th>
+              <th>Name *</th>
+              <th>Email</th>
+              <th>Phone / WhatsApp</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let sup of suppliers; let i = index">
+              <td class="row-num">{{ i + 1 }}</td>
+              <td>
+                <erp-dropdown [options]="supplierOptions" [(ngModel)]="sup.supplierId"
+                  placeholder="Pick supplier"
+                  (ngModelChange)="onSupplierSelect(sup)"></erp-dropdown>
+              </td>
+              <td>
+                <erp-input [(ngModel)]="sup.name" placeholder="Supplier name"></erp-input>
+              </td>
+              <td>
+                <erp-input [(ngModel)]="sup.email" placeholder="email@domain.com"></erp-input>
+              </td>
+              <td>
+                <erp-input [(ngModel)]="sup.phone" placeholder="+65 XXXX XXXX"></erp-input>
+              </td>
+              <td class="del-col">
+                <button class="btn-icon danger" (click)="removeSupplier(i)" title="Remove">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!suppliers.length">
+              <td colspan="6" class="empty-lines">Add suppliers to send this RFQ to</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Items -->
     <div class="card section-card">
       <div class="section-label-row">
         <div class="section-label">Items Required</div>
@@ -57,27 +114,21 @@
         <table class="lines-table">
           <colgroup>
             <col style="width:28px">
-            <col style="min-width:180px">
-            <col style="width:80px">
+            <col style="min-width:200px">
+            <col style="min-width:160px">
             <col style="width:90px">
-            <col style="width:100px">
-            <col style="width:70px">
-            <col style="width:100px">
-            <col style="width:90px">
-            <col style="min-width:140px">
+            <col style="width:110px">
+            <col style="min-width:160px">
             <col style="width:30px">
           </colgroup>
           <thead>
             <tr>
               <th>#</th>
               <th>Item *</th>
+              <th>Item Name (override)</th>
               <th>Qty *</th>
               <th>UOM</th>
-              <th>Unit Price</th>
-              <th>Disc %</th>
-              <th>Tax Code</th>
-              <th>Tax Mode</th>
-              <th>Description</th>
+              <th>Remarks</th>
               <th></th>
             </tr>
           </thead>
@@ -89,36 +140,21 @@
                   placeholder="Select item"
                   (ngModelChange)="onItemSelect(item)"></erp-dropdown>
               </td>
+              <td>
+                <erp-input [(ngModel)]="item.itemName" placeholder="Item description"></erp-input>
+              </td>
               <td class="qty-col">
-                <erp-input type="number" [(ngModel)]="item.quantity" placeholder="0"
-                  (ngModelChange)="recalcLine(item)"></erp-input>
+                <erp-input type="number" [(ngModel)]="item.quantity" placeholder="0"></erp-input>
               </td>
               <td class="uom-col">
-                <erp-dropdown [options]="uomOptions" [(ngModel)]="item.uomId" placeholder="UOM"></erp-dropdown>
-              </td>
-              <td class="price-col">
-                <erp-input type="number" [(ngModel)]="item.unitPrice" placeholder="0.00"
-                  (ngModelChange)="recalcLine(item)"></erp-input>
-              </td>
-              <td class="disc-col">
-                <erp-input type="number" [(ngModel)]="item.discountPct" placeholder="0"
-                  (ngModelChange)="recalcLine(item)"></erp-input>
-              </td>
-              <td class="tax-col">
-                <erp-dropdown [options]="taxCodeOptions" [(ngModel)]="item.taxCodeId"
-                  placeholder="Tax" (ngModelChange)="recalcLine(item)"></erp-dropdown>
-              </td>
-              <td>
-                <erp-dropdown [options]="taxModeOptions" [(ngModel)]="item.taxMode"
-                  (ngModelChange)="recalcLine(item)"></erp-dropdown>
+                <erp-dropdown [options]="uomOptions" [(ngModel)]="item.uomId"
+                  placeholder="UOM"
+                  (ngModelChange)="onUomSelect(item)"></erp-dropdown>
               </td>
               <td class="remarks-col">
-                <erp-input [(ngModel)]="item.description" placeholder="Description"></erp-input>
+                <erp-input [(ngModel)]="item.remarks" placeholder="Notes"></erp-input>
               </td>
               <td class="del-col">
-                <button class="btn-icon info" (click)="viewLineDetail(item)" title="View details">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
-                </button>
                 <button class="btn-icon danger" (click)="removeItem(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                     <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
@@ -127,29 +163,12 @@
               </td>
             </tr>
             <tr *ngIf="!items.length">
-              <td colspan="10" class="empty-lines">Add items to request quotes for</td>
+              <td colspan="7" class="empty-lines">Add items you want suppliers to quote for</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Totals -->
-      <div class="totals-row" *ngIf="items.length">
-        <div class="total-item">
-          <span>Subtotal</span>
-          <strong>{{ subTotal | number:'1.2-2' }}</strong>
-        </div>
-        <div class="total-sep"></div>
-        <div class="total-item">
-          <span>Tax</span>
-          <strong>{{ totalTax | number:'1.2-2' }}</strong>
-        </div>
-        <div class="total-sep"></div>
-        <div class="total-item grand">
-          <span>Grand Total</span>
-          <strong>{{ grandTotal | number:'1.2-2' }}</strong>
-        </div>
-      </div>
     </div>
+
   </ng-container>
 </div>

@@ -103,7 +103,9 @@ export class SupplierInvoiceListComponent implements OnInit {
 
   private mapRow(r: any): any {
     const numStatus = Number(r.approvalStatus ?? r.statusId ?? r.status ?? 0);
-    const isPosted = r.isPostedToAp || r.postedToAp || r.apPosted || r.glPosted || r.isGlPosted || r.status === 'Posted' || numStatus >= 4;
+    const rawListLabel = String(r.listStatusLabel ?? r.ListStatusLabel ?? '');
+    const isPosted = r.isPostedToAp || r.postedToAp || r.apPosted || r.glPosted || r.isGlPosted ||
+      r.status === 'Posted' || numStatus >= 4 || rawListLabel.toLowerCase().includes('posted');
     return {
       ...r,
       id: r.id ?? r.iD,
@@ -123,13 +125,23 @@ export class SupplierInvoiceListComponent implements OnInit {
       isOverseas: !!(r.isOverseas || r.IsOverseas),
       numStatus,
       isPostedFlag: isPosted,
-      statusLabel: isPosted ? 'Posted to A/P' : (r.statusLabel ?? r.listStatusLabel ?? this.numToLabel(numStatus)),
-      matchStatus: r.matchStatus ?? ''
+      statusLabel: isPosted ? 'Posted to A/P' : this.numToLabel(numStatus),
+      typeLabel: this.toTypeLabel(r),
+      matchStatus: r.matchStatus ?? '',
+      linkedWithInvoiceNo: r.linkedWithInvoiceNo ?? r.LinkedWithInvoiceNo ?? null
     };
   }
 
   private numToLabel(n: number): string {
     return ({ 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'Posted' } as any)[n] ?? 'Draft';
+  }
+
+  private toTypeLabel(r: any): string {
+    const pinCount = Number(r.pinCount ?? r.PinCount ?? 1);
+    const grnCount = Number(r.grnCount ?? r.GrnCount ?? 1);
+    if (pinCount > 1) return 'Multi Invoice';
+    if (grnCount > 1) return 'Multi GRN';
+    return 'Single Invoice';
   }
 
   isPosted(row: any): boolean {
