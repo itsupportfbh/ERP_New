@@ -47,10 +47,10 @@ export class MasterService {
   deleteBank(id: number): Observable<any> { return this.http.delete(`${this.api}/Bank/deleteBankById/${id}`); }
 
   // BIN
-  getBins(): Observable<any> { return this.http.get(`${this.api}/Bin/GetAllBin`); }
-  createBin(d: any): Observable<any> { return this.http.post(`${this.api}/Bin/createBin`, this.withAudit(d)); }
-  updateBin(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/Bin/updateBinById/${id}`, this.withAudit({ ...d, id })); }
-  deleteBin(id: number): Observable<any> { return this.http.delete(`${this.api}/Bin/deleteBinById/${id}`); }
+  getBins(): Observable<any> { return this.http.get(`${this.api}/Bins/GetAllBin`); }
+  createBin(d: any): Observable<any> { return this.http.post(`${this.api}/Bins/createBin`, this.withAudit(d)); }
+  updateBin(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/Bins/updateBinById/${id}`, this.withAudit({ ...d, id })); }
+  deleteBin(id: number): Observable<any> { return this.http.delete(`${this.api}/Bins/deleteBinById/${id}`); }
 
   // CATEGORY
   getCategories(): Observable<any> { return this.http.get(`${this.api}/Catagory/GetAllCatagory`); }
