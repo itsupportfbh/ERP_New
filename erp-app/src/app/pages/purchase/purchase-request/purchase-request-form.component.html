@@ -51,7 +51,7 @@
       <div class="form-row cols-3">
         <erp-input label="Requester" [(ngModel)]="requester" [disabled]="true"></erp-input>
         <erp-dropdown label="Department *" [options]="departmentOptions" [(ngModel)]="departmentId"
-          placeholder="Select department" (ngModelChange)="onDeptChange()"></erp-dropdown>
+          placeholder="Select department" [disabled]="true" (ngModelChange)="onDeptChange()"></erp-dropdown>
         <erp-input label="Delivery Date *" type="date" [(ngModel)]="deliveryDate"></erp-input>
       </div>
       <div class="form-row cols-1 block-gap">
