@@ -30,6 +30,12 @@ export class ProductionPlanningListComponent implements OnInit {
   markingPlanId: number | null = null;
   expandedPlanId: number | null = null;
 
+  // Sales-order alerts (bell): SOs that are ready and still need a production plan
+  showSoAlertModal = false;
+  soAlertList: any[] = [];
+  soAlertCount = 0;
+  soAlertSearch = '';
+
   // view-details modal
   showView = false;
   viewLoading = false;
@@ -51,6 +57,48 @@ export class ProductionPlanningListComponent implements OnInit {
   ngOnInit(): void {
     this.load();
     this.loadShortageGrnCount();
+    this.loadSoAlertCount();
+  }
+
+  // ── Sales-order-ready alerts (bell) ───────────────────
+  openSoAlerts(): void {
+    this.showSoAlertModal = true;
+    this.loadSoAlerts();
+  }
+
+  closeSoAlertModal(): void {
+    this.showSoAlertModal = false;
+    this.soAlertSearch = '';
+  }
+
+  loadSoAlerts(): void {
+    this.svc.getProductionSalesOrders().subscribe({
+      next: (res: any) => {
+        this.soAlertList = this.svc.unwrap(res);
+        this.soAlertCount = this.soAlertList.length;
+      },
+      error: () => { this.soAlertList = []; this.soAlertCount = 0; }
+    });
+  }
+
+  loadSoAlertCount(): void {
+    this.svc.getProductionSalesOrders().subscribe({
+      next: (res: any) => { this.soAlertCount = this.svc.unwrap(res).length; },
+      error: () => { this.soAlertCount = 0; }
+    });
+  }
+
+  filteredSoAlertList(): any[] {
+    const v = (this.soAlertSearch || '').toLowerCase().trim();
+    if (!v) return this.soAlertList;
+    return this.soAlertList.filter((x: any) =>
+      String(x.salesOrderNo ?? x.soNo ?? '').toLowerCase().includes(v) ||
+      String(x.status ?? '').toLowerCase().includes(v));
+  }
+
+  planForSo(soId: number): void {
+    this.showSoAlertModal = false;
+    this.router.navigate(['/app/recipe/production-planning/new'], { queryParams: { soId } });
   }
 
   load(): void {

@@ -5,6 +5,10 @@
       <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize" (change)="applyFilter()"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
       <div class="dt-right">
         <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText" name="search" (input)="applyFilter()" placeholder="Plan no / SO no / status"/></div>
+        <button class="pp-bell pp-bell-so" type="button" title="Sales Orders ready for Production Plan" (click)="openSoAlerts()">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="2.5" width="14" height="15" rx="1.5"/><path d="M6 6h8M6 9.5h8M6 13h5"/></svg>
+          <span class="pp-bell-badge so" *ngIf="soAlertCount > 0">{{ soAlertCount }}</span>
+        </button>
         <button class="pp-bell" type="button" title="Shortage GRN Alerts" (click)="openShortageGrnAlerts()">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2a5 5 0 0 0-5 5c0 4-1.5 5.5-2 6h14c-.5-.5-2-2-2-6a5 5 0 0 0-5-5z"/><path d="M8.5 17a1.8 1.8 0 0 0 3 0"/></svg>
           <span class="pp-bell-badge" *ngIf="shortageGrnCount > 0">{{ shortageGrnCount }}</span>
@@ -114,6 +118,41 @@
       </div>
       <div class="pp-alert-foot">
         <button class="pp-alert-close" (click)="closeShortageGrnModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sales Orders ready for Production Plan modal -->
+  <div class="pp-alert-overlay" *ngIf="showSoAlertModal" (click)="closeSoAlertModal()">
+    <div class="pp-alert-modal" (click)="$event.stopPropagation()">
+      <div class="pp-alert-head">
+        <h3>Sales Orders Ready for Production Plan</h3>
+        <div class="pp-alert-head-right">
+          <input class="pp-alert-search" type="search" [(ngModel)]="soAlertSearch" name="soSearch" placeholder="Search SO / status"/>
+          <button class="pp-alert-refresh" (click)="loadSoAlerts()">Refresh</button>
+          <button class="pp-alert-x" (click)="closeSoAlertModal()" aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="pp-alert-body">
+        <table class="pp-alert-table">
+          <thead><tr>
+            <th>SO NO</th><th>DELIVERY DATE</th><th>STATUS</th><th class="ta-c">ACTION</th>
+          </tr></thead>
+          <tbody>
+            <tr *ngFor="let so of filteredSoAlertList()">
+              <td class="pp-plan">{{ so.salesOrderNo || so.soNo || ('SOID:' + so.id) }}</td>
+              <td>{{ so.deliveryDate ? (so.deliveryDate | date:'dd-MM-yyyy') : '—' }}</td>
+              <td>{{ so.status || '—' }}</td>
+              <td class="ta-c">
+                <button class="pp-approve" (click)="planForSo(so.id); $event.stopPropagation()">Create Plan</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredSoAlertList().length === 0"><td colspan="4" class="pp-alert-empty">No sales orders pending a plan</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pp-alert-foot">
+        <button class="pp-alert-close" (click)="closeSoAlertModal()">Close</button>
       </div>
     </div>
   </div>

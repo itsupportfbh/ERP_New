@@ -21,6 +21,9 @@ export class RecipeMasterListComponent implements OnInit {
   sortField = '';
   sortAsc = true;
 
+  // Base currency of the logged-in company (shown alongside cost figures)
+  baseCurrency = localStorage.getItem('companyCurrencyName') || 'SGD';
+
   showDeleteModal = false;
   itemToDelete: any = null;
 
@@ -42,7 +45,7 @@ export class RecipeMasterListComponent implements OnInit {
     { header: 'Ingredient', key: 'ingredientName' },
     { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
     { header: 'UOM', key: 'uomName', align: 'center' },
-    { header: 'Unit Cost', key: 'unitCost', align: 'right', type: 'number' },
+    { header: `Unit Cost (${this.baseCurrency})`, key: 'unitCost', align: 'right', type: 'number' },
     { header: 'Yield %', key: 'yieldPct', align: 'right', type: 'number' },
   ];
 
@@ -63,6 +66,7 @@ export class RecipeMasterListComponent implements OnInit {
           id: r.id ?? r.iD,
           code: r.recipeCode ?? r.code,
           finishedItemName: r.finishedItem ?? r.finishedItemName ?? r.itemName ?? '',
+          uomName: r.finishedUomName ?? r.uomName ?? r.uom ?? '',
           cuisine: r.cuisine ?? '',
           status: r.status ?? 'Draft',
           cost: r.totalCost ?? r.cost ?? r.recipeCost ?? r.costPrice ?? null,
@@ -145,7 +149,7 @@ export class RecipeMasterListComponent implements OnInit {
           { label: 'Ingredients', value: this.viewLines.length },
         ];
         this.viewTotals = [
-          { label: 'Total Cost', value: totalCost.toFixed(2) },
+          { label: 'Total Cost', value: `${this.baseCurrency} ${totalCost.toFixed(2)}` },
         ];
         this.viewTitle = `Recipe Ingredients — ${finishedItem || '—'}`;
         this.viewSubtitle = `Finished Item: ${finishedItem || '—'} · Cuisine: ${cuisine || '—'}`;

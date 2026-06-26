@@ -52,6 +52,11 @@ export class BatchProductionFormComponent implements OnInit {
     this.minPostedDate = this.getTodayLocalDate();
     const paramId = this.route.snapshot.paramMap.get('id');
     this.isEdit = !!paramId && paramId !== 'new';
+    // When opened from the "Plans ready" alert, preselect that production plan.
+    if (!this.isEdit) {
+      const planIdParam = Number(this.route.snapshot.queryParamMap.get('planId') || 0);
+      if (planIdParam > 0) this.productionPlanId = planIdParam;
+    }
     this.loadLookups();
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
   }

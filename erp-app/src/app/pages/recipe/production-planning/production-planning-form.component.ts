@@ -51,7 +51,10 @@ export class ProductionPlanningFormComponent implements OnInit {
       this.loadSalesOrders(this.id ?? undefined);
       this.loadForEdit();
     } else {
-      this.loadSalesOrders();
+      // When opened from the "Sales Orders ready" alert, preselect that SO.
+      const soIdParam = Number(this.route.snapshot.queryParamMap.get('soId') || 0);
+      if (soIdParam > 0) this.salesOrderId = soIdParam;
+      this.loadSalesOrders(soIdParam > 0 ? soIdParam : undefined);
     }
   }
 

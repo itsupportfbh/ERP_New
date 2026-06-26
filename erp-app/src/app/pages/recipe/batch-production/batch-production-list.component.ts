@@ -28,6 +28,12 @@ export class BatchProductionListComponent implements OnInit {
   showDeleteModal = false;
   itemToDelete: any = null;
 
+  // Production-plan-ready alerts (bell): plans that are ready for batch production
+  showPlanAlertModal = false;
+  planAlertList: any[] = [];
+  planAlertCount = 0;
+  planAlertSearch = '';
+
   // view-details modal
   showView = false;
   viewLoading = false;
@@ -54,10 +60,60 @@ export class BatchProductionListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadPlanAlertCount();
     this.svc.getItems().subscribe(r => this.svc.unwrap(r).forEach((i: any) => {
       const uom = i.uomName ?? i.uom ?? '';
       if (i.id != null && uom) this.uomByItem.set(Number(i.id), uom);
     }));
+  }
+
+  // ── Production-plan-ready alerts (bell) ───────────────
+  /** A plan is ready for batch production when its status is Pending (1). */
+  private readonly READY_STATUS = 1;
+
+  private mapReadyPlans(res: any): any[] {
+    return this.svc.unwrap(res).filter((p: any) =>
+      Number(p.status ?? p.Status ?? 0) === this.READY_STATUS);
+  }
+
+  openPlanAlerts(): void {
+    this.showPlanAlertModal = true;
+    this.loadPlanAlerts();
+  }
+
+  closePlanAlertModal(): void {
+    this.showPlanAlertModal = false;
+    this.planAlertSearch = '';
+  }
+
+  loadPlanAlerts(): void {
+    this.svc.getProductionPlans().subscribe({
+      next: (res: any) => {
+        this.planAlertList = this.mapReadyPlans(res);
+        this.planAlertCount = this.planAlertList.length;
+      },
+      error: () => { this.planAlertList = []; this.planAlertCount = 0; }
+    });
+  }
+
+  loadPlanAlertCount(): void {
+    this.svc.getProductionPlans().subscribe({
+      next: (res: any) => { this.planAlertCount = this.mapReadyPlans(res).length; },
+      error: () => { this.planAlertCount = 0; }
+    });
+  }
+
+  filteredPlanAlertList(): any[] {
+    const v = (this.planAlertSearch || '').toLowerCase().trim();
+    if (!v) return this.planAlertList;
+    return this.planAlertList.filter((p: any) =>
+      String(p.productionPlanNo ?? p.id ?? '').toLowerCase().includes(v) ||
+      String(p.salesOrderNo ?? '').toLowerCase().includes(v));
+  }
+
+  batchForPlan(planId: number): void {
+    this.showPlanAlertModal = false;
+    this.router.navigate(['/app/recipe/batch-production/new'], { queryParams: { planId } });
   }
 
   load(): void {

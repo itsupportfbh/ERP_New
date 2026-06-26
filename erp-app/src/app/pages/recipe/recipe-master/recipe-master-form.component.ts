@@ -29,6 +29,9 @@ export class RecipeMasterFormComponent implements OnInit {
   error = '';
   success = '';
 
+  // Base currency of the logged-in company (shown alongside cost figures)
+  baseCurrency = localStorage.getItem('companyCurrencyName') || 'SGD';
+
   // Header
   code = '';
   finishedItemId: number | null = null;
