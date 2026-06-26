@@ -31,8 +31,8 @@
 /* Lines table */
 .lines-table-wrap { overflow-x: auto; }
 .lines-table { width: 100%; border-collapse: collapse; font-size: 12px;
-  th { padding: 6px 6px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); background: var(--surface); border-bottom: 1px solid var(--border); }
-  td { padding: 3px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { padding: 6px 16px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); background: var(--surface); border-bottom: 1px solid var(--border); }
+  td { padding: 3px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 }
 .row-num { width: 28px; text-align: center; font-size: 11px; color: var(--text-muted); }
 .pr-col     { min-width: 120px; }

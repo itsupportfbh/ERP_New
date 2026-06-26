@@ -75,11 +75,10 @@
             <tr>
               <th>#</th>
               <th>Ingredient</th>
-              <th>UOM</th>
               <th class="ta-right">Qty</th>
-              <th class="ta-right">Yield %</th>
+              <th>UOM</th>
               <th class="ta-right">Unit Cost</th>
-              <th class="ta-right">Total</th>
+              <th class="ta-right">Yield %</th>
               <th class="ta-center">Action</th>
             </tr>
           </thead>
@@ -87,11 +86,10 @@
             <tr *ngFor="let line of lines; let i = index">
               <td class="row-num">{{ i + 1 }}</td>
               <td>{{ line.ingredientName || getLabel(itemOptions, line.ingredientItemId) || '—' }}</td>
-              <td>{{ line.uom || getLabel(uomOptions, line.uomId) || '—' }}</td>
               <td class="ta-right">{{ line.qty }}</td>
-              <td class="ta-right">{{ line.yieldPct ?? 100 }}</td>
+              <td>{{ line.uom || getLabel(uomOptions, line.uomId) || '—' }}</td>
               <td class="ta-right">{{ line.unitCost | number:'1.2-2' }}</td>
-              <td class="ta-right">{{ rowCost(line) | number:'1.2-2' }}</td>
+              <td class="ta-right">{{ line.yieldPct ?? 100 }}</td>
               <td class="del-col">
                 <button class="btn-icon edit" (click)="editLine(i)" title="Edit">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2l3 3-8 8H3v-3z"/></svg>
@@ -102,13 +100,14 @@
               </td>
             </tr>
             <tr *ngIf="!lines.length">
-              <td colspan="8" class="empty-lines">Click "+ Add Line" to add ingredients</td>
+              <td colspan="7" class="empty-lines">Click "+ Add Line" to add ingredients</td>
             </tr>
           </tbody>
           <tfoot *ngIf="lines.length">
             <tr class="lines-tfoot">
-              <td colspan="6" class="ta-right tfoot-label">Total Cost</td>
+              <td colspan="4" class="ta-right tfoot-label">Total Cost</td>
               <td class="ta-right tfoot-val">{{ totalCost | number:'1.2-2' }}</td>
+              <td></td>
               <td></td>
             </tr>
           </tfoot>
@@ -138,16 +137,15 @@
     <div class="card section-card">
       <div class="section-label">Ingredients ({{ lines.length }})</div>
       <table class="review-lines">
-        <thead><tr><th>#</th><th>Ingredient</th><th>Qty</th><th>UOM</th><th>Yield %</th><th>Unit Cost</th><th>Row Cost</th></tr></thead>
+        <thead><tr><th>#</th><th>Ingredient</th><th>Qty</th><th>UOM</th><th>Unit Cost</th><th>Yield %</th></tr></thead>
         <tbody>
           <tr *ngFor="let l of lines; let i = index">
             <td>{{ i + 1 }}</td>
             <td>{{ getLabel(itemOptions, l.ingredientItemId) }}</td>
             <td>{{ l.qty }}</td>
             <td>{{ l.uom || getLabel(uomOptions, l.uomId) }}</td>
-            <td>{{ l.yieldPct ?? 100 }}%</td>
             <td>{{ l.unitCost | number:'1.2-2' }}</td>
-            <td>{{ rowCost(l) | number:'1.2-2' }}</td>
+            <td>{{ l.yieldPct ?? 100 }}%</td>
           </tr>
         </tbody>
       </table>

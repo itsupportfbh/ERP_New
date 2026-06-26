@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RecipeService } from '../recipe.service';
 import { DropdownOption } from '../../../shared/components/dropdown/dropdown.component';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-production-planning-form',
@@ -254,14 +255,23 @@ export class ProductionPlanningFormComponent implements OnInit {
           // Success → plan stays, mark status, alert to PO already raised by backend.
           this.planCreatedInThisFlow = false;
           this.svc.updatePlanStatus(planId, { status: 0, updatedBy: this.loginUserId }).subscribe({
-            next: () => { this.prBusy = false; this.success = 'PR created from recipe shortage. Alert sent to Purchase / PO.'; setTimeout(() => this.back(), 1000); },
-            error: () => { this.prBusy = false; this.success = 'PR created (plan status update pending).'; setTimeout(() => this.back(), 1000); }
+            next: () => {
+              this.prBusy = false;
+              this.success = 'PR created from recipe shortage. Alert sent to Purchase / PO.';
+              Swal.fire('Submitted', this.success, 'success').then(() => this.back());
+            },
+            error: () => {
+              this.prBusy = false;
+              this.success = 'PR created (plan status update pending).';
+              Swal.fire('Submitted', this.success, 'success').then(() => this.back());
+            }
           });
         } else {
           // No PR raised → undo the plan we just created so nothing is left in the list.
           this.rollbackPlanIfNeeded(() => {
             this.prBusy = false;
             this.error = d?.message ?? 'No shortage items to raise a PR.';
+            Swal.fire('No Shortage', this.error, 'info');
           });
         }
       },
@@ -270,6 +280,7 @@ export class ProductionPlanningFormComponent implements OnInit {
         this.rollbackPlanIfNeeded(() => {
           this.prBusy = false;
           this.error = err?.error?.message ?? 'Failed to create PR.';
+          Swal.fire('Error', this.error, 'error');
         });
       }
     });
@@ -302,8 +313,16 @@ export class ProductionPlanningFormComponent implements OnInit {
       planDate: this.planDate || this.today,
       createdBy: this.loginUserId
     }).subscribe({
-      next: () => { this.saving = false; this.success = 'Production plan saved.'; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
+      next: () => {
+        this.saving = false;
+        this.success = 'Production plan saved.';
+        Swal.fire('Submitted', 'Production plan saved successfully.', 'success').then(() => this.back());
+      },
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed.';
+        Swal.fire('Error', this.error, 'error');
+      }
     });
   }
 
@@ -311,8 +330,17 @@ export class ProductionPlanningFormComponent implements OnInit {
     if (!this.id) return;
     this.saving = true;
     this.svc.updatePlanStatus(this.id, { status, updatedBy: this.loginUserId }).subscribe({
-      next: () => { this.saving = false; this.status = status; this.success = 'Status updated.'; },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Status update failed.'; }
+      next: () => {
+        this.saving = false;
+        this.status = status;
+        this.success = 'Status updated.';
+        Swal.fire('Updated', 'Status updated successfully.', 'success');
+      },
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Status update failed.';
+        Swal.fire('Error', this.error, 'error');
+      }
     });
   }
 

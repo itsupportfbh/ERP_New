@@ -28,6 +28,7 @@ export class ProductionPlanningListComponent implements OnInit {
   shortageGrnCount = 0;
   shortageGrnSearch = '';
   markingPlanId: number | null = null;
+  expandedPlanId: number | null = null;
 
   // view-details modal
   showView = false;
@@ -269,6 +270,28 @@ export class ProductionPlanningListComponent implements OnInit {
       String(x.productionPlanId ?? '').includes(v) ||
       String(x.salesOrderNo ?? x.salesOrderId ?? '').toLowerCase().includes(v) ||
       String(x.grnNo ?? '').toLowerCase().includes(v));
+  }
+
+  /** Group the flat item rows by production plan so each plan shows ONE Approve. */
+  groupedShortageGrnList(): any[] {
+    const map = new Map<number, any>();
+    for (const a of this.filteredShortageGrnList()) {
+      const planId = Number(a.productionPlanId);
+      if (!map.has(planId)) {
+        map.set(planId, {
+          productionPlanId: planId,
+          salesOrderNo: a.salesOrderNo,
+          salesOrderId: a.salesOrderId,
+          items: []
+        });
+      }
+      map.get(planId).items.push(a);
+    }
+    return Array.from(map.values());
+  }
+
+  togglePlanDetails(planId: number): void {
+    this.expandedPlanId = this.expandedPlanId === planId ? null : planId;
   }
 
   markPlanAsPending(planId: number): void {

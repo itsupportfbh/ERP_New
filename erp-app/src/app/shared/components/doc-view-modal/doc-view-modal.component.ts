@@ -22,9 +22,25 @@ export class DocViewModalComponent {
   @Input() totals: PrintField[] = [];
   @Input() loading = false;
   @Input() showPrint = false;
+  /** Optional column key under which the total VALUE should be shown. Defaults to the last column. */
+  @Input() totalKey: string | null = null;
 
   @Output() close = new EventEmitter<void>();
   @Output() print = new EventEmitter<void>();
+
+  private get totalColIndex(): number {
+    if (!this.totalKey) return this.columns.length - 1;
+    const idx = this.columns.findIndex(c => c.key === this.totalKey);
+    return idx >= 0 ? idx : this.columns.length - 1;
+  }
+
+  /** Colspan for the total label (covers the # column + every column before the value column). */
+  get totalLabelColspan(): number { return this.totalColIndex + 1; }
+
+  /** Number of empty trailing cells after the total value column. */
+  get totalTrailingCols(): number { return this.columns.length - this.totalColIndex - 1; }
+
+  get totalTrailing(): number[] { return Array(Math.max(this.totalTrailingCols, 0)).fill(0); }
 
   cellValue(col: PrintColumn, row: any): string {
     const raw = row?.[col.key];
