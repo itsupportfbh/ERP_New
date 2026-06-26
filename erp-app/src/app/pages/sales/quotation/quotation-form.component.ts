@@ -460,21 +460,10 @@ export class QuotationFormComponent implements OnInit {
           l.isSellable = !!f.isSellable;
           l.isConsumable = !!f.isConsumable;
           l.allowManualFulfillment = !!f.allowManualFulfillment;
-          this.applyAutoFulfillmentIfEmpty(l);
         }
       },
       error: () => { /* degrade gracefully */ }
     });
-  }
-
-  private applyAutoFulfillmentIfEmpty(l: UiLine): void {
-    if (l.isSetHeader) return;
-    if (l.fulfillmentMode === 1 || l.fulfillmentMode === 2) return;
-    const isSellable = !!l.isSellable;
-    const isConsumable = !!l.isConsumable;
-    if (isSellable && !isConsumable) l.fulfillmentMode = 2;
-    else if (!isSellable && isConsumable) l.fulfillmentMode = 1;
-    else l.fulfillmentMode = 2;
   }
 
   onFulfillmentChanged(l: UiLine, i: number): void {
@@ -1255,10 +1244,6 @@ export class QuotationFormComponent implements OnInit {
   }
 
   submit(): void {
-    for (const l of this.lines) {
-      if (l.isSetHeader) continue;
-      this.applyAutoFulfillmentIfEmpty(l);
-    }
     if (!this.validateBeforeSave()) return;
     this.saving = true;
 

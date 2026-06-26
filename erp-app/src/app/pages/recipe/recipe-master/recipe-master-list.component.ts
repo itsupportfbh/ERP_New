@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { RecipeService } from '../recipe.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import Swal from 'sweetalert2';
 
 const STATUS_CLASS: Record<string, number> = { Draft: 0, Inactive: 1, Active: 2 };
 
@@ -39,10 +40,10 @@ export class RecipeMasterListComponent implements OnInit {
 
   readonly lineColumns: PrintColumn[] = [
     { header: 'Ingredient', key: 'ingredientName' },
-    { header: 'UOM', key: 'uomName', align: 'center' },
     { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
-    { header: 'Yield %', key: 'yieldPct', align: 'right', type: 'number' },
+    { header: 'UOM', key: 'uomName', align: 'center' },
     { header: 'Unit Cost', key: 'unitCost', align: 'right', type: 'number' },
+    { header: 'Yield %', key: 'yieldPct', align: 'right', type: 'number' },
   ];
 
   constructor(private svc: RecipeService, private router: Router, private printSvc: DocumentPrintService) {}
@@ -132,7 +133,7 @@ export class RecipeMasterListComponent implements OnInit {
             lineCost,
           };
         });
-        const totalCost = this.viewLines.reduce((s, l) => s + (+l.lineCost || 0), 0);
+        const totalCost = this.viewLines.reduce((s, l) => s + (+l.unitCost || 0), 0);
         const finishedItem = d.finishedItem ?? d.finishedItemName ?? row.finishedItemName ?? '—';
         const code = d.recipeCode ?? d.code ?? row.code ?? '';
         const status = d.status ?? row.status ?? 'Draft';
@@ -186,8 +187,16 @@ export class RecipeMasterListComponent implements OnInit {
   confirmDelete(): void {
     if (!this.itemToDelete) return;
     this.svc.deleteRecipe(this.itemToDelete.id).subscribe({
-      next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); },
-      error: () => { this.showDeleteModal = false; }
+      next: () => {
+        this.showDeleteModal = false;
+        this.itemToDelete = null;
+        this.load();
+        Swal.fire('Deleted', 'Recipe deleted successfully.', 'success');
+      },
+      error: err => {
+        this.showDeleteModal = false;
+        Swal.fire('Error', err?.error?.message ?? 'Unable to delete recipe.', 'error');
+      }
     });
   }
 }

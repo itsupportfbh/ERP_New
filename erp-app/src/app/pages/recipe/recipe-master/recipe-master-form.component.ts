@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RecipeService } from '../recipe.service';
+import Swal from 'sweetalert2';
 
 interface RecipeLine {
   ingredientItemId: number | null;
@@ -177,7 +178,7 @@ export class RecipeMasterFormComponent implements OnInit {
   }
 
   get totalCost(): number {
-    return this.lines.reduce((sum, l) => sum + this.rowCost(l), 0);
+    return this.lines.reduce((sum, l) => sum + (Number(l.unitCost) || 0), 0);
   }
 
   next(): void {
@@ -224,8 +225,19 @@ export class RecipeMasterFormComponent implements OnInit {
       : this.svc.createRecipe(payload);
 
     obs$.subscribe({
-      next: () => { this.saving = false; this.back(); },
-      error: err => { this.saving = false; this.error = err?.error?.message ?? 'Save failed. Please try again.'; }
+      next: () => {
+        this.saving = false;
+        Swal.fire(
+          'Submitted',
+          this.isEdit ? 'Recipe updated successfully.' : 'Recipe created successfully.',
+          'success'
+        ).then(() => this.back());
+      },
+      error: err => {
+        this.saving = false;
+        this.error = err?.error?.message ?? 'Save failed. Please try again.';
+        Swal.fire('Error', this.error, 'error');
+      }
     });
   }
 

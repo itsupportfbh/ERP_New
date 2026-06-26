@@ -72,20 +72,43 @@
       <div class="pp-alert-body">
         <table class="pp-alert-table">
           <thead><tr>
-            <th>PLAN ID</th><th>SO NO</th><th>GRN NO</th><th>RECEIVED DATE</th><th>ITEM CODE</th><th>ITEM NAME</th><th class="ta-r">QTY RECEIVED</th><th class="ta-c">ACTION</th>
+            <th>PLAN ID</th><th>SO NO</th><th class="ta-c">ITEMS</th><th class="ta-c">DETAILS</th><th class="ta-c">ACTION</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let a of filteredShortageGrnList()">
-              <td class="pp-plan">{{ a.productionPlanId }}</td>
-              <td>{{ a.salesOrderNo || ('SOID:' + a.salesOrderId) }}</td>
-              <td>{{ a.grnNo }}</td>
-              <td>{{ a.receptionDate ? (a.receptionDate | date:'dd-MM-yyyy') : '—' }}</td>
-              <td>{{ a.itemCode }}</td>
-              <td>{{ a.itemName }}</td>
-              <td class="ta-r">{{ a.qtyReceived | number:'1.0-3' }}</td>
-              <td class="ta-c"><button class="pp-approve" [disabled]="markingPlanId === a.productionPlanId" (click)="markPlanAsPending(a.productionPlanId); $event.stopPropagation()">Approve</button></td>
-            </tr>
-            <tr *ngIf="filteredShortageGrnList().length === 0"><td colspan="8" class="pp-alert-empty">No alerts</td></tr>
+            <ng-container *ngFor="let g of groupedShortageGrnList()">
+              <tr class="pp-group-row">
+                <td class="pp-plan">{{ g.productionPlanId }}</td>
+                <td>{{ g.salesOrderNo || ('SOID:' + g.salesOrderId) }}</td>
+                <td class="ta-c">{{ g.items.length }}</td>
+                <td class="ta-c">
+                  <button class="pp-detail-toggle" (click)="togglePlanDetails(g.productionPlanId); $event.stopPropagation()">
+                    {{ expandedPlanId === g.productionPlanId ? 'Hide' : 'View' }} Details
+                  </button>
+                </td>
+                <td class="ta-c">
+                  <button class="pp-approve" [disabled]="markingPlanId === g.productionPlanId" (click)="markPlanAsPending(g.productionPlanId); $event.stopPropagation()">Approve</button>
+                </td>
+              </tr>
+              <tr *ngIf="expandedPlanId === g.productionPlanId" class="pp-detail-row">
+                <td colspan="5">
+                  <table class="pp-detail-table">
+                    <thead><tr>
+                      <th>GRN NO</th><th>RECEIVED DATE</th><th>ITEM CODE</th><th>ITEM NAME</th><th class="ta-r">QTY RECEIVED</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr *ngFor="let a of g.items">
+                        <td>{{ a.grnNo }}</td>
+                        <td>{{ a.receptionDate ? (a.receptionDate | date:'dd-MM-yyyy') : '—' }}</td>
+                        <td>{{ a.itemCode }}</td>
+                        <td>{{ a.itemName }}</td>
+                        <td class="ta-r">{{ a.qtyReceived | number:'1.0-3' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </ng-container>
+            <tr *ngIf="groupedShortageGrnList().length === 0"><td colspan="5" class="pp-alert-empty">No alerts</td></tr>
           </tbody>
         </table>
       </div>

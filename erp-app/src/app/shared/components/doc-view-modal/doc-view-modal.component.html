@@ -34,8 +34,9 @@
           </tbody>
           <tfoot *ngIf="totals?.length">
             <tr *ngFor="let t of totals">
-              <td class="ta-right dv-tot-label" [attr.colspan]="columns.length">{{ t.label }}</td>
+              <td class="ta-right dv-tot-label" [attr.colspan]="totalLabelColspan">{{ t.label }}</td>
               <td class="ta-right dv-tot-val">{{ t.value }}</td>
+              <td *ngFor="let _ of totalTrailing"></td>
             </tr>
           </tfoot>
         </table>
