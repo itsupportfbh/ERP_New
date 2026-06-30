@@ -1259,7 +1259,7 @@ export class SalesOrderFormComponent implements OnInit {
       CustomerId: this.header.customerId,
       RequestedDate: this.header.orderDate || this.header.deliveryDate,
       DeliveryDate: this.header.deliveryDate,
-      Status: this.header.status,
+      Status: this.isEdit ? this.header.status : 2,
       DeliveryTo: (this.header.deliveryTo || '').trim(),
       Remarks: (this.header.remarks || '').trim(),
       Shipping: 0,

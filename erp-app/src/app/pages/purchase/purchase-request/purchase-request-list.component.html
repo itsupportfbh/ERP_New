@@ -23,10 +23,12 @@
         </div>
       </div>
       <div class="list-card-actions">
+        <!-- ALERTS HIDDEN - PR list does not need alerts panel
         <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showAlerts = true; loadAlerts()">
           &#128276; Alerts
           <span class="badge-pill warn" *ngIf="alertCount > 0">{{ alertCount }}</span>
         </button>
+        -->
         <!-- DRAFT DISABLED
         <button class="panel-toggle-btn draft-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()" [disabled]="isCurrentPeriodLocked">
           &#128190; Drafts
