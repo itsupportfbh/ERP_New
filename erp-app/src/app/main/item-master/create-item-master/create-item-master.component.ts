@@ -162,6 +162,14 @@ export class CreateItemMasterComponent implements OnInit {
   private readonly stepsEdit = ['Summary', 'Warehouses', 'Suppliers', 'Audit', 'Review'] as const;
   itemsetList: any;
   ItemTypeList: any;
+
+  // Fulfillment Mode: drives PP / Direct DO routing in Sales (1=Sellable, 2=Consumable, 3=Both)
+  // Default comes from the item's Category; this is the per-item override.
+  fulfillmentModeList = [
+    { id: 1, name: 'Sales Item → Direct DO' },
+    { id: 2, name: 'Purchase Item → PP' },
+    { id: 3, name: 'Both → Pending (procurement)' }
+  ];
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }
   get lastStepIndex() { return this.stepsView.length - 1; }
   step = 0;
@@ -1679,18 +1687,19 @@ syncBomFromPrices(opts: { preserveUnitCost?: boolean } = { preserveUnitCost: tru
     const t = this.ItemTypeList.find((x: any) => Number(x.id) === Number(this.item.itemType));
     const name = (t?.itemTypeName || '').toLowerCase();
 
+    // FulfillmentMode: 1 = Sellable (Direct DO), 2 = Consumable (PP), 3 = Both
     // default
-    this.item.fulfillmentMode = 1; // AUTO
+    this.item.fulfillmentMode = 1; // Sellable → Direct DO
 
     if (name === 'finished good' || name === 'semi finished') {
-      this.item.fulfillmentMode = 2; // PP
+      this.item.fulfillmentMode = 2; // produced via recipe → Consumable (PP)
     } else if (
       name === 'trading item' ||
       name === 'beverage / drink'
     ) {
-      this.item.fulfillmentMode = 3; // Direct DO
+      this.item.fulfillmentMode = 3; // sold and/or produced → Both (manual select allowed)
     }
-    // Raw Material / Consumable => AUTO (0)
+    // Raw Material / Consumable → keep Sellable default unless category overrides
   }
   // -------- COPY/DOWNLOAD (DATA) --------
 
@@ -1837,15 +1846,18 @@ onCategoryChange(resetUsage: boolean = true) {
 
   const categoryType = Number(category.itemCategoryType);
 
+  // Don't overwrite a fulfillment the user picked manually.
+  const keep = this.userOverrodeFulfillment;
+
   switch (categoryType) {
     case 1:
       this.allowedUsageTypes = [{ id: 1, name: 'Sales Item' }];
-      this.item.fulfillmentMode = 1;
+      if (!keep) this.item.fulfillmentMode = 1;
       break;
 
     case 2:
       this.allowedUsageTypes = [{ id: 2, name: 'Internal Use Item' }];
-      this.item.fulfillmentMode = 2;
+      if (!keep) this.item.fulfillmentMode = 2;
       break;
 
     case 3:
@@ -1855,7 +1867,7 @@ onCategoryChange(resetUsage: boolean = true) {
         { id: 3, name: 'Sales & Internal Use' }
       ];
 
-      if (resetUsage) {
+      if (resetUsage && !keep) {
         this.item.fulfillmentMode = 3;
       }
       break;

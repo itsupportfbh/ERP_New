@@ -92,6 +92,7 @@ import { ReportComponent } from './pages/sales/reports/report.component';
 import { ReportDeliveryNoteComponent } from './pages/sales/reports/report-delivery-note.component';
 import { SalesOrderListComponent } from './pages/sales/sales-order/sales-order-list.component';
 import { SalesOrderFormComponent } from './pages/sales/sales-order/sales-order-form.component';
+import { PendingFulfillmentComponent } from './pages/sales/pending-fulfillment/pending-fulfillment.component';
 import { PickingListComponent } from './pages/sales/picking/picking-list.component';
 import { PickingFormComponent } from './pages/sales/picking/picking-form.component';
 import { DeliveryOrderListComponent } from './pages/sales/delivery-order/delivery-order-list.component';
@@ -294,6 +295,8 @@ const routes: Routes = [
       { path: 'sales/orders',                  component: SalesOrderListComponent },
       { path: 'sales/orders/new',              component: SalesOrderFormComponent },
       { path: 'sales/orders/:id',              component: SalesOrderFormComponent },
+
+      { path: 'sales/pending-fulfillment',     component: PendingFulfillmentComponent },
 
       { path: 'sales/picking',                 component: PickingListComponent },
       { path: 'sales/picking/new',             component: PickingFormComponent },

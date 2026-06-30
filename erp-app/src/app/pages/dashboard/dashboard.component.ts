@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { DashboardService } from './dashboard.service';
 import { MaterialRequisitionService } from 'app/main/material-requisation/material-requisition.service';
+import { SalesService } from 'app/pages/sales/sales.service';
 import Swal from 'sweetalert2';
 
 export interface KpiCard {
@@ -60,14 +61,34 @@ export class DashboardComponent implements OnInit {
   pendingMrRequests: any[] = [];
   mrLoading = false;
 
+  pendingFulfillment: any[] = [];
+  pfLoading = false;
+
   constructor(
     private svc: DashboardService,
     private mrService: MaterialRequisitionService,
+    private salesSvc: SalesService,
     private router: Router
   ) {}
 
   goToMrList(): void {
     this.router.navigate(['/app/inventory/list-material-requisition']);
+  }
+
+  goToPendingFulfillment(): void {
+    this.router.navigate(['/app/sales/pending-fulfillment']);
+  }
+
+  loadPendingFulfillment(): void {
+    this.pfLoading = true;
+    this.salesSvc.getPendingFulfillment().subscribe({
+      next: (res: any) => {
+        const list: any[] = res?.data ?? res ?? [];
+        this.pendingFulfillment = Array.isArray(list) ? list : [];
+        this.pfLoading = false;
+      },
+      error: () => { this.pfLoading = false; }
+    });
   }
 
   ngOnInit(): void {
@@ -99,6 +120,7 @@ export class DashboardComponent implements OnInit {
     if (this.companyId === 1) {
       this.loadPendingMrRequests();
     }
+    this.loadPendingFulfillment();
   }
 
   loadPendingMrRequests(): void {

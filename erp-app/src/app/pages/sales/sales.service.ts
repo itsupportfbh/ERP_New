@@ -65,6 +65,13 @@ export class SalesService {
   rejectSalesOrder(id: number | string): Observable<any> {
     return this.http.post(`${this.api}/SalesOrder/reject/${id}`, {});
   }
+  // Procurement worklist: SO lines awaiting PP / Direct DO decision (Both items)
+  getPendingFulfillment(): Observable<any> {
+    return this.http.get(`${this.api}/SalesOrder/pending-fulfillment`);
+  }
+  resolveFulfillment(lineId: number, supplyMethodId: number, updatedBy = 1, locationId = 0): Observable<any> {
+    return this.http.put(`${this.api}/SalesOrder/resolve-fulfillment`, { lineId, supplyMethodId, updatedBy, locationId });
+  }
   previewAllocation(lines: { itemId: number; quantity: number }[]): Observable<any> {
     return this.http.post(`${this.api}/SalesOrder/preview-allocation`, { lines });
   }

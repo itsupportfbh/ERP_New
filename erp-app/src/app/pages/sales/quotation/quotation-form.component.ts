@@ -178,6 +178,7 @@ export class QuotationFormComponent implements OnInit {
     discountPct: 0 as number | null,
     taxMode: 'Standard-Rated' as LineTaxMode,
     fulfillmentMode: null as number | null,
+    allowManualFulfillment: false,
     description: '',
     dropdownOpen: false,
     filteredItems: [] as SimpleItem[]
@@ -460,10 +461,32 @@ export class QuotationFormComponent implements OnInit {
           l.isSellable = !!f.isSellable;
           l.isConsumable = !!f.isConsumable;
           l.allowManualFulfillment = !!f.allowManualFulfillment;
+          this.applyFulfillmentByPolicy(l);
+          // Fresh quotation: 'Both' items start Pending (procurement decides later).
+          if (!this.isEdit && l.allowManualFulfillment) l.fulfillmentMode = null;
         }
+        this.syncAllSetHeaders();
+        this.computeTotals();
       },
       error: () => { /* degrade gracefully */ }
     });
+  }
+
+  // System's automatic fulfillment from item flags: sellable-only → Direct DO,
+  // consumable-only → PP, both/neither → Direct DO (default).
+  private autoFulfillmentFromFlags(l: UiLine): number {
+    if (l.isSellable && !l.isConsumable) return 2; // Direct DO
+    if (!l.isSellable && l.isConsumable) return 1; // PP
+    return 2; // both / neither → default Direct DO (staff can switch if manual)
+  }
+
+  // Non-manual items are system-decided and locked to the auto value.
+  // 'Both' items stay Pending (null) — sales does not decide; the procurement
+  // team resolves PP / Direct DO later. Any value already set is preserved.
+  private applyFulfillmentByPolicy(l: UiLine): void {
+    if (l.isSetHeader) return;
+    if (!l.allowManualFulfillment) { l.fulfillmentMode = this.autoFulfillmentFromFlags(l); return; }
+    // 'Both' → leave as-is (Pending when new)
   }
 
   onFulfillmentChanged(l: UiLine, i: number): void {
@@ -644,6 +667,7 @@ export class QuotationFormComponent implements OnInit {
         }
 
         this.rebuildLinesWithSetHeaders();
+        this.syncAllSetHeaders();
         this.backfillMissingUoms();
         this.computeTotals();
         this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
@@ -687,10 +711,85 @@ export class QuotationFormComponent implements OnInit {
 
   private makeSetHeader(itemSetId: number, setName: string): UiLine {
     return {
-      itemId: 0, uomId: null, qty: 0, unitPrice: 0, discountPct: 0,
+      itemId: 0, uomId: null, qty: null, unitPrice: null, discountPct: 0,
       taxMode: 'Zero-Rated', isSetHeader: true, isFromSet: true,
       itemSetId, setName, description: '', fulfillmentMode: null
     };
+  }
+
+  // ── Package (set) header controls ────────────────────
+  // Child item rows that belong to a given package set.
+  private setChildren(setId: number | null | undefined): UiLine[] {
+    if (setId == null) return [];
+    return this.lines.filter(
+      l => !l.isSetHeader && l.isFromSet && Number(l.itemSetId) === Number(setId)
+    );
+  }
+
+  // Spread the package's total price across its child lines so the sum
+  // equals the package price (no double-counting). Last line absorbs rounding.
+  private distributeSetPrice(header: UiLine): void {
+    const kids = this.setChildren(header.itemSetId);
+    const n = kids.length;
+    if (!n) return;
+    const total = Math.max(0, +(header.unitPrice ?? 0) || 0);
+    const share = this.round2(total / n);
+    let acc = 0;
+    kids.forEach((k, idx) => {
+      k.unitPrice = idx === n - 1 ? this.round2(total - acc) : share;
+      if (idx !== n - 1) acc = this.round2(acc + share);
+      this.computeLine(k);
+    });
+  }
+
+  // Package Qty → every child line gets the same qty.
+  onSetQtyChange(header: UiLine): void {
+    const q = header.qty == null || (header.qty as any) === '' ? null : Math.max(0, +header.qty);
+    header.qty = q;
+    for (const k of this.setChildren(header.itemSetId)) { k.qty = q; this.computeLine(k); }
+    this.computeTotals();
+  }
+
+  // Package Price → distributed across child lines.
+  onSetPriceChange(header: UiLine): void {
+    header.unitPrice = header.unitPrice == null || (header.unitPrice as any) === ''
+      ? null : Math.max(0, +header.unitPrice);
+    this.distributeSetPrice(header);
+    this.computeTotals();
+  }
+
+  // Package Fulfillment → default for every child line (each line still overridable).
+  onSetFulfillmentChange(header: UiLine): void {
+    const fm = header.fulfillmentMode == null || (header.fulfillmentMode as any) === ''
+      ? null : Number(header.fulfillmentMode);
+    header.fulfillmentMode = fm;
+    // locked (non-manual) items keep their system-decided value
+    for (const k of this.setChildren(header.itemSetId)) {
+      if (k.allowManualFulfillment) k.fulfillmentMode = fm;
+    }
+    this.computeTotals();
+  }
+
+  // Header display total = sum of its child lines (not added again to doc totals).
+  private refreshSetHeaderTotal(header: UiLine): void {
+    const kids = this.setChildren(header.itemSetId);
+    header.lineNet = this.round2(kids.reduce((s, k) => s + (k.lineNet || 0), 0));
+    header.lineTax = this.round2(kids.reduce((s, k) => s + (k.lineTax || 0), 0));
+    header.lineTotal = this.round2(kids.reduce((s, k) => s + (k.lineTotal || 0), 0));
+  }
+
+  // On load, derive the header's Qty / Price / Fulfillment from saved child lines.
+  private syncAllSetHeaders(): void {
+    for (const header of this.lines) {
+      if (!header.isSetHeader) continue;
+      const kids = this.setChildren(header.itemSetId);
+      if (!kids.length) continue;
+      header.qty = kids[0].qty ?? null;
+      header.unitPrice = this.round2(kids.reduce((s, k) => s + (+(k.unitPrice ?? 0) || 0), 0));
+      const fms = Array.from(new Set(kids.map(k => k.fulfillmentMode ?? null)));
+      header.fulfillmentMode = fms.length === 1 ? fms[0] : null;
+      this.refreshSetHeaderTotal(header);
+    }
   }
 
   // ── Line source ──────────────────────────────────────
@@ -966,6 +1065,7 @@ export class QuotationFormComponent implements OnInit {
           this.computeLine(line);
           this.lines.push(line);
         }
+        this.syncAllSetHeaders();
         this.computeTotals();
         this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
       },
@@ -1024,6 +1124,8 @@ export class QuotationFormComponent implements OnInit {
       baseSubtotal += base;
       if ((+(l.discountPct ?? 0) || 0) > 10) hod = true;
     }
+    // package header rows show the sum of their children (display only)
+    for (const h of this.lines) if (h.isSetHeader) this.refreshSetHeaderTotal(h);
     this.header.subtotal = this.round2(baseSubtotal);
 
     const gstPct = +this.header.taxPct || 0;
@@ -1084,7 +1186,7 @@ export class QuotationFormComponent implements OnInit {
       itemId: null, itemSearch: '', qty: null, uomId: null, unitPrice: null,
       discountPct: 0,
       taxMode: (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated',
-      fulfillmentMode: null, description: '', dropdownOpen: false, filteredItems: []
+      fulfillmentMode: null, allowManualFulfillment: false, description: '', dropdownOpen: false, filteredItems: []
     };
     this.showModal = true;
   }
@@ -1112,13 +1214,37 @@ export class QuotationFormComponent implements OnInit {
     this.modal.itemSearch = row.itemName;
     this.modal.uomId = (row.uomId ?? null) as any;
     this.modal.dropdownOpen = false;
+    this.loadModalItemFulfillment(row.id);
     this.previewLineTotals();
   }
 
   onModalItemSelect(id: number | null): void {
     const row = id ? this.itemsList.find(x => x.id === id) : null;
     this.modal.uomId = row ? ((row.uomId ?? null) as any) : null;
+    this.loadModalItemFulfillment(id);
     this.previewLineTotals();
+  }
+
+  // Auto-set the modal's fulfillment from the selected item's flags (same as grid lines).
+  private loadModalItemFulfillment(itemId: number | null): void {
+    this.modal.fulfillmentMode = null;
+    this.modal.allowManualFulfillment = false;
+    if (!itemId) return;
+    this.svc.getItemFlagsBulk([itemId]).subscribe({
+      next: (res: any) => {
+        const arr: any[] = (res?.data ?? res ?? []) as any;
+        const f = Array.isArray(arr) ? arr.find((x: any) => Number(x.itemId) === Number(itemId)) : null;
+        if (!f) return;
+        const sellable = !!f.isSellable;
+        const consumable = !!f.isConsumable;
+        this.modal.allowManualFulfillment = !!f.allowManualFulfillment;
+        // 'Both' items stay Pending (procurement decides); auto items show their value.
+        this.modal.fulfillmentMode = f.allowManualFulfillment
+          ? null
+          : ((sellable && !consumable) ? 2 : (!sellable && consumable) ? 1 : 2);
+      },
+      error: () => { /* leave defaults; policy resolves after add */ }
+    });
   }
   previewLineTotals(): void {
     const qty = +(this.modal.qty ?? 0);
@@ -1135,10 +1261,7 @@ export class QuotationFormComponent implements OnInit {
   }
   addLineFromModal(): void {
     if (!this.modal.itemId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Item is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (this.modal.fulfillmentMode === null || this.modal.fulfillmentMode === undefined) {
-      void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Fulfillment Mode.', confirmButtonColor: '#16a34a' });
-      return;
-    }
+    // Fulfillment is system-decided (auto) or left Pending for procurement — sales never picks it here.
     const payload: UiLine = {
       itemId: this.modal.itemId,
       itemName: this.modal.itemSearch,
@@ -1151,7 +1274,7 @@ export class QuotationFormComponent implements OnInit {
       taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode),
       isFromSet: false, isSetHeader: false, itemSetId: null, setName: '',
       fulfillmentMode: this.modal.fulfillmentMode == null ? null : Number(this.modal.fulfillmentMode),
-      isSellable: false, isConsumable: false, allowManualFulfillment: false
+      isSellable: false, isConsumable: false, allowManualFulfillment: this.modal.allowManualFulfillment
     };
     this.computeLine(payload);
     this.lines.push(payload);
@@ -1178,9 +1301,8 @@ export class QuotationFormComponent implements OnInit {
       const p = l.unitPrice == null ? 0 : +l.unitPrice;
       const name = l.itemName || this.getItemName(l.itemId) || `Line ${idx + 1}`;
       if (q <= 0 || p <= 0) { void Swal.fire('Validation', `Please enter Qty & Unit Price for ${name}.`, 'warning'); return false; }
-      if (l.fulfillmentMode === null || l.fulfillmentMode === undefined || l.fulfillmentMode === 0) {
-        void Swal.fire('Validation', `Please select Fulfillment (PP / Direct DO) for ${name}.`, 'warning'); return false;
-      }
+      // 'Both' items may be saved Pending (procurement decides later); only auto
+      // items must carry a value — and they always do, so no fulfillment block here.
     }
     return true;
   }

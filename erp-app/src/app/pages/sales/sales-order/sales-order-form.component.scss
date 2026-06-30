@@ -114,8 +114,25 @@ select.qf-cellInput { width: 100%; min-width: 0; }
   background: var(--primary-pale) !important;
   padding: 8px 14px !important;
 }
-.qf-setBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.qf-setBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .qf-setName { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary); }
+
+/* Package header inline controls */
+.qf-setCtrls { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.qf-setField { display: flex; flex-direction: column; gap: 3px; font-size: 11px; font-weight: 600; color: var(--text-muted, #555); }
+.qf-setField > span { letter-spacing: 0.02em; }
+.qf-setInput { width: 110px; }
+.qf-setTotal { font-size: 13px; color: var(--text, #222); align-self: center; }
+.qf-setTotal b { color: var(--primary); }
+
+/* Locked (package-driven) child cells */
+.qf-locked { background: #f1f1f1 !important; color: #777 !important; cursor: not-allowed; }
+
+/* Auto (system-decided) fulfillment hint */
+.qf-autoTag { display: inline-block; margin-top: 2px; font-size: 10px; font-weight: 600; color: #888; letter-spacing: 0.03em; }
+
+/* Pending (procurement-decided) fulfillment hint */
+.qf-pendTag { display: inline-block; margin-top: 2px; font-size: 10px; font-weight: 700; color: #b45309; letter-spacing: 0.03em; }
 .qf-setTag {
   font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
   background: var(--primary); color: #fff; text-transform: uppercase; letter-spacing: 0.04em;
