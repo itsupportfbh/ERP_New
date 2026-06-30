@@ -41,7 +41,7 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   isEdit = false;
   id: number | null = null;
-  draftId: number | null = null;
+  // draftId: number | null = null; // DRAFT DISABLED
   fromPrId: number | null = null;
   fromReorderPrId: number | null = null;
   fromAlertPrId: number | null = null;
@@ -109,7 +109,7 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   ngOnInit(): void {
     const paramId = this.route.snapshot.paramMap.get('id');
-    const draftParam = this.route.snapshot.queryParamMap.get('draftId');
+    // const draftParam = this.route.snapshot.queryParamMap.get('draftId'); // DRAFT DISABLED
     const fromPR = this.route.snapshot.queryParamMap.get('fromPR');
     const fromReorder = this.route.snapshot.queryParamMap.get('fromReorderPrId');
     const fromAlert = this.route.snapshot.queryParamMap.get('prId');
@@ -131,9 +131,10 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (this.isEdit) {
       this.id = Number(paramId);
       this.loadForEdit();
-    } else if (draftParam) {
-      this.draftId = Number(draftParam);
-      this.loadFromDraft();
+    // DRAFT DISABLED
+    // } else if (draftParam) {
+    //   this.draftId = Number(draftParam);
+    //   this.loadFromDraft();
     } else if (fromPR) {
       this.fromPrId = Number(fromPR);
       if (!this.sourceType) { this.sourceType = 'PR'; this.sourceRefId = this.fromPrId; }
@@ -298,6 +299,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     });
   }
 
+  /* DRAFT DISABLED
   loadFromDraft(): void {
     this.loading = true;
     this.svc.getPurchaseOrderDraftById(this.draftId!).subscribe({
@@ -326,6 +328,7 @@ export class PurchaseOrderFormComponent implements OnInit {
       error: () => { this.loading = false; }
     });
   }
+  */
 
   loadFromPR(prId: number): void {
     this.loading = true;
@@ -780,6 +783,7 @@ export class PurchaseOrderFormComponent implements OnInit {
     };
   }
 
+  /* DRAFT DISABLED
   saveDraft(): void {
     this.saving = true;
     this.error = '';
@@ -800,6 +804,7 @@ export class PurchaseOrderFormComponent implements OnInit {
       }
     });
   }
+  */
 
   submit(): void {
     this.error = '';
@@ -827,7 +832,7 @@ export class PurchaseOrderFormComponent implements OnInit {
       next: (res: any) => {
         this.saving = false;
         this.markClean();
-        if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
+        // DRAFT DISABLED: if (this.draftId) this.svc.deletePurchaseOrderDraft(this.draftId).subscribe({ error: () => {} });
         const savedId = this.id ?? this.svc.unwrapOne(res)?.id ?? this.svc.unwrapOne(res)?.iD ?? null;
         if (savedId) this.svc.updateSoProcurementByPO(Number(savedId), 2).subscribe({ error: () => {} });
         Swal.fire({ icon: 'success', title: 'Submitted!', text: this.isEdit ? 'Purchase order updated.' : 'Purchase order submitted for approval.', confirmButtonColor: '#16a34a' })
@@ -875,6 +880,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   }
 
   async back(): Promise<void> {
+    /* DRAFT DISABLED
     if (!this.isEdit && this.isDirty) {
       const result = await Swal.fire({
         icon: 'question',
@@ -891,6 +897,7 @@ export class PurchaseOrderFormComponent implements OnInit {
       if (result.isDenied) { this.goToList(); }
       return;
     }
+    */
     this.goToList();
   }
 
@@ -898,7 +905,7 @@ export class PurchaseOrderFormComponent implements OnInit {
 
   get title(): string {
     if (this.isEdit) return `Edit PO${this.purchaseOrderNo ? ' - ' + this.purchaseOrderNo : ''}`;
-    if (this.draftId) return 'Edit PO Draft';
+    // if (this.draftId) return 'Edit PO Draft'; // DRAFT DISABLED
     if (this.fromPrId || this.fromReorderPrId || this.fromAlertPrId) return 'New PO from PR';
     return 'New Purchase Order';
   }

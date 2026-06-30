@@ -170,10 +170,12 @@
     <div class="wizard-footer">
       <button class="btn btn-outline btn-sm" (click)="prGo(-1)">&#8592; Back</button>
       <div class="footer-right">
+        <!-- DRAFT DISABLED
         <button class="btn btn-outline btn-sm" [disabled]="saving" (click)="saveDraft()">
           <span class="btn-spinner" *ngIf="saving"></span>
           &#128190; Save as Draft
         </button>
+        -->
         <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit()">
           <span class="btn-spinner" *ngIf="saving"></span>
           {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update PR' : '&#10003; Submit PR') }}

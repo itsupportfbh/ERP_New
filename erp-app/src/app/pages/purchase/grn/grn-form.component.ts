@@ -490,13 +490,15 @@ export class GrnFormComponent implements OnInit {
       });
     }
 
-    const remaining = this.lines.filter(l => !l.isPosted).length;
-    const title = remaining === 0 ? 'All Lines Posted!' : 'Posted';
+    const remaining = this.lines.filter(l => !l.isPosted && !l.flagIssueId).length;
+    const title = remaining === 0 ? 'All Lines Done!' : 'Posted';
     const msg   = remaining === 0
       ? 'All GRN lines have been posted to inventory successfully.'
       : `Line posted to inventory. ${remaining} line${remaining !== 1 ? 's' : ''} remaining.`;
 
-    Swal.fire(title, msg, 'success').then(() => this.router.navigate(['/app/purchase/grn']));
+    Swal.fire(title, msg, 'success').then(() => {
+      if (remaining === 0) this.router.navigate(['/app/purchase/grn']);
+    });
   }
 
 
@@ -540,6 +542,7 @@ export class GrnFormComponent implements OnInit {
 
   submit(): void {
     if (!this.poId) { this.error = 'Please select a Purchase Order.'; return; }
+    if (!this.invoiceNo?.trim()) { this.error = 'Invoice No is required.'; return; }
     const overQty = this.lines.find(l => l.qtyError);
     if (overQty) { this.error = `Line "${overQty.itemName || overQty.itemCode}": ${overQty.qtyError}`; return; }
     this.saving = true;
@@ -719,8 +722,9 @@ export class GrnFormComponent implements OnInit {
         GrnNo: this.grnNo, GRNJson: JSON.stringify(this.buildGrnLinesData()), InvoiceNo: this.invoiceNo || null, isActive: true
       }).subscribe({
         next: () => {
+          const remaining = this.lines.filter(l => !l.isPosted && !l.flagIssueId).length;
           Swal.fire({ icon: 'warning', title: 'Flagged', text: 'Line flagged successfully.', confirmButtonColor: '#16a34a' })
-            .then(() => this.router.navigate(['/app/purchase/grn']));
+            .then(() => { if (remaining === 0) this.router.navigate(['/app/purchase/grn']); });
         },
         error: err => {
           this.error = err?.error?.message ?? 'Flag save failed.';

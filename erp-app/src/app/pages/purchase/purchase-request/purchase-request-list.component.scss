@@ -12,13 +12,13 @@
 
 .list-card-actions { display: flex; align-items: center; gap: 8px; }
 
-.panel-toggle-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer; transition: all .15s; white-space: nowrap;
+.panel-toggle-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px 0 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer; transition: all .15s; white-space: nowrap;
   &:hover { border-color: var(--primary); color: var(--primary); background: #eaf2f5; }
 }
-.badge-pill { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center;
-  &.warn   { background: #fef3c7; color: #92400e; }
-  &.info   { background: #e0f2fe; color: #0e4a60; }
-  &.danger { background: #fee2e2; color: #b91c1c; }
+.badge-pill { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  &.warn   { background: #f59e0b; color: #fff; }
+  &.info   { background: #0e4a60; color: #fff; }
+  &.danger { background: #ef4444; color: #fff; }
 }
 .list-add-btn { height: 36px; padding: 0 16px; border-radius: 8px; background: var(--primary,#0e4a60); color: #fff; font-size: 13px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; &:hover { opacity: .9; } svg { width: 14px; height: 14px; stroke: #fff; } }
 

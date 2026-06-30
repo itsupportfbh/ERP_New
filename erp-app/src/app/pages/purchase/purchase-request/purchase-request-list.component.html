@@ -23,14 +23,18 @@
         </div>
       </div>
       <div class="list-card-actions">
+        <!-- ALERTS HIDDEN - PR list does not need alerts panel
         <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showAlerts = true; loadAlerts()">
           &#128276; Alerts
           <span class="badge-pill warn" *ngIf="alertCount > 0">{{ alertCount }}</span>
         </button>
+        -->
+        <!-- DRAFT DISABLED
         <button class="panel-toggle-btn draft-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="showDrafts = !showDrafts; loadDrafts()" [disabled]="isCurrentPeriodLocked">
           &#128190; Drafts
           <span class="badge-pill info" *ngIf="draftCount > 0">{{ draftCount }}</span>
         </button>
+        -->
         <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="create()" [disabled]="isCurrentPeriodLocked">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           New PR
@@ -38,7 +42,7 @@
       </div>
     </div>
 
-    <!-- Drafts panel -->
+    <!-- Drafts panel - DRAFT DISABLED
     <div class="side-panel" *ngIf="showDrafts && perm.canCreate(fnId)">
       <div class="sp-head">
         <strong>&#128190; Draft PRs</strong>
@@ -56,6 +60,7 @@
         </div>
       </div>
     </div>
+    -->
 
     <!-- Table -->
     <erp-table

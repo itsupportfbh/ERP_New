@@ -49,8 +49,8 @@ export class GrnListComponent implements OnInit {
   ];
 
   rowActionFilter = (action: string, row: any): boolean => {
-    if (action === 'edit') return row.statusLabel !== 'Posted' && row.statusLabel !== 'Closed' && this.perm.canEdit(this.fnId);
-    if (action === 'delete') return this.perm.canDelete(this.fnId);
+    if (action === 'edit')   return row._group !== 'posted' && row.statusLabel !== 'Posted' && row.statusLabel !== 'Closed' && this.perm.canEdit(this.fnId);
+    if (action === 'delete') return row._group !== 'posted' && this.perm.canDelete(this.fnId); // show delete only on first (flagged) split row
     return true;
   };
 
@@ -62,41 +62,49 @@ export class GrnListComponent implements OnInit {
     this.loading = true;
     this.svc.getGRNs().subscribe({
       next: res => {
-        this.rows = this.svc.unwrap(res).map((r: any) => {
+        this.rows = this.svc.unwrap(res).flatMap((r: any) => {
           const isClosed = r.isClosed ?? r.IsClosed ?? false;
 
-          // Parse GRN line JSON to compute per-line status
           const rawJson = r.gRNJson ?? r.GRNJson ?? r.grnJson ?? r.GrnJson ?? '[]';
           let lines: any[] = [];
           try { lines = typeof rawJson === 'string' ? JSON.parse(rawJson || '[]') : (Array.isArray(rawJson) ? rawJson : []); } catch { lines = []; }
 
-          const total      = lines.length;
-          const postedCnt  = lines.filter((l: any) => !!l.isPostInventory).length;
-          const flaggedCnt = lines.filter((l: any) => !!l.isFlagIssue).length;
-          const allPosted  = total > 0 && postedCnt === total;
-          const anyFlagged = flaggedCnt > 0;
+          const total        = lines.length;
+          const postedLines  = lines.filter((l: any) => !!l.isPostInventory);
+          const flaggedLines = lines.filter((l: any) => !!l.isFlagIssue && !l.isPostInventory);
+          const postedCnt    = postedLines.length;
+          const flaggedCnt   = flaggedLines.length;
 
-          let statusLabel: string;
-          if (isClosed)        statusLabel = 'Closed';
-          else if (allPosted)  statusLabel = 'Posted';
-          else if (anyFlagged) statusLabel = 'Flagged';
-          else if (postedCnt)  statusLabel = 'Partial';
-          else                 statusLabel = 'Open';
-
-          const linesSummary = total > 0
-            ? `${postedCnt}/${total} Posted${flaggedCnt ? ', ' + flaggedCnt + ' Flagged' : ''}`
-            : '—';
-
-          return {
+          const base = {
             ...r,
             id: r.id ?? r.iD ?? r.ID,
             grnNo: r.grnNo ?? r.GrnNo ?? '',
             receptionDate: r.receptionDate ?? r.ReceptionDate,
             supplierName: r.supplierName ?? r.SupplierName ?? '',
             poid: r.poid ?? r.POID,
-            statusLabel,
-            linesSummary,
           };
+
+          // Split into 2 rows when GRN has both posted and flagged lines
+          if (!isClosed && postedCnt > 0 && flaggedCnt > 0) {
+            return [
+              { ...base, statusLabel: 'Posted',  linesSummary: `${postedCnt} line${postedCnt !== 1 ? 's' : ''} Posted`,  _groupLines: postedLines,  _group: 'posted'  },
+              { ...base, statusLabel: 'Flagged', linesSummary: `${flaggedCnt} line${flaggedCnt !== 1 ? 's' : ''} Flagged`, _groupLines: flaggedLines, _group: 'flagged' },
+            ];
+          }
+
+          // Single row
+          let statusLabel: string;
+          if (isClosed)              statusLabel = 'Closed';
+          else if (total > 0 && postedCnt === total) statusLabel = 'Posted';
+          else if (flaggedCnt > 0)   statusLabel = 'Flagged';
+          else if (postedCnt > 0)    statusLabel = 'Partial';
+          else                       statusLabel = 'Open';
+
+          const linesSummary = total > 0
+            ? `${postedCnt}/${total} Posted${flaggedCnt ? ', ' + flaggedCnt + ' Flagged' : ''}`
+            : '—';
+
+          return [{ ...base, statusLabel, linesSummary, _groupLines: null, _group: null }];
         });
         this.applyFilter();
         this.loading = false;
@@ -119,6 +127,18 @@ export class GrnListComponent implements OnInit {
   onRowClick(row: any): void { this.openLinesModal(row); }
 
   openLinesModal(row: any): void {
+    this.modalGrnNo   = row.grnNo ?? '';
+    this.modalSupplier = row.supplierName ?? '';
+    this.modalPoNo    = row.poid ?? '';
+    this.modalStatus  = row.statusLabel ?? '';
+
+    // Split group row — use pre-filtered lines directly
+    if (row._groupLines?.length) {
+      this.modalLines = row._groupLines;
+      this.showLinesModal = true;
+      return;
+    }
+
     const parseGrnJson = (raw: any): any[] => {
       if (Array.isArray(raw)) return raw;
       if (typeof raw === 'string' && raw.trim()) {
@@ -126,14 +146,9 @@ export class GrnListComponent implements OnInit {
       }
       return [];
     };
-    // GRN lines are saved as JSON in gRNJson by buildGrnLinesData()
     const rawJson = row?.gRNJson ?? row?.GRNJson ?? row?.grnJson ?? row?.GrnJson ?? '';
     const lines = parseGrnJson(rawJson);
     this.modalLines = lines;
-    this.modalGrnNo = row.grnNo ?? '';
-    this.modalSupplier = row.supplierName ?? '';
-    this.modalPoNo = row.poid ?? '';
-    this.modalStatus = row.statusLabel ?? '';
     if (!lines.length) {
       this.svc.getGRNById(row.id).subscribe({
         next: res => {

@@ -28,7 +28,7 @@ interface PRLine {
 export class PurchaseRequestFormComponent implements OnInit {
   isEdit = false;
   id: number | null = null;
-  draftId: number | null = null;
+  // draftId: number | null = null; // DRAFT DISABLED
   prStep = 0;
   prSteps = ['Header', 'Lines', 'Review'];
   loading = false;
@@ -75,7 +75,7 @@ export class PurchaseRequestFormComponent implements OnInit {
 
   ngOnInit(): void {
     const paramId  = this.route.snapshot.paramMap.get('id');
-    const draftParam = this.route.snapshot.queryParamMap.get('draftId');
+    // const draftParam = this.route.snapshot.queryParamMap.get('draftId'); // DRAFT DISABLED
     const fromSo   = this.route.snapshot.queryParamMap.get('fromSo');
     const fromRecipe = this.route.snapshot.queryParamMap.get('fromRecipe');
     const refId    = this.route.snapshot.queryParamMap.get('refId');
@@ -98,7 +98,7 @@ export class PurchaseRequestFormComponent implements OnInit {
 
     this.loadLookups();
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
-    else if (draftParam) { this.draftId = Number(draftParam); this.loadFromDraft(); }
+    // else if (draftParam) { this.draftId = Number(draftParam); this.loadFromDraft(); } // DRAFT DISABLED
   }
 
   private emptyLine(): PRLine {
@@ -121,7 +121,7 @@ export class PurchaseRequestFormComponent implements OnInit {
           value: d.id,
           raw: d
         }));
-        if (!this.isEdit && !this.draftId) {
+        if (!this.isEdit) {
           this.autoBindDepartment(depts);
         }
       },
@@ -249,6 +249,7 @@ export class PurchaseRequestFormComponent implements OnInit {
     this.router.navigate(['/app/purchase/orders/new'], { queryParams: { fromPR: this.id } });
   }
 
+  /* DRAFT DISABLED
   loadFromDraft(): void {
     this.loading = true;
     this.svc.getPurchaseRequestDraftById(this.draftId!).subscribe({
@@ -265,6 +266,7 @@ export class PurchaseRequestFormComponent implements OnInit {
       error: () => { this.loading = false; }
     });
   }
+  */
 
   // Modal
   openAddLine(): void {
@@ -385,6 +387,7 @@ export class PurchaseRequestFormComponent implements OnInit {
     };
   }
 
+  /* DRAFT DISABLED
   saveDraft(): void {
     this.saving = true;
     this.error = '';
@@ -402,6 +405,7 @@ export class PurchaseRequestFormComponent implements OnInit {
       error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Draft save failed.'; }
     });
   }
+  */
 
   submit(): void {
     this.saving = true;
@@ -440,9 +444,7 @@ export class PurchaseRequestFormComponent implements OnInit {
           }
         }
         this.saving = false;
-        if (this.draftId) {
-          this.svc.deletePurchaseRequestDraft(this.draftId, this.loginUserId).subscribe({ error: () => {} });
-        }
+        // DRAFT DISABLED: if (this.draftId) { this.svc.deletePurchaseRequestDraft(this.draftId, this.loginUserId).subscribe({ error: () => {} }); }
         Swal.fire('Submitted', this.isEdit ? 'Purchase request updated successfully.' : 'Purchase request submitted successfully.', 'success').then(() => this.back());
       },
       error: (err: any) => { this.saving = false; this.error = err?.error?.message ?? 'Save failed.'; }
@@ -477,7 +479,7 @@ export class PurchaseRequestFormComponent implements OnInit {
   get sourceTypeLabel(): string { return this.sourceType === 'SO' ? 'Sales Order' : this.sourceType === 'RECIPE' ? 'Production Plan' : ''; }
   get title(): string {
     if (this.isEdit) return 'Edit Purchase Request';
-    if (this.draftId) return 'Edit PR Draft';
+    // if (this.draftId) return 'Edit PR Draft'; // DRAFT DISABLED
     return 'New Purchase Request';
   }
 }
