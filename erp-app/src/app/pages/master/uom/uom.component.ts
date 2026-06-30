@@ -24,7 +24,19 @@ export class UomComponent implements OnInit {
   cancel(): void { this.isFormVisible = false; this.message = ''; }
   clearForm(): void { this.form = { name: '', description: '' }; }
   onSubmit(): void {
-    if (!this.form.name?.trim()) { this.message = 'UOM Name is required.'; this.isError = true; return; }
+    const name = (this.form.name || '').trim();
+    if (!name) { this.message = 'UOM Name is required.'; this.isError = true; return; }
+    const duplicate = (this.items || []).some((u: any) => {
+      const existing = String(u.name ?? u.uomName ?? '').trim().toLowerCase();
+      const sameRow = this.isEditMode && Number(u.id) === Number(this.selectedId);
+      return existing === name.toLowerCase() && !sameRow;
+    });
+    if (duplicate) {
+      this.popupIsSuccess = false;
+      this.popupMessage = `A UOM named "${name}" already exists.`;
+      this.showResultPopup = true;
+      return;
+    }
     const obs = this.isEditMode ? this.masterSvc.updateUom(this.selectedId, this.form) : this.masterSvc.createUom(this.form);
     obs.subscribe({ next: (res: any) => { this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || (this.isEditMode ? 'Updated successfully.' : 'Created successfully.'); this.showResultPopup = true; if (res?.isSuccess !== false) { this.cancel(); this.load(); } }, error: (err: any) => { this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Save failed. Please try again.'; this.showResultPopup = true; } });
   }
