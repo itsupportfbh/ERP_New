@@ -88,6 +88,7 @@ import { ReportDeliveriesComponent } from './pages/sales/reports/report-deliveri
 import { ReportDeliveryNoteComponent } from './pages/sales/reports/report-delivery-note.component';
 import { SalesOrderListComponent } from './pages/sales/sales-order/sales-order-list.component';
 import { SalesOrderFormComponent } from './pages/sales/sales-order/sales-order-form.component';
+import { PendingFulfillmentComponent } from './pages/sales/pending-fulfillment/pending-fulfillment.component';
 import { PickingListComponent } from './pages/sales/picking/picking-list.component';
 import { PickingFormComponent } from './pages/sales/picking/picking-form.component';
 import { DeliveryOrderListComponent } from './pages/sales/delivery-order/delivery-order-list.component';
@@ -181,6 +182,7 @@ MobileReceivingComponent,
     ReportDeliveryNoteComponent,
     SalesOrderListComponent,
     SalesOrderFormComponent,
+    PendingFulfillmentComponent,
     PickingListComponent,
     PickingFormComponent,
     DeliveryOrderListComponent,

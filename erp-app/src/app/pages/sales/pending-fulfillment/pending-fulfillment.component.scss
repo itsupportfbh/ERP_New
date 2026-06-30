@@ -1,0 +1,94 @@
+.pf-wrap { padding: 16px 20px; }
+
+.pf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.pf-title { margin: 0; font-size: 20px; font-weight: 700; color: var(--primary, #0f766e); }
+.pf-sub { margin: 2px 0 0; font-size: 12.5px; color: #667085; }
+
+/* Summary stat cards — equal width, compact height */
+.pf-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.pf-stat {
+  flex: 1 1 0; min-width: 200px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  background: #fff; border: 1px solid var(--border, #e5e7eb);
+  box-shadow: 0 1px 2px rgba(16,24,40,.04);
+}
+.pf-stat-ico {
+  width: 30px; height: 30px; flex: none; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pf-stat-ico svg { width: 16px; height: 16px; }
+.pf-stat-body { display: flex; flex-direction: column; gap: 0; }
+.pf-stat-val { font-size: 18px; font-weight: 800; line-height: 1.1; }
+.pf-stat-lbl { font-size: 10.5px; color: #667085; font-weight: 600; }
+
+.pf-stat--total .pf-stat-ico { background: rgba(15,118,110,.10); color: #0f766e; }
+.pf-stat--total .pf-stat-val { color: #0f766e; }
+.pf-stat--ok    .pf-stat-ico { background: rgba(22,163,74,.12); color: #16a34a; }
+.pf-stat--ok    .pf-stat-val { color: #16a34a; }
+.pf-stat--short .pf-stat-ico { background: rgba(220,38,38,.12); color: #dc2626; }
+.pf-stat--short .pf-stat-val { color: #dc2626; }
+
+.pf-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.pf-search { max-width: 360px; }
+.pf-count { font-size: 12px; font-weight: 600; color: #b45309; }
+
+.pf-c { text-align: center; }
+.pf-uom { color: #98a2b3; font-size: 11px; }
+.pf-short { color: #dc2626; font-weight: 700; }
+.pf-hint { display: block; margin-top: 8px; font-size: 11px; color: #98a2b3; }
+
+.pf-empty {
+  padding: 56px 24px; text-align: center; color: #667085;
+  background: #fff; border: 1px dashed var(--border, #e5e7eb); border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.pf-empty-ico {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(22,163,74,.10); color: #16a34a; margin-bottom: 6px;
+}
+.pf-empty-title { font-size: 17px; font-weight: 700; color: #1f2937; }
+.pf-empty-sub { font-size: 13px; color: #98a2b3; max-width: 360px; }
+
+/* Card grid */
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.pf-card {
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(16,24,40,.06);
+  border-top: 4px solid #cbd5e1;
+  transition: box-shadow .15s ease;
+}
+.pf-card:hover { box-shadow: 0 6px 18px rgba(16,24,40,.10); }
+.pf-card--short { border-top-color: #dc2626; }
+.pf-card--ok    { border-top-color: #16a34a; }
+
+.pf-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pf-card-so { font-size: 15px; font-weight: 800; color: var(--primary, #0f766e); }
+.pf-pill {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 3px 9px; border-radius: 999px; background: #dcfce7; color: #15803d;
+}
+.pf-pill--short { background: #fee2e2; color: #b91c1c; }
+
+.pf-card-cust { font-size: 12px; color: #667085; margin-top: 2px; }
+.pf-card-item { font-size: 14px; font-weight: 600; color: #1f2937; margin: 10px 0; }
+
+.pf-metrics { display: flex; gap: 8px; margin-bottom: 12px; }
+.pf-metric {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 4px; background: #f8fafc; border-radius: 8px;
+}
+.pf-m-val { font-size: 16px; font-weight: 800; color: #1f2937; }
+.pf-m-lbl { font-size: 10px; color: #98a2b3; font-weight: 600; }
+
+.pf-card-action { display: flex; gap: 8px; align-items: center; }
+.pf-card-action erp-dropdown { flex: 1; }
+.pf-confirm { white-space: nowrap; }

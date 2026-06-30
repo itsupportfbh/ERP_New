@@ -105,6 +105,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
       label: 'Purchase',
       icon: 'purchase',
       children: [
+        { label: 'Pending Fulfillment', icon: 'pr',     route: '/app/sales/pending-fulfillment', permId: 'pr-list' },
         { label: 'Purchase Request', icon: 'pr',        route: '/app/purchase/requests',         permId: 'pr-list' },
         { label: 'Purchase Order',   icon: 'po',        route: '/app/purchase/orders',           permId: 'po-list' },
         { label: 'RFQ',              icon: 'rfq',       route: '/app/purchase/rfq',              permId: 'rfq' },

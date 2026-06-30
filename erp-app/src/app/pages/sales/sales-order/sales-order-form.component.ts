@@ -182,6 +182,7 @@ export class SalesOrderFormComponent implements OnInit {
     discountPct: 0 as number | null,
     taxMode: 'Standard-Rated' as LineTaxMode,
     fulfillmentMode: null as number | null,
+    allowManualFulfillment: false,
     description: '',
     dropdownOpen: false,
     filteredItems: [] as SimpleItem[]
@@ -496,12 +497,106 @@ export class SalesOrderFormComponent implements OnInit {
         if (!dto) { this.loading = false; return; }
         this.applyHeaderFromSource(dto);
         this.lines = this.mapApiLines(dto.lines ?? dto.Lines ?? dto.lineItems ?? []);
-        this.computeTotals();
-        this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
+
+        // Rebuild package grouping carried over from the quotation
+        const apiItemSets = dto.itemSets ?? dto.ItemSets ?? [];
+        let sets: ItemSetHeaderRow[] = (apiItemSets || [])
+          .map((x: any) => ({
+            id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0),
+            setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim()
+          }))
+          .filter((x: ItemSetHeaderRow) => x.id > 0);
+        if (!sets.length) {
+          const ids: number[] = String(dto.itemSetIds ?? dto.ItemSetIds ?? '')
+            .split(',').map((n: any) => Number(n)).filter((n: number) => n > 0);
+          sets = ids.map(sid => ({ id: sid, setName: `Set #${sid}` }));
+        }
+        this.selectedItemSets = sets;
+        this.selectedPackageIds = sets.map(s => s.id);
+        this.loadedItemSetIds.clear();
+        this.selectedItemSets.forEach(s => this.loadedItemSetIds.add(s.id));
+        if (sets.length) this.header.lineSourceId = 2 as LineSourceId;
+
+        if (sets.length) {
+          this.hydrateSetInfoForEditThenRebuildRows();
+        } else {
+          this.computeTotals();
+          this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
+        }
         this.loading = false;
       },
       error: () => { this.loading = false; void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load quotation details.', confirmButtonColor: '#16a34a' }); }
     });
+  }
+
+  // Fetch each package's items, tag matching lines, then group under package headers.
+  private hydrateSetInfoForEditThenRebuildRows(): void {
+    const sets = (this.selectedItemSets || [])
+      .map(s => ({ id: Number(s.id), setName: String(s.setName || '').trim() }))
+      .filter(s => s.id > 0);
+
+    if (!sets.length) {
+      this.computeTotals();
+      this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
+      return;
+    }
+
+    const calls = sets.map(s => this.svc.getItemSetById(s.id));
+    forkJoin(calls).subscribe({
+      next: (responses: any[]) => {
+        this.itemIdToSet.clear();
+        responses.forEach((res: any, idx: number) => {
+          const setId = sets[idx].id;
+          const dto = this.svc.unwrapOne(res);
+          const setName = sets[idx].setName || String(dto?.setName || `Set #${setId}`);
+          const chip = this.selectedItemSets.find(s => s.id === setId);
+          if (chip && (!chip.setName || /^Set #/.test(chip.setName))) chip.setName = setName;
+
+          const rows: any[] = dto?.items ?? dto?.itemSetItems ?? dto?.lines ?? [];
+          for (const r of rows) {
+            const itemId = Number(r.itemId ?? r.ItemId ?? 0);
+            if (!itemId) continue;
+            if (!this.itemIdToSet.has(itemId)) this.itemIdToSet.set(itemId, { itemSetId: setId, setName });
+          }
+        });
+
+        for (const l of this.lines) {
+          if (l.isSetHeader) continue;
+          const m = this.itemIdToSet.get(Number(l.itemId));
+          if (m) { l.isFromSet = true; l.itemSetId = m.itemSetId; l.setName = m.setName; }
+        }
+
+        this.rebuildLinesWithSetHeaders();
+        this.syncAllSetHeaders();
+        this.computeTotals();
+        this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
+      },
+      error: () => {
+        this.computeTotals();
+        this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
+      }
+    });
+  }
+
+  private rebuildLinesWithSetHeaders(): void {
+    const items = this.lines.filter(x => !x.isSetHeader);
+    const rebuilt: UiLine[] = [];
+    const added = new Set<number>();
+    const setOrder = (this.selectedItemSets || []).map(s => Number(s.id));
+
+    for (const sid of setOrder) {
+      const setName = this.selectedItemSets.find(x => x.id === sid)?.setName || `Set #${sid}`;
+      const group = items.filter(x => x.isFromSet && Number(x.itemSetId) === sid);
+      if (!group.length) continue;
+      rebuilt.push(this.makeSetHeader(sid, setName));
+      for (const g of group) rebuilt.push(g);
+      added.add(sid);
+    }
+
+    const nonSet = items.filter(x => !x.isFromSet || !x.itemSetId);
+    for (const l of nonSet) rebuilt.push(l);
+
+    this.lines = rebuilt;
   }
 
   private applyHeaderFromSource(dto: any): void {
@@ -555,21 +650,33 @@ export class SalesOrderFormComponent implements OnInit {
           l.isSellable = !!f.isSellable;
           l.isConsumable = !!f.isConsumable;
           l.allowManualFulfillment = !!f.allowManualFulfillment;
-          this.applyAutoFulfillmentIfEmpty(l);
+          this.applyFulfillmentByPolicy(l);
+          // Fresh SO (new / from quotation): 'Both' items start Pending so the
+          // procurement team resolves them on the Pending Fulfillment screen.
+          if (!this.isEdit && l.allowManualFulfillment) l.fulfillmentMode = null;
         }
+        this.syncAllSetHeaders();
+        this.computeTotals();
       },
       error: () => { /* degrade gracefully */ }
     });
   }
 
-  private applyAutoFulfillmentIfEmpty(l: UiLine): void {
+  // System's automatic fulfillment from item flags: sellable-only → Direct DO,
+  // consumable-only → PP, both/neither → Direct DO (default).
+  private autoFulfillmentFromFlags(l: UiLine): number {
+    if (l.isSellable && !l.isConsumable) return 2; // Direct DO
+    if (!l.isSellable && l.isConsumable) return 1; // PP
+    return 2; // both / neither → default Direct DO (staff can switch if manual)
+  }
+
+  // Non-manual items are system-decided and locked to the auto value.
+  // 'Both' items stay Pending (null) — sales does not decide; the procurement
+  // team resolves PP / Direct DO later. Any value already set is preserved.
+  private applyFulfillmentByPolicy(l: UiLine): void {
     if (l.isSetHeader) return;
-    if (l.fulfillmentMode === 1 || l.fulfillmentMode === 2) return;
-    const isSellable = !!l.isSellable;
-    const isConsumable = !!l.isConsumable;
-    if (isSellable && !isConsumable) l.fulfillmentMode = 2;
-    else if (!isSellable && isConsumable) l.fulfillmentMode = 1;
-    else l.fulfillmentMode = 2;
+    if (!l.allowManualFulfillment) { l.fulfillmentMode = this.autoFulfillmentFromFlags(l); return; }
+    // 'Both' → leave as-is (Pending when new)
   }
 
   onFulfillmentChanged(l: UiLine, i: number): void {
@@ -699,10 +806,78 @@ export class SalesOrderFormComponent implements OnInit {
 
   private makeSetHeader(itemSetId: number, setName: string): UiLine {
     return {
-      itemId: 0, uomId: null, qty: 0, unitPrice: 0, discountPct: 0,
+      itemId: 0, uomId: null, qty: null, unitPrice: null, discountPct: 0,
       taxMode: 'Zero-Rated', isSetHeader: true, isFromSet: true,
       itemSetId, setName, description: '', fulfillmentMode: null
     };
+  }
+
+  // ── Package (set) header controls ────────────────────
+  private setChildren(setId: number | null | undefined): UiLine[] {
+    if (setId == null) return [];
+    return this.lines.filter(
+      l => !l.isSetHeader && l.isFromSet && Number(l.itemSetId) === Number(setId)
+    );
+  }
+
+  // Spread the package's total price across its child lines (sum === package price).
+  private distributeSetPrice(header: UiLine): void {
+    const kids = this.setChildren(header.itemSetId);
+    const n = kids.length;
+    if (!n) return;
+    const total = Math.max(0, +(header.unitPrice ?? 0) || 0);
+    const share = this.round2(total / n);
+    let acc = 0;
+    kids.forEach((k, idx) => {
+      k.unitPrice = idx === n - 1 ? this.round2(total - acc) : share;
+      if (idx !== n - 1) acc = this.round2(acc + share);
+      this.computeLine(k);
+    });
+  }
+
+  onSetQtyChange(header: UiLine): void {
+    const q = header.qty == null || (header.qty as any) === '' ? null : Math.max(0, +header.qty);
+    header.qty = q;
+    for (const k of this.setChildren(header.itemSetId)) { k.qty = q; this.computeLine(k); }
+    this.computeTotals();
+  }
+
+  onSetPriceChange(header: UiLine): void {
+    header.unitPrice = header.unitPrice == null || (header.unitPrice as any) === ''
+      ? null : Math.max(0, +header.unitPrice);
+    this.distributeSetPrice(header);
+    this.computeTotals();
+  }
+
+  onSetFulfillmentChange(header: UiLine): void {
+    const fm = header.fulfillmentMode == null || (header.fulfillmentMode as any) === ''
+      ? null : Number(header.fulfillmentMode);
+    header.fulfillmentMode = fm;
+    // locked (non-manual) items keep their system-decided value
+    for (const k of this.setChildren(header.itemSetId)) {
+      if (k.allowManualFulfillment) k.fulfillmentMode = fm;
+    }
+    this.computeTotals();
+  }
+
+  private refreshSetHeaderTotal(header: UiLine): void {
+    const kids = this.setChildren(header.itemSetId);
+    header.lineNet = this.round2(kids.reduce((s, k) => s + (k.lineNet || 0), 0));
+    header.lineTax = this.round2(kids.reduce((s, k) => s + (k.lineTax || 0), 0));
+    header.lineTotal = this.round2(kids.reduce((s, k) => s + (k.lineTotal || 0), 0));
+  }
+
+  private syncAllSetHeaders(): void {
+    for (const header of this.lines) {
+      if (!header.isSetHeader) continue;
+      const kids = this.setChildren(header.itemSetId);
+      if (!kids.length) continue;
+      header.qty = kids[0].qty ?? null;
+      header.unitPrice = this.round2(kids.reduce((s, k) => s + (+(k.unitPrice ?? 0) || 0), 0));
+      const fms = Array.from(new Set(kids.map(k => k.fulfillmentMode ?? null)));
+      header.fulfillmentMode = fms.length === 1 ? fms[0] : null;
+      this.refreshSetHeaderTotal(header);
+    }
   }
 
   // ── Line source ──────────────────────────────────────
@@ -945,6 +1120,7 @@ export class SalesOrderFormComponent implements OnInit {
           this.computeLine(line);
           this.lines.push(line);
         }
+        this.syncAllSetHeaders();
         this.computeTotals();
         this.loadFlagsForLines(this.lines.filter(x => !x.isSetHeader));
       },
@@ -1003,6 +1179,8 @@ export class SalesOrderFormComponent implements OnInit {
       baseSubtotal += base;
       if ((+(l.discountPct ?? 0) || 0) > 10) hod = true;
     }
+    // package header rows show the sum of their children (display only)
+    for (const h of this.lines) if (h.isSetHeader) this.refreshSetHeaderTotal(h);
     this.header.subtotal = this.round2(baseSubtotal);
 
     const gstPct = +this.header.taxPct || 0;
@@ -1063,7 +1241,7 @@ export class SalesOrderFormComponent implements OnInit {
       itemId: null, itemSearch: '', qty: null, uomId: null, unitPrice: null,
       discountPct: 0,
       taxMode: (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated',
-      fulfillmentMode: null, description: '', dropdownOpen: false, filteredItems: []
+      fulfillmentMode: null, allowManualFulfillment: false, description: '', dropdownOpen: false, filteredItems: []
     };
     this.showModal = true;
   }
@@ -1091,13 +1269,37 @@ export class SalesOrderFormComponent implements OnInit {
     this.modal.itemSearch = row.itemName;
     this.modal.uomId = (row.uomId ?? null) as any;
     this.modal.dropdownOpen = false;
+    this.loadModalItemFulfillment(row.id);
     this.previewLineTotals();
   }
 
   onModalItemSelect(id: number | null): void {
     const row = id ? this.itemsList.find(x => x.id === id) : null;
     this.modal.uomId = row ? ((row.uomId ?? null) as any) : null;
+    this.loadModalItemFulfillment(id);
     this.previewLineTotals();
+  }
+
+  // Auto-set the modal's fulfillment from the selected item's flags (same as grid lines).
+  private loadModalItemFulfillment(itemId: number | null): void {
+    this.modal.fulfillmentMode = null;
+    this.modal.allowManualFulfillment = false;
+    if (!itemId) return;
+    this.svc.getItemFlagsBulk([itemId]).subscribe({
+      next: (res: any) => {
+        const arr: any[] = (res?.data ?? res ?? []) as any;
+        const f = Array.isArray(arr) ? arr.find((x: any) => Number(x.itemId) === Number(itemId)) : null;
+        if (!f) return;
+        const sellable = !!f.isSellable;
+        const consumable = !!f.isConsumable;
+        this.modal.allowManualFulfillment = !!f.allowManualFulfillment;
+        // 'Both' items stay Pending (procurement decides); auto items show their value.
+        this.modal.fulfillmentMode = f.allowManualFulfillment
+          ? null
+          : ((sellable && !consumable) ? 2 : (!sellable && consumable) ? 1 : 2);
+      },
+      error: () => { /* leave defaults; policy resolves after add */ }
+    });
   }
   previewLineTotals(): void {
     const qty = +(this.modal.qty ?? 0);
@@ -1114,10 +1316,7 @@ export class SalesOrderFormComponent implements OnInit {
   }
   addLineFromModal(): void {
     if (!this.modal.itemId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Item is required.', confirmButtonColor: '#16a34a' }); return; }
-    if (this.modal.fulfillmentMode === null || this.modal.fulfillmentMode === undefined) {
-      void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Fulfillment Mode.', confirmButtonColor: '#16a34a' });
-      return;
-    }
+    // Fulfillment is system-decided (auto) or left Pending for procurement — sales never picks it here.
     const payload: UiLine = {
       itemId: this.modal.itemId,
       itemName: this.modal.itemSearch,
@@ -1130,7 +1329,7 @@ export class SalesOrderFormComponent implements OnInit {
       taxCodeId: this.taxModeToTaxCodeId(this.modal.taxMode),
       isFromSet: false, isSetHeader: false, itemSetId: null, setName: '',
       fulfillmentMode: this.modal.fulfillmentMode == null ? null : Number(this.modal.fulfillmentMode),
-      isSellable: false, isConsumable: false, allowManualFulfillment: false
+      isSellable: false, isConsumable: false, allowManualFulfillment: this.modal.allowManualFulfillment
     };
     this.computeLine(payload);
     this.lines.push(payload);
@@ -1216,9 +1415,8 @@ export class SalesOrderFormComponent implements OnInit {
       const p = l.unitPrice == null ? 0 : +l.unitPrice;
       const name = l.itemName || this.getItemName(l.itemId) || `Line ${idx + 1}`;
       if (q <= 0 || p <= 0) { void Swal.fire('Validation', `Please enter Qty & Unit Price for ${name}.`, 'warning'); return false; }
-      if (l.fulfillmentMode === null || l.fulfillmentMode === undefined || l.fulfillmentMode === 0) {
-        void Swal.fire('Validation', `Please select Fulfillment (PP / Direct DO) for ${name}.`, 'warning'); return false;
-      }
+      // 'Both' items may be saved Pending (procurement decides later); auto items
+      // always carry a value, so no fulfillment block is needed here.
     }
     return true;
   }
@@ -1259,7 +1457,7 @@ export class SalesOrderFormComponent implements OnInit {
       CustomerId: this.header.customerId,
       RequestedDate: this.header.orderDate || this.header.deliveryDate,
       DeliveryDate: this.header.deliveryDate,
-      Status: this.isEdit ? this.header.status : 2,
+      Status: this.header.status,
       DeliveryTo: (this.header.deliveryTo || '').trim(),
       Remarks: (this.header.remarks || '').trim(),
       Shipping: 0,
@@ -1284,7 +1482,7 @@ export class SalesOrderFormComponent implements OnInit {
   async submit(): Promise<void> {
     for (const l of this.lines) {
       if (l.isSetHeader) continue;
-      this.applyAutoFulfillmentIfEmpty(l);
+      this.applyFulfillmentByPolicy(l);
     }
     if (!this.validateBeforeSave()) return;
 
@@ -1330,14 +1528,24 @@ export class SalesOrderFormComponent implements OnInit {
           return;
         }
 
+        // PR cannot be auto-created without a location in the session.
+        if (!this.locationId || this.locationId <= 0) {
+          void Swal.fire({ icon: 'warning', title: 'Saved — PR NOT created',
+            text: 'Your session has no Location (locationId = 0), so the Purchase Request could not be auto-created. Please log in with a location assigned, then create the PR.',
+            confirmButtonColor: '#16a34a' }).then(() => this.back());
+          return;
+        }
+
         this.svc.triggerAutoPr(Number(soId), Number(this.loginUserId) || 1, this.locationId).subscribe({
           next: (prRes: any) => {
             const data = prRes?.data ?? prRes;
             const created = data?.created ?? data?.Created ?? false;
             const prNo = data?.purchaseRequestNo ?? data?.PurchaseRequestNo ?? '';
+            const msg = data?.message ?? data?.Message ?? '';
             let html = 'Sales Order saved successfully.';
             if (created) html += `<br/><br/><b>PR Auto Created</b>${prNo ? '<br/>PR No: ' + prNo : ''}`;
-            void Swal.fire({ icon: 'success', title: 'Success', html, confirmButtonColor: '#16a34a' })
+            else html += `<br/><br/><b>PR NOT created.</b>${msg ? '<br/>Reason: ' + msg : ''}`;
+            void Swal.fire({ icon: created ? 'success' : 'warning', title: created ? 'Success' : 'Saved — no PR', html, confirmButtonColor: '#16a34a' })
               .then(() => { if (created) this.router.navigate(['/app/purchase/requests']); else this.back(); });
           },
           error: () => {

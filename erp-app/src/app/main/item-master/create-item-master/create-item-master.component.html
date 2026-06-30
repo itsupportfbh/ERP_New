@@ -65,6 +65,15 @@
           </erp-dropdown>
         </div>
         <div>
+          <label class="fc-label">Fulfillment Mode *</label>
+          <erp-dropdown name="fulfillmentMode" [(ngModel)]="item.fulfillmentMode"
+            [items]="fulfillmentModeList" bindLabel="name" bindValue="id"
+            placeholder="Select Fulfillment"
+            (ngModelChange)="onFulfillmentUserOverride()">
+          </erp-dropdown>
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Default from Category — override per item if needed</small>
+        </div>
+        <div>
           <label class="fc-label">UOM *</label>
           <erp-dropdown name="uomId" [(ngModel)]="item.uomId"
             [items]="uomList" bindLabel="name" bindValue="id"

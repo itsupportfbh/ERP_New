@@ -1,0 +1,77 @@
+<div class="list-page">
+  <div class="list-card">
+
+    <div class="list-card-head">
+      <div class="list-card-title-block">
+        <div class="list-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="list-card-title">Pending Fulfillment</h3>
+          <p class="list-card-sub">Procurement decides PP / Direct DO for "Both" items on confirmed Sales Orders</p>
+        </div>
+      </div>
+      <div class="list-card-actions">
+        <button class="list-add-btn" type="button" (click)="load()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="dt-controls">
+    <div class="dt-show">Show <select class="dt-pg-select" [(ngModel)]="pageSize" name="pageSize"><option [value]="10">10</option><option [value]="25">25</option><option [value]="50">50</option></select> entries</div>
+    <div class="dt-right">
+      <div class="dt-search-wrap">Search: <input class="dt-search-input" type="text" [(ngModel)]="searchText"
+        name="search" (input)="applyFilter()" placeholder="SO no / customer / item" /></div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="pf-empty">Loading…</div>
+  <div *ngIf="!loading && filtered.length === 0" class="pf-empty">
+    <div class="pf-empty-ico">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div class="pf-empty-title">All caught up</div>
+    <div class="pf-empty-sub">No pending items — every Sales Order line is routed to PP or Direct DO.</div>
+  </div>
+
+  <!-- Card grid -->
+  <div class="pf-grid" *ngIf="!loading && filtered.length">
+    <div class="pf-card" *ngFor="let r of paged"
+         [class.pf-card--short]="shortage(r) > 0" [class.pf-card--ok]="shortage(r) === 0">
+      <div class="pf-card-top">
+        <div class="pf-card-so">{{ r.salesOrderNo || ('SO-' + r.salesOrderId) }}</div>
+        <span class="pf-pill" [class.pf-pill--short]="shortage(r) > 0">
+          {{ shortage(r) > 0 ? 'Short' : 'In stock' }}
+        </span>
+      </div>
+      <div class="pf-card-cust">{{ r.customerName || 'Cash Sales' }}</div>
+
+      <div class="pf-card-item">
+        {{ r.itemName }} <small class="pf-uom">{{ r.uom }}</small>
+      </div>
+
+      <div class="pf-metrics">
+        <div class="pf-metric"><span class="pf-m-val">{{ r.quantity | number:'1.0-2' }}</span><span class="pf-m-lbl">Qty</span></div>
+        <div class="pf-metric"><span class="pf-m-val">{{ r.available | number:'1.0-2' }}</span><span class="pf-m-lbl">Available</span></div>
+        <div class="pf-metric"><span class="pf-m-val" [class.pf-short]="shortage(r) > 0">{{ shortage(r) | number:'1.0-2' }}</span><span class="pf-m-lbl">Shortage</span></div>
+      </div>
+
+      <div class="pf-card-action">
+        <erp-dropdown [(ngModel)]="r.choice"
+          [items]="fulfillmentOptions" bindLabel="label" bindValue="value"></erp-dropdown>
+        <button class="btn btn-primary btn-sm pf-confirm" type="button"
+          [disabled]="r.saving || (r.choice !== 1 && r.choice !== 2)"
+          (click)="resolve(r)">{{ r.saving ? 'Saving…' : 'Confirm' }}</button>
+      </div>
+      <small class="pf-hint">{{ r.available >= r.quantity ? 'Stock available → Direct DO suggested' : 'Short → PP / buy suggested' }}</small>
+    </div>
+  </div>
+
+  <div class="dt-footer">{{ filtered.length }} total</div>
+
+  </div>
+</div>

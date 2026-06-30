@@ -52,7 +52,8 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- PENDING MATERIAL REQUESTS (Company 1 only)                             -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div class="mr-widget" *ngIf="companyId === 1" (click)="goToMrList()">
+  <div class="mr-row-2" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+  <div class="mr-widget" *ngIf="companyId === 1" (click)="goToMrList()" style="flex:1 1 360px;min-width:320px">
     <div class="mr-widget-head">
       <div class="mr-widget-title">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -97,6 +98,51 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+  <!-- PENDING FULFILLMENT (Both items → procurement decide) -->
+  <div class="mr-widget" (click)="goToPendingFulfillment()" style="flex:1 1 360px;min-width:320px">
+    <div class="mr-widget-head">
+      <div class="mr-widget-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M3 3v18h18"/>
+          <path d="M7 14l4-4 3 3 5-6"/>
+        </svg>
+        Pending Fulfillment
+        <span class="mr-badge" *ngIf="pendingFulfillment.length">{{ pendingFulfillment.length }}</span>
+      </div>
+      <span class="mr-sub">Both items awaiting PP / Direct DO — click to resolve</span>
+    </div>
+
+    <div *ngIf="pfLoading" class="no-data" style="padding:16px">Loading...</div>
+
+    <div *ngIf="!pfLoading && !pendingFulfillment.length" class="no-data" style="padding:16px">
+      No pending fulfillment items. 🎉
+    </div>
+
+    <div class="table-wrap" *ngIf="!pfLoading && pendingFulfillment.length">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>SO No</th>
+            <th>Item</th>
+            <th style="text-align:center">Qty</th>
+            <th style="text-align:center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of pendingFulfillment.slice(0, 6)" class="mr-row">
+            <td style="font-weight:600">{{ r.salesOrderNo || r.SalesOrderNo || ('SO-' + (r.salesOrderId || r.SalesOrderId)) }}</td>
+            <td>{{ r.itemName || r.ItemName || '—' }}</td>
+            <td style="text-align:center">{{ r.quantity ?? r.Quantity ?? 0 }}</td>
+            <td style="text-align:center">
+              <span class="badge-sm-warn">Pending</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
