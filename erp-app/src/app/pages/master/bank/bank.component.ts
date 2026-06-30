@@ -120,6 +120,19 @@ export class BankComponent implements OnInit {
     if (!this.form.contactEmail?.trim()) { this.message = 'Contact Email is required.'; this.isError = true; return; }
     if (!this.form.budgetLineId) { this.message = 'Ledger Account (Ledger Name) is required. Please select a ledger from the dropdown.'; this.isError = true; return; }
 
+    const bankNameLower = this.form.bankName.trim().toLowerCase();
+    const duplicate = (this.items || []).some((b: any) => {
+      const existing = String(b.bankName ?? '').trim().toLowerCase();
+      const sameRow = this.isEditMode && Number(b.id) === Number(this.selectedId);
+      return existing === bankNameLower && !sameRow;
+    });
+    if (duplicate) {
+      this.popupIsSuccess = false;
+      this.popupMessage = `A bank named "${this.form.bankName.trim()}" already exists.`;
+      this.showResultPopup = true;
+      return;
+    }
+
     const rawAccNo = this.form.accountNumber.trim().replace(/\D/g, '');
     const accountNo = rawAccNo ? Number(rawAccNo) : 0;
 

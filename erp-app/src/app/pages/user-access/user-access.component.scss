@@ -278,14 +278,14 @@
 }
 
 .fn-col  { width: 180px; padding: 8px 12px; text-align: left; font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--text-muted); }
-.flag-col { width: 58px; text-align: center; }
+.flag-col { width: 66px; text-align: center; }
 
 .flag-head {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 6px 2px;
+  gap: 6px;
+  padding: 8px 2px;
 }
 
 .flag-key {
@@ -298,7 +298,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 5px;
   cursor: pointer;
 }
 
@@ -330,7 +330,7 @@
 
 .flag-cell {
   text-align: center;
-  padding: 8px 2px;
+  padding: 10px 6px;
 }
 
 /* Custom checkbox */
