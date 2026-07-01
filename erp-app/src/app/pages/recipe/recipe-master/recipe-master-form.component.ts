@@ -181,7 +181,7 @@ export class RecipeMasterFormComponent implements OnInit {
   }
 
   get totalCost(): number {
-    return this.lines.reduce((sum, l) => sum + (Number(l.unitCost) || 0), 0);
+    return this.lines.reduce((sum, l) => sum + this.rowCost(l), 0);
   }
 
   next(): void {
