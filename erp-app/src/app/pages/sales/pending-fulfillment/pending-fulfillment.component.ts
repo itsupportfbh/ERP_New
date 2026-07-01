@@ -8,6 +8,7 @@ interface PendingRow {
   salesOrderId: number;
   salesOrderNo: string;
   customerName: string;
+  deliveryDate: string | null;
   itemId: number;
   itemName: string;
   uom: string;
@@ -32,6 +33,7 @@ export class PendingFulfillmentComponent implements OnInit {
   filtered: PendingRow[] = [];
   searchText = '';
   pageSize = 10;
+  showAlerts = false;
 
   get paged(): PendingRow[] { return this.filtered.slice(0, this.pageSize); }
 
@@ -58,6 +60,7 @@ export class PendingFulfillmentComponent implements OnInit {
           salesOrderId: Number(r.salesOrderId ?? r.SalesOrderId),
           salesOrderNo: String(r.salesOrderNo ?? r.SalesOrderNo ?? ''),
           customerName: String(r.customerName ?? r.CustomerName ?? ''),
+          deliveryDate: r.deliveryDate ?? r.DeliveryDate ?? null,
           itemId: Number(r.itemId ?? r.ItemId),
           itemName: String(r.itemName ?? r.ItemName ?? ''),
           uom: String(r.uom ?? r.Uom ?? ''),

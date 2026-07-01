@@ -22,7 +22,8 @@
       "Bash(xargs grep -n \"namespace\\\\|interface\")",
       "Bash(grep -v \"//\\\\|AdjustStock\\\\|GetStock\")",
       "Bash(grep -v \"//\\\\|comment\")",
-      "Bash(xargs grep -l \"class GrnForPinDto\")"
+      "Bash(xargs grep -l \"class GrnForPinDto\")",
+      "PowerShell(dotnet build \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi\\\\FinanceApi.csproj\" -nologo -v quiet 2>&1)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

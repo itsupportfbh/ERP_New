@@ -105,7 +105,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
       label: 'Purchase',
       icon: 'purchase',
       children: [
-        { label: 'Pending Fulfillment', icon: 'pr',     route: '/app/sales/pending-fulfillment', permId: 'pr-list' },
         { label: 'Purchase Request', icon: 'pr',        route: '/app/purchase/requests',         permId: 'pr-list' },
         { label: 'Purchase Order',   icon: 'po',        route: '/app/purchase/orders',           permId: 'po-list' },
         { label: 'RFQ',              icon: 'rfq',       route: '/app/purchase/rfq',              permId: 'rfq' },
@@ -114,6 +113,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Supplier Invoice', icon: 'invoice',   route: '/app/purchase/supplier-invoice', permId: 'pin-list' },
         { label: 'Debit Note',       icon: 'debit',     route: '/app/purchase/debit-note',       permId: 'dn-list' },
         { label: 'Scorecard',        icon: 'scorecard', route: '/app/purchase/scorecard',        permId: 'supplier-scorecard' },
+        { label: 'Pending Fulfillment', icon: 'pr',     route: '/app/purchase/pending-fulfillment', permId: 'pr-list' },
       ]
     },
         {

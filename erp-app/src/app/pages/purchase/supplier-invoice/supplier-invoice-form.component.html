@@ -5,13 +5,9 @@
     <button class="btn btn-outline btn-sm" (click)="back()">&#8592; Back</button>
     <div class="pin-title-block">
       <h2>{{ title }}</h2>
-      <span class="pin-badge-3way">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;margin-right:4px;"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
-        3-Way Match: PO · GRN · Invoice
-      </span>
     </div>
     <div class="header-actions">
-      <span class="status-badge" [class.posted]="isGlPosted">{{ isGlPosted ? 'GL Posted' : status }}</span>
+      <span class="status-badge posted" *ngIf="isGlPosted">GL Posted</span>
       <button class="btn btn-primary btn-sm" *ngIf="isEdit && !isGlPosted" [disabled]="posting" (click)="postToAP()">
         <span class="btn-spinner" *ngIf="posting"></span>
         {{ posting ? 'Posting…' : '&#128229; Post to A/P' }}
@@ -67,47 +63,22 @@
             </div>
           </div>
 
-          <!-- Selected GRN badges -->
-          <div class="grn-badges" *ngIf="selectedGrnNos.length">
-            <span class="grn-badge" *ngFor="let n of selectedGrnNos">
-              {{ n }}
-              <button type="button" class="grn-badge-rm" (click)="removeGrnByNo(n)" [disabled]="isGlPosted">&#10005;</button>
-            </span>
-          </div>
-
-          <!-- 3-way match status bar -->
-          <div class="match-bar" *ngIf="lines.length">
-            <div class="match-bar-inner" [class.ok]="allMatchOk" [class.warn]="!allMatchOk">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0;">
-                <circle cx="8" cy="8" r="7"/>
-                <polyline *ngIf="allMatchOk" points="5,8 7,10 11,6"/>
-                <line *ngIf="!allMatchOk" x1="8" y1="5" x2="8" y2="9"/>
-                <circle *ngIf="!allMatchOk" cx="8" cy="11.5" r="0.5" fill="currentColor"/>
-              </svg>
-              <span *ngIf="allMatchOk">3-Way Match: All lines OK</span>
-              <span *ngIf="!allMatchOk">3-Way Match: {{ mismatchCount }} line(s) exceed GRN qty — review before posting</span>
-            </div>
-          </div>
       </div>
 
       <div class="form-row cols-2 block-gap">
         <erp-input label="Invoice Date" type="date" [(ngModel)]="invoiceDate" [disabled]="isGlPosted"></erp-input>
         <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
       </div>
-      <div class="form-row cols-3 block-gap">
+      <div class="form-row cols-2 block-gap">
         <erp-input label="Tax %" type="number" [(ngModel)]="taxRate" (ngModelChange)="recalcLines()" [disabled]="isGlPosted" placeholder="0"></erp-input>
         <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="isGlPosted" *ngIf="fxRate !== 1"></erp-input>
       </div>
     </div>
 
-    <!-- ── Lines – 3-Way Match Table ──────────────── -->
+    <!-- ── Invoice Lines ──────────────────────────── -->
     <div class="card section-card">
       <div class="section-label-row">
-        <div class="section-label">Invoice Lines — 3-Way Match</div>
-        <div class="three-way-legend" *ngIf="lines.length">
-          <span class="legend-ok">&#9679; OK</span>
-          <span class="legend-mm">&#9679; Mismatch</span>
-        </div>
+        <div class="section-label">Invoice Lines</div>
       </div>
 
       <div class="lines-table-wrap">
@@ -116,8 +87,6 @@
             <tr>
               <th class="col-num">#</th>
               <th class="col-item">Item</th>
-              <th class="col-qty num-cell">PO Qty</th>
-              <th class="col-qty num-cell">GRN Qty</th>
               <th class="col-qty num-cell">Inv Qty</th>
               <th class="col-partial" *ngIf="!isGlPosted">Partial</th>
               <th class="col-price num-cell">Unit Price</th>
@@ -126,7 +95,6 @@
               <th class="col-amt num-cell">Tax Amt</th>
               <th class="col-amt num-cell">Grand Total</th>
               <th class="col-ledger" style="display:none">Ledger</th>
-              <th class="col-match">Match</th>
             </tr>
           </thead>
           <tbody>
@@ -135,8 +103,6 @@
                 [class.match-mm-row]="l.matchStatus === 'Mismatch'">
               <td class="row-num">{{ i + 1 }}</td>
               <td class="col-item-val">{{ l.itemName || '—' }}</td>
-              <td class="num-cell po-qty">{{ l.poQty || '—' }}</td>
-              <td class="num-cell grn-qty">{{ l.grnQty }}</td>
               <td class="num-cell">
                 <erp-input type="number" [(ngModel)]="l.qty" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0"></erp-input>
               </td>
@@ -157,21 +123,16 @@
               <td class="col-ledger" style="display:none">
                 <erp-dropdown [options]="ledgerOptions" [(ngModel)]="l.budgetLineId" [disabled]="isGlPosted" placeholder="Ledger"></erp-dropdown>
               </td>
-              <td class="match-cell">
-                <span class="match-badge ok"  *ngIf="l.matchStatus === 'OK'">&#10003; OK</span>
-                <span class="match-badge mm"  *ngIf="l.matchStatus === 'Mismatch'">&#9651; Mismatch</span>
-                <span class="match-badge na"  *ngIf="!l.matchStatus">—</span>
-              </td>
             </tr>
             <tr *ngIf="!lines.length">
-              <td colspan="13" class="empty-lines">Select GRN(s) above to populate invoice lines with 3-way match data</td>
+              <td colspan="10" class="empty-lines">Select GRN(s) above to populate invoice lines</td>
             </tr>
           </tbody>
           <tfoot *ngIf="lines.length">
             <tr class="total-foot">
-              <td colspan="9" style="text-align:right;padding:8px 10px;font-size:11px;font-weight:700;color:var(--text-muted);">TOTALS</td>
+              <td colspan="7" style="text-align:right;padding:8px 10px;font-size:11px;font-weight:700;color:var(--text-muted);">TOTALS</td>
               <td class="num-cell" style="font-weight:700;color:var(--primary)">{{ grandTotal | number:'1.2-2' }}</td>
-              <td colspan="2"></td>
+              <td colspan="1"></td>
             </tr>
           </tfoot>
         </table>
@@ -186,23 +147,17 @@
     </div>
 
     <!-- ── Footer ──────────────────────────────────── -->
-    <div class="wizard-footer">
+    <div class="wizard-footer" style="display:flex;justify-content:flex-end;gap:10px;">
       <button class="btn btn-outline btn-sm" (click)="back()">Cancel</button>
-      <div class="footer-right" *ngIf="!isGlPosted">
-        <button class="btn btn-outline btn-sm" [disabled]="saving" (click)="submit(true)">
-          <span class="btn-spinner" *ngIf="saving"></span>
-          &#128190; Save as Draft
-        </button>
-        <button class="btn btn-primary btn-sm" [disabled]="saving" (click)="submit(false)">
-          <span class="btn-spinner" *ngIf="saving"></span>
-          {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update' : '&#10003; Save Invoice') }}
-        </button>
-        <button class="btn btn-primary btn-sm" *ngIf="isEdit" [disabled]="posting" (click)="postToAP()"
-          style="background:#0e4a60;">
-          <span class="btn-spinner" *ngIf="posting"></span>
-          {{ posting ? 'Posting…' : '&#128229; Post to A/P' }}
-        </button>
-      </div>
+      <button class="btn btn-primary btn-sm" *ngIf="!isGlPosted" [disabled]="saving" (click)="submit(false)">
+        <span class="btn-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Saving…' : (isEdit ? '&#10003; Update' : '&#10003; Save Invoice') }}
+      </button>
+      <button class="btn btn-primary btn-sm" *ngIf="isEdit && !isGlPosted" [disabled]="posting" (click)="postToAP()"
+        style="background:#0e4a60;">
+        <span class="btn-spinner" *ngIf="posting"></span>
+        {{ posting ? 'Posting…' : '&#128229; Post to A/P' }}
+      </button>
     </div>
 
   </ng-container>
