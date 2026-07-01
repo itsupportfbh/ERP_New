@@ -259,91 +259,37 @@ export class SupplierInvoiceListComponent implements OnInit {
   createFromOcr(): void {
     if (!this.ocrResult) return;
 
+    // GRN is mandatory — validate here so the user gets a friendly warning
+    // instead of a 500 "GRN is required" error from the backend.
+    if (!this.ocrSelectedGrns.length) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'GRN Required',
+        text: 'Please select at least one GRN for this invoice before creating.',
+        confirmButtonColor: '#16a34a'
+      });
+      return;
+    }
+
     const grnIds = this.ocrSelectedGrns.map((g: any) => Number(g.id));
-    const grnNos = this.ocrSelectedGrns.map((g: any) => g.grnNo as string);
-    const firstGrn = this.ocrSelectedGrns[0] as any;
-    const systemInvoiceNo = this.docNoSvc.reserveNextNumber('PIN', this.companyId || undefined);
-    const companyCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
-    const companyCountryId = Number(localStorage.getItem('companyCountryId') || 0) || null;
-    const taxDecision = this.taxDecisionSvc.decide({
-      companyCountryId,
-      partnerCountryId: firstGrn?.supplierCountryId ?? null,
-      companyCurrencyId,
-      documentCurrencyId: firstGrn?.currencyId ?? companyCurrencyId,
-      defaultTaxRate: Number(this.ocrResult.taxPercent ?? 0)
-    });
 
-    const ocrLines: any[] = this.ocrResult.lines ?? [];
-    const matchByKey = new Map(this.ocrReceivingMatches.map(line => [line.itemKey, line]));
-    const linesData = ocrLines.map((l: any) => {
-      const qty = Number(l.qty ?? 0);
-      const unitPrice = Number(l.unitPrice ?? 0);
-      const discPct = Number(l.discountPct ?? 0);
-      const base = qty * unitPrice * (1 - discPct / 100);
-      const itemKey = this.receivingSvc.normalizeKey(String(l.item ?? l.itemName ?? ''));
-      const received = matchByKey.get(itemKey);
-      const taxAmt = taxDecision.taxMode === 'Exclusive' ? +(base * (taxDecision.taxRate / 100)).toFixed(2) : 0;
-      return {
-        itemId: null,
-        itemName: l.item ?? l.itemName ?? '',
-        locationId: null,
-        poQty: 0,
-        grnQty: received?.receivedQty ?? qty,
-        qty,
-        unitPrice,
-        discountPct: discPct,
-        taxMode: taxDecision.taxMode,
-        lineTotal: +base.toFixed(2),
-        taxAmt,
-        lineGrandTotal: +(base + taxAmt).toFixed(2),
-        budgetLineId: null,
-        dcNoteNo: '',
-        remarks: received ? `Receiving qty ${received.receivedQty}` : '',
-        matchStatus: received?.status ?? ''
-      };
-    });
-
-    const grandTotal = +linesData.reduce((s: number, l: any) => s + l.lineGrandTotal, 0).toFixed(2);
-    const loginUserId = Number(localStorage.getItem('id')) || 0;
-    const today = new Date().toISOString().substring(0, 10);
-
-    const payload: any = {
-      InvoiceNo: systemInvoiceNo,
-      SupplierInvoiceNo: this.ocrResult.invoiceNo ?? '',
-      VendorInvoiceNo: this.ocrResult.invoiceNo ?? '',
-      InvoiceDate: this.ocrResult.invoiceDate ? String(this.ocrResult.invoiceDate).substring(0, 10) : today,
-      SupplierId: firstGrn?.supplierId ?? 0,
-      CurrencyId: firstGrn?.currencyId ?? companyCurrencyId,
-      FxRate: firstGrn?.fxRate ?? 1,
-      TaxRate: taxDecision.taxRate,
-      Tax: +(linesData.reduce((s: number, l: any) => s + Number(l.taxAmt ?? 0), 0)).toFixed(2),
-      Amount: grandTotal,
-      GrnNos: grnNos.join(','),
-      Status: 1,
-      LinesJson: JSON.stringify(linesData),
-      GrnId: grnIds[0] ?? null,
-      GrnIds: grnIds,
-      IsPartial: false,
-      CreatedBy: loginUserId,
-      UpdatedBy: loginUserId,
-      IsOverseas: taxDecision.isOverseas
+    // Don't create directly. Hand the SCANNED (OCR) data + selected GRN(s) to the
+    // invoice form (as a draft) so the user can review the scanned lines/amounts,
+    // then Save from there.
+    const draft = {
+      invoiceNo: this.ocrResult.invoiceNo ?? '',
+      invoiceDate: this.ocrResult.invoiceDate ? String(this.ocrResult.invoiceDate).substring(0, 10) : '',
+      grnIds,
+      lines: (this.ocrResult.lines ?? []).map((l: any) => ({
+        item: l.item ?? l.itemName ?? '',
+        qty: Number(l.qty ?? 0),
+        unitPrice: Number(l.unitPrice ?? 0),
+        discountPct: Number(l.discountPct ?? 0)
+      }))
     };
-
-    this.ocrLoading = true;
-    this.ocrError = '';
-    this.svc.createSupplierInvoice(payload).subscribe({
-      next: () => {
-        this.ocrLoading = false;
-        this.closeOcrModal();
-        this.load();
-        Swal.fire({ icon: 'success', title: 'Invoice Created!', text: `Supplier invoice ${systemInvoiceNo} created successfully from OCR.`, confirmButtonColor: '#16a34a' });
-      },
-      error: (err: any) => {
-        this.ocrLoading = false;
-        this.ocrError = err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.';
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message ?? err?.message ?? 'Failed to create invoice. Please try again.', confirmButtonColor: '#16a34a' });
-      }
-    });
+    sessionStorage.setItem('ocrPinDraft', JSON.stringify(draft));
+    this.closeOcrModal();
+    this.router.navigate(['/app/purchase/supplier-invoice/new']);
   }
 
   openLinesModal(row: any): void {

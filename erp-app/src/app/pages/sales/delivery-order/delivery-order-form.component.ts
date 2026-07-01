@@ -162,6 +162,11 @@ export class DeliveryOrderFormComponent implements OnInit {
           } as DoLine;
         });
 
+        // 'Both' items still awaiting a PP / Direct DO decision (procurement not done)
+        const hasPendingFulfillment = arr.some((l: any) => {
+          const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
+          return sm !== 1 && sm !== 2;   // 0 / null = Pending
+        });
         const hasDirectDoShortage = arr.some((l: any) => {
           const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
           const sq = Number(l.shortageQty ?? l.ShortageQty ?? 0);
@@ -173,7 +178,15 @@ export class DeliveryOrderFormComponent implements OnInit {
           const ps = Number(l.procurementStatus ?? l.ProcurementStatus ?? 0);
           return sm === 1 && ps < 4;
         });
-        if (hasDirectDoShortage) {
+        if (hasPendingFulfillment) {
+          void Swal.fire({
+            icon: 'warning',
+            title: 'Fulfillment Pending',
+            text: 'This Sales Order has item(s) still awaiting a PP / Direct DO decision. Please resolve them in Purchase → Pending Fulfillment before creating a Delivery Order.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#16a34a'
+          }).then(() => this.clear());
+        } else if (hasDirectDoShortage) {
           void Swal.fire({
             icon: 'warning',
             title: 'Stock Not Yet Received',

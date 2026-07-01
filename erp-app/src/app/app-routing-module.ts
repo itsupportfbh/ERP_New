@@ -296,7 +296,7 @@ const routes: Routes = [
       { path: 'sales/orders/new',              component: SalesOrderFormComponent },
       { path: 'sales/orders/:id',              component: SalesOrderFormComponent },
 
-      { path: 'sales/pending-fulfillment',     component: PendingFulfillmentComponent },
+      { path: 'purchase/pending-fulfillment',  component: PendingFulfillmentComponent },
 
       { path: 'sales/picking',                 component: PickingListComponent },
       { path: 'sales/picking/new',             component: PickingFormComponent },

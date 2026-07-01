@@ -170,9 +170,44 @@ export class SupplierInvoiceFormComponent implements OnInit {
           this.fxRate = selectedGrns[0].fxRate;
           this.applyTaxDecision(this.taxRate);
         }
-        this.loadLinesWithPoFetch(selectedGrns);
+        // Prefer the SCANNED (OCR) line items so the user reviews what the supplier
+        // billed. Fall back to GRN lines only if the scan produced no lines.
+        const draftLines: any[] = draft.lines ?? [];
+        if (draftLines.length) {
+          this.lines = draftLines.map((l: any) => this.makeOcrLine(l));
+        } else {
+          this.loadLinesWithPoFetch(selectedGrns);
+        }
       }
     } catch {}
+  }
+
+  // Build an editable invoice line from a scanned (OCR) line item.
+  // itemId is left null so the user can map it to a real item before saving.
+  private makeOcrLine(l: any): PinLine {
+    const qty = Number(l.qty ?? 0) || 0;
+    const unitPrice = Number(l.unitPrice ?? 0) || 0;
+    const line: PinLine = {
+      itemId: null,
+      itemName: String(l.item ?? l.itemName ?? ''),
+      locationId: null,
+      poQty: 0,
+      grnQty: qty,
+      qty,
+      unitPrice,
+      discountPct: Number(l.discountPct ?? 0) || 0,
+      taxMode: this.defaultTaxMode === 'ZeroRated' ? 'Zero' : 'Exclusive',
+      lineTotal: 0,
+      taxAmt: 0,
+      lineGrandTotal: 0,
+      budgetLineId: null,
+      dcNoteNo: '',
+      remarks: 'From scan',
+      matchStatus: '',
+      isPartial: false
+    };
+    this.recalcLine(line);
+    return line;
   }
 
   @HostListener('document:click', ['$event'])
