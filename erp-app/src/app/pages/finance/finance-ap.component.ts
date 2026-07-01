@@ -88,6 +88,7 @@ export class FinanceApComponent implements OnInit {
   apAdvBankHeadId: number | null = null;
   apAdvBankName = '';
   apAdvGrnNo = '';
+  apAdvGrnTotal = 0;
   apAdvFxRate = 1;
   apAdvAmountBase = 0;
   apAdvCurrencyId: number | null = null;
@@ -670,6 +671,7 @@ export class FinanceApComponent implements OnInit {
     this.apAdvBankName   = '';
     this.apAdvGrnNo = '';
     this.apAdvGrnSearch = '';
+    this.apAdvGrnTotal = 0;
     this.apAdvFxRate = 1;
     this.apAdvAmountBase = 0;
     this.apAdvCurrencyId = null;
@@ -710,6 +712,29 @@ export class FinanceApComponent implements OnInit {
       Swal.fire('Required', 'Please select a bank account.', 'warning'); return;
     }
 
+    // Warn when the advance exceeds the selected GRN total, but allow proceeding.
+    if (this.apAdvExceedsGrn) {
+      const amt  = (Number(this.advanceForm.amount) || 0).toFixed(2);
+      const grn  = this.apAdvGrnTotal.toFixed(2);
+      const cur  = this.apAdvCurrencyName || 'SGD';
+      Swal.fire({
+        icon: 'warning',
+        title: 'Advance exceeds GRN total',
+        html: `Advance <strong>${amt} ${cur}</strong> is more than GRN <strong>${this.apAdvGrnNo}</strong> total <strong>${grn} ${cur}</strong>.<br>Do you still want to save?`,
+        showCancelButton: true,
+        confirmButtonText: 'Save anyway',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#d97706',
+        cancelButtonColor: '#6b7280'
+      }).then(res => { if (res.isConfirmed) this.doSaveAdvance(); });
+      return;
+    }
+
+    this.doSaveAdvance();
+  }
+
+  private doSaveAdvance(): void {
+    const needsBank = this.apAdvMethodId === 2 || this.apAdvMethodId === 3;
     this.savingAdvance = true;
     this.error = '';
 
@@ -861,10 +886,25 @@ export class FinanceApComponent implements OnInit {
     this.apAdvGrnNo    = g.grnNo ?? g.GrnNo ?? '';
     this.advGrnSearch  = this.apAdvGrnNo;
     this.advGrnOpen    = false;
+    this.apAdvGrnTotal = this.computeGrnTotal(g);
+  }
+
+  /** Sum of (qtyReceived × unitPrice) across the GRN's line items (stored in GRNJson). */
+  private computeGrnTotal(g: any): number {
+    const raw = g?.grnJson ?? g?.GRNJson ?? g?.gRNJson ?? '[]';
+    let lines: any[] = [];
+    try { lines = Array.isArray(raw) ? raw : JSON.parse(raw || '[]'); } catch { lines = []; }
+    return lines.reduce((s, l) => s + (Number(l.qtyReceived) || 0) * (Number(l.unitPrice) || 0), 0);
+  }
+
+  /** True when the entered advance amount exceeds the selected GRN's total. */
+  get apAdvExceedsGrn(): boolean {
+    return this.apAdvGrnTotal > 0 && (Number(this.advanceForm.amount) || 0) > this.apAdvGrnTotal;
   }
 
   private loadGrns(): void {
-    this.finance.list({ list: '/PurchaseGoodReceipt/GetAllGRN' }).subscribe({
+    // Advance dropdown: exclude fully-paid GRNs (they don't need an advance).
+    this.finance.list({ list: '/PurchaseGoodReceipt/GetAvailableGRNsForAdvance' }).subscribe({
       next: res => {
         this.grns = this.finance.unwrap(res).map((g: any) => ({
           ...g,

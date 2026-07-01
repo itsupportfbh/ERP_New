@@ -373,11 +373,15 @@ export class SupplierInvoiceListComponent implements OnInit {
 
   private doPostToAp(row: any): void {
     this.svc.postPinToAP(row.id).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.isPosting = false;
         this.closeMatchModal();
         this.load();
-        Swal.fire({ icon: 'success', title: 'Posted!', text: 'Invoice posted to Accounts Payable successfully.', confirmButtonColor: '#16a34a' });
+        if (res && res.glPosted === false) {
+          Swal.fire({ icon: 'warning', title: 'Posted to A/P (GL pending)', text: res.message || 'Posted to A/P, but GL posting did not complete — please check the ledger account mappings.', confirmButtonColor: '#d97706' });
+        } else {
+          Swal.fire({ icon: 'success', title: 'Posted!', text: 'Invoice posted to Accounts Payable successfully.', confirmButtonColor: '#16a34a' });
+        }
       },
       error: err => {
         this.isPosting = false;
