@@ -6,20 +6,18 @@
     <table class="dash-table">
       <thead>
         <tr>
-          <th>PR #</th>
+          <th>SO / Batch No</th>
           <th>Item</th>
           <th>Qty</th>
-          <th>Status</th>
+          <th>UOM</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let item of Stockmovement">
-          <td>{{ item.prNo }}</td>
+          <td>{{ item.soNo }}</td>
           <td>{{ item.item }}</td>
           <td>{{ item.qty }}</td>
-          <td>
-            <span [ngClass]="item.class">{{ item.status }}</span>
-          </td>
+          <td>{{ item.uom }}</td>
         </tr>
         <tr *ngIf="Stockmovement.length === 0">
           <td colspan="4" class="no-data">No stock movements today</td>

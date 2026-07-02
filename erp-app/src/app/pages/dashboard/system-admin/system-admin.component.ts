@@ -16,6 +16,8 @@ export class SystemAdminComponent implements OnInit {
 
   totalRevenue = '₹0';
   totalPayables = '₹0';
+  arInvoices = 0;
+  apInvoices = 0;
   totalSkus = 0;
   allExceptions = 0;
 
@@ -30,6 +32,8 @@ export class SystemAdminComponent implements OnInit {
       next: (res: AdminSummaryDashboard) => {
         this.totalRevenue = this.formatAmount(res.totalRevenue ?? 0);
         this.totalPayables = this.formatAmount(res.totalPayables ?? 0);
+        this.arInvoices = res.arInvoices ?? 0;
+        this.apInvoices = res.apInvoices ?? 0;
         this.totalSkus = res.totalSkus ?? 0;
         this.allExceptions = res.allExceptions ?? 0;
 
