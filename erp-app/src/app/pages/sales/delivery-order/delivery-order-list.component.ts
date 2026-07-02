@@ -45,6 +45,8 @@ export class DeliveryOrderListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  printBillTo: { name?: string; lines?: string[] } = {};
+  printDeliverTo: { name?: string; lines?: string[] } = {};
 
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item Code', key: 'itemCode', align: 'center' },
@@ -171,6 +173,10 @@ export class DeliveryOrderListComponent implements OnInit {
             { label: 'Posted', value: row.postedLabel },
           ];
           this.viewTotals = [];
+          const custName = hdr.customerName ?? hdr.CustomerName ?? '—';
+          const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
+          this.printBillTo = { name: custName, lines: [custAddr].filter(Boolean) };
+          this.printDeliverTo = { name: custName, lines: [custAddr, row.routeName ? `Route: ${row.routeName}` : ''].filter(Boolean) };
           this.viewTitle = `Delivery Order Lines — ${row.doNumber}`;
           this.viewSubtitle = `SO: ${row.salesOrderNo || '—'} · Route: ${row.routeName || '—'}`;
           this.viewLoading = false;
@@ -197,10 +203,12 @@ export class DeliveryOrderListComponent implements OnInit {
       this.printSvc.print({
         docTitle: 'DELIVERY ORDER',
         docNo: this.activeRow?.doNumber ?? '',
-        fields: this.viewInfo,
+        fields: this.viewInfo.filter(f => f.label !== 'Customer'),
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
+        billTo: this.printBillTo,
+        deliverTo: this.printDeliverTo,
       });
     });
   }

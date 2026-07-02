@@ -10,6 +10,8 @@ export interface PrintColumn {
   type?: 'text' | 'number' | 'qty' | 'date';
 }
 
+export interface PrintParty { name?: string; lines?: string[]; }
+
 export interface DocumentPrintConfig {
   docTitle: string;
   docNo: string;
@@ -19,6 +21,9 @@ export interface DocumentPrintConfig {
   lines: any[];
   totals?: PrintField[];
   company?: { name?: string; addr1?: string; addr2?: string; phone?: string; email?: string; logo?: string; };
+  /** Optional Bill To / Deliver To address blocks. When provided they replace the single "Order To" box. */
+  billTo?: PrintParty;
+  deliverTo?: PrintParty;
 }
 
 export interface ClassicParty { name?: string; lines?: string[]; tel?: string; fax?: string; attn?: string; acceptance?: string[]; }

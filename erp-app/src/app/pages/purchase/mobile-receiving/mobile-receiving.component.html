@@ -70,7 +70,7 @@
         </div>
 
         <div class="mr-field mr-field-grow">
-          <label class="mr-field-label">Barcode</label>
+          <label class="mr-field-label">Barcode (optional — or use "Add" on PO lines below)</label>
           <div style="display:flex;gap:6px;align-items:center;">
             <input #barcodeInput class="mr-input" [(ngModel)]="mrBarcode"
               (keydown.enter)="addScan()" placeholder="Scan or type barcode…" autofocus
