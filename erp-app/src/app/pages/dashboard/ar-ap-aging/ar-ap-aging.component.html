@@ -1,0 +1,31 @@
+<div class="section-row">
+
+  <div class="section-card">
+    <h6 class="section-title">AR Aging</h6>
+    <table class="dash-table">
+      <thead><tr><th>Bucket</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let item of receivables">
+          <td>{{ item.period }}</td>
+          <td [class.warn-text]="item.overdue">{{ item.amount }}</td>
+        </tr>
+        <tr *ngIf="!receivables.length"><td colspan="2" class="no-data">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-card">
+    <h6 class="section-title">AP Aging</h6>
+    <table class="dash-table">
+      <thead><tr><th>Bucket</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let item of payables">
+          <td>{{ item.period }}</td>
+          <td [class.warn-text]="item.overdue">{{ item.amount }}</td>
+        </tr>
+        <tr *ngIf="!payables.length"><td colspan="2" class="no-data">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>

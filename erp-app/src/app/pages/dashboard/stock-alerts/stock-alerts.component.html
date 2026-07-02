@@ -1,0 +1,27 @@
+<div class="section-card">
+
+  <div class="section-title">Stock Alerts</div>
+
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Issue</th>
+          <th>Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of stockAlerts">
+          <td>{{ item.sku }}</td>
+          <td><span [ngClass]="item.class">{{ item.issue }}</span></td>
+          <td>{{ item.qty }}</td>
+        </tr>
+        <tr *ngIf="stockAlerts.length === 0">
+          <td colspan="3" class="no-data">No stock alerts</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>

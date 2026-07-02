@@ -1,0 +1,55 @@
+<div class="kpi-grid">
+
+  <div class="kpi-card blue-card">
+    <div class="kpi-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="kpi-title">Total Revenue</div>
+    <div class="kpi-value">{{ totalRevenue }}</div>
+    <div class="kpi-footer" *ngIf="totalRevenueChangePercent !== 0">
+      <span [ngClass]="totalRevenueChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+        {{ totalRevenueChangePercent >= 0 ? '↑' : '↓' }} {{ absValue(totalRevenueChangePercent) }}%
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card green-card">
+    <div class="kpi-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    </div>
+    <div class="kpi-title">Collections</div>
+    <div class="kpi-value">{{ collections }}</div>
+    <div class="kpi-footer" *ngIf="collectionsChangePercent !== 0">
+      <span [ngClass]="collectionsChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+        {{ collectionsChangePercent >= 0 ? '↑' : '↓' }} {{ absValue(collectionsChangePercent) }}%
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card orange-card">
+    <div class="kpi-icon orange-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    </div>
+    <div class="kpi-title">Total Payables</div>
+    <div class="kpi-value">{{ totalPayables }}</div>
+    <div class="kpi-footer" *ngIf="totalPayablesChangePercent !== 0">
+      <span [ngClass]="totalPayablesChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+        {{ totalPayablesChangePercent >= 0 ? '↑' : '↓' }} {{ absValue(totalPayablesChangePercent) }}%
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card red-card">
+    <div class="kpi-icon red-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="kpi-title">Exceptions</div>
+    <div class="kpi-value">{{ exceptions }}</div>
+    <div class="kpi-footer" *ngIf="exceptionsChange !== 0">
+      <span [ngClass]="exceptionsChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ exceptionsChange >= 0 ? '↑' : '↓' }} {{ absValue(exceptionsChange) }}
+      </span>
+    </div>
+  </div>
+
+</div>

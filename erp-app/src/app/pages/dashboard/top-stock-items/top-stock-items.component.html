@@ -1,0 +1,29 @@
+<div class="section-card">
+
+  <div class="section-title">Top Stock Items &mdash; Highest On-Hand Qty</div>
+
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Item</th>
+          <th>Warehouse</th>
+          <th>Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of stockItems">
+          <td>{{ item.sku }}</td>
+          <td>{{ item.itemName }}</td>
+          <td>{{ item.warehouse }}</td>
+          <td>{{ item.qty | number:'1.0-0' }}</td>
+        </tr>
+        <tr *ngIf="stockItems.length === 0">
+          <td colspan="4" class="no-data">No Records Found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>

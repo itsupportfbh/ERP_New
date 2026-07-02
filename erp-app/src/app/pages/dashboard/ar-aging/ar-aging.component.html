@@ -1,0 +1,34 @@
+<div class="section-card half-width">
+  <h6 class="section-title">AR Aging</h6>
+
+  <div *ngIf="loading" class="no-data">Loading...</div>
+
+  <div class="table-wrap" *ngIf="!loading">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Receivables Aging</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0–30 days</td>
+          <td>{{ formatCurrency(arAging.currentAmount) }}</td>
+        </tr>
+        <tr>
+          <td>31–60 days</td>
+          <td>{{ formatCurrency(arAging.days30) }}</td>
+        </tr>
+        <tr>
+          <td>61–90 days</td>
+          <td>{{ formatCurrency(arAging.days60) }}</td>
+        </tr>
+        <tr>
+          <td>&gt;90 days</td>
+          <td class="warn-text">{{ formatCurrency(arAging.days90) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

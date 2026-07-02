@@ -1,0 +1,38 @@
+<div class="section-card">
+
+  <div class="section-title">Warehouse Summary &mdash; On-Hand By Location</div>
+
+  <!-- Warehouses -->
+  <div class="ov-row" *ngFor="let warehouse of warehouses">
+    <span>{{ warehouse.warehouseName }}</span>
+    <div class="prog-wrap">
+      <div class="prog-fill green" [style.width.%]="warehouse.percentage"></div>
+    </div>
+    <span class="prog-pct">{{ warehouse.percentage }}%</span>
+    <span class="ov-val">{{ warehouse.totalSkus | number }} SKUs</span>
+  </div>
+
+  <div class="no-data" *ngIf="warehouses.length === 0">No Records Found</div>
+
+  <!-- Summary Stats -->
+  <div class="kpi-grid" style="margin-top: 12px;">
+
+    <div class="kpi-card teal-card">
+      <div class="kpi-title">New Items</div>
+      <div class="kpi-value">{{ newItems }}</div>
+      <div class="kpi-footer">
+        <span class="badge-sm-info">This Month</span>
+      </div>
+    </div>
+
+    <div class="kpi-card orange-card">
+      <div class="kpi-title">Pending DOs</div>
+      <div class="kpi-value">{{ pendingDOs }}</div>
+      <div class="kpi-footer">
+        <span class="badge-sm-warn">For Dispatch</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>

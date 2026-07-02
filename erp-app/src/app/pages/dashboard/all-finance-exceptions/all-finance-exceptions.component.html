@@ -1,0 +1,18 @@
+<div class="section-card">
+  <h6 class="section-title">Finance Exceptions</h6>
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead><tr><th>Severity</th><th>Type</th><th>Document</th><th>Party</th><th>Impact</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let item of exceptions">
+          <td><span [ngClass]="item.level === 'high' ? 'badge-sm-danger' : 'badge-sm-warn'">{{ item.severity }}</span></td>
+          <td>{{ item.type }}</td>
+          <td>{{ item.document }}</td>
+          <td>{{ item.party || '-' }}</td>
+          <td>{{ item.impact }}</td>
+        </tr>
+        <tr *ngIf="!exceptions.length"><td colspan="5" class="no-data">No exceptions</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

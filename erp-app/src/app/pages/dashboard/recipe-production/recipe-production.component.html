@@ -1,0 +1,42 @@
+<div class="kpi-grid">
+
+  <div class="kpi-card blue-card">
+    <div class="kpi-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </div>
+    <div class="kpi-title">Open Orders</div>
+    <div class="kpi-value">{{ openOrders }}</div>
+    <div class="kpi-footer" *ngIf="openOrdersChange !== 0">
+      <span [ngClass]="openOrdersChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ openOrdersChange >= 0 ? '↑' : '↓' }} {{ absValue(openOrdersChange) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card green-card">
+    <div class="kpi-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div class="kpi-title">Completed Today</div>
+    <div class="kpi-value">{{ completedToday }}</div>
+    <div class="kpi-footer" *ngIf="completedTodayChange !== 0">
+      <span [ngClass]="completedTodayChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ completedTodayChange >= 0 ? '↑' : '↓' }} {{ absValue(completedTodayChange) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card orange-card">
+    <div class="kpi-icon orange-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+    </div>
+    <div class="kpi-title">Active Recipes</div>
+    <div class="kpi-value">{{ activeRecipes }}</div>
+    <div class="kpi-footer" *ngIf="activeRecipesChange !== 0">
+      <span [ngClass]="activeRecipesChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ activeRecipesChange >= 0 ? '↑' : '↓' }} {{ absValue(activeRecipesChange) }}
+      </span>
+    </div>
+  </div>
+
+</div>

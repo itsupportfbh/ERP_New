@@ -1,0 +1,33 @@
+<div class="section-card">
+  <h6 class="section-title">My Open Sales Orders</h6>
+
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Order #</th>
+          <th>Customer</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Due</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of openSalesOrders">
+          <td>{{ order.salesOrderNo }}</td>
+          <td>{{ order.customerName }}</td>
+          <td>{{ order.requestedDate | date:'dd MMM' }}</td>
+          <td>{{ order.grandTotal | number:'1.2-2' }}</td>
+          <td>
+            <span [ngClass]="badgeClass(order.statusText)">{{ order.statusText }}</span>
+          </td>
+          <td>{{ order.deliveryDate | date:'dd MMM' }}</td>
+        </tr>
+        <tr *ngIf="!openSalesOrders?.length">
+          <td colspan="6" class="no-data">No open sales orders</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<div class="section-card">
+  <h6 class="section-title">Module Health</h6>
+
+  <div class="mod-row" *ngFor="let item of moduleHealth">
+    <span class="mod-name">{{ item.name }}</span>
+    <div class="prog-wrap">
+      <div class="prog-fill" [ngClass]="item.color" [style.width.%]="item.percentage"></div>
+    </div>
+    <span class="prog-pct" [class.warn-text]="item.alerts > 0">{{ item.status }}</span>
+  </div>
+
+  <div class="no-data" *ngIf="moduleHealth.length === 0">No module data</div>
+</div>

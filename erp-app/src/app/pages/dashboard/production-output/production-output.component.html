@@ -1,0 +1,17 @@
+<div class="section-card">
+  <h6 class="section-title">Production Output — Last 7 Days</h6>
+
+  <ng-container *ngIf="outputDays.length; else noData">
+    <div class="ov-row" *ngFor="let d of outputDays">
+      <span>{{ d.dayName }}</span>
+      <div class="prog-wrap">
+        <div class="prog-fill blue" [style.width.%]="d.pct"></div>
+      </div>
+      <span class="ov-val">{{ d.outputQty }}</span>
+    </div>
+  </ng-container>
+
+  <ng-template #noData>
+    <div class="no-data">No production output</div>
+  </ng-template>
+</div>

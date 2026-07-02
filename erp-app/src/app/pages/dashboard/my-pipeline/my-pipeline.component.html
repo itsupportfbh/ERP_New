@@ -1,0 +1,13 @@
+<div class="section-card half-width">
+  <h6 class="section-title">My Pipeline &nbsp;·&nbsp; PR to PIN Progress</h6>
+
+  <div class="ov-row" *ngFor="let item of myPipeline">
+    <span>{{ item.name }} ({{ item.count }})</span>
+    <div class="prog-wrap"><div class="prog-fill blue" [style.width.%]="item.percentage"></div></div>
+    <span class="prog-pct">{{ item.percentage }}%</span>
+  </div>
+
+  <div class="ov-row" *ngIf="!myPipeline.length">
+    <span class="no-data">Loading...</span>
+  </div>
+</div>

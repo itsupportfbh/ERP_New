@@ -1,0 +1,42 @@
+<div class="kpi-grid">
+
+  <div class="kpi-card blue-card">
+    <div class="kpi-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <div class="kpi-title">My Open PRs</div>
+    <div class="kpi-value">{{ myOpenPRs }}</div>
+    <div class="kpi-footer">
+      <span [ngClass]="myOpenPrsChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ myOpenPrsChange >= 0 ? '↑' : '↓' }} {{ myOpenPrsChange < 0 ? (myOpenPrsChange * -1) : myOpenPrsChange }}
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card orange-card">
+    <div class="kpi-icon orange-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </div>
+    <div class="kpi-title">Pending GRN</div>
+    <div class="kpi-value">{{ pendingGRN }}</div>
+    <div class="kpi-footer">
+      <span [ngClass]="pendingGrnChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ pendingGrnChange >= 0 ? '↑' : '↓' }} {{ pendingGrnChange < 0 ? (pendingGrnChange * -1) : pendingGrnChange }}
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card green-card">
+    <div class="kpi-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="kpi-title">Open PINs</div>
+    <div class="kpi-value">{{ openPINs }}</div>
+    <div class="kpi-footer">
+      <span [ngClass]="openPinsChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ openPinsChange >= 0 ? '↑' : '↓' }} {{ openPinsChange < 0 ? (openPinsChange * -1) : openPinsChange }}
+      </span>
+    </div>
+  </div>
+
+</div>

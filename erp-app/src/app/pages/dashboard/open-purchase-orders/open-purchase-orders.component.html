@@ -1,0 +1,28 @@
+<div class="section-card">
+  <h6 class="section-title">Open Purchase Orders</h6>
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>PO #</th>
+          <th>Supplier</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Due</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let po of purchaseOrders">
+          <td>{{ po.poNo }}</td>
+          <td>{{ po.supplierName }}</td>
+          <td>{{ formatDate(po.poDate) }}</td>
+          <td>{{ formatAmount(po.amount) }}</td>
+          <td>{{ formatDate(po.dueDate) }}</td>
+        </tr>
+        <tr *ngIf="purchaseOrders.length === 0">
+          <td colspan="5" class="no-data">No open purchase orders</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

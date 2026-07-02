@@ -1,0 +1,35 @@
+<div class="section-card">
+  <h6 class="section-title">My Purchase Requests</h6>
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>PR #</th>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of purchaseRequests">
+          <td>{{ item.prNo }}</td>
+          <td>{{ item.itemName }}</td>
+          <td>{{ formatQty(item) }}</td>
+          <td>
+            <span [ngClass]="{
+              'badge-sm-warn': item.statusText === 'Pending Approval',
+              'badge-sm-success': item.statusText === 'Approved',
+              'badge-sm-info': item.statusText === 'PO Raised',
+              'badge-sm-danger': item.statusText === 'Draft'
+            }">
+              {{ item.statusText }}
+            </span>
+          </td>
+        </tr>
+        <tr *ngIf="purchaseRequests.length === 0">
+          <td colspan="4" class="no-data">No purchase requests found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
