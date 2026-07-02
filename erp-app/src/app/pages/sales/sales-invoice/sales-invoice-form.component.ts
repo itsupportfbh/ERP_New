@@ -77,7 +77,7 @@ export class SalesInvoiceFormComponent implements OnInit {
     this.isEdit = !!paramId && paramId !== 'new';
     this.loadLookups();
     if (this.isEdit) { this.id = Number(paramId); this.loadForEdit(); }
-    else { this.loadSourceDocs(); }
+    else { this.loadSourceDocs(); this.addLine(); }
   }
 
   // ── Lookups ───────────────────────────────────────────
@@ -107,22 +107,28 @@ export class SalesInvoiceFormComponent implements OnInit {
 
   loadSourceDocs(): void {
     if (this.sourceType === 1) {
-      this.svc.getAvailableSalesOrdersForInvoice().subscribe(r => {
-        this.soList = this.svc.unwrap(r);
-        this.sourceDocOptions = this.soList.map((s: any) => ({
-          label: `${s.soNumber ?? s.salesOrderNo ?? s.orderNo ?? ('SO-' + (s.id ?? s.soId))} - ${s.customerName ?? ''}`,
-          value: s.id ?? s.soId,
-          raw: s
-        }));
+      this.svc.getAvailableSalesOrdersForInvoice().subscribe({
+        next: r => {
+          this.soList = this.svc.unwrap(r);
+          this.sourceDocOptions = this.soList.map((s: any) => ({
+            label: `${s.soNumber ?? s.salesOrderNo ?? s.orderNo ?? ('SO-' + (s.id ?? s.soId))} - ${s.customerName ?? ''}`,
+            value: s.id ?? s.soId,
+            raw: s
+          }));
+        },
+        error: () => { void Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load Sales Orders.', confirmButtonColor: '#16a34a' }); }
       });
     } else {
-      this.svc.getAvailableDeliveryOrdersForInvoice().subscribe(r => {
-        this.doList = this.svc.unwrap(r);
-        this.sourceDocOptions = this.doList.map((d: any) => ({
-          label: `${d.doNumber ?? d.deliveryOrderNo ?? ('DO-' + (d.id ?? d.doId))} - ${d.customerName ?? ''}`,
-          value: d.id ?? d.doId,
-          raw: d
-        }));
+      this.svc.getAvailableDeliveryOrdersForInvoice().subscribe({
+        next: r => {
+          this.doList = this.svc.unwrap(r);
+          this.sourceDocOptions = this.doList.map((d: any) => ({
+            label: `${d.doNumber ?? d.deliveryOrderNo ?? ('DO-' + (d.id ?? d.doId))} - ${d.customerName ?? ''}`,
+            value: d.id ?? d.doId,
+            raw: d
+          }));
+        },
+        error: () => { void Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load Delivery Orders.', confirmButtonColor: '#16a34a' }); }
       });
     }
   }
@@ -132,7 +138,7 @@ export class SalesInvoiceFormComponent implements OnInit {
     if (this.isEdit) return;
     this.sourceId = null;
     this.sourceDocOptions = [];
-    this.lines = [];
+    this.lines = [this.emptyLine()];
     this.customerName = '';
     this.loadSourceDocs();
   }
@@ -141,18 +147,26 @@ export class SalesInvoiceFormComponent implements OnInit {
     if (this.isEdit) return;
     this.lines = [];
     this.customerName = '';
-    if (!this.sourceId) return;
+    if (!this.sourceId) { this.addLine(); return; }
 
     const opt = this.sourceDocOptions.find(o => String(o.value) === String(this.sourceId));
-    this.customerName = opt?.raw?.customerName ?? '';
+    const raw = opt?.raw ?? {};
+    this.customerName = raw.customerName ?? raw.CustomerName ?? raw.customer ?? raw.Customer ?? '';
 
     this.svc.getSalesInvoiceSourceLines(this.sourceType, this.sourceId).subscribe({
       next: res => {
         const rows = this.svc.unwrap(res);
-        this.lines = (rows ?? []).map((r: any) => this.mapSourceLine(r));
+        const mapped = (rows ?? []).map((r: any) => this.mapSourceLine(r));
+        this.lines = mapped.length ? mapped : [this.emptyLine()];
         this.recalcLines();
+        if (!this.customerName && rows?.length) {
+          const first = rows[0];
+          this.customerName = first.customerName ?? first.CustomerName ?? first.customer ?? '';
+        }
       },
-      error: () => {}
+      error: () => {
+        void Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load source lines. Please try again.', confirmButtonColor: '#16a34a' });
+      }
     });
   }
 
@@ -178,13 +192,13 @@ export class SalesInvoiceFormComponent implements OnInit {
   }
 
   // ── Lines / totals ────────────────────────────────────
-  addLine(): void {
-    this.lines.push({
-      sourceLineId: null, itemId: null, itemName: '', description: '', ledgerId: null,
-      uom: '', qty: 1, unitPrice: 0, discountPct: 0, gstPct: 0, tax: '', taxCodeId: null,
-      lineAmount: 0, taxAmount: 0
-    });
+  private emptyLine(): SiLine {
+    return { sourceLineId: null, itemId: null, itemName: '', description: '', ledgerId: null,
+             uom: '', qty: 1, unitPrice: 0, discountPct: 0, gstPct: 0, tax: '', taxCodeId: null,
+             lineAmount: 0, taxAmount: 0 };
   }
+
+  addLine(): void { this.lines.push(this.emptyLine()); }
 
   recalcLine(line: SiLine): void {
     const qty = Number(line.qty ?? 0);
@@ -244,7 +258,7 @@ export class SalesInvoiceFormComponent implements OnInit {
           : (hdr.doId ?? hdr.deliveryOrderId ?? null);
         this.shippingCost = Number(hdr.shippingCost ?? 0);
         this.remarks = hdr.remarks ?? '';
-        this.customerName = hdr.customerName ?? hdr.CustomerName ?? '';
+        this.customerName = hdr.customerName ?? hdr.CustomerName ?? hdr.customer ?? hdr.Customer ?? '';
         this.sourceRef = hdr.sourceRef ?? hdr.SourceRef ?? '';
         this.currencyName = hdr.currencyName ?? this.currencyName;
         this.status = hdr.glPosted ? 'Posted' : (hdr.status ?? 'Draft');
@@ -267,7 +281,10 @@ export class SalesInvoiceFormComponent implements OnInit {
         this.recalcLines();
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => {
+        this.loading = false;
+        void Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load invoice. Please try again.', confirmButtonColor: '#16a34a' });
+      }
     });
   }
 
@@ -321,7 +338,10 @@ export class SalesInvoiceFormComponent implements OnInit {
     };
 
     this.svc.createSalesInvoice(payload).subscribe({
-      next: () => { this.saving = false; this.back(); },
+      next: () => {
+        this.saving = false;
+        void Swal.fire({ icon: 'success', title: 'Success', text: 'Sales Invoice created successfully.', confirmButtonColor: '#16a34a' }).then(() => this.back());
+      },
       error: err => { this.saving = false; void Swal.fire('Error', err?.error?.message ?? 'Save failed.', 'error'); }
     });
   }

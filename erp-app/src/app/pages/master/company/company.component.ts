@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { DocumentNumberService } from '../../../core/services/document-number.service';
+import Swal from 'sweetalert2';
 
 type CompanyTab = 'general' | 'financeTax' | 'defaults' | 'numberSeries' | 'adminUser' | 'audit';
 
 const blankGeneral = () => ({ code: '', name: '', legalName: '', registrationNo: '', taxRegistrationNo: '', status: 'Active', phone: '', email: '', website: '', country: 'Singapore', contactPerson: '', contactMobileNo: '', contactEmail: '', address1: '', address2: '', city: '', state: '', postal: '' });
-const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up' });
+const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any });
 const blankDefaults = () => ({ defaultBranch: 'Head Office', defaultWarehouse: 'Main Warehouse', defaultBin: 'MAIN', defaultLanguage: 'EN', timeZone: 'Asia/Kolkata' });
 const blankAdmin = () => ({ username: '', email: '', password: '', departmentId: 1, locationId: 1 });
 const defaultNumberSeries = () => ([
@@ -41,9 +42,11 @@ export class CompanyComponent implements OnInit {
   // Dropdown data
   currencies: any[] = [];
   countries: any[] = [];
+  chartOfAccounts: any[] = [];
 
   // Logo
   logoPreview: string | null = null;
+  logoName: string = '';
 
   // Audit
   lastUpdatedBy = '—'; lastUpdatedAt = '—';
@@ -146,6 +149,7 @@ export class CompanyComponent implements OnInit {
     this.integrations = { whatsapp: true, smtp: true, ocr: false, apiEndpoint: '', apiKey: '' };
     this.adminUser = blankAdmin();
     this.logoPreview = null;
+    this.logoName = '';
     this.isNewOrganization = true;
     this.selectedOrganizationId = 0;
     this.selectedOrgGuid = '';
@@ -184,7 +188,9 @@ export class CompanyComponent implements OnInit {
           filingFrequency: f.filingFrequency || 'Monthly',
           defaultOutputTaxCode: f.defaultOutputTaxCode || '',
           defaultInputTaxCode: f.defaultInputTaxCode || '',
-          decimalPlaces: f.decimalPlaces ?? 2, roundingRule: f.roundingRule || 'Round half up'
+          decimalPlaces: f.decimalPlaces ?? 2, roundingRule: f.roundingRule || 'Round half up',
+          cashAccountId: f.cashAccountId || null,
+          advanceAccountId: f.advanceAccountId || null
         };
         const d = res.defaults || {};
         this.defaults = { defaultBranch: d.defaultBranch || 'Head Office', defaultWarehouse: d.defaultWarehouse || 'Main Warehouse', defaultBin: d.defaultBin || 'MAIN', defaultLanguage: d.defaultLanguage || 'EN', timeZone: d.timeZone || 'Asia/Kolkata' };
@@ -192,6 +198,12 @@ export class CompanyComponent implements OnInit {
         this.adminUser = { username: res.initialAdminUser?.username || '', email: res.initialAdminUser?.email || '', password: '', departmentId: res.initialAdminUser?.departmentId || 1, locationId: res.initialAdminUser?.locationId || 1 };
         this.numberSeries = res.numberSeries?.length ? res.numberSeries : defaultNumberSeries();
         this.logoPreview = res.logoBase64 || null;
+        this.logoName = res.logoName || '';
+        const currentCompanyId = Number(localStorage.getItem('companyId') || 0);
+        if (company.id === currentCompanyId) {
+          if (res.logoBase64) localStorage.setItem('companyLogoBase64', res.logoBase64);
+          else localStorage.removeItem('companyLogoBase64');
+        }
         this.selectedOrganizationId = res.organizationId || 0;
         this.selectedOrgGuid = res.orgGuid || '';
         this.isNewOrganization = false;
@@ -207,6 +219,7 @@ export class CompanyComponent implements OnInit {
     this.masterSvc.getCurrencies().subscribe({ next: (r: any) => { this.currencies = r?.data || r || []; }, error: () => {} });
     this.masterSvc.getCountries().subscribe({ next: (r: any) => { this.countries = r?.data || r || []; }, error: () => {} });
     this.masterSvc.getOrganizationsLookup().subscribe({ next: (r: any) => { this.organizations = r?.data || r || []; }, error: () => {} });
+    this.masterSvc.getChartOfAccounts().subscribe({ next: (r: any) => { this.chartOfAccounts = (r?.data || r || []).filter((c: any) => c.isGl === true || c.isGl === 1); }, error: () => {} });
   }
 
   cancel(): void { this.isFormVisible = false; this.message = ''; }
@@ -221,11 +234,12 @@ export class CompanyComponent implements OnInit {
   onLogoPicked(evt: Event): void {
     const file = (evt.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    this.logoName = file.name;
     const reader = new FileReader();
     reader.onload = () => { this.logoPreview = String(reader.result || ''); };
     reader.readAsDataURL(file);
   }
-  removeLogo(): void { this.logoPreview = null; }
+  removeLogo(): void { this.logoPreview = null; this.logoName = ''; }
 
   addNumberRow(): void { this.numberSeries.push({ document: '', prefix: '', nextNo: 1, reset: false }); }
   removeNumberRow(i: number): void { this.numberSeries.splice(i, 1); }
@@ -241,15 +255,20 @@ export class CompanyComponent implements OnInit {
     this.selectedOrgGuid = org?.orgGuid || '';
   }
 
+  private swalValidation(msg: string, tab: typeof this.activeTab): void {
+    this.activeTab = tab;
+    Swal.fire({ icon: 'warning', title: 'Validation', text: msg, confirmButtonColor: '#1a5c6e' });
+  }
+
   save(): void {
-    if (!this.general.name?.trim()) { this.message = 'Company Name is required.'; this.isError = true; this.activeTab = 'general'; return; }
-    if (!this.general.code?.trim()) { this.message = 'Company Code is required.'; this.isError = true; this.activeTab = 'general'; return; }
+    if (!this.general.name?.trim()) { this.swalValidation('Company Name is required.', 'general'); return; }
+    if (!this.general.code?.trim()) { this.swalValidation('Company Code is required.', 'general'); return; }
     const normalizedSeries = this.docNoSvc.normalizeSeries(this.numberSeries);
-    if (!normalizedSeries.length) { this.message = 'At least one valid number series is required.'; this.isError = true; this.activeTab = 'numberSeries'; return; }
+    if (!normalizedSeries.length) { this.swalValidation('At least one valid number series is required.', 'numberSeries'); return; }
     const hasDuplicateDocument = new Set(normalizedSeries.map(x => x.document.toLowerCase())).size !== normalizedSeries.length;
-    if (hasDuplicateDocument) { this.message = 'Duplicate document rows found in number series.'; this.isError = true; this.activeTab = 'numberSeries'; return; }
+    if (hasDuplicateDocument) { this.swalValidation('Duplicate document rows found in number series.', 'numberSeries'); return; }
     const hasDuplicatePrefix = new Set(normalizedSeries.map(x => x.prefix.toLowerCase())).size !== normalizedSeries.length;
-    if (hasDuplicatePrefix) { this.message = 'Duplicate prefixes are not allowed in number series.'; this.isError = true; this.activeTab = 'numberSeries'; return; }
+    if (hasDuplicatePrefix) { this.swalValidation('Duplicate prefixes are not allowed in number series.', 'numberSeries'); return; }
 
     const userId = Number(localStorage.getItem('id') || 0);
     const payload: any = {
@@ -262,43 +281,89 @@ export class CompanyComponent implements OnInit {
       numberSeries: normalizedSeries,
       integrations: { ...this.integrations },
       initialAdminUser: { ...this.adminUser, password: (this.isEditMode && !this.adminUser.password) ? null : this.adminUser.password },
-      logoBase64: this.logoPreview
+      logoBase64: this.logoPreview,
+      logoName: this.logoName || null
     };
 
     this.saving = true; this.message = ''; this.isError = false;
-    let req$ = this.isEditMode
+    const req$ = this.isEditMode
       ? this.masterSvc.updateCompany(this.selectedId, payload)
       : (this.isNewOrganization ? this.masterSvc.createCompanySetup(payload) : this.masterSvc.createCompanyUnderOrg(payload));
 
     req$.subscribe({
       next: (res: any) => {
         this.saving = false;
-        this.message = res?.message || (this.isEditMode ? 'Company updated.' : 'Company created.');
-        this.isError = false;
         const currentCompanyId = Number(localStorage.getItem('companyId') || 0);
         const affectedCompanyId = this.isEditMode ? this.selectedId : currentCompanyId;
-        if (affectedCompanyId) {
-          this.docNoSvc.cacheCompanySeries(affectedCompanyId, normalizedSeries);
+        if (affectedCompanyId && affectedCompanyId === currentCompanyId) {
+          if (this.logoPreview) localStorage.setItem('companyLogoBase64', this.logoPreview);
+          else localStorage.removeItem('companyLogoBase64');
+          localStorage.setItem('companyPrintName',     this.general.name     || '');
+          localStorage.setItem('companyPrintAddress1', this.general.address1 || '');
+          localStorage.setItem('companyPrintAddress2', this.general.address2 || '');
+          localStorage.setItem('companyPrintCity',     this.general.city     || '');
+          localStorage.setItem('companyPrintState',    this.general.state    || '');
+          localStorage.setItem('companyPrintPostal',   this.general.postal   || '');
+          localStorage.setItem('companyPrintPhone',    this.general.phone    || '');
+          localStorage.setItem('companyPrintEmail',    this.general.email    || '');
         }
-        if (this.financeTax?.countryId) {
-          localStorage.setItem('companyCountryId', String(this.financeTax.countryId));
-        }
+        if (affectedCompanyId) this.docNoSvc.cacheCompanySeries(affectedCompanyId, normalizedSeries);
+        if (this.financeTax?.countryId) localStorage.setItem('companyCountryId', String(this.financeTax.countryId));
         this.auditTrail.unshift({ date: new Date().toLocaleString(), user: String(userId), change: this.isEditMode ? 'Company updated' : 'Company created' });
-        this.activeTab = 'audit';
-        setTimeout(() => { this.cancel(); this.load(); }, 1500);
+
+        Swal.fire({
+          icon: 'success',
+          title: this.isEditMode ? 'Updated!' : 'Created!',
+          text: res?.message || (this.isEditMode ? 'Company updated successfully.' : 'Company created successfully.'),
+          confirmButtonColor: '#1a5c6e',
+          timer: 2000,
+          showConfirmButton: false
+        }).then(() => { this.cancel(); this.load(); });
       },
-      error: (err: any) => { this.saving = false; this.message = err?.error?.message || 'Save failed.'; this.isError = true; }
+      error: (err: any) => {
+        this.saving = false;
+        const msg = err?.error?.message || 'Save failed. Please try again.';
+        Swal.fire({ icon: 'error', title: 'Save Failed', text: msg, confirmButtonColor: '#1a5c6e' });
+      }
     });
   }
 
-  openDelete(company: any): void { this.itemToDelete = company; this.showDeleteModal = true; }
-  confirmDelete(): void {
-    if (!this.itemToDelete) return;
-    this.masterSvc.deleteCompany(this.itemToDelete.id).subscribe({
-      next: (res: any) => { this.showDeleteModal = false; this.itemToDelete = null; this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || 'Deleted successfully.'; this.showResultPopup = true; if (res?.isSuccess !== false) { this.load(); } },
-      error: (err: any) => { this.showDeleteModal = false; this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Delete failed. Please try again.'; this.showResultPopup = true; }
+  openDelete(company: any): void {
+    Swal.fire({
+      title: 'Delete Company?',
+      text: `"${company.companyName}" — this action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel'
+    }).then(result => {
+      if (result.isConfirmed) this.doDelete(company);
     });
   }
+
+  private doDelete(company: any): void {
+    this.masterSvc.deleteCompany(company.id).subscribe({
+      next: (res: any) => {
+        const ok = res?.isSuccess !== false;
+        Swal.fire({
+          icon: ok ? 'success' : 'error',
+          title: ok ? 'Deleted!' : 'Failed',
+          text: res?.message || (ok ? 'Company deleted successfully.' : 'Delete failed.'),
+          confirmButtonColor: '#1a5c6e',
+          timer: ok ? 2000 : undefined,
+          showConfirmButton: !ok
+        });
+        if (ok) this.load();
+      },
+      error: (err: any) => {
+        Swal.fire({ icon: 'error', title: 'Delete Failed', text: err?.error?.message || 'Delete failed. Please try again.', confirmButtonColor: '#1a5c6e' });
+      }
+    });
+  }
+
+  confirmDelete(): void {}
 
   loadPermission(): void {
     if (!this.userId || this.userId <= 0) {

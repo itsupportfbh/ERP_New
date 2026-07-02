@@ -58,11 +58,13 @@
             <td class="td-name">
               <div class="name-wrap" [style.paddingLeft]="indentPx(row)">
                 <button class="toggle-btn"
+                        *ngIf="row._hasChildren"
                         [class.toggle-expanded]="isExpanded(row)"
                         type="button"
-                        (click)="row._hasChildren ? toggle(row) : null">
-                  {{ row._hasChildren && isExpanded(row) ? '−' : '+' }}
+                        (click)="toggle(row)">
+                  {{ isExpanded(row) ? '−' : '+' }}
                 </button>
+                <span class="toggle-leaf" *ngIf="!row._hasChildren">·</span>
                 <span class="acct-label" [class.parent-label]="!row._parentId || row._parentId === 0">
                   {{ row.headName }}
                 </span>
@@ -147,6 +149,17 @@
         <input type="checkbox" [(ngModel)]="form.isGl">
       </label>
     </div>
+    <label class="coa-field" *ngIf="form.isGl">
+      <span>Finance Account Type</span>
+      <select [(ngModel)]="form.systemAccountType">
+        <option *ngFor="let opt of systemAccountOptions" [value]="opt.value">{{ opt.label }}</option>
+      </select>
+      <small class="coa-hint" *ngIf="form.systemAccountType">
+        This account will be used as the company's
+        {{ form.systemAccountType === 'cash' ? 'Cash Account' : 'Advance Payment Account' }}
+        in GL and Trial Balance.
+      </small>
+    </label>
   </div>
   <div class="coa-modal-foot">
     <button class="coa-save-btn" type="button" (click)="save()" [disabled]="saving">

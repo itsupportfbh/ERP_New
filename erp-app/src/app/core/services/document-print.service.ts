@@ -90,7 +90,8 @@ export class DocumentPrintService {
 
   // ── html ──────────────────────────────────────────────
   private buildHtml(cfg: DocumentPrintConfig): string {
-    const co = { ...this.defaultCompany, ...(cfg.company || {}) };
+    const storedLogo = typeof localStorage !== 'undefined' ? (localStorage.getItem('companyLogoBase64') || '') : '';
+    const co = { ...this.defaultCompany, ...(cfg.company || {}), logo: cfg.company?.logo || storedLogo || this.defaultCompany.logo };
 
     // Customer goes in left "Order To" box; all other fields go in the right meta table
     const allFields    = cfg.fields || [];
@@ -140,10 +141,12 @@ export class DocumentPrintService {
     .doc-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
     .logo-wrap { display: flex; align-items: center; gap: 10px; }
     .logo-box {
-      width: 58px; height: 58px; border: 2px solid #1a5c6e; border-radius: 6px;
+      width: 72px; height: 72px; border: 2px solid #1a5c6e; border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
       font-size: 14px; font-weight: 900; color: #1a5c6e; text-align: center; line-height: 1.2;
+      overflow: hidden; padding: 4px;
     }
+    .logo-box img { width: 100%; height: 100%; object-fit: contain; }
     .co-brand { font-size: 13px; font-weight: 900; color: #1a5c6e; text-transform: uppercase; }
     .co-brand-sub { font-size: 9.5px; color: #555; margin-top: 2px; line-height: 1.5; }
     .co-info-right { text-align: right; font-size: 10.5px; line-height: 1.8; color: #222; }
@@ -204,7 +207,7 @@ export class DocumentPrintService {
   <!-- HEADER -->
   <div class="doc-hdr">
     <div class="logo-wrap">
-      <div class="logo-box">${this.escape(co.logo)}</div>
+      <div class="logo-box">${co.logo && co.logo.startsWith('data:image') ? `<img src="${co.logo}" alt="logo"/>` : this.escape(co.logo)}</div>
       <div>
         <div class="co-brand">${this.escape(co.name)}</div>
         <div class="co-brand-sub">${this.escape(co.addr1)}<br/>${this.escape(co.addr2)}</div>

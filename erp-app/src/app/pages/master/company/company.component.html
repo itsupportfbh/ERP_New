@@ -66,15 +66,6 @@
 
   </div>
 
-  <erp-master-popup
-    [showDeleteConfirm]="showDeleteModal"
-    [showResult]="showResultPopup"
-    [isSuccess]="popupIsSuccess"
-    [message]="popupMessage"
-    (deleteConfirmed)="confirmDelete()"
-    (deleteCancelled)="showDeleteModal=false"
-    (resultClosed)="showResultPopup=false">
-  </erp-master-popup>
 </ng-container>
 
 <!-- ══════════════════════════════════════════════ SETUP VIEW -->
@@ -304,6 +295,20 @@
           <div class="mf-group">
             <label class="mf-label">Default Input Tax Code</label>
             <input class="mf-input" type="text" [(ngModel)]="financeTax.defaultInputTaxCode" name="inputTax" placeholder="Input Tax Code"/>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Cash Account (GL)</label>
+            <erp-dropdown name="cashAccountId" [(ngModel)]="financeTax.cashAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select Cash Account --">
+            </erp-dropdown>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Advance Payment Account (GL)</label>
+            <erp-dropdown name="advanceAccountId" [(ngModel)]="financeTax.advanceAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select Advance Account --">
+            </erp-dropdown>
           </div>
         </div>
       </div>

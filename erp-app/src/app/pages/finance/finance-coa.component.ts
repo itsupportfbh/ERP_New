@@ -14,6 +14,7 @@ import Swal from 'sweetalert2';
 })
 export class FinanceCoaComponent implements OnInit {
   rows: any[] = [];
+  displayRows: any[] = [];
   rowMap = new Map<any, any>();
   expanded = new Set<any>();
   search = '';
@@ -26,7 +27,12 @@ export class FinanceCoaComponent implements OnInit {
   showForm = false;
   editRow: any = null;
   saving = false;
-  form: any = { headCode: null, headName: '', headType: '', headLevel: null, parentHead: null, isGl: false, isTransaction: false };
+  form: any = { headCode: null, headName: '', headType: '', headLevel: null, parentHead: null, isGl: false, isTransaction: false, systemAccountType: '' };
+  systemAccountOptions = [
+    { label: 'None', value: '' },
+    { label: 'Cash Account', value: 'cash' },
+    { label: 'Advance Payment Account', value: 'advance' }
+  ];
   accountTypes = ['Asset', 'Liability', 'Equity', 'Income', 'Expense'];
 
   permission: FunctionPermission | null = null;
@@ -56,6 +62,7 @@ export class FinanceCoaComponent implements OnInit {
       next: res => {
         this.rows = this.finance.unwrap(res);
         this.buildMap();
+        this.rebuildDisplayRows();
         this.loading = false;
       },
       error: () => { this.rows = []; this.loading = false; this.error = 'Chart of Accounts unavailable.'; }
@@ -65,35 +72,32 @@ export class FinanceCoaComponent implements OnInit {
   private buildMap(): void {
     this.rowMap.clear();
     this.rows.forEach(r => {
-      // parentHead references the parent's headCode (not database id)
-      r._id    = String(r.headCode);                                              // tree key = headCode
-      r._dbId  = r.id;                                                            // keep db id for CRUD
+      r._id       = String(r.headCode);
+      r._dbId     = r.id;
       r._parentId = (r.parentHead && r.parentHead !== 0) ? String(r.parentHead) : null;
-      r._level = 0;
+      r._level    = 0;
       r._hasChildren = false;
-      this.rowMap.set(r._id, r);                                                  // map keyed by headCode
+      if (!this.rowMap.has(r._id)) this.rowMap.set(r._id, r);  // first-wins — no overwrite on dup headCode
     });
+    // Scan all rows directly so duplicate-headCode overwrites don't lose _hasChildren on the original
     this.rows.forEach(r => {
       if (r._parentId) {
-        const parent = this.rowMap.get(r._parentId);
-        if (parent) parent._hasChildren = true;
+        this.rows.forEach(p => { if (p._id === r._parentId) p._hasChildren = true; });
       }
     });
     this.rows.forEach(r => { r._level = this.computeLevel(r); });
   }
 
-  private computeLevel(row: any, depth = 0): number {
-    if (depth > 15 || !row._parentId) return depth;
+  private computeLevel(row: any, depth = 0, visited = new Set<any>()): number {
+    if (depth > 20 || !row._parentId) return depth;
+    if (visited.has(row._parentId)) return depth; // circular reference guard
+    visited.add(row._parentId);
     const parent = this.rowMap.get(row._parentId);
     if (!parent) return depth;
-    return this.computeLevel(parent, depth) + 1;
+    return this.computeLevel(parent, depth + 1, visited);
   }
 
   get pagedRows(): any[] {
-    return this.filteredRows;
-  }
-
-  get filteredRows(): any[] {
     if (this.search) {
       const q = this.search.toLowerCase();
       return this.rows.filter(r =>
@@ -102,9 +106,13 @@ export class FinanceCoaComponent implements OnInit {
         String(r.headType ?? '').toLowerCase().includes(q)
       );
     }
+    return this.displayRows;
+  }
+
+  private rebuildDisplayRows(): void {
     const result: any[] = [];
     this.addVisible(null, result);
-    return result;
+    this.displayRows = result;
   }
 
   private addVisible(parentId: string | null, result: any[]): void {
@@ -112,24 +120,25 @@ export class FinanceCoaComponent implements OnInit {
       .filter(r => r._parentId === parentId)
       .forEach(r => {
         result.push(r);
-        if (r._hasChildren && this.expanded.has(r._id as string)) {
+        if (r._hasChildren && this.expanded.has(r._id)) {
           this.addVisible(r._id, result);
         }
       });
   }
 
   toggle(row: any): void {
-    const key = row._id as string;
+    const key = row._id;
     this.expanded.has(key) ? this.expanded.delete(key) : this.expanded.add(key);
+    this.rebuildDisplayRows();
   }
 
   isExpanded(row: any): boolean {
-    return this.expanded.has(row._id as string);
+    return this.expanded.has(row._id);
   }
 
   openCreate(): void {
     this.editRow = null;
-    this.form = { headCode: null, headName: '', headType: '', headLevel: null, parentHead: null, pHeadName: 'COA', isGl: false, isTransaction: false };
+    this.form = { headCode: null, headName: '', headType: '', headLevel: null, parentHead: null, pHeadName: 'COA', isGl: false, isTransaction: false, systemAccountType: '' };
     this.applyTopLevelDefaults();
     this.showForm = true;
     this.message = '';
@@ -140,14 +149,15 @@ export class FinanceCoaComponent implements OnInit {
     this.editRow = row;
     const parent = row.parentHead ? this.rows.find(r => Number(r.headCode) === Number(row.parentHead)) : null;
     this.form = {
-      headCode:      row.headCode,
-      headName:      row.headName,
-      headType:      row.headType ?? '',
-      headLevel:     row.headLevel ?? (row._level + 1),
-      parentHead:    row.parentHead ?? null,
-      pHeadName:     parent ? parent.headName : 'COA',
-      isGl:          row.isGl ?? false,
-      isTransaction: row.isTransaction ?? false
+      headCode:          row.headCode,
+      headName:          row.headName,
+      headType:          row.headType ?? '',
+      headLevel:         row.headLevel ?? (row._level + 1),
+      parentHead:        row.parentHead ?? null,
+      pHeadName:         parent ? parent.headName : 'COA',
+      isGl:              row.isGl ?? false,
+      isTransaction:     row.isTransaction ?? false,
+      systemAccountType: ''
     };
     this.showForm = true;
     this.message = '';
@@ -211,17 +221,28 @@ export class FinanceCoaComponent implements OnInit {
     const obs = isEdit
       ? this.finance.update(this.endpoint, this.editRow._dbId, this.form)
       : this.finance.create(this.endpoint, this.form);
+    const systemType = this.form.systemAccountType;
+    const headName   = this.form.headName;
+
     obs.subscribe({
-      next: () => {
+      next: (res: any) => {
         this.saving = false;
         this.showForm = false;
         this.load();
+
+        if (systemType) {
+          const newId = res?.data ?? (isEdit ? this.editRow._dbId : null);
+          if (newId) {
+            this.finance.setSystemAccount(newId, systemType).subscribe();
+          }
+        }
+
         Swal.fire({
           icon: 'success',
           title: isEdit ? 'Updated!' : 'Created!',
           text: isEdit
-            ? `"${this.form.headName}" updated successfully.`
-            : `"${this.form.headName}" created successfully.`,
+            ? `"${headName}" updated successfully.`
+            : `"${headName}" created successfully.`,
           timer: 2000,
           showConfirmButton: false
         });

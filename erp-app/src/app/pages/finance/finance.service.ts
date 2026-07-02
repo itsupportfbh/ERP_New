@@ -164,6 +164,10 @@ export class FinanceService {
     return this.http.put(this.url(endpoint), payload);
   }
 
+  setSystemAccount(coaId: number, accountType: 'cash' | 'advance'): Observable<any> {
+    return this.http.post(this.url('/ChartOfAccount/SetSystemAccount'), { coaId, accountType });
+  }
+
   private url(endpoint: string, id?: number | string): string {
     const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     if (id !== undefined && id !== null && (clean.includes(':id') || clean.includes('{id}'))) {
