@@ -34,6 +34,8 @@ export class SalesInvoiceListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  printBillTo: { name?: string; lines?: string[] } = {};
+  printDeliverTo: { name?: string; lines?: string[] } = {};
 
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
@@ -162,8 +164,15 @@ export class SalesInvoiceListComponent implements OnInit {
           { label: 'Tax', value: tax.toFixed(2) },
           { label: `Grand Total (${cur})`, value: total.toFixed(2) },
         ];
+        const custName = (hdr.customerName ?? row.customerName) || '—';
+        const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
+        const contact  = hdr.contactNumber ?? hdr.ContactNumber ?? '';
+        const deliverTo = hdr.deliveryTo ?? hdr.DeliveryTo ?? '';
+        this.printBillTo = { name: custName, lines: [custAddr, contact ? `Tel: ${contact}` : ''].filter(Boolean) };
+        this.printDeliverTo = { name: custName, lines: [deliverTo || custAddr].filter(Boolean) };
+
         this.viewTitle = `Invoice Lines — ${row.invoiceNo}`;
-        this.viewSubtitle = `Customer: ${(hdr.customerName ?? row.customerName) || '—'} · Currency: ${cur}`;
+        this.viewSubtitle = `Customer: ${custName} · Currency: ${cur}`;
         this.viewLoading = false;
         cb();
       },
@@ -178,11 +187,13 @@ export class SalesInvoiceListComponent implements OnInit {
       this.printSvc.print({
         docTitle: 'SALES INVOICE',
         docNo: this.activeRow?.invoiceNo ?? '',
-        fields: this.viewInfo.filter(f => f.label !== 'Remarks'),
+        fields: this.viewInfo.filter(f => f.label !== 'Remarks' && f.label !== 'Customer'),
         remarks: this.activeRow ? (this.viewInfo.find(f => f.label === 'Remarks')?.value as string) : '',
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
+        billTo: this.printBillTo,
+        deliverTo: this.printDeliverTo,
       });
     });
   }

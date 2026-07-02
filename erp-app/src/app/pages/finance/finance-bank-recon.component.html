@@ -7,8 +7,8 @@
       <p>Match bank statement lines with accounting ledger entries</p>
     </div>
     <div class="br-head-actions">
-      <button class="br-btn br-btn-outline" type="button" (click)="importStatement()" [disabled]="saving">
-        <span class="br-btn-icon">&#8659;</span> Import Statement
+      <button class="br-btn br-btn-outline" type="button" (click)="importStatement()" [disabled]="saving || !selectedBankId">
+        <span class="br-btn-icon">&#8659;</span> Import Statement (CSV)
       </button>
     </div>
   </div>
@@ -43,7 +43,7 @@
     <div class="br-sum-card br-sum-diff">
       <span class="br-sum-icon">&#8597;</span>
       <span class="br-sum-body">
-        <span class="br-sum-label">Bank vs Ledger Diff</span>
+        <span class="br-sum-label">Unreconciled Net</span>
         <strong class="br-sum-val" [class.red]="summary.difference !== 0" [class.green]="summary.difference === 0">
           {{ summary.difference | number:'1.2-2' }}
         </strong>
@@ -51,21 +51,20 @@
     </div>
   </div>
 
-  <!-- Date Filter -->
+  <!-- Bank + Filter -->
   <div class="br-filter-bar">
     <label class="br-filter-field">
-      <span>From Date</span>
-      <input type="date" [(ngModel)]="fromDate">
+      <span>Bank Account</span>
+      <select [(ngModel)]="selectedBankId" (ngModelChange)="onBankChange()">
+        <option [ngValue]="null" disabled>Select bank…</option>
+        <option *ngFor="let b of banks" [ngValue]="b.id">{{ b.name }}</option>
+      </select>
     </label>
-    <label class="br-filter-field">
-      <span>To Date</span>
-      <input type="date" [(ngModel)]="toDate">
-    </label>
-    <button class="br-btn br-btn-primary" type="button" (click)="load()" [disabled]="loading">
-      {{ loading ? 'Loading...' : 'Run' }}
+    <button class="br-btn br-btn-primary" type="button" (click)="load()" [disabled]="loading || !selectedBankId">
+      {{ loading ? 'Loading...' : 'Refresh' }}
     </button>
     <div class="br-search-wrap">
-      <input class="br-search" type="text" placeholder="Search reference, bank..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+      <input class="br-search" type="text" placeholder="Search reference, description..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
     </div>
   </div>
 
@@ -88,28 +87,28 @@
       <table class="br-table">
         <thead>
           <tr>
-            <th>Bank</th>
             <th>Statement Date</th>
             <th>Reference No</th>
             <th>Description</th>
-            <th class="right">Ledger Amount</th>
-            <th class="right">Bank Amount</th>
-            <th class="right">Difference</th>
+            <th class="right">Debit</th>
+            <th class="right">Credit</th>
+            <th class="right">Amount</th>
+            <th>Matched Doc</th>
             <th>Status</th>
             <th class="center">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of filtered" class="br-row">
-            <td class="bank-cell">{{ row.bankName }}</td>
-            <td class="date-cell">{{ row.statementDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="date-cell">{{ row.transactionDate | date:'dd-MMM-yyyy' }}</td>
             <td class="ref-cell">{{ row.referenceNo }}</td>
             <td class="desc-cell">{{ row.description }}</td>
-            <td class="right amt">{{ row.ledgerAmount | number:'1.2-2' }}</td>
-            <td class="right amt">{{ row.bankAmount | number:'1.2-2' }}</td>
-            <td class="right" [class.diff-zero]="(row.bankAmount - row.ledgerAmount) === 0"
-                              [class.diff-nonzero]="(row.bankAmount - row.ledgerAmount) !== 0">
-              {{ (row.bankAmount - row.ledgerAmount) | number:'1.2-2' }}
+            <td class="right amt">{{ row.debit | number:'1.2-2' }}</td>
+            <td class="right amt">{{ row.credit | number:'1.2-2' }}</td>
+            <td class="right amt">{{ row.amount | number:'1.2-2' }}</td>
+            <td class="ref-cell">
+              <span *ngIf="row.matchedDocumentNo">{{ row.matchedDocumentType }} {{ row.matchedDocumentNo }}</span>
+              <span *ngIf="!row.matchedDocumentNo">—</span>
             </td>
             <td>
               <span class="br-badge" [ngClass]="row.status === 'Reconciled' ? 'badge-success' : 'badge-open'">
@@ -118,12 +117,12 @@
             </td>
             <td class="center">
               <button class="br-action-btn recon-btn" type="button"
-                *ngIf="row.status !== 'Reconciled'"
+                *ngIf="!row.isMatched"
                 (click)="reconcile(row)" [disabled]="saving">
                 Reconcile
               </button>
               <button class="br-action-btn unrecon-btn" type="button"
-                *ngIf="row.status === 'Reconciled'"
+                *ngIf="row.isMatched"
                 (click)="unreconcile(row)" [disabled]="saving">
                 Unreconcile
               </button>
@@ -131,11 +130,84 @@
           </tr>
           <tr *ngIf="filtered.length === 0 && !loading">
             <td colspan="9" class="br-empty">
-              {{ activeTab === 'unreconciled' ? 'No unreconciled lines found.' : 'No reconciled lines found.' }}
+              <span *ngIf="!selectedBankId">Select a bank account to view statement lines.</span>
+              <span *ngIf="selectedBankId">{{ activeTab === 'unreconciled' ? 'No unreconciled lines found.' : 'No reconciled lines found.' }}</span>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Reconcile Modal -->
+  <div *ngIf="showReconcile" class="br-modal-overlay" (click)="closeReconcile()">
+    <div class="br-modal" (click)="$event.stopPropagation()">
+      <div class="br-modal-head">
+        <strong>Reconcile Statement Line</strong>
+        <button class="br-modal-close" type="button" (click)="closeReconcile()">&#215;</button>
+      </div>
+      <div class="br-modal-body">
+        <div class="br-modal-line" *ngIf="reconcileRow">
+          <span>{{ reconcileRow.transactionDate | date:'dd-MMM-yyyy' }}</span>
+          <span>{{ reconcileRow.description }}</span>
+          <strong>{{ reconcileRow.amount | number:'1.2-2' }}</strong>
+        </div>
+
+        <!-- Book entries to match against -->
+        <div *ngIf="!manualMode">
+          <div class="br-match-title">Match to a book entry <span *ngIf="suggestedEntries.length">({{ suggestedEntries.length }})</span></div>
+          <div class="br-entry-list" *ngIf="suggestedEntries.length">
+            <div class="br-entry" *ngFor="let e of suggestedEntries"
+                 [class.selected]="selectedEntry === e"
+                 (click)="selectBookEntry(e)">
+              <div class="br-entry-main">
+                <span class="br-entry-type" [ngClass]="e.documentType === 'Receipt' ? 'in' : 'out'">{{ e.documentType }}</span>
+                <span class="br-entry-no">{{ e.documentNo }}</span>
+                <span class="br-entry-party">{{ e.partyName }}</span>
+              </div>
+              <div class="br-entry-right">
+                <span class="br-entry-date">{{ e.documentDate | date:'dd-MMM-yy' }}</span>
+                <strong class="br-entry-amt">{{ e.amount | number:'1.2-2' }}</strong>
+                <span class="br-entry-suggest" *ngIf="isAmountMatch(e)">✓ match</span>
+              </div>
+            </div>
+          </div>
+          <div class="br-entry-empty" *ngIf="!suggestedEntries.length">
+            No unmatched payments / receipts for this bank. Use manual adjustment.
+          </div>
+          <button class="br-link-btn" type="button" (click)="toggleManual()">Can't find it? Reconcile manually →</button>
+        </div>
+
+        <!-- Manual adjustment -->
+        <div *ngIf="manualMode">
+          <label class="br-modal-field">
+            <span>Document Type</span>
+            <select [(ngModel)]="reconcileForm.documentType">
+              <option value="Payment">Supplier Payment</option>
+              <option value="Receipt">Customer Receipt</option>
+              <option value="Journal">Journal Entry</option>
+              <option value="Manual">Manual Adjustment</option>
+            </select>
+          </label>
+          <label class="br-modal-field">
+            <span>Document / Reference No</span>
+            <input type="text" [(ngModel)]="reconcileForm.documentNo" placeholder="e.g. PMT-0001 / cheque no">
+          </label>
+          <button class="br-link-btn" type="button" (click)="toggleManual()" *ngIf="bookEntries.length">← Back to book entries</button>
+        </div>
+
+        <label class="br-modal-field">
+          <span>Remarks</span>
+          <input type="text" [(ngModel)]="reconcileForm.remarks" placeholder="optional">
+        </label>
+      </div>
+      <div class="br-modal-foot">
+        <button class="br-btn br-btn-outline" type="button" (click)="closeReconcile()" [disabled]="saving">Cancel</button>
+        <button class="br-btn br-btn-primary" type="button" (click)="confirmReconcile()"
+                [disabled]="saving || (!manualMode && !selectedEntry)">
+          {{ saving ? 'Saving...' : 'Reconcile' }}
+        </button>
+      </div>
     </div>
   </div>
 

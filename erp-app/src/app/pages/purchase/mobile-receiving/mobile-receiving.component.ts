@@ -207,12 +207,20 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
       this.error = 'You do not have permission to add mobile receiving scans.';
       return;
     }
+    this.error = '';
     const key = line.item ?? line.itemCode;
     const qty = Number(this.lineInputQty[key] || 1);
     if (qty <= 0) { this.error = 'Enter a valid qty.'; return; }
-    this.mrBarcode = this.codeFrom(key);
-    this.mrQty = qty;
-    this.addScan();
+
+    const remaining = this.lineRemainingAfterQueue(line);
+    if (remaining > 0 && qty > remaining) {
+      this.error = `Cannot receive more than the balance (${remaining}).`;
+      return;
+    }
+
+    // Receiving directly against a known PO line — no barcode scan / validation needed.
+    this.pushRow(this.codeFrom(key), qty);
+    this.saveOffline();
     this.lineInputQty[key] = 1;
   }
 

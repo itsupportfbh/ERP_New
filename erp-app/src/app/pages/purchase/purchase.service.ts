@@ -96,6 +96,9 @@ export class PurchaseService {
   getPurchaseOrderById(id: number | string): Observable<any> {
     return this.http.get(`${this.api}/PurchaseOrder/get/${id}`);
   }
+  getPoPdfExtra(id: number | string): Observable<any> {
+    return this.http.get(`${this.api}/PurchaseOrder/GetPoPdfExtra/${id}`);
+  }
   createPurchaseOrder(data: any): Observable<any> {
     return this.http.post(`${this.api}/PurchaseOrder/insert`, data);
   }
