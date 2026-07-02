@@ -219,7 +219,15 @@ export class CompanyComponent implements OnInit {
     this.masterSvc.getCurrencies().subscribe({ next: (r: any) => { this.currencies = r?.data || r || []; }, error: () => {} });
     this.masterSvc.getCountries().subscribe({ next: (r: any) => { this.countries = r?.data || r || []; }, error: () => {} });
     this.masterSvc.getOrganizationsLookup().subscribe({ next: (r: any) => { this.organizations = r?.data || r || []; }, error: () => {} });
-    this.masterSvc.getChartOfAccounts().subscribe({ next: (r: any) => { this.chartOfAccounts = (r?.data || r || []).filter((c: any) => c.isGl === true || c.isGl === 1); }, error: () => {} });
+    this.masterSvc.getChartOfAccounts().subscribe({
+      next: (r: any) => {
+        this.chartOfAccounts = (r?.data || r || []).map((c: any) => ({
+          ...c,
+          headCodeName: c.headCodeName || `${c.headCode ?? ''} - ${c.headName ?? ''}`
+        }));
+      },
+      error: () => {}
+    });
   }
 
   cancel(): void { this.isFormVisible = false; this.message = ''; }

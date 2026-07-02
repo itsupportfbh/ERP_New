@@ -31,19 +31,19 @@
     <div class="sum-grid ap-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">▣</span>
-        <span class="sum-text"><span class="sum-label">Total Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.totalInvoice | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount ({{ baseCurrencyName }})</span><strong class="sum-val orange">{{ invoiceSummary.totalInvoice | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">▰</span>
-        <span class="sum-text"><span class="sum-label">Total Paid</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Paid ({{ baseCurrencyName }})</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">▤</span>
-        <span class="sum-text"><span class="sum-label">Total Debit Notes</span><strong class="sum-val slate">{{ invoiceSummary.debitNote | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Debit Notes ({{ baseCurrencyName }})</span><strong class="sum-val slate">{{ invoiceSummary.debitNote | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-icon">⚖</span>
-        <span class="sum-text"><span class="sum-label">Net Outstanding</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Net Outstanding ({{ baseCurrencyName }})</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
       </div>
     </div>
 
@@ -61,6 +61,7 @@
               <th>Supplier</th>
               <th class="right">Invoice Count</th>
               <th class="right">Amount</th>
+              <th class="right">Base Amount ({{ baseCurrencyName }})</th>
               <th class="right">Paid</th>
               <th class="right">Debit Note</th>
               <th class="right">Advance</th>
@@ -76,13 +77,14 @@
                 </td>
                 <td class="right muted">{{ grp.invoices.length }}</td>
                 <td class="right">{{ grp.total | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.baseAmount | number:'1.2-2' }}</td>
                 <td class="right">{{ grp.paid | number:'1.2-2' }}</td>
                 <td class="right">{{ grp.debitNote | number:'1.2-2' }}</td>
                 <td class="right">{{ grp.advance | number:'1.2-2' }}</td>
                 <td class="right">{{ grp.outstanding | number:'1.2-2' }}</td>
               </tr>
               <tr class="invoice-detail-row" *ngIf="isExpanded(grp.supplier)">
-                <td colspan="7">
+                <td colspan="8">
                   <table class="invoice-detail-table">
                     <thead>
                       <tr>
@@ -91,6 +93,7 @@
                         <th>Invoice Date</th>
                         <th>Due Date</th>
                         <th class="right">Amount</th>
+                        <th class="right">Base Amount ({{ baseCurrencyName }})</th>
                         <th class="right">Paid</th>
                         <th class="right">Debit Note</th>
                         <th class="right">Advance</th>
@@ -105,6 +108,7 @@
                         <td>{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                         <td>{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
                         <td class="right">{{ inv.amount | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <td class="right">{{ inv.baseAmount | number:'1.2-2' }} <span class="currency">{{ baseCurrencyName }}</span></td>
                         <td class="right">{{ inv.paid | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
                         <td class="right">{{ inv.debitNote | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
                         <td class="right">{{ inv.advance | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
@@ -117,7 +121,7 @@
               </tr>
             </ng-container>
             <tr *ngIf="supplierGroups.length === 0 && !loading">
-              <td colspan="7" class="ap-empty">No AP invoices found.</td>
+              <td colspan="8" class="ap-empty">No AP invoices found.</td>
             </tr>
           </tbody>
         </table>
@@ -241,19 +245,10 @@
           <div class="ap-form-row ap-row-sup-pills">
             <div class="ap-field ap-field-sup-compact">
               <span class="ap-field-label">Supplier <span class="req">*</span></span>
-              <div class="ap-dd" (click)="$event.stopPropagation()">
-                <div class="ap-dd-trigger" [class.is-open]="pmtSupplierOpen" (click)="toggleCombo('pmtSupplierOpen')">
-                  <span class="ap-dd-value" [class.placeholder]="!pmtSupplierName">{{ pmtSupplierName || 'Search supplier' }}</span>
-                  <span class="ap-dd-arrow" [class.open]="pmtSupplierOpen">&#x25BE;</span>
-                </div>
-                <div class="ap-dd-panel" *ngIf="pmtSupplierOpen">
-                  <input class="ap-dd-search" type="text" [(ngModel)]="pmtSupplierSearch" placeholder="Search..." autocomplete="off" (click)="$event.stopPropagation()">
-                  <div class="ap-dd-list">
-                    <div class="ap-dd-item" *ngFor="let s of pmtFilteredSuppliers" (click)="selectPmtSupplier(s)">{{ s.name }}</div>
-                    <div class="ap-dd-empty" *ngIf="!pmtFilteredSuppliers.length">No suppliers found</div>
-                  </div>
-                </div>
-              </div>
+              <erp-dropdown [(ngModel)]="paymentForm.supplierId"
+                [items]="suppliers" bindLabel="name" bindValue="id"
+                placeholder="Search supplier"
+                (ngModelChange)="onPaymentSupplierChange()"></erp-dropdown>
             </div>
             <div class="sup-pills sup-pills-inline">
               <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | number:'1.2-2' }}</span></div>
@@ -272,33 +267,19 @@
             </div>
             <div class="ap-field">
               <span class="ap-field-label">Method <span class="req">*</span></span>
-              <select class="ap-select" [(ngModel)]="paymentForm.paymentMethodId">
-                <option [ngValue]="1">Cash</option>
-                <option [ngValue]="2">Bank Transfer</option>
-                <option [ngValue]="3">Cheque</option>
-              </select>
+              <erp-dropdown [(ngModel)]="paymentForm.paymentMethodId" [options]="paymentMethodOptions"></erp-dropdown>
             </div>
             <div class="ap-field" *ngIf="paymentForm.paymentMethodId === 2 || paymentForm.paymentMethodId === 3">
               <span class="ap-field-label">Bank Account <span class="req">*</span></span>
-              <div class="ap-dd" (click)="$event.stopPropagation()">
-                <div class="ap-dd-trigger" [class.is-open]="pmtBankOpen" (click)="toggleCombo('pmtBankOpen')">
-                  <span class="ap-dd-value" [class.placeholder]="!paymentBankName">{{ paymentBankName || '-- Select Bank --' }}</span>
-                  <span class="ap-dd-arrow" [class.open]="pmtBankOpen">&#x25BE;</span>
-                </div>
-                <div class="ap-dd-panel" *ngIf="pmtBankOpen">
-                  <input class="ap-dd-search" type="text" [(ngModel)]="pmtBankSearch" placeholder="Search..." autocomplete="off" (click)="$event.stopPropagation()">
-                  <div class="ap-dd-list">
-                    <div class="ap-dd-item" *ngFor="let b of pmtFilteredBanks" (click)="selectPmtBank(b)">{{ b.displayName }}</div>
-                    <div class="ap-dd-empty" *ngIf="!pmtFilteredBanks.length">No banks found</div>
-                  </div>
-                </div>
-              </div>
+              <erp-dropdown [(ngModel)]="paymentForm.bankId"
+                [items]="bankAccounts" bindLabel="displayName" bindValue="id"
+                placeholder="-- Select Bank --"></erp-dropdown>
             </div>
             <div class="ap-field">
               <span class="ap-field-label">Pay Currency</span>
-              <select class="ap-select" [(ngModel)]="paymentCurrencyId" (ngModelChange)="onPaymentCurrencyChange()">
-                <option *ngFor="let c of paymentCurrencies" [ngValue]="c.id ?? c.currencyId">{{ c.currencyCode ?? c.currencyName }}</option>
-              </select>
+              <erp-dropdown [(ngModel)]="paymentCurrencyId"
+                [items]="paymentCurrencies" bindLabel="currencyCode" bindValue="id"
+                (ngModelChange)="onPaymentCurrencyChange()"></erp-dropdown>
             </div>
             <div class="ap-field">
               <span class="ap-field-label">Amount <span class="req">*</span> <span class="ap-curr-tag">({{ paymentCurrencyName || 'SGD' }})</span></span>
@@ -589,17 +570,10 @@
             <!-- Supplier -->
             <div class="ap-field" style="margin-bottom:16px;">
               <span class="ap-field-label">Supplier <span class="req">*</span></span>
-              <div class="ap-combo">
-                <div class="ap-combo-trigger" (click)="toggleCombo('advSupplierOpen')">
-                  <input class="ap-combo-input" type="text" [(ngModel)]="advSupplierSearch"
-                         (ngModelChange)="advSupplierOpen = true" placeholder="Search supplier..." autocomplete="off">
-                  <span class="ap-combo-arrow" [class.open]="advSupplierOpen">&#x25BE;</span>
-                </div>
-                <div class="ap-combo-menu" *ngIf="advSupplierOpen">
-                  <div class="ap-combo-item" *ngFor="let s of advFilteredSuppliers" (mousedown)="selectAdvSupplier(s)">{{ s.name }}</div>
-                  <div class="ap-combo-empty" *ngIf="!advFilteredSuppliers.length">No suppliers found</div>
-                </div>
-              </div>
+              <erp-dropdown [(ngModel)]="advanceForm.supplierId"
+                [items]="suppliers" bindLabel="name" bindValue="id"
+                placeholder="Search supplier..."
+                (ngModelChange)="onSupplierSelect()"></erp-dropdown>
             </div>
 
             <!-- Row: Date | Amount | Currency | Reference -->
@@ -614,19 +588,10 @@
               </div>
               <div class="ap-field">
                 <span class="ap-field-label">Currency</span>
-                <div class="ap-combo" (click)="$event.stopPropagation()">
-                  <div class="ap-combo-trigger" (click)="toggleCombo('advCurrOpen')">
-                    <input class="ap-combo-input" type="text" [(ngModel)]="advCurrSearch"
-                           (ngModelChange)="advCurrOpen = true" placeholder="SGD" autocomplete="off">
-                    <span class="ap-combo-arrow" [class.open]="advCurrOpen">&#x25BE;</span>
-                  </div>
-                  <div class="ap-combo-menu" *ngIf="advCurrOpen">
-                    <div class="ap-combo-item" *ngFor="let c of advFilteredCurrencies" (mousedown)="selectAdvCurrency(c)">
-                      {{ c.currencyCode ?? c.currencyName }}
-                    </div>
-                    <div class="ap-combo-empty" *ngIf="!advFilteredCurrencies.length">No currencies found</div>
-                  </div>
-                </div>
+                <erp-dropdown [(ngModel)]="apAdvCurrencyId"
+                  [items]="paymentCurrencies" bindLabel="currencyCode" bindValue="id"
+                  placeholder="SGD"
+                  (ngModelChange)="onApAdvCurrencyChange()"></erp-dropdown>
               </div>
               <div class="ap-field">
                 <span class="ap-field-label">Reference No</span>
@@ -634,20 +599,13 @@
               </div>
             </div>
 
-            <!-- GRN # Combobox -->
+            <!-- GRN # Dropdown -->
             <div class="ap-field" style="margin-bottom:16px;">
               <span class="ap-field-label">GRN #</span>
-              <div class="ap-combo">
-                <div class="ap-combo-trigger" (click)="toggleCombo('advGrnOpen')">
-                  <input class="ap-combo-input" type="text" [(ngModel)]="advGrnSearch"
-                         (ngModelChange)="advGrnOpen = true" placeholder="Search GRN..." autocomplete="off">
-                  <span class="ap-combo-arrow" [class.open]="advGrnOpen">&#x25BE;</span>
-                </div>
-                <div class="ap-combo-menu" *ngIf="advGrnOpen">
-                  <div class="ap-combo-item" *ngFor="let g of advFilteredGrns" (mousedown)="selectAdvGrn(g)">{{ g.grnNo }}</div>
-                  <div class="ap-combo-empty" *ngIf="!advFilteredGrns.length">No GRNs found</div>
-                </div>
-              </div>
+              <erp-dropdown [(ngModel)]="apAdvGrnNo"
+                [items]="grns" bindLabel="grnNo" bindValue="grnNo"
+                placeholder="Search GRN..."
+                (ngModelChange)="onAdvGrnChange()"></erp-dropdown>
               <div *ngIf="apAdvGrnNo && apAdvGrnTotal > 0"
                    style="margin-top:6px;font-size:12px;color:#334155;">
                 GRN Total: <strong>{{ apAdvGrnTotal | number:'1.2-2' }} {{ apAdvCurrencyName || 'SGD' }}</strong>
@@ -663,25 +621,15 @@
             <div class="ap-form-row">
               <div class="ap-field">
                 <span class="ap-field-label">Method <span class="req">*</span></span>
-                <select class="ap-select" [(ngModel)]="apAdvMethodId" (change)="onApAdvMethodChange()">
-                  <option [ngValue]="1">Cash</option>
-                  <option [ngValue]="2">Bank Transfer</option>
-                  <option [ngValue]="3">Cheque</option>
-                </select>
+                <erp-dropdown [(ngModel)]="apAdvMethodId" [options]="paymentMethodOptions"
+                  (ngModelChange)="onApAdvMethodChange()"></erp-dropdown>
               </div>
               <div class="ap-field" *ngIf="apAdvMethodId === 2 || apAdvMethodId === 3">
                 <span class="ap-field-label">Bank Account <span class="req">*</span></span>
-                <div class="ap-combo">
-                  <div class="ap-combo-trigger" (click)="toggleCombo('advBankOpen')">
-                    <input class="ap-combo-input" type="text" [(ngModel)]="advBankSearch"
-                           (ngModelChange)="advBankOpen = true" placeholder="Search bank..." autocomplete="off">
-                    <span class="ap-combo-arrow" [class.open]="advBankOpen">&#x25BE;</span>
-                  </div>
-                  <div class="ap-combo-menu" *ngIf="advBankOpen">
-                    <div class="ap-combo-item" *ngFor="let b of advFilteredBanks" (mousedown)="selectAdvBank(b)">{{ b.displayName }}</div>
-                    <div class="ap-combo-empty" *ngIf="!advFilteredBanks.length">No banks found</div>
-                  </div>
-                </div>
+                <erp-dropdown [(ngModel)]="apAdvBankId"
+                  [items]="bankAccounts" bindLabel="displayName" bindValue="id"
+                  placeholder="Search bank..."
+                  (ngModelChange)="onApAdvBankChange()"></erp-dropdown>
               </div>
             </div>
 

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
+import { AuditPrintService } from '../../core/services/audit-print.service';
 
 @Component({
   selector: 'erp-finance-bs',
@@ -24,8 +25,9 @@ export class FinanceBsComponent implements OnInit {
   private readonly userId = Number(localStorage.getItem('id'));
 
   private endpoint = { list: '/FinanceReport/GetBalanceSheetDetails' };
+  private readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService, private auditPrint: AuditPrintService) {}
 
   ngOnInit(): void {
     this.load();
@@ -148,20 +150,56 @@ export class FinanceBsComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 
+  /** Combined Acc Code / Description / Debit (Assets) / Credit (Liabilities & Equity) ledger rows for the auditing-format export. */
+  private get auditRows(): Array<{ code: string; name: string; debit: number; credit: number }> {
+    const rows = [
+      ...this.assetRows.map(r => ({ code: String(r.accountCode ?? ''), name: r.accountName ?? '', debit: r.amount || 0, credit: 0 })),
+      ...this.liabilityRows.map(r => ({ code: String(r.accountCode ?? ''), name: r.accountName ?? '', debit: 0, credit: r.amount || 0 }))
+    ];
+    return rows.sort((a, b) => a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
+  }
+
+  /** Balancing figure so Debit (Assets) and Credit (Liabilities & Equity) foot to the same Grand Total. */
+  private get balancingRow(): { label: string; debit: number; credit: number } {
+    const diff = this.totalAssets - this.totalLiabilities;
+    return {
+      label: 'Balancing Figure',
+      debit: diff < 0 ? -diff : 0,
+      credit: diff > 0 ? diff : 0
+    };
+  }
+
+  private get grandTotal(): number { return Math.max(this.totalAssets, this.totalLiabilities); }
+
+  private fmtDate(d: string): string {
+    if (!d) return 'All';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${dt.getFullYear()}`;
+  }
+
   exportPdf(): void {
-    const w = window.open('', '_blank', 'width=900,height=700');
-    if (!w) return;
-    w.document.write(`<html><head><title>Balance Sheet</title><style>body{font-family:Arial;font-size:12px;margin:20px}h2{color:#2e5f73}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#f3f4f6;padding:6px;text-align:left;border-bottom:1px solid #ddd}td{padding:5px 6px;border-bottom:1px solid #f0f0f0}.total-row td{font-weight:bold;border-top:1px solid #ccc}</style></head><body>
-      <h2>Balance Sheet</h2><p>Total Liabilities: <b>${this.totalLiabilities.toFixed(2)}</b> &nbsp; Total Assets: <b>${this.totalAssets.toFixed(2)}</b></p>
-      <table><thead><tr><th>Liabilities</th><th style="text-align:right">Amount</th></tr></thead><tbody>
-        ${this.liabilityRows.map(r=>`<tr><td>${r.accountName}</td><td style="text-align:right">${(r.amount||0).toFixed(2)}</td></tr>`).join('')}
-        <tr class="total-row"><td>Total Liabilities</td><td style="text-align:right">${this.totalLiabilities.toFixed(2)}</td></tr>
-      </tbody></table>
-      <table style="margin-top:16px"><thead><tr><th>Assets</th><th style="text-align:right">Amount</th></tr></thead><tbody>
-        ${this.assetRows.map(r=>`<tr><td>${r.accountName}</td><td style="text-align:right">${(r.amount||0).toFixed(2)}</td></tr>`).join('')}
-        <tr class="total-row"><td>Total Assets</td><td style="text-align:right">${this.totalAssets.toFixed(2)}</td></tr>
-      </tbody></table>
-    </body></html>`);
-    w.document.close(); w.print();
+    const asAt = this.fmtDate(this.toDate);
+    const bal  = this.balancingRow;
+
+    this.auditPrint.print({
+      reportTitle: 'Balance Sheet',
+      periodLine: `As At ${asAt}`,
+      metaLines: [`Date : As At ${asAt}`, 'Sort By : Code;Description', 'Project : All'],
+      labelColumnKey: 'name',
+      columns: [
+        { header: 'Acc Code', key: 'code' },
+        { header: 'Description', key: 'name' },
+        { header: 'Debit (Assets)', key: 'debit', align: 'right', type: 'number' },
+        { header: 'Credit (Liabilities & Equity)', key: 'credit', align: 'right', type: 'number' }
+      ],
+      rows: this.auditRows,
+      totalRows: [
+        { label: bal.label, values: { debit: bal.debit, credit: bal.credit } },
+        { label: `Grand Total Amount (${this.baseCurrencyName})`, values: { debit: this.grandTotal, credit: this.grandTotal }, grand: true }
+      ]
+    });
   }
 }

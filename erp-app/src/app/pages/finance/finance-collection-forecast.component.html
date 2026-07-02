@@ -5,8 +5,12 @@
   <!-- Header -->
   <div class="rpt-head">
     <h4 class="rpt-title">Collections Forecast</h4>
-    <div class="rpt-head-actions">
-      <span class="rpt-sub">Expected customer collections by due date and probability</span>
+    <div class="rpt-head-actions" style="display:flex;align-items:center;gap:14px;">
+      <span class="rpt-sub">Expected customer collections by due date, per customer</span>
+      <button class="btn-run" type="button" (click)="exportPdf()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export PDF
+      </button>
     </div>
   </div>
 
@@ -15,49 +19,37 @@
     <div class="bucket-card bucket-total">
       <div class="bucket-icon-wrap bucket-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
       <div class="bucket-info">
-        <div class="bucket-lbl">Total Expected</div>
+        <div class="bucket-lbl">Total Expected ({{ baseCurrencyName }})</div>
         <div class="bucket-val">{{ total | number:'1.2-2' }}</div>
-        <div class="bucket-count">{{ rows.length }} invoice{{ rows.length !== 1 ? 's' : '' }}</div>
-      </div>
-    </div>
-    <div class="bucket-card bucket-overdue">
-      <div class="bucket-icon-wrap bucket-icon-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-      <div class="bucket-info">
-        <div class="bucket-lbl">Overdue</div>
-        <div class="bucket-val">{{ buckets.overdue.amount | number:'1.2-2' }}</div>
-        <div class="bucket-count">{{ buckets.overdue.count }} invoice{{ buckets.overdue.count !== 1 ? 's' : '' }}</div>
+        <div class="bucket-count">{{ rows.length }} customer{{ rows.length !== 1 ? 's' : '' }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-current">
       <div class="bucket-icon-wrap bucket-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="bucket-info">
-        <div class="bucket-lbl">Current (0–30 days)</div>
-        <div class="bucket-val">{{ buckets.current.amount | number:'1.2-2' }}</div>
-        <div class="bucket-count">{{ buckets.current.count }} invoice{{ buckets.current.count !== 1 ? 's' : '' }}</div>
+        <div class="bucket-lbl">Due in 0–7 Days</div>
+        <div class="bucket-val">{{ buckets.days0_7.amount | number:'1.2-2' }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-30">
       <div class="bucket-icon-wrap bucket-icon-orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <div class="bucket-info">
-        <div class="bucket-lbl">31–60 Days</div>
-        <div class="bucket-val">{{ buckets.days30.amount | number:'1.2-2' }}</div>
-        <div class="bucket-count">{{ buckets.days30.count }} invoice{{ buckets.days30.count !== 1 ? 's' : '' }}</div>
+        <div class="bucket-lbl">Due in 8–14 Days</div>
+        <div class="bucket-val">{{ buckets.days8_14.amount | number:'1.2-2' }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-60">
       <div class="bucket-icon-wrap bucket-icon-purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <div class="bucket-info">
-        <div class="bucket-lbl">61–90 Days</div>
-        <div class="bucket-val">{{ buckets.days60.amount | number:'1.2-2' }}</div>
-        <div class="bucket-count">{{ buckets.days60.count }} invoice{{ buckets.days60.count !== 1 ? 's' : '' }}</div>
+        <div class="bucket-lbl">Due in 15–30 Days</div>
+        <div class="bucket-val">{{ buckets.days15_30.amount | number:'1.2-2' }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-90">
       <div class="bucket-icon-wrap bucket-icon-gray"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
       <div class="bucket-info">
-        <div class="bucket-lbl">90+ Days</div>
-        <div class="bucket-val">{{ buckets.days90.amount | number:'1.2-2' }}</div>
-        <div class="bucket-count">{{ buckets.days90.count }} invoice{{ buckets.days90.count !== 1 ? 's' : '' }}</div>
+        <div class="bucket-lbl">Due in 30+ Days</div>
+        <div class="bucket-val">{{ buckets.days30plus.amount | number:'1.2-2' }}</div>
       </div>
     </div>
   </div>
@@ -75,7 +67,7 @@
       </label>
       <label class="filter-lbl">
         <span>Search</span>
-        <input type="text" [(ngModel)]="search" placeholder="Customer / Invoice No" (input)="applyFilter()">
+        <input type="text" [(ngModel)]="search" placeholder="Customer" (input)="applyFilter()">
       </label>
     </div>
     <div class="filter-actions">
@@ -91,7 +83,7 @@
   <!-- Table Card -->
   <div class="table-card">
     <div class="table-header-row">
-      <span class="table-title">Forecast Detail</span>
+      <span class="table-title">Forecast by Customer</span>
       <span class="table-count" *ngIf="filtered.length">{{ filtered.length }} record{{ filtered.length !== 1 ? 's' : '' }}</span>
     </div>
 
@@ -101,29 +93,51 @@
       <table class="cf-table">
         <thead>
           <tr>
-            <th>CUSTOMER</th><th>INVOICE NO</th><th>DUE DATE</th><th>EXPECTED DATE</th>
-            <th class="num">AMOUNT</th><th class="center">PROBABILITY</th><th class="center">DAYS TO DUE</th>
+            <th style="width:32px"></th>
+            <th>CUSTOMER</th>
+            <th class="num">0-7 DAYS</th>
+            <th class="num">8-14 DAYS</th>
+            <th class="num">15-30 DAYS</th>
+            <th class="num">30+ DAYS</th>
+            <th class="num">TOTAL OUTSTANDING ({{ baseCurrencyName }})</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let r of filtered">
-            <td class="cust-cell">{{ r.customerName }}</td>
-            <td class="inv-cell">{{ r.invoiceNo }}</td>
-            <td [ngClass]="overdueClass(daysUntilDue(r.dueDate))">{{ r.dueDate | date:'dd-MMM-yyyy' }}</td>
-            <td class="muted-cell">{{ r.expectedDate | date:'dd-MMM-yyyy' }}</td>
-            <td class="num amt-cell">{{ r.amount | number:'1.2-2' }}</td>
-            <td class="center">
-              <div class="prob-row">
-                <div class="prob-bar"><div class="prob-fill" [ngClass]="probabilityClass(r.probability)" [style.width.%]="r.probability"></div></div>
-                <span class="prob-pct" [ngClass]="probabilityClass(r.probability)">{{ r.probability }}%</span>
-              </div>
-            </td>
-            <td class="center">
-              <span class="days-badge" [ngClass]="overdueClass(daysUntilDue(r.dueDate))">
-                {{ daysUntilDue(r.dueDate) < 0 ? (daysUntilDue(r.dueDate) * -1) + ' days overdue' : daysUntilDue(r.dueDate) + ' days' }}
-              </span>
-            </td>
-          </tr>
+          <ng-container *ngFor="let r of filtered">
+            <tr class="customer-row" (click)="toggleCustomer(r)">
+              <td class="expand-cell">
+                <button class="expand-btn" type="button">{{ isExpanded(r) ? '−' : '+' }}</button>
+              </td>
+              <td class="cust-cell">{{ r.customerName }}</td>
+              <td class="num">{{ r.bucket0_7 | number:'1.2-2' }}</td>
+              <td class="num">{{ r.bucket8_14 | number:'1.2-2' }}</td>
+              <td class="num">{{ r.bucket15_30 | number:'1.2-2' }}</td>
+              <td class="num">{{ r.bucket30Plus | number:'1.2-2' }}</td>
+              <td class="num amt-cell">{{ r.totalOutstanding | number:'1.2-2' }}</td>
+            </tr>
+            <tr class="detail-row" *ngIf="isExpanded(r)">
+              <td colspan="7">
+                <div class="rpt-loading" *ngIf="detailLoading[r.customerId]"><span class="spinner"></span> Loading invoices...</div>
+                <table class="detail-table" *ngIf="!detailLoading[r.customerId]">
+                  <thead>
+                    <tr><th>Invoice No</th><th>Invoice Date</th><th>Due Date</th><th class="num">Balance</th><th>Bucket</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let d of detailRows[r.customerId]">
+                      <td>{{ d.invoiceNo }}</td>
+                      <td>{{ d.invoiceDate | date:'dd-MMM-yyyy' }}</td>
+                      <td>{{ d.dueDate | date:'dd-MMM-yyyy' }}</td>
+                      <td class="num">{{ d.balance | number:'1.2-2' }}</td>
+                      <td>{{ d.bucketName }}</td>
+                    </tr>
+                    <tr *ngIf="!detailRows[r.customerId]?.length">
+                      <td colspan="5" class="no-data">No open invoices for this customer.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </ng-container>
           <tr *ngIf="!filtered.length && !loading">
             <td colspan="7" class="no-data">No collection forecast data found for selected period.</td>
           </tr>

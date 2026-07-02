@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
+import { AuditPrintService } from '../../core/services/audit-print.service';
 
 @Component({
   selector: 'erp-finance-gst-detail',
@@ -30,8 +31,9 @@ export class FinanceGstDetailComponent implements OnInit {
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly threeMonthsAgo = (() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10); })();
   private readonly api = environment.apiUrl;
+  readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private auditPrint: AuditPrintService) {}
 
   ngOnInit(): void {
     this.fromDate = this.threeMonthsAgo;
@@ -95,6 +97,40 @@ export class FinanceGstDetailComponent implements OnInit {
     if (l === 'supplier') return 'badge-supplier';
     if (l === 'customer') return 'badge-customer';
     return 'badge-other';
+  }
+
+  private fmtDate(d: string): string {
+    if (!d) return 'All';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${dt.getFullYear()}`;
+  }
+
+  exportPdf(): void {
+    const fromTxt = this.fmtDate(this.fromDate);
+    const toTxt   = this.fmtDate(this.toDate);
+
+    this.auditPrint.print({
+      reportTitle: 'GST Detail Report',
+      periodLine: `For The Period From ${fromTxt} To ${toTxt}`,
+      metaLines: [`Date : From ${fromTxt} to ${toTxt}`, 'Sort By : Date;Doc No', `Doc Type : ${this.docType === 'ALL' ? 'All' : this.docType}`],
+      labelColumnKey: 'partyName',
+      columns: [
+        { header: 'Type', key: 'typeLabel' },
+        { header: 'Doc No', key: 'docNo' },
+        { header: 'Date', key: 'txnDate', type: 'date' },
+        { header: 'Customer / Supplier', key: 'partyName' },
+        { header: 'Taxable', key: 'taxable', align: 'right', type: 'number' },
+        { header: 'Tax', key: 'taxAmt', align: 'right', type: 'number' },
+        { header: 'Net', key: 'net', align: 'right', type: 'number' }
+      ],
+      rows: this.filtered.map(r => ({ ...r, typeLabel: this.typeLabel(r) })),
+      totalRows: [
+        { label: 'Grand Total', values: { taxable: this.totalTaxable, taxAmt: this.totalTax, net: this.totalNet }, grand: true }
+      ]
+    });
   }
 
   exportExcel(): void {
