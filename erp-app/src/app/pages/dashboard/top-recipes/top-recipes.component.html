@@ -1,0 +1,20 @@
+<div class="section-card">
+  <h6 class="section-title">Top Recipes</h6>
+
+  <ng-container *ngIf="recipes.length > 0; else noData">
+    <div class="recipe-list">
+      <div class="recipe-item" *ngFor="let item of recipes">
+        <div class="recipe-img" [ngClass]="item.imageClass">{{ item.initial }}</div>
+        <div class="recipe-info">
+          <div class="recipe-name">{{ item.name }}</div>
+          <div class="recipe-meta">{{ item.cuisine }} · {{ item.cost }}</div>
+        </div>
+        <span [ngClass]="item.badgeClass">{{ item.status }}</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #noData>
+    <div class="no-data">No top recipes found</div>
+  </ng-template>
+</div>

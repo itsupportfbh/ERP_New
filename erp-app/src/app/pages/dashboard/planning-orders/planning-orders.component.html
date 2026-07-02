@@ -1,0 +1,28 @@
+<div class="section-card">
+  <h6 class="section-title">Planning Orders</h6>
+  <div class="table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of planningOrders">
+          <td>{{ item.orderNo }}</td>
+          <td>{{ item.product }}</td>
+          <td>{{ item.qty }}</td>
+          <td><span [ngClass]="item.class">{{ item.status }}</span></td>
+          <td>{{ item.date }}</td>
+        </tr>
+        <tr *ngIf="planningOrders.length === 0">
+          <td colspan="5" class="no-data">No planning orders</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

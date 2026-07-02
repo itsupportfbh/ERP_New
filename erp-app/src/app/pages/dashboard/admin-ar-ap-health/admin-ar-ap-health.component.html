@@ -1,0 +1,26 @@
+<div class="section-card half-width">
+  <h6 class="section-title">AR / AP Health</h6>
+
+  <div class="ov-row">
+    <span>Receivables Collected</span>
+    <div class="prog-wrap"><div class="prog-fill blue" [style.width.%]="receivablePercent"></div></div>
+    <span class="prog-pct">{{ receivablePercent }}%</span>
+  </div>
+
+  <div class="ov-row">
+    <span>Payables Paid</span>
+    <div class="prog-wrap"><div class="prog-fill orange" [style.width.%]="payablePercent"></div></div>
+    <span class="prog-pct">{{ payablePercent }}%</span>
+  </div>
+
+  <div class="health-stats">
+    <div class="health-stat">
+      <span class="hs-val">{{ activeUsers }}</span>
+      <span class="hs-lbl">Active Users</span>
+    </div>
+    <div class="health-stat">
+      <span class="hs-val" [class.warn]="pendingApprovals > 0">{{ pendingApprovals }}</span>
+      <span class="hs-lbl">Pending Approvals</span>
+    </div>
+  </div>
+</div>

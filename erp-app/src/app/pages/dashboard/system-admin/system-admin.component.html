@@ -1,0 +1,51 @@
+<div class="kpi-grid">
+
+  <!-- Total Revenue -->
+  <div class="kpi-card blue-card">
+    <div class="kpi-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="kpi-title">Total Revenue</div>
+    <div class="kpi-value">{{ totalRevenue }}</div>
+    <div class="kpi-footer">
+      <span class="badge-up">&#8593; 18%</span>
+    </div>
+  </div>
+
+  <!-- Total Payables -->
+  <div class="kpi-card orange-card">
+    <div class="kpi-icon orange-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    </div>
+    <div class="kpi-title">Total Payables</div>
+    <div class="kpi-value">{{ totalPayables }}</div>
+    <div class="kpi-footer">
+      <span class="badge-down">&#8595; 5%</span>
+    </div>
+  </div>
+
+  <!-- Total SKUs -->
+  <div class="kpi-card green-card">
+    <div class="kpi-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </div>
+    <div class="kpi-title">Total SKUs</div>
+    <div class="kpi-value">{{ totalSkus | number }}</div>
+    <div class="kpi-footer">
+      <span class="badge-up">&#8593; 3%</span>
+    </div>
+  </div>
+
+  <!-- All Exceptions -->
+  <div class="kpi-card red-card">
+    <div class="kpi-icon red-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="kpi-title">All Exceptions</div>
+    <div class="kpi-value">{{ allExceptions }}</div>
+    <div class="kpi-footer">
+      <span class="badge-down">&#8595; 3</span>
+    </div>
+  </div>
+
+</div>

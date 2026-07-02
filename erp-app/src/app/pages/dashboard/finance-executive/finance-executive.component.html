@@ -1,0 +1,42 @@
+<div class="kpi-grid">
+
+  <div class="kpi-card blue-card">
+    <div class="kpi-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    </div>
+    <div class="kpi-title">Open AR Invoices</div>
+    <div class="kpi-value">{{ openARInvoices }}</div>
+    <div class="kpi-footer" *ngIf="openArInvoicesChange !== 0">
+      <span [ngClass]="openArInvoicesChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ openArInvoicesChange >= 0 ? '↑' : '↓' }} {{ positiveValue(openArInvoicesChange) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card orange-card">
+    <div class="kpi-icon orange-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    </div>
+    <div class="kpi-title">AP Due Today</div>
+    <div class="kpi-value">{{ apDueToday }}</div>
+    <div class="kpi-footer" *ngIf="apDueTodayChange !== 0">
+      <span [ngClass]="apDueTodayChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ apDueTodayChange >= 0 ? '↑' : '↓' }} {{ positiveValue(apDueTodayChange) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card red-card">
+    <div class="kpi-icon red-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="kpi-title">3-Way Mismatch</div>
+    <div class="kpi-value">{{ _3WayMismatch }}</div>
+    <div class="kpi-footer" *ngIf="threeWayMismatchChangePercent !== 0">
+      <span [ngClass]="threeWayMismatchChangePercent >= 0 ? 'badge-up' : 'badge-down'">
+        {{ threeWayMismatchChangePercent >= 0 ? '↑' : '↓' }} {{ positiveValue(threeWayMismatchChangePercent) }}%
+      </span>
+    </div>
+  </div>
+
+</div>

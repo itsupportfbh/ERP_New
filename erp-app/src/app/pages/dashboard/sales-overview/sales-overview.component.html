@@ -1,0 +1,27 @@
+<div class="section-card half-width">
+  <h6 class="section-title">Sales Overview</h6>
+
+  <div class="ov-row">
+    <span>Quotations</span>
+    <div class="prog-wrap"><div class="prog-fill blue" [style.width.%]="pct(salesOverviewData.quotation)"></div></div>
+    <span class="ov-val">{{ salesOverviewData.quotation }}</span>
+  </div>
+
+  <div class="ov-row">
+    <span>Sales Orders</span>
+    <div class="prog-wrap"><div class="prog-fill green" [style.width.%]="pct(salesOverviewData.salesOrders)"></div></div>
+    <span class="ov-val">{{ salesOverviewData.salesOrders }}</span>
+  </div>
+
+  <div class="ov-row">
+    <span>Deliveries</span>
+    <div class="prog-wrap"><div class="prog-fill teal" [style.width.%]="pct(salesOverviewData.deliveries)"></div></div>
+    <span class="ov-val">{{ salesOverviewData.deliveries }}</span>
+  </div>
+
+  <div class="ov-row">
+    <span>Invoices</span>
+    <div class="prog-wrap"><div class="prog-fill orange" [style.width.%]="pct(salesOverviewData.invoices)"></div></div>
+    <span class="ov-val">{{ salesOverviewData.invoices }}</span>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+<div class="kpi-grid">
+
+  <div class="kpi-card blue-card">
+    <div class="kpi-icon blue-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    </div>
+    <div class="kpi-title">Total Recipes</div>
+    <div class="kpi-value">{{ totalRecipes }}</div>
+    <div class="kpi-footer"><span class="badge-up">12 added this month</span></div>
+  </div>
+
+  <div class="kpi-card green-card">
+    <div class="kpi-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 4h16v4H4z"/><path d="M4 10h16v10H4z"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+    </div>
+    <div class="kpi-title">Production Orders</div>
+    <div class="kpi-value">{{ productionOrders }}</div>
+    <div class="kpi-footer"><span class="badge-up">+8 vs last week</span></div>
+  </div>
+
+  <div class="kpi-card orange-card">
+    <div class="kpi-icon orange-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="kpi-title">Avg Recipe Cost</div>
+    <div class="kpi-value">{{ avgRecipeCost }}</div>
+    <div class="kpi-footer"><span class="badge-down">−₹12 vs last month</span></div>
+  </div>
+
+  <div class="kpi-card purple-card">
+    <div class="kpi-icon purple-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </div>
+    <div class="kpi-title">Raw Materials</div>
+    <div class="kpi-value">{{ rawMaterials }}</div>
+    <div class="kpi-footer"><span class="kpi-title" style="margin:0">Across 6 warehouses</span></div>
+  </div>
+
+  <div class="kpi-card red-card">
+    <div class="kpi-icon red-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="kpi-title">Pending Orders</div>
+    <div class="kpi-value">{{ pendingOrders }}</div>
+    <div class="kpi-footer"><span class="badge-down">3 overdue</span></div>
+  </div>
+
+</div>

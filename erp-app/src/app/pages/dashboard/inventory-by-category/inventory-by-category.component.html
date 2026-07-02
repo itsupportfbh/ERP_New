@@ -1,0 +1,18 @@
+<div class="section-card">
+
+  <div class="section-title">Inventory by Category</div>
+
+  <div class="ov-row" *ngFor="let item of categories">
+    <span>{{ item.name }}</span>
+    <div class="prog-wrap">
+      <div class="prog-fill teal" [style.width.%]="item.percentage"></div>
+    </div>
+    <span class="prog-pct">{{ item.percentage }}%</span>
+    <span class="ov-val">{{ item.value }}</span>
+  </div>
+
+  <div *ngIf="categories.length === 0" class="no-data">
+    No inventory category data
+  </div>
+
+</div>
