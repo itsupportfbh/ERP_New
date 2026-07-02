@@ -143,9 +143,9 @@ export class SalesService {
   postDeliveryOrder(id: number | string): Observable<any> {
     return this.http.post(`${this.api}/DeliveryOrder/Post/${id}`, {});
   }
-  // Sales orders available to deliver (reuse picking source)
+  // Sales orders available to deliver (reuse picking source, but exclude SOs already used in a DO/SI)
   getAvailableSalesOrdersForDelivery(): Observable<any> {
-    return this.http.get(`${this.api}/Picking/available-salesorders`);
+    return this.http.get(`${this.api}/Picking/available-salesorders`, { params: { forDelivery: true } });
   }
 
   // ── Sales Invoice ────────────────────────────────────
