@@ -8,6 +8,7 @@ import { FinanceService, FINANCE_PAGES } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
+import { SharedModule } from '../../shared/shared.module';
 
 type ApTab = 'invoices' | 'payments' | 'aging' | 'advances' | 'match';
 type ApView = 'list' | 'payment-form' | 'advance-form';
@@ -15,7 +16,7 @@ type ApView = 'list' | 'payment-form' | 'advance-form';
 @Component({
   selector: 'erp-finance-ap',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './finance-ap.component.html',
   styleUrls: ['./finance-ap.component.scss']
 })
@@ -35,7 +36,9 @@ export class FinanceApComponent implements OnInit {
   invoices: any[] = [];
   filteredInvoices: any[] = [];
   expandedSuppliers: Record<string, boolean> = {};
+  /** All 4 top KPI cards are always in the company base currency, regardless of each invoice's own currency. */
   invoiceSummary = { totalInvoice: 0, paid: 0, debitNote: 0, advance: 0, outstanding: 0 };
+  readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
   // Payments list
   payments: any[] = [];
@@ -83,6 +86,11 @@ export class FinanceApComponent implements OnInit {
   showAdvanceForm = false;
   advanceForm: any = { supplierId: null, supplierName: '', advanceDate: '', amount: null, referenceNo: '', notes: '' };
   savingAdvance = false;
+  readonly paymentMethodOptions = [
+    { label: 'Cash', value: 1 },
+    { label: 'Bank Transfer', value: 2 },
+    { label: 'Cheque', value: 3 }
+  ];
   apAdvMethodId = 2;
   apAdvBankId:     number | null = null;
   apAdvBankHeadId: number | null = null;
@@ -189,7 +197,11 @@ export class FinanceApComponent implements OnInit {
   private loadPaymentCurrencies(): void {
     this.finance.list({ list: '/Currency/GetCurrencies' }).subscribe({
       next: res => {
-        this.paymentCurrencies = this.finance.unwrap(res);
+        this.paymentCurrencies = this.finance.unwrap(res).map((c: any) => ({
+          ...c,
+          id: c.id ?? c.currencyId,
+          currencyCode: c.currencyCode ?? c.currencyName ?? ''
+        }));
         if (this.paymentCurrencies.length && !this.paymentCurrencyId) {
           const base = this.paymentCurrencies.find(c => c.isBase) ?? this.paymentCurrencies[0];
           this.paymentCurrencyId = base.id ?? base.currencyId;
@@ -573,7 +585,7 @@ export class FinanceApComponent implements OnInit {
     this.buildSupplierGroups();
   }
 
-  supplierGroups: { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number }[] = [];
+  supplierGroups: { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number; baseAmount: number }[] = [];
 
   private buildSupplierGroups(): void {
     const map = new Map<string, any[]>();
@@ -589,7 +601,8 @@ export class FinanceApComponent implements OnInit {
       paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
       debitNote: invs.reduce((s, i) => s + (i.debitNote || 0), 0),
       advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
-      outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0)
+      outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0),
+      baseAmount: invs.reduce((s, i) => s + (i.baseAmount || 0), 0)
     }));
   }
 
@@ -861,6 +874,13 @@ export class FinanceApComponent implements OnInit {
     this.advBankOpen     = false;
   }
 
+  /** erp-dropdown handler for the Advance form's Bank Account field. */
+  onApAdvBankChange(): void {
+    this.apAdvBankHeadId = this.apAdvBankId;
+    const b = this.bankAccounts.find(x => x.id === Number(this.apAdvBankId));
+    this.apAdvBankName = b?.displayName ?? '';
+  }
+
   get advFilteredCurrencies(): any[] {
     const q = this.advCurrSearch.toLowerCase();
     return q ? this.paymentCurrencies.filter(c =>
@@ -871,6 +891,13 @@ export class FinanceApComponent implements OnInit {
     this.apAdvCurrencyName = c.currencyCode ?? c.currencyName ?? '';
     this.advCurrSearch     = this.apAdvCurrencyName;
     this.advCurrOpen       = false;
+    this.onApAdvAmountChange();
+  }
+
+  /** erp-dropdown handler for the Advance form's Currency field. */
+  onApAdvCurrencyChange(): void {
+    const cur = this.paymentCurrencies.find(c => c.id === Number(this.apAdvCurrencyId));
+    this.apAdvCurrencyName = cur?.currencyCode ?? '';
     this.onApAdvAmountChange();
   }
 
@@ -889,12 +916,23 @@ export class FinanceApComponent implements OnInit {
     this.apAdvGrnTotal = this.computeGrnTotal(g);
   }
 
-  /** Sum of (qtyReceived × unitPrice) across the GRN's line items (stored in GRNJson). */
+  /** erp-dropdown handler — apAdvGrnNo is bound directly to the GRN's grnNo (its bindValue). */
+  onAdvGrnChange(): void {
+    const g = this.grns.find(x => x.grnNo === this.apAdvGrnNo);
+    this.apAdvGrnTotal = g ? this.computeGrnTotal(g) : 0;
+  }
+
+  /** Sum of (qtyReceived × unitPrice), inclusive of tax, across the GRN's line items (stored in GRNJson). */
   private computeGrnTotal(g: any): number {
     const raw = g?.grnJson ?? g?.GRNJson ?? g?.gRNJson ?? '[]';
     let lines: any[] = [];
     try { lines = Array.isArray(raw) ? raw : JSON.parse(raw || '[]'); } catch { lines = []; }
-    return lines.reduce((s, l) => s + (Number(l.qtyReceived) || 0) * (Number(l.unitPrice) || 0), 0);
+    const total = lines.reduce((s, l) => {
+      const base = (Number(l.qtyReceived) || 0) * (Number(l.unitPrice) || 0);
+      const taxRate = Number(l.taxRate) || 0;
+      return s + base * (1 + taxRate / 100);
+    }, 0);
+    return +total.toFixed(2);
   }
 
   /** True when the entered advance amount exceeds the selected GRN's total. */
@@ -952,11 +990,11 @@ export class FinanceApComponent implements OnInit {
   }
 
   private calculateInvoiceSummary(): void {
-    this.invoiceSummary.totalInvoice = this.invoices.reduce((s, r) => s + (r.amount || 0), 0);
-    this.invoiceSummary.paid = this.invoices.reduce((s, r) => s + (r.paid || 0), 0);
-    this.invoiceSummary.debitNote = this.invoices.reduce((s, r) => s + (r.debitNote || 0), 0);
-    this.invoiceSummary.advance = this.invoices.reduce((s, r) => s + (r.advance || 0), 0);
-    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance || 0), 0);
+    this.invoiceSummary.totalInvoice = this.invoices.reduce((s, r) => s + (r.baseAmount || 0), 0);
+    this.invoiceSummary.paid = this.invoices.reduce((s, r) => s + (r.paidBase || 0), 0);
+    this.invoiceSummary.debitNote = this.invoices.reduce((s, r) => s + (r.debitNoteBase || 0), 0);
+    this.invoiceSummary.advance = this.invoices.reduce((s, r) => s + (r.advanceBase || 0), 0);
+    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balanceBase || 0), 0);
   }
 
   private normalizeInvoice(row: any): any {
@@ -966,6 +1004,10 @@ export class FinanceApComponent implements OnInit {
     const debitNote = this.money(row, ['debitNote', 'DebitNote', 'debitNoteAmount', 'DebitNoteAmount']);
     const advance = this.money(row, ['advance', 'Advance', 'advanceAmount', 'AdvanceAmount', 'advanceAppliedAmount', 'AdvanceAppliedAmount', 'advanceApplied', 'AdvanceApplied']);
     const net = this.money(row, ['netPayableAmount', 'NetPayableAmount', 'outstandingAmount', 'OutstandingAmount', 'balance', 'Balance', 'outstanding', 'Outstanding'], amount - paid - debitNote - advance);
+    const fxRate = Number(row.fxRate ?? row.FxRate ?? 1) || 1;
+    const storedBase = this.money(row, ['baseAmount', 'BaseAmount', 'amountBase', 'AmountBase']);
+    const baseAmount = storedBase > 0 ? storedBase : +(amount * fxRate).toFixed(2);
+    const balance = Math.max(net, 0);
     return {
       ...row,
       id: row.id ?? row.Id ?? row.invoiceId ?? row.pinId ?? row.supplierInvoiceId,
@@ -980,8 +1022,16 @@ export class FinanceApComponent implements OnInit {
       paid,
       debitNote,
       advance,
-      balance: Math.max(net, 0),
+      balance,
       currencyName: row.currencyName ?? row.CurrencyName ?? row.currencyCode ?? 'SGD',
+      fxRate,
+      baseAmount,
+      // Base-currency equivalents for the top KPI cards — a paid/debit-note/advance amount is always
+      // recorded in the same currency as its invoice, so the same fxRate converts it to base currency.
+      paidBase: +(paid * fxRate).toFixed(2),
+      debitNoteBase: +(debitNote * fxRate).toFixed(2),
+      advanceBase: +(advance * fxRate).toFixed(2),
+      balanceBase: +(balance * fxRate).toFixed(2),
       status: net <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid'
     };
   }

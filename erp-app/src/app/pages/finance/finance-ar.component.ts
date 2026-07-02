@@ -5,6 +5,7 @@ import { FinanceService, FINANCE_PAGES } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
+import { SharedModule } from '../../shared/shared.module';
 
 type ArTab = 'invoices' | 'receipts' | 'advances' | 'aging' | 'create-invoice';
 
@@ -26,7 +27,7 @@ interface AllocationRow {
 @Component({
   selector: 'erp-finance-ar',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './finance-ar.component.html',
   styleUrls: ['./finance-ar.component.scss']
 })
@@ -37,7 +38,9 @@ export class FinanceArComponent implements OnInit {
   invoices: any[] = [];
   filteredInvoices: any[] = [];
   expandedCustomers: Set<string> = new Set();
+  /** All 4 top KPI cards are always in the company base currency, regardless of each invoice's own currency. */
   invoiceSummary = { total: 0, paid: 0, creditNote: 0, outstanding: 0 };
+  readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
   // Receipts list
   receipts: any[] = [];
@@ -79,6 +82,17 @@ export class FinanceArComponent implements OnInit {
   advAmountBase = 0;
   advFxRateLoading = false;
   customers: any[] = [];
+  readonly advancePaymentModeOptions = [
+    { label: 'Bank Transfer', value: 'BANK' },
+    { label: 'Cash', value: 'CASH' },
+    { label: 'UPI', value: 'UPI' }
+  ];
+  readonly receiptPaymentModeOptions = [
+    { label: 'Bank Transfer', value: 'BANK' },
+    { label: 'Cash', value: 'CASH' },
+    { label: 'Cheque', value: 'CHEQUE' },
+    { label: 'UPI', value: 'UPI' }
+  ];
 
   // Aging
   agingRows: any[] = [];
@@ -89,7 +103,7 @@ export class FinanceArComponent implements OnInit {
   // Create Invoice
   invoiceForm: { customerId: number | null; invoiceDate: string; remarks: string } = { customerId: null, invoiceDate: '', remarks: '' };
   invoiceLines: Array<{ itemName: string; uom: string; qty: number; unitPrice: number; discountPct: number; taxCodeId: number | null; gstPct: number; lineAmount: number; taxAmount: number; description: string }> = [];
-  taxCodes: Array<{ id: number; taxCode: string; taxName: string; taxRate: number }> = [];
+  taxCodes: Array<{ id: number; taxCode: string; taxName: string; label: string; taxRate: number }> = [];
   savingInvoice = false;
 
   isPeriodLocked = false;
@@ -160,7 +174,16 @@ export class FinanceArComponent implements OnInit {
 
   private loadBankAccounts(): void {
     this.finance.list({ list: '/BankAccounts' }).subscribe({
-      next: res => { this.bankAccounts = this.finance.unwrap(res); },
+      next: res => {
+        this.bankAccounts = this.finance.unwrap(res).map((b: any) => {
+          const name = b.headName ?? b.HeadName ?? b.bankName ?? b.BankName ?? b.name ?? b.accountName ?? '—';
+          return {
+            ...b,
+            id: b.id ?? b.bankId ?? b.BankId ?? b.Id,
+            displayName: name + (b.accountNo ? ` (${b.accountNo})` : '')
+          };
+        });
+      },
       error: () => { this.bankAccounts = []; }
     });
   }
@@ -170,7 +193,11 @@ export class FinanceArComponent implements OnInit {
   private loadReceiptCurrencies(): void {
     this.finance.list({ list: '/Currency/GetCurrencies' }).subscribe({
       next: res => {
-        this.receiptCurrencies = this.finance.unwrap(res);
+        this.receiptCurrencies = this.finance.unwrap(res).map((c: any) => ({
+          ...c,
+          id: c.id ?? c.currencyId,
+          currencyCode: c.currencyCode ?? c.currencyName ?? ''
+        }));
         if (this.receiptCurrencies.length && !this.receiptCurrencyId) {
           const base = this.receiptCurrencies.find(c => c.isBase) ?? this.receiptCurrencies[0];
           this.receiptCurrencyId = base.id ?? base.currencyId;
@@ -407,12 +434,16 @@ export class FinanceArComponent implements OnInit {
   private loadTaxCodes(): void {
     this.finance.list({ list: '/TaxCode/getAll' }).subscribe({
       next: res => {
-        this.taxCodes = this.finance.unwrap(res).map((t: any) => ({
-          id: t.id ?? t.iD ?? t.taxCodeId,
-          taxCode: t.taxCode ?? t.TaxCode,
-          taxName: t.taxName ?? t.TaxName,
-          taxRate: Number(t.taxRate ?? t.TaxRate ?? 0)
-        }));
+        this.taxCodes = this.finance.unwrap(res).map((t: any) => {
+          const taxCode = t.taxCode ?? t.TaxCode;
+          const taxName = t.taxName ?? t.TaxName;
+          return {
+            id: t.id ?? t.iD ?? t.taxCodeId,
+            taxCode, taxName,
+            label: `${taxCode ?? ''} – ${taxName ?? ''}`,
+            taxRate: Number(t.taxRate ?? t.TaxRate ?? 0)
+          };
+        });
       },
       error: () => { this.taxCodes = []; }
     });
@@ -578,7 +609,7 @@ setTab(tab: ArTab): void {
       : [...this.invoices];
   }
 
-  get customerGroups(): { customer: string; invoices: any[]; total: number; paid: number; creditNote: number; advance: number; outstanding: number }[] {
+  get customerGroups(): { customer: string; invoices: any[]; total: number; paid: number; creditNote: number; advance: number; outstanding: number; baseAmount: number }[] {
     const map = new Map<string, any[]>();
     this.filteredInvoices.forEach(inv => {
       const key = inv.customerName || 'Unknown Customer';
@@ -592,7 +623,8 @@ setTab(tab: ArTab): void {
       paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
       creditNote: invs.reduce((s, i) => s + (i.creditNote || 0), 0),
       advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
-      outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0)
+      outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0),
+      baseAmount: invs.reduce((s, i) => s + (i.baseAmount || 0), 0)
     }));
   }
 
@@ -655,9 +687,16 @@ setTab(tab: ArTab): void {
     if (!this.advanceForm.customerId) return;
     this.loadingOrders = true;
     this.finance.list({ list: `/SalesOrder/customer-open/${this.advanceForm.customerId}` }).subscribe({
-      next: res => { this.orders = this.finance.unwrap(res); this.loadingOrders = false; },
+      next: res => {
+        this.orders = this.finance.unwrap(res).map((o: any) => ({ ...o, soLabel: this.soLabel(o) }));
+        this.loadingOrders = false;
+      },
       error: () => { this.orders = []; this.loadingOrders = false; }
     });
+  }
+
+  soLabel(o: any): string {
+    return o?.salesOrderNo ?? o?.soNo ?? o?.orderNo ?? (o ? ('SO-' + o.id) : '');
   }
 
   onAdvanceSalesOrderChange(): void {
@@ -762,10 +801,10 @@ setTab(tab: ArTab): void {
   }
 
   private calcInvoiceSummary(): void {
-    this.invoiceSummary.total = this.invoices.reduce((s, r) => s + (r.amount || 0), 0);
-    this.invoiceSummary.paid  = this.invoices.reduce((s, r) => s + (r.paid || 0), 0);
-    this.invoiceSummary.creditNote = this.invoices.reduce((s, r) => s + (r.creditNote || 0), 0);
-    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balance || 0), 0);
+    this.invoiceSummary.total = this.invoices.reduce((s, r) => s + (r.baseAmount || 0), 0);
+    this.invoiceSummary.paid  = this.invoices.reduce((s, r) => s + (r.paidBase || 0), 0);
+    this.invoiceSummary.creditNote = this.invoices.reduce((s, r) => s + (r.creditNoteBase || 0), 0);
+    this.invoiceSummary.outstanding = this.invoices.reduce((s, r) => s + (r.balanceBase || 0), 0);
   }
 
   private calcAdvanceSummary(): void {
@@ -790,17 +829,29 @@ setTab(tab: ArTab): void {
     const advance = this.money(row, ['advance', 'Advance', 'advanceAmount', 'AdvanceAmount']);
     // outstanding is the canonical field name from the API; balance is fallback
     const balance = this.money(row, ['outstanding', 'Outstanding', 'balance', 'Balance', 'balanceAmount', 'BalanceAmount'], amount - paid - creditNote - advance);
+    const fxRate = Number(row.fxRate ?? row.FxRate ?? 1) || 1;
+    const storedBase = this.money(row, ['baseAmount', 'BaseAmount', 'amountBase', 'AmountBase']);
+    const baseAmount = storedBase > 0 ? storedBase : +(amount * fxRate).toFixed(2);
+    const balanceOut = Math.max(balance, 0);
     return {
       ...row,
       customerName: row.customerName ?? row.CustomerName ?? row.customer ?? 'Unknown Customer',
       invoiceNo: row.invoiceNo ?? row.InvoiceNo ?? row.salesInvoiceNo ?? row.SalesInvoiceNo,
       invoiceDate: row.invoiceDate ?? row.InvoiceDate,
       dueDate: row.dueDate ?? row.DueDate,
+      currencyName: row.currencyName ?? row.CurrencyName ?? row.currencyCode ?? 'SGD',
       amount,
       paid,
       creditNote,
       advance,
-      balance: Math.max(balance, 0)
+      balance: balanceOut,
+      fxRate,
+      baseAmount,
+      // Base-currency equivalents for the top KPI cards — paid/credit-note amounts are recorded in the
+      // same currency as the invoice, so the invoice's own fxRate converts them to base currency.
+      paidBase: +(paid * fxRate).toFixed(2),
+      creditNoteBase: +(creditNote * fxRate).toFixed(2),
+      balanceBase: +(balanceOut * fxRate).toFixed(2)
     };
   }
 

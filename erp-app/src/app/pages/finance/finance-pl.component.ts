@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
+import { AuditPrintService } from '../../core/services/audit-print.service';
 
 @Component({
   selector: 'erp-finance-pl',
@@ -22,8 +23,9 @@ export class FinancePlComponent implements OnInit {
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
   private endpoint = { list: '/FinanceReport/GetProfitLossDetails' };
+  private readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService, private auditPrint: AuditPrintService) {}
 
   ngOnInit(): void {
     this.load();
@@ -98,44 +100,84 @@ export class FinancePlComponent implements OnInit {
     return colors[Math.abs(h) % colors.length];
   }
 
+  /** Combined Acc Code / Description / Debit / Credit ledger rows, sorted by code, for the auditing-format exports. */
+  private get auditRows(): Array<{ code: string; name: string; debit: number; credit: number }> {
+    const rows = [
+      ...this.expenseRows.map(r => ({
+        code: String(r.accountCode ?? r.headCode ?? ''),
+        name: r.accountName ?? r.headName ?? '',
+        debit: Number(r.amount ?? r.purchase ?? 0),
+        credit: 0
+      })),
+      ...this.incomeRows.map(r => ({
+        code: String(r.accountCode ?? r.headCode ?? ''),
+        name: r.accountName ?? r.headName ?? '',
+        debit: 0,
+        credit: Number(r.amount ?? r.sales ?? 0)
+      }))
+    ];
+    return rows.sort((a, b) => a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
+  }
+
+  /** Balancing "Net Profit/Loss" line so the Debit and Credit columns foot to the same Grand Total, ledger-style. */
+  private get netRow(): { label: string; debit: number; credit: number } {
+    const isProfit = this.netProfit >= 0;
+    return {
+      label: isProfit ? 'Net Profit for the period' : 'Net Loss for the period',
+      debit: isProfit ? this.netProfit : 0,
+      credit: isProfit ? 0 : -this.netProfit
+    };
+  }
+
+  private get grandTotal(): number { return this.totalExpense + (this.netProfit >= 0 ? this.netProfit : 0); }
+
+  private fmtDate(d: string): string {
+    if (!d) return 'All';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${dt.getFullYear()}`;
+  }
+
   exportExcel(): void {
+    const net = this.netRow;
     const rows: any[][] = [
-      ['Profit & Loss'], [],
-      ['Total Expense', this.totalExpense.toFixed(2)],
-      ['Total Sales', this.totalIncome.toFixed(2)],
-      ['Net Profit', this.netProfit.toFixed(2)], [],
-      ['Purchase Accounts'], ['Name', 'Code', 'Amount'],
-      ...this.expenseRows.map(r => [r.accountName || r.headName, r.accountCode || r.headCode || '', (r.amount || r.purchase || 0).toFixed(2)]),
-      [], ['Sales Accounts'], ['Name', 'Code', 'Amount'],
-      ...this.incomeRows.map(r => [r.accountName || r.headName, r.accountCode || r.headCode || '', (r.amount || r.sales || 0).toFixed(2)])
+      [localStorage.getItem('companyPrintName') || localStorage.getItem('companyName') || ''],
+      ['Profit and Loss'],
+      [`For The Period From ${this.fmtDate(this.fromDate)} To ${this.fmtDate(this.toDate)}`], [],
+      ['Acc Code', 'Description', 'Debit', 'Credit'],
+      ...this.auditRows.map(r => [r.code, r.name, r.debit ? r.debit.toFixed(2) : '', r.credit ? r.credit.toFixed(2) : '']),
+      ['', net.label, net.debit ? net.debit.toFixed(2) : '', net.credit ? net.credit.toFixed(2) : ''],
+      ['', `Grand Total Amount (${this.baseCurrencyName})`, this.grandTotal.toFixed(2), this.grandTotal.toFixed(2)]
     ];
     const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
     this.download(csv, 'ProfitLoss.csv', 'text/csv;charset=utf-8;');
   }
 
   exportPdf(): void {
-    const w = window.open('', '_blank', 'width=900,height=700');
-    if (!w) return;
-    w.document.write(`<html><head><title>Profit & Loss</title><style>
-      body{font-family:Arial,sans-serif;font-size:12px;margin:20px}
-      h2{color:#2e5f73}table{width:100%;border-collapse:collapse;margin-top:10px}
-      th{background:#f3f4f6;padding:6px;text-align:left;border-bottom:1px solid #ddd}
-      td{padding:5px 6px;border-bottom:1px solid #f0f0f0}
-      .total-row td{font-weight:bold;border-top:1px solid #ccc}
-    </style></head><body>
-      <h2>Profit &amp; Loss</h2>
-      <p>Total Expense: <b>${this.totalExpense.toFixed(2)}</b> &nbsp; Total Sales: <b>${this.totalIncome.toFixed(2)}</b> &nbsp; Net Profit: <b>${this.netProfit.toFixed(2)}</b></p>
-      <table><thead><tr><th>Purchase Accounts</th><th>Code</th><th>Amount</th></tr></thead><tbody>
-        ${this.expenseRows.map(r => `<tr><td>${r.accountName||r.headName}</td><td>${r.accountCode||r.headCode||''}</td><td>${(r.amount||r.purchase||0).toFixed(2)}</td></tr>`).join('')}
-        <tr class="total-row"><td>Total</td><td></td><td>${this.totalExpense.toFixed(2)}</td></tr>
-      </tbody></table>
-      <table style="margin-top:16px"><thead><tr><th>Sales Accounts</th><th>Code</th><th>Amount</th></tr></thead><tbody>
-        ${this.incomeRows.map(r => `<tr><td>${r.accountName||r.headName}</td><td>${r.accountCode||r.headCode||''}</td><td>${(r.amount||r.sales||0).toFixed(2)}</td></tr>`).join('')}
-        <tr class="total-row"><td>Total</td><td></td><td>${this.totalIncome.toFixed(2)}</td></tr>
-      </tbody></table>
-    </body></html>`);
-    w.document.close();
-    w.print();
+    const fromTxt = this.fmtDate(this.fromDate);
+    const toTxt   = this.fmtDate(this.toDate);
+    const net     = this.netRow;
+    const grand   = this.grandTotal;
+
+    this.auditPrint.print({
+      reportTitle: 'Profit and Loss',
+      periodLine: `For The Period From ${fromTxt} To ${toTxt}`,
+      metaLines: [`Date : From ${fromTxt} to ${toTxt}`, 'Sort By : Code;Description', 'Project : All'],
+      labelColumnKey: 'name',
+      columns: [
+        { header: 'Acc Code', key: 'code' },
+        { header: 'Description', key: 'name' },
+        { header: 'Debit', key: 'debit', align: 'right', type: 'number' },
+        { header: 'Credit', key: 'credit', align: 'right', type: 'number' }
+      ],
+      rows: this.auditRows,
+      totalRows: [
+        { label: net.label, values: { debit: net.debit, credit: net.credit } },
+        { label: `Grand Total Amount (${this.baseCurrencyName})`, values: { debit: grand, credit: grand }, grand: true }
+      ]
+    });
   }
 
   private download(data: string, fileName: string, mime: string): void {

@@ -5,10 +5,16 @@
   <!-- Header -->
   <div class="rpt-head">
     <h4 class="rpt-title">GST Details by Transaction</h4>
-    <button class="btn-export" type="button" (click)="exportExcel()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Export
-    </button>
+    <div class="rpt-actions">
+      <button class="btn-export" type="button" (click)="exportExcel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export
+      </button>
+      <button class="btn-export" type="button" (click)="exportPdf()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export PDF
+      </button>
+    </div>
   </div>
 
   <!-- Summary Cards -->
@@ -16,7 +22,7 @@
     <div class="sum-card sum-taxable">
       <div class="sum-icon-wrap taxable-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
       <div>
-        <div class="sum-lbl">Total Taxable</div>
+        <div class="sum-lbl">Total Taxable ({{ baseCurrencyName }})</div>
         <div class="sum-val">{{ totalTaxable | number:'1.2-2' }}</div>
         <div class="sum-sub">Sum of taxable base value</div>
       </div>
@@ -24,7 +30,7 @@
     <div class="sum-card sum-tax">
       <div class="sum-icon-wrap tax-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="14.31" y1="8" x2="20.05" y2="17.94"/><line x1="9.69" y1="8" x2="21.17" y2="8"/><line x1="7.38" y1="12" x2="13.12" y2="2.06"/><line x1="9.69" y1="16" x2="3.95" y2="6.06"/><line x1="14.31" y1="16" x2="2.83" y2="16"/><line x1="16.62" y1="12" x2="10.88" y2="21.94"/></svg></div>
       <div>
-        <div class="sum-lbl">Total Tax</div>
+        <div class="sum-lbl">Total Tax ({{ baseCurrencyName }})</div>
         <div class="sum-val">{{ totalTax | number:'1.2-2' }}</div>
         <div class="sum-sub">Output + Input tax</div>
       </div>
@@ -32,7 +38,7 @@
     <div class="sum-card sum-net">
       <div class="sum-icon-wrap net-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div>
-        <div class="sum-lbl">Total Net</div>
+        <div class="sum-lbl">Total Net ({{ baseCurrencyName }})</div>
         <div class="sum-val">{{ totalNet | number:'1.2-2' }}</div>
         <div class="sum-sub">Taxable + Tax</div>
       </div>
@@ -94,7 +100,7 @@
         <thead>
           <tr>
             <th>TYPE</th><th>SOURCE</th><th>DATE</th><th>DOC NO</th>
-            <th>CUSTOMER / SUPPLIER</th><th class="num">TAXABLE</th><th class="num">TAX</th><th class="num">NET</th>
+            <th>CUSTOMER / SUPPLIER</th><th class="num">TAXABLE ({{ baseCurrencyName }})</th><th class="num">TAX</th><th class="num">NET ({{ baseCurrencyName }})</th>
           </tr>
         </thead>
         <tbody>

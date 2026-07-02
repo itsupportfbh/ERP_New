@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { FinanceService } from './finance.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
+import { AuditPrintService } from '../../core/services/audit-print.service';
 
 @Component({
   selector: 'erp-finance-daybook',
@@ -36,8 +38,9 @@ export class FinanceDaybookComponent implements OnInit {
   private readonly monthAgo = (() => {
     const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10);
   })();
+  private readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private auditPrint: AuditPrintService, private router: Router) {}
 
   ngOnInit(): void {
     this.modalFrom = this.monthAgo;
@@ -52,8 +55,10 @@ export class FinanceDaybookComponent implements OnInit {
     this.load();
   }
 
+  /** Cancelling the period picker means the user never ran a report — send them back to the
+   *  Reports Center landing instead of revealing an empty "No transactions found" Daybook page. */
   cancelModal(): void {
-    this.showModal = false;
+    this.router.navigate(['/app/finance/reports']);
   }
 
   load(): void {
@@ -161,6 +166,61 @@ export class FinanceDaybookComponent implements OnInit {
 
   typeLabel(code: string): string {
     return this.TYPE_LABELS[String(code).toUpperCase()] ?? code;
+  }
+
+  private fmtDate(d: string): string {
+    if (!d) return 'All';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${dt.getFullYear()}`;
+  }
+
+  exportPdf(): void {
+    const fromTxt = this.fmtDate(this.fromDate);
+    const toTxt   = this.fmtDate(this.toDate);
+    const metaLines = [`Date : From ${fromTxt} to ${toTxt}`, 'Sort By : Posting Date'];
+
+    if (this.viewMode === 'summary') {
+      const groups = this.summaryGroups;
+      this.auditPrint.print({
+        reportTitle: 'Daybook Summary',
+        periodLine: `For The Period From ${fromTxt} To ${toTxt}`,
+        metaLines,
+        labelColumnKey: 'type',
+        columns: [
+          { header: 'Voucher Type', key: 'type' },
+          { header: 'Debit', key: 'debit', align: 'right', type: 'number' },
+          { header: 'Credit', key: 'credit', align: 'right', type: 'number' }
+        ],
+        rows: groups,
+        totalRows: [
+          { label: `Grand Total Amount (${this.baseCurrencyName})`, values: { debit: this.summary.totalDebit, credit: this.summary.totalCredit }, grand: true }
+        ]
+      });
+      return;
+    }
+
+    this.auditPrint.print({
+      reportTitle: 'Daybook',
+      periodLine: `For The Period From ${fromTxt} To ${toTxt}`,
+      metaLines,
+      labelColumnKey: 'accountName',
+      columns: [
+        { header: 'Date', key: 'postingDate', type: 'date' },
+        { header: 'Voucher No', key: 'voucherNo' },
+        { header: 'Type', key: 'voucherType' },
+        { header: 'Account', key: 'accountName' },
+        { header: 'Debit', key: 'debit', align: 'right', type: 'number' },
+        { header: 'Credit', key: 'credit', align: 'right', type: 'number' },
+        { header: 'Running Balance', key: '_running', align: 'right', type: 'number' }
+      ],
+      rows: this.runningRows,
+      totalRows: [
+        { label: `Grand Total Amount (${this.baseCurrencyName})`, values: { debit: this.summary.totalDebit, credit: this.summary.totalCredit }, grand: true }
+      ]
+    });
   }
 
   private normalize(r: any): any {

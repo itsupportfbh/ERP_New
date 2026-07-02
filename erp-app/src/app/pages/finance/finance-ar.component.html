@@ -30,19 +30,19 @@
     <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">▣</span>
-        <span class="sum-text"><span class="sum-label">Total Invoice Amount</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount ({{ baseCurrencyName }})</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">▰</span>
-        <span class="sum-text"><span class="sum-label">Total Paid</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Paid ({{ baseCurrencyName }})</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">▤</span>
-        <span class="sum-text"><span class="sum-label">Credit Notes</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Credit Notes ({{ baseCurrencyName }})</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-icon">⚖</span>
-        <span class="sum-text"><span class="sum-label">Net Outstanding</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Net Outstanding ({{ baseCurrencyName }})</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
       </div>
     </div>
 
@@ -62,6 +62,7 @@
               <th>Customer / Invoice No</th>
               <th class="right">Due Date</th>
               <th class="right">Total Amount</th>
+              <th class="right">Base Amount ({{ baseCurrencyName }})</th>
               <th class="right">Paid</th>
               <th class="right">Credit Note</th>
               <th class="right">Advance</th>
@@ -77,6 +78,7 @@
                 <td class="customer-name">{{ grp.customer }}</td>
                 <td class="right muted small">{{ grp.invoices.length }} invoice(s)</td>
                 <td class="right">{{ grp.total | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.baseAmount | number:'1.2-2' }}</td>
                 <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
                 <td class="right info-text">{{ grp.creditNote | number:'1.2-2' }}</td>
                 <td class="right muted">{{ grp.advance | number:'1.2-2' }}</td>
@@ -87,7 +89,8 @@
                   <td></td>
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}<br><span class="muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</span></td>
                   <td class="right muted small">{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
-                  <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }}</td>
+                  <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                  <td class="right">{{ (inv.baseAmount || 0) | number:'1.2-2' }} <span class="currency">{{ baseCurrencyName }}</span></td>
                   <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
                   <td class="right info-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
                   <td class="right muted">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
@@ -96,7 +99,7 @@
               </ng-container>
             </ng-container>
             <tr *ngIf="customerGroups.length === 0 && !loading">
-              <td colspan="8" class="ar-empty">No AR invoices found.</td>
+              <td colspan="9" class="ar-empty">No AR invoices found.</td>
             </tr>
           </tbody>
         </table>
@@ -118,10 +121,10 @@
       <div class="form-grid rcp-header-grid">
         <label class="form-field">
           <span>Customer <span class="req">*</span></span>
-          <select [(ngModel)]="receiptForm.customerId" (ngModelChange)="onReceiptCustomerChange()">
-            <option [ngValue]="null">— Select Customer —</option>
-            <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
-          </select>
+          <erp-dropdown [(ngModel)]="receiptForm.customerId"
+            [items]="customers" bindLabel="name" bindValue="id"
+            placeholder="— Select Customer —"
+            (ngModelChange)="onReceiptCustomerChange()"></erp-dropdown>
         </label>
         <label class="form-field">
           <span>Receipt Date <span class="req">*</span></span>
@@ -129,21 +132,13 @@
         </label>
         <label class="form-field">
           <span>Payment Mode</span>
-          <select [(ngModel)]="receiptForm.paymentMode">
-            <option value="BANK">Bank Transfer</option>
-            <option value="CASH">Cash</option>
-            <option value="CHEQUE">Cheque</option>
-            <option value="UPI">UPI</option>
-          </select>
+          <erp-dropdown [(ngModel)]="receiptForm.paymentMode" [options]="receiptPaymentModeOptions"></erp-dropdown>
         </label>
         <label class="form-field" *ngIf="receiptForm.paymentMode === 'BANK'">
           <span>Bank Account</span>
-          <select [(ngModel)]="receiptForm.bankId">
-            <option [ngValue]="null">— Select Bank —</option>
-            <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
-              {{ b.headName ?? b.bankName ?? b.accountName ?? b.name }} {{ b.accountNo ? '(' + b.accountNo + ')' : '' }}
-            </option>
-          </select>
+          <erp-dropdown [(ngModel)]="receiptForm.bankId"
+            [items]="bankAccounts" bindLabel="displayName" bindValue="id"
+            placeholder="— Select Bank —"></erp-dropdown>
         </label>
         <label class="form-field">
           <span>Amount Received <span class="req">*</span></span>
@@ -151,11 +146,9 @@
         </label>
         <label class="form-field">
           <span>Currency</span>
-          <select [(ngModel)]="receiptCurrencyId" (ngModelChange)="onReceiptCurrencyChange()">
-            <option *ngFor="let c of receiptCurrencies" [ngValue]="c.id ?? c.currencyId">
-              {{ c.currencyCode ?? c.currencyName }}
-            </option>
-          </select>
+          <erp-dropdown [(ngModel)]="receiptCurrencyId"
+            [items]="receiptCurrencies" bindLabel="currencyCode" bindValue="id"
+            (ngModelChange)="onReceiptCurrencyChange()"></erp-dropdown>
         </label>
         <label class="form-field">
           <span>FX Rate</span>
@@ -326,10 +319,10 @@
         <!-- Customer -->
         <label class="adv-form-field">
           <span>Customer <span class="req">*</span></span>
-          <select [(ngModel)]="advanceForm.customerId" (change)="onAdvanceCustomerChange()">
-            <option [ngValue]="null">— Select Customer —</option>
-            <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
-          </select>
+          <erp-dropdown [(ngModel)]="advanceForm.customerId"
+            [items]="customers" bindLabel="name" bindValue="id"
+            placeholder="Search customer..."
+            (ngModelChange)="onAdvanceCustomerChange()"></erp-dropdown>
         </label>
 
         <!-- Link to Sales Order toggle -->
@@ -344,15 +337,11 @@
         <!-- Sales Order (only when isOrderSpecific) -->
         <label class="adv-form-field" *ngIf="isOrderSpecific">
           <span>Sales Order <span class="req">*</span></span>
-          <select [(ngModel)]="advanceForm.salesOrderId" (change)="onAdvanceSalesOrderChange()"
-                  [disabled]="!advanceForm.customerId || loadingOrders">
-            <option [ngValue]="null">
-              {{ loadingOrders ? 'Loading...' : (advanceForm.customerId ? (orders.length ? '— Select Order —' : 'No open orders') : '— Select customer first —') }}
-            </option>
-            <option *ngFor="let o of orders" [ngValue]="o.id">
-              {{ o.salesOrderNo ?? o.soNo ?? o.orderNo ?? ('SO-' + o.id) }}
-            </option>
-          </select>
+          <erp-dropdown [(ngModel)]="advanceForm.salesOrderId"
+            [items]="orders" bindLabel="soLabel" bindValue="id"
+            [disabled]="!advanceForm.customerId || loadingOrders"
+            [placeholder]="loadingOrders ? 'Loading...' : (advanceForm.customerId ? 'Search order...' : 'Select customer first')"
+            (ngModelChange)="onAdvanceSalesOrderChange()"></erp-dropdown>
         </label>
 
         <!-- Advance Date -->
@@ -373,22 +362,16 @@
         <!-- Payment Mode -->
         <label class="adv-form-field">
           <span>Payment Mode</span>
-          <select [(ngModel)]="advanceForm.paymentMode" (change)="onAdvancePaymentModeChange()">
-            <option value="BANK">Bank Transfer</option>
-            <option value="CASH">Cash</option>
-            <option value="UPI">UPI</option>
-          </select>
+          <erp-dropdown [(ngModel)]="advanceForm.paymentMode" [options]="advancePaymentModeOptions"
+            (ngModelChange)="onAdvancePaymentModeChange()"></erp-dropdown>
         </label>
 
         <!-- Bank Account (only when BANK) -->
         <label class="adv-form-field" *ngIf="advanceForm.paymentMode === 'BANK'">
           <span>Bank Account</span>
-          <select [(ngModel)]="advanceForm.bankAccountId">
-            <option [ngValue]="null">— Select Bank —</option>
-            <option *ngFor="let b of bankAccounts" [ngValue]="b.id ?? b.bankId">
-              {{ b.headName ?? b.bankName ?? b.accountName ?? b.name }}
-            </option>
-          </select>
+          <erp-dropdown [(ngModel)]="advanceForm.bankAccountId"
+            [items]="bankAccounts" bindLabel="displayName" bindValue="id"
+            placeholder="Search bank..."></erp-dropdown>
         </label>
 
         <!-- FX section (only when foreign currency from SO) -->
@@ -517,10 +500,9 @@
       <div class="form-grid inv-header-grid">
         <label class="form-field">
           <span>Customer <span class="req">*</span></span>
-          <select [(ngModel)]="invoiceForm.customerId">
-            <option [ngValue]="null">— Select Customer —</option>
-            <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
-          </select>
+          <erp-dropdown [(ngModel)]="invoiceForm.customerId"
+            [items]="customers" bindLabel="name" bindValue="id"
+            placeholder="— Select Customer —"></erp-dropdown>
         </label>
         <label class="form-field">
           <span>Invoice Date <span class="req">*</span></span>
@@ -574,10 +556,10 @@
                   <input class="inv-cell-input right" type="number" min="0" max="100" [(ngModel)]="line.discountPct" (ngModelChange)="calcLine(line)">
                 </td>
                 <td>
-                  <select class="inv-cell-input" [(ngModel)]="line.taxCodeId" (ngModelChange)="onTaxCodeChange(line)">
-                    <option [ngValue]="null">— None —</option>
-                    <option *ngFor="let tc of taxCodes" [ngValue]="tc.id">{{ tc.taxCode }} – {{ tc.taxName }}</option>
-                  </select>
+                  <erp-dropdown [(ngModel)]="line.taxCodeId"
+                    [items]="taxCodes" bindLabel="label" bindValue="id"
+                    placeholder="— None —"
+                    (ngModelChange)="onTaxCodeChange(line)"></erp-dropdown>
                 </td>
                 <td class="right inv-gst-pct">{{ line.gstPct | number:'1.1-2' }}%</td>
                 <td class="right inv-amount">{{ line.lineAmount | number:'1.2-2' }}</td>
