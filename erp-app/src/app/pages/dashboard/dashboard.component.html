@@ -148,19 +148,20 @@
   <ng-container *ngIf="showRole('inventory-manager')">
     <app-inventory-manager></app-inventory-manager>
     <app-inventory-by-category></app-inventory-by-category>
-    <app-stock-alerts></app-stock-alerts>
   </ng-container>
 
   <!-- Finance Executive -->
   <ng-container *ngIf="showRole('finance-executive')">
     <app-finance-executive></app-finance-executive>
-    <app-finance-ar-aging></app-finance-ar-aging>
-    <app-finance-ap-aging></app-finance-ap-aging>
+    <div class="section-row">
+      <app-finance-ar-aging></app-finance-ar-aging>
+      <app-finance-ap-aging></app-finance-ap-aging>
+    </div>
   </ng-container>
 
   <!-- Finance Manager -->
   <ng-container *ngIf="showRole('finance-manager')">
-    <app-finance-manager-dashboard></app-finance-manager-dashboard>
+    <app-finance-executive></app-finance-executive>
     <app-ar-ap-health></app-ar-ap-health>
     <app-ar-ap-aging></app-ar-ap-aging>
     <app-all-finance-exceptions></app-all-finance-exceptions>

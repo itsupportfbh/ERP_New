@@ -172,7 +172,8 @@ export interface TopStockItem {
   itemName: string;
   warehouse: string;
   qty: number;
-} 
+  uom: string;
+}
 
 export interface WarehouseSummary {
   warehouseName: string;
@@ -270,6 +271,9 @@ export interface MyPipelineItem {
 export interface FinanceOpsDashboard {
   openArInvoices: number;
   openArInvoicesChange: number;
+
+  totalReceivables: number;
+  totalReceivablesChange: number;
 
   apDueToday: number;
   apDueTodayChange: number;
@@ -397,6 +401,8 @@ export interface PlanningOrder {
 export interface AdminSummaryDashboard {
   totalRevenue: number;
   totalPayables: number;
+  arInvoices: number;
+  apInvoices: number;
   totalSkus: number;
   allExceptions: number;
 }

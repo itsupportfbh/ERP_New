@@ -15,9 +15,11 @@ export class FinanceExecutiveComponent implements OnInit {
   companyId = Number(localStorage.getItem('companyId')) || 0;
 
   openARInvoices = 0;
+  totalReceivables = '₹0.00';
   apDueToday = 0;
   _3WayMismatch = '₹0.00';
 
+  totalReceivablesChange = 0;
   openArInvoicesChange = 0;
   apDueTodayChange = 0;
   threeWayMismatchChangePercent = 0;
@@ -32,9 +34,11 @@ export class FinanceExecutiveComponent implements OnInit {
     this.dashboardService.getFinanceOpsDashboard(this.companyId).subscribe({
       next: (res: FinanceOpsDashboard) => {
         this.openARInvoices = res.openArInvoices ?? 0;
+        this.totalReceivables = this.formatAmount(res.totalReceivables ?? 0);
         this.apDueToday = res.apDueToday ?? 0;
         this._3WayMismatch = this.formatAmount(res.threeWayMismatch ?? 0);
 
+        this.totalReceivablesChange = res.totalReceivablesChange ?? 0;
         this.openArInvoicesChange = res.openArInvoicesChange ?? 0;
         this.apDueTodayChange = res.apDueTodayChange ?? 0;
         this.threeWayMismatchChangePercent =

@@ -4,7 +4,7 @@
     <div class="kpi-icon green-icon">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     </div>
-    <div class="kpi-title">Available SKUs</div>
+    <div class="kpi-title">Available   Items</div>
     <div class="kpi-value">{{ availableSKUs | number }}</div>
     <div class="kpi-footer" *ngIf="availableSkusChange !== 0">
       <span [ngClass]="availableSkusChange >= 0 ? 'badge-up' : 'badge-down'">
@@ -32,10 +32,8 @@
     </div>
     <div class="kpi-title">New Items</div>
     <div class="kpi-value">{{ newItems }}</div>
-    <div class="kpi-footer" *ngIf="newItemsChange !== 0">
-      <span [ngClass]="newItemsChange >= 0 ? 'badge-up' : 'badge-down'">
-        {{ newItemsChange >= 0 ? '↑' : '↓' }} {{ absValue(newItemsChange) }}
-      </span>
+    <div class="kpi-footer">
+      <span class="mr-sub">This Month</span>
     </div>
   </div>
 

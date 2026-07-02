@@ -10,6 +10,7 @@
           <th>Item</th>
           <th>Warehouse</th>
           <th>Qty</th>
+          <th>UOM</th>
         </tr>
       </thead>
       <tbody>
@@ -18,9 +19,10 @@
           <td>{{ item.itemName }}</td>
           <td>{{ item.warehouse }}</td>
           <td>{{ item.qty | number:'1.0-0' }}</td>
+          <td>{{ item.uom }}</td>
         </tr>
         <tr *ngIf="stockItems.length === 0">
-          <td colspan="4" class="no-data">No Records Found</td>
+          <td colspan="5" class="no-data">No Records Found</td>
         </tr>
       </tbody>
     </table>

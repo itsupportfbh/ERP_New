@@ -13,11 +13,24 @@
     </div>
   </div>
 
+  <div class="kpi-card green-card">
+    <div class="kpi-icon green-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="kpi-title">Total Receivables</div>
+    <div class="kpi-value">{{ totalReceivables }}</div>
+    <div class="kpi-footer" *ngIf="totalReceivablesChange !== 0">
+      <span [ngClass]="totalReceivablesChange >= 0 ? 'badge-up' : 'badge-down'">
+        {{ totalReceivablesChange >= 0 ? '↑' : '↓' }} {{ positiveValue(totalReceivablesChange) }}%
+      </span>
+    </div>
+  </div>
+
   <div class="kpi-card orange-card">
     <div class="kpi-icon orange-icon">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
     </div>
-    <div class="kpi-title">AP Due Today</div>
+    <div class="kpi-title">AP Invoices</div>
     <div class="kpi-value">{{ apDueToday }}</div>
     <div class="kpi-footer" *ngIf="apDueTodayChange !== 0">
       <span [ngClass]="apDueTodayChange >= 0 ? 'badge-up' : 'badge-down'">
@@ -30,7 +43,7 @@
     <div class="kpi-icon red-icon">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </div>
-    <div class="kpi-title">3-Way Mismatch</div>
+    <div class="kpi-title">Total Payable</div>
     <div class="kpi-value">{{ _3WayMismatch }}</div>
     <div class="kpi-footer" *ngIf="threeWayMismatchChangePercent !== 0">
       <span [ngClass]="threeWayMismatchChangePercent >= 0 ? 'badge-up' : 'badge-down'">

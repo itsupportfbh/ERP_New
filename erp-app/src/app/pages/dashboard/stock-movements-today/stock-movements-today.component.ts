@@ -1,8 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import {
-  DashboardService,
-  StockMovementRequest
-} from '../dashboard.service';
+import { DashboardService } from '../dashboard.service';
 
 @Component({
   standalone: false,
@@ -24,13 +21,12 @@ export class StockMovementsTodayComponent implements OnInit {
 
   loadStockMovementRequests(): void {
     this.dashboardService.getStockMovementRequests(this.companyId).subscribe({
-      next: (res: StockMovementRequest[]) => {
+      next: (res: any[]) => {
         this.Stockmovement = (res || []).map(x => ({
-          prNo: x.requestNo,
-          item: x.item,
-          qty: x.qty,
-          status: x.status,
-          class: this.getStatusClass(x.status)
+          soNo: x.requestNo ?? x.RequestNo ?? '-',
+          item: x.item ?? x.Item ?? '-',
+          qty: x.qty ?? x.Qty ?? '-',
+          uom: x.uom ?? x.Uom ?? '-'
         }));
 
         console.log('Stock Movement Requests:', this.Stockmovement);
