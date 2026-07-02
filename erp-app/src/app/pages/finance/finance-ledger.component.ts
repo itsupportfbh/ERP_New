@@ -123,7 +123,8 @@ export class FinanceLedgerComponent implements OnInit {
         }));
 
         const flatActive = flat.filter(r => !!r.isActive);
-        const nodesByCode = new Map<number, LedgerNode>();
+        const nodesById   = new Map<number, LedgerNode>();
+        const byHeadCode  = new Map<number, LedgerNode>();
 
         flatActive.forEach(f => {
           const node: LedgerNode = {
@@ -140,17 +141,18 @@ export class FinanceLedgerComponent implements OnInit {
             displayDebit: 0, displayCredit: 0, displayBalance: 0,
             children: [], hasChildren: false, $$expanded: false, level: 0, parent: null
           };
-          nodesByCode.set(node.headCode, node);
+          nodesById.set(node.id, node);
+          if (!byHeadCode.has(node.headCode)) byHeadCode.set(node.headCode, node);
         });
 
         const roots: LedgerNode[] = [];
-        nodesByCode.forEach(node => {
+        nodesById.forEach(node => {
           const p = node.parentHead ?? 0;
           if (!p) {
             roots.push(node);
           } else {
-            const parent = nodesByCode.get(p);
-            if (parent) { node.parent = parent; parent.children.push(node); }
+            const parent = byHeadCode.get(p);
+            if (parent && parent.id !== node.id) { node.parent = parent; parent.children.push(node); }
             else roots.push(node);
           }
         });

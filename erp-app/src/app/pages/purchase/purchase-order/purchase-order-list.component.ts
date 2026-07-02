@@ -398,7 +398,18 @@ export class PurchaseOrderListComponent implements OnInit {
     const tax       = Number(po.tax ?? po.Tax ?? 0);
     const shipping  = Number(po.shipping ?? po.Shipping ?? 0);
     const discount  = Number(po.discount ?? po.Discount ?? 0);
-    const printDate = new Date().toLocaleDateString('en-GB');
+    const printDate    = new Date().toLocaleDateString('en-GB');
+    const companyLogo  = localStorage.getItem('companyLogoBase64')  || '';
+    const coName       = localStorage.getItem('companyPrintName')    || localStorage.getItem('companyName') || '';
+    const coAddress1   = localStorage.getItem('companyPrintAddress1') || '';
+    const coAddress2   = localStorage.getItem('companyPrintAddress2') || '';
+    const coCity       = localStorage.getItem('companyPrintCity')     || '';
+    const coState      = localStorage.getItem('companyPrintState')    || '';
+    const coPostal     = localStorage.getItem('companyPrintPostal')   || '';
+    const coPhone      = localStorage.getItem('companyPrintPhone')    || '';
+    const coEmail      = localStorage.getItem('companyPrintEmail')    || '';
+    const coAddrLine   = [coAddress1, coAddress2].filter(Boolean).join(', ');
+    const coCityLine   = [coCity, coState, coPostal].filter(Boolean).join(', ');
 
     let lineNo = 0;
     const lineRows = lines.map((l: any) => {
@@ -467,9 +478,14 @@ table.lines thead th:last-child{border-right:none;}
 </style></head><body>
 
 <div class="hdr">
-  <div>
-    <div class="co-name">Purchase Order</div>
-    <div class="co-sub">Official Purchase Document</div>
+  <div style="display:flex;align-items:flex-start;gap:12px;">
+    ${companyLogo ? `<img src="${companyLogo}" style="height:64px;width:auto;object-fit:contain;border-radius:6px;flex-shrink:0;" alt="logo"/>` : ''}
+    <div>
+      <div class="co-name">${coName || 'Purchase Order'}</div>
+      ${coAddrLine ? `<div class="co-sub">${esc(coAddrLine)}</div>` : ''}
+      ${coCityLine ? `<div class="co-sub">${esc(coCityLine)}</div>` : ''}
+      ${coPhone    ? `<div class="co-sub">Tel: ${esc(coPhone)}${coEmail ? '  |  Email: ' + esc(coEmail) : ''}</div>` : (coEmail ? `<div class="co-sub">Email: ${esc(coEmail)}</div>` : '')}
+    </div>
   </div>
   <div class="doc-title" style="display:flex;align-items:center;gap:16px;">
     ${qrSrc ? `<div style="text-align:center;"><img src="${qrSrc}" style="width:72px;height:72px;display:block;" /><div style="font-size:9px;color:#9ca3af;margin-top:2px;">Scan to receive</div></div>` : ''}

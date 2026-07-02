@@ -8,10 +8,6 @@
       {{ statusLabel }}
     </span>
     <span class="qf-hodHint" *ngIf="header.needsHodApproval">Discounts above 10% need HOD approval</span>
-    <div class="qf-headActions" *ngIf="isEdit && header.status === 1 && perm.canApprove(fnId)">
-      <button class="btn btn-success btn-sm" type="button" [disabled]="saving" (click)="approve(2)">&#10003; Approve</button>
-      <button class="btn btn-danger btn-sm" type="button" [disabled]="saving" (click)="approve(3)">&#10007; Reject</button>
-    </div>
   </div>
 
   <div class="loading-row" *ngIf="loading">Loading…</div>

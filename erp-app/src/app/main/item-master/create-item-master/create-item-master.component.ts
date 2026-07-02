@@ -166,8 +166,8 @@ export class CreateItemMasterComponent implements OnInit {
   // Fulfillment Mode: drives PP / Direct DO routing in Sales (1=Sellable, 2=Consumable, 3=Both)
   // Default comes from the item's Category; this is the per-item override.
   fulfillmentModeList = [
-    { id: 1, name: 'Sales Item → Direct DO' },
-    { id: 2, name: 'Purchase Item → PP' },
+    { id: 1, name: 'Sales Item' },
+    { id: 2, name: 'Purchase Item' },
     { id: 3, name: 'Both → Pending (procurement)' }
   ];
   get stepsView() { return this.isEdit ? this.stepsEdit : this.stepsCreate; }

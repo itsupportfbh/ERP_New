@@ -76,6 +76,27 @@ export class MasterService {
   // COMPANY
   getOrganizationCompanyList(approvalLevelName = '', orgGuid = ''): Observable<any> { return this.http.get(`${this.api}/Company/organization-company-list`, { params: { approvalLevelName, orgGuid } }); }
   getCompanyById(id: number): Observable<any> { return this.http.get(`${this.api}/Company/${id}`); }
+
+  cacheCompanyLogo(): void {
+    const companyId = Number(localStorage.getItem('companyId') || 0);
+    if (!companyId) return;
+    this.getCompanyById(companyId).subscribe({
+      next: (res: any) => {
+        if (res?.logoBase64) localStorage.setItem('companyLogoBase64', res.logoBase64);
+        else localStorage.removeItem('companyLogoBase64');
+        const g = res?.general || {};
+        localStorage.setItem('companyPrintName',    g.name     || localStorage.getItem('companyName') || '');
+        localStorage.setItem('companyPrintAddress1', g.address1 || '');
+        localStorage.setItem('companyPrintAddress2', g.address2 || '');
+        localStorage.setItem('companyPrintCity',     g.city     || '');
+        localStorage.setItem('companyPrintState',    g.state    || '');
+        localStorage.setItem('companyPrintPostal',   g.postal   || '');
+        localStorage.setItem('companyPrintPhone',    g.phone    || '');
+        localStorage.setItem('companyPrintEmail',    g.email    || '');
+      },
+      error: () => {}
+    });
+  }
   createCompanySetup(d: any): Observable<any> { return this.http.post(`${this.api}/organizations/create-from-company-setup`, d); }
   createCompanyUnderOrg(d: any): Observable<any> { return this.http.post(`${this.api}/organizations/create-company-under-org`, d); }
   updateCompany(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/Company/${id}`, d); }

@@ -82,7 +82,8 @@ export class FinanceTrialBalanceComponent implements OnInit {
 
   // ─── Tree build (same logic as Unity_ERP) ───────────────────────
   private buildTree(raw: any[]): void {
-    const map = new Map<string, TbNode>();
+    const byHeadCode = new Map<string, TbNode>();
+    const byHeadId   = new Map<any, TbNode>();
 
     raw.forEach(r => {
       const node: TbNode = {
@@ -99,28 +100,33 @@ export class FinanceTrialBalanceComponent implements OnInit {
         closingDebit:  Number(r.closingDebit  ?? r.ClosingDebit  ?? 0),
         closingCredit: Number(r.closingCredit ?? r.ClosingCredit ?? 0),
       };
-      map.set(node.headCode, node);
+      byHeadId.set(node.headId, node);
+      if (!byHeadCode.has(node.headCode)) byHeadCode.set(node.headCode, node);
     });
 
     const roots: TbNode[] = [];
 
-    map.forEach(node => {
+    byHeadId.forEach(node => {
       const parentKey = (node.parentHead != null && node.parentHead !== 0 && node.parentHead !== '')
         ? String(node.parentHead)
         : '';
 
-      if (parentKey && map.has(parentKey)) {
-        const parent = map.get(parentKey)!;
-        parent.children.push(node);
-        parent.isLeaf = false;
-        node.level    = parent.level + 1;
+      if (parentKey && byHeadCode.has(parentKey)) {
+        const parent = byHeadCode.get(parentKey)!;
+        if (parent.headId !== node.headId) {
+          parent.children.push(node);
+          parent.isLeaf = false;
+          node.level    = parent.level + 1;
+        } else {
+          roots.push(node);
+        }
       } else {
         roots.push(node);
       }
     });
 
     // sort children by headCode
-    map.forEach(n => {
+    byHeadId.forEach(n => {
       if (n.children.length) n.children.sort((a, b) => a.headCode.localeCompare(b.headCode));
     });
     roots.sort((a, b) => a.headCode.localeCompare(b.headCode));
@@ -129,7 +135,7 @@ export class FinanceTrialBalanceComponent implements OnInit {
     // roll-up parent totals from leaves
     this.roots.forEach(r => this.recalcTotals(r));
     // recompute levels after tree links are set
-    map.forEach(n => { n.level = this.getLevel(n, map); });
+    byHeadId.forEach(n => { n.level = this.getLevel(n, byHeadCode); });
 
     this.computeSummaryTotals();
     this.currentPage = 1;
