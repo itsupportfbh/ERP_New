@@ -4,6 +4,7 @@ import { forkJoin, Subscription, filter } from 'rxjs';
 import { AuthService } from '../core/services/auth.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { CurrentPeriodLockState, PeriodLockStateService } from '../core/services/period-lock-state.service';
+import { MasterService } from '../core/services/master.service';
 
 interface MenuItem {
   label: string;
@@ -227,7 +228,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private router: Router,
     private permissionService: PermissionService,
-    private periodLockState: PeriodLockStateService
+    private periodLockState: PeriodLockStateService,
+    private masterSvc: MasterService
   ) {
     const isMasterOwner = localStorage.getItem('isMasterOwner') === 'true';
     const roles: string[] = JSON.parse(localStorage.getItem('approvalRoles') || '[]');
@@ -239,6 +241,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+     this.masterSvc.cacheCompanyLogo();
     this.syncOpenMenuFromUrl(this.router.url);
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
