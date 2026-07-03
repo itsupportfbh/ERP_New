@@ -249,7 +249,11 @@ export class CreateItemMasterComponent implements OnInit {
       this.maybeScrollToReviewBottom();
     }
   }
-  prev() { if (this.step > 0) this.step--; }
+  prev() {
+    if (this.step > 0) { this.step--; return; }
+    // On the first step, "Back" leaves the form and returns to the item list.
+    this.onGoToItemList();
+  }
 
   /* Edit vs Create */
   isEdit = false;
@@ -395,22 +399,8 @@ export class CreateItemMasterComponent implements OnInit {
     });
   }
 
-  /* Returns a warning message if code/name already exists, otherwise null */
+  /* Duplicate Item Code / Item Name warning has been removed. */
   private getDuplicateWarning(): string | null {
-    const code = (this.item.itemCode ?? '').toString().trim().toLowerCase();
-    const name = (this.item.itemName ?? '').toString().trim().toLowerCase();
-    const currentId = Number(this.item.id ?? 0);
-
-    const dupCode = this.existingItems.some(
-      x => x.id !== currentId && x.itemCode.trim().toLowerCase() === code && code !== ''
-    );
-    const dupName = this.existingItems.some(
-      x => x.id !== currentId && x.itemName.trim().toLowerCase() === name && name !== ''
-    );
-
-    if (dupCode && dupName) return 'An item with the same Item Code and Item Name already exists.';
-    if (dupCode) return 'An item with the same Item Code already exists.';
-    if (dupName) return 'An item with the same Item Name already exists.';
     return null;
   }
   /* -------------------- Edit loader -------------------- */

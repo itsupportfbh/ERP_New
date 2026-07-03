@@ -8,6 +8,7 @@ import { TableColumn, RowAction } from 'app/shared/components/data-table/data-ta
 export interface ItemMaster {
   id: number;
   sku: string;
+  itemCode?: string;
   itemName: string;
   catagoryName?: string;
   uomName?: string;
@@ -224,6 +225,7 @@ export class ItemMasterListComponent implements OnInit {
     this.filteredRows = this.rows.filter(r => {
       const id = String(r.id ?? '').toLowerCase();
       const sku = String(r.sku ?? '').toLowerCase();
+      const code = String(r.itemCode ?? '').toLowerCase();
       const name = String(r.itemName ?? '').toLowerCase();
       const cat = String(r.catagoryName ?? '').toLowerCase();
       const uom = String(r.uomName ?? '').toLowerCase();
@@ -232,6 +234,7 @@ export class ItemMasterListComponent implements OnInit {
       return (
         id.includes(q) ||
         sku.includes(q) ||
+        code.includes(q) ||
         name.includes(q) ||
         cat.includes(q) ||
         uom.includes(q) ||

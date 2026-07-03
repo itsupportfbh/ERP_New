@@ -307,6 +307,12 @@ export class ProductionPlanningFormComponent implements OnInit {
       this.error = 'Please select Sales Order and Warehouse.';
       return;
     }
+    // Block saving while ingredients are short — a PR must be raised first.
+    if (this.shortageCount > 0) {
+      this.error = `Cannot save plan: ${this.shortageCount} ingredient(s) short. Create a PR to cover the shortage first.`;
+      Swal.fire('Ingredient Shortage', this.error, 'warning');
+      return;
+    }
     this.saving = true;
     this.error = '';
     this.svc.savePlan({

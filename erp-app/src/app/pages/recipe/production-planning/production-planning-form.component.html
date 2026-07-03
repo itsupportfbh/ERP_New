@@ -10,7 +10,8 @@
     <div class="pp-head-actions">
       <button class="btn btn-outline btn-sm" (click)="refresh()" [disabled]="loading || !salesOrderId || !warehouseId">Refresh</button>
       <button class="btn btn-primary btn-sm" *ngIf="!isEdit"
-        [disabled]="saving || !salesOrderId || !warehouseId" (click)="save()">
+        [disabled]="saving || !salesOrderId || !warehouseId || shortageCount > 0" (click)="save()"
+        [title]="shortageCount > 0 ? 'Create a PR to cover the shortage before saving' : ''">
         <span class="btn-spinner" *ngIf="saving"></span>
         {{ saving ? 'Saving…' : 'Save Plan' }}
       </button>
