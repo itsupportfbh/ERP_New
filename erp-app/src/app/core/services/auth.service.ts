@@ -85,7 +85,7 @@ export class AuthService {
     localStorage.setItem('companyName', data.companyName);
     localStorage.setItem('locationId', String(data.locationId));
     localStorage.setItem('departmentId', String(data.departmentId));
-    localStorage.setItem('orgGuid', data.orgGuid);
+    localStorage.setItem('orgGuid', data.orgGuid ?? '');
     localStorage.setItem('databaseName', data.databaseName);
     localStorage.setItem('isMasterOwner', String(data.isMasterOwner));
     localStorage.setItem('isTenantUser', String(data.isTenantUser));
@@ -117,6 +117,26 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  /**
+   * Single source of truth for "is this user a Super Admin" — normalizes role
+   * names (spacing/casing/underscores all vary by backend data entry) so
+   * every screen agrees on who gets full access, instead of each component
+   * doing its own ad-hoc string match.
+   *
+   * Plain "Admin" is intentionally NOT treated as Super Admin — Admin is a
+   * narrower, per-company role (see CompanyComponent, which scopes an Admin's
+   * visible companies by CompanyId instead of granting full access).
+   */
+  isSuperAdmin(): boolean {
+    if (localStorage.getItem('isMasterOwner') === 'true') return true;
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'owner', 'systemadministrator']);
+    return Array.isArray(roles) && roles.some(r =>
+      SUPER_ADMIN_ROLES.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
+    );
   }
 
   getRememberedUser(): string | null {

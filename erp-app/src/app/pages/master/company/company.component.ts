@@ -2,12 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { DocumentNumberService } from '../../../core/services/document-number.service';
+import { AuthService } from '../../../core/services/auth.service';
 import Swal from 'sweetalert2';
 
 type CompanyTab = 'general' | 'financeTax' | 'defaults' | 'numberSeries' | 'adminUser' | 'audit';
 
 const blankGeneral = () => ({ code: '', name: '', legalName: '', registrationNo: '', taxRegistrationNo: '', status: 'Active', phone: '', email: '', website: '', country: 'Singapore', contactPerson: '', contactMobileNo: '', contactEmail: '', address1: '', address2: '', city: '', state: '', postal: '' });
-const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any });
+const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any, retainedEarningsAccountId: null as any });
 const blankDefaults = () => ({ defaultBranch: 'Head Office', defaultWarehouse: 'Main Warehouse', defaultBin: 'MAIN', defaultLanguage: 'EN', timeZone: 'Asia/Kolkata' });
 const blankAdmin = () => ({ username: '', email: '', password: '', departmentId: 1, locationId: 1 });
 const defaultNumberSeries = () => ([
@@ -74,7 +75,8 @@ export class CompanyComponent implements OnInit {
   constructor(
     private masterSvc: MasterService,
     private permissionService: PermissionService,
-    private docNoSvc: DocumentNumberService
+    private docNoSvc: DocumentNumberService,
+    private auth: AuthService
   ) {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
@@ -84,10 +86,14 @@ export class CompanyComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    const approvalRoles: string[] = JSON.parse(localStorage.getItem('approvalRoles') || '[]');
-    const isSuperAdmin = approvalRoles.some(x => (x || '').trim().toLowerCase() === 'super admin');
+    const isSuperAdmin = this.auth.isSuperAdmin();
     const approvalLevelName = isSuperAdmin ? 'Super Admin' : '';
-    const orgGuid = localStorage.getItem('orgGuid') || '';
+    // SuperAdmin accounts live only in the master DB and have no orgGuid of
+    // their own — a stale login can leave the literal string "undefined"
+    // cached (localStorage.setItem coerces JS undefined to that string),
+    // which would otherwise scope the query down to a non-existent org.
+    const rawOrgGuid = localStorage.getItem('orgGuid') || '';
+    const orgGuid = rawOrgGuid === 'undefined' ? '' : rawOrgGuid;
     const userCompanyId = Number(localStorage.getItem('companyId') || 0);
 
     this.masterSvc.getOrganizationCompanyList(approvalLevelName, orgGuid).subscribe({
@@ -190,7 +196,8 @@ export class CompanyComponent implements OnInit {
           defaultInputTaxCode: f.defaultInputTaxCode || '',
           decimalPlaces: f.decimalPlaces ?? 2, roundingRule: f.roundingRule || 'Round half up',
           cashAccountId: f.cashAccountId || null,
-          advanceAccountId: f.advanceAccountId || null
+          advanceAccountId: f.advanceAccountId || null,
+          retainedEarningsAccountId: f.retainedEarningsAccountId || null
         };
         const d = res.defaults || {};
         this.defaults = { defaultBranch: d.defaultBranch || 'Head Office', defaultWarehouse: d.defaultWarehouse || 'Main Warehouse', defaultBin: d.defaultBin || 'MAIN', defaultLanguage: d.defaultLanguage || 'EN', timeZone: d.timeZone || 'Asia/Kolkata' };

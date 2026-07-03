@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { MaterialRequisitionService } from 'app/main/material-requisation/material-requisition.service';
 import { SalesService } from 'app/pages/sales/sales.service';
+import { AuthService } from '../../core/services/auth.service';
 
 type RoleGroup =
   | 'admin'
@@ -41,7 +42,8 @@ export class DashboardComponent implements OnInit {
   constructor(
     private mrService: MaterialRequisitionService,
     private salesSvc: SalesService,
-    private router: Router
+    private router: Router,
+    private auth: AuthService
   ) {}
 
   goToMrList(): void {
@@ -107,6 +109,7 @@ export class DashboardComponent implements OnInit {
     try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
 
     const out = new Set<RoleGroup>();
+    if (this.auth.isSuperAdmin()) out.add('admin');
     for (const raw of roles) {
       const s = (raw || '').toLowerCase().trim();
       if (!s) continue;

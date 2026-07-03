@@ -96,13 +96,28 @@ export class FinanceBsComponent implements OnInit {
   get liabilityRows(): any[] {
     const filtered = this.rows.filter(r => {
       const s = String(r.section ?? '').toLowerCase();
-      return (s.includes('liabil') || s.includes('equity') || s.includes('capital')) && r.amount !== 0;
+      return s.includes('liabil') && r.amount !== 0;
     });
     return this.sortByCode(filtered);
   }
 
+  get equityRows(): any[] {
+    const filtered = this.rows.filter(r => {
+      const s = String(r.section ?? '').toLowerCase();
+      return (s.includes('equity') || s.includes('capital')) && r.amount !== 0;
+    });
+    return this.sortByCode(filtered);
+  }
+
+  /** Liabilities + Equity combined, for the left column of the T-format layout. */
+  get liabilityAndEquityRows(): any[] {
+    return this.sortByCode([...this.liabilityRows, ...this.equityRows]);
+  }
+
   get totalAssets():      number { return this.assetRows.reduce((s, r)     => s + (r.amount || 0), 0); }
   get totalLiabilities(): number { return this.liabilityRows.reduce((s, r) => s + (r.amount || 0), 0); }
+  get totalEquity():      number { return this.equityRows.reduce((s, r)    => s + (r.amount || 0), 0); }
+  get totalLiabilitiesAndEquity(): number { return this.totalLiabilities + this.totalEquity; }
 
   toggle(row: any): void {
     const key = String(row._id);
@@ -136,10 +151,12 @@ export class FinanceBsComponent implements OnInit {
   exportExcel(): void {
     const rows: any[][] = [
       ['Balance Sheet'], [],
-      ['Total Liabilities', this.totalLiabilities.toFixed(2)],
+      ['Total Liabilities & Equity', this.totalLiabilitiesAndEquity.toFixed(2)],
       ['Total Assets', this.totalAssets.toFixed(2)], [],
       ['Liabilities'], ['Account', 'Amount'],
       ...this.liabilityRows.map(r => [r.accountName, (r.amount || 0).toFixed(2)]),
+      [], ['Equity'], ['Account', 'Amount'],
+      ...this.equityRows.map(r => [r.accountName, (r.amount || 0).toFixed(2)]),
       [], ['Assets'], ['Account', 'Amount'],
       ...this.assetRows.map(r => [r.accountName, (r.amount || 0).toFixed(2)])
     ];
@@ -154,14 +171,14 @@ export class FinanceBsComponent implements OnInit {
   private get auditRows(): Array<{ code: string; name: string; debit: number; credit: number }> {
     const rows = [
       ...this.assetRows.map(r => ({ code: String(r.accountCode ?? ''), name: r.accountName ?? '', debit: r.amount || 0, credit: 0 })),
-      ...this.liabilityRows.map(r => ({ code: String(r.accountCode ?? ''), name: r.accountName ?? '', debit: 0, credit: r.amount || 0 }))
+      ...this.liabilityAndEquityRows.map(r => ({ code: String(r.accountCode ?? ''), name: r.accountName ?? '', debit: 0, credit: r.amount || 0 }))
     ];
     return rows.sort((a, b) => a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
   }
 
   /** Balancing figure so Debit (Assets) and Credit (Liabilities & Equity) foot to the same Grand Total. */
   private get balancingRow(): { label: string; debit: number; credit: number } {
-    const diff = this.totalAssets - this.totalLiabilities;
+    const diff = this.totalAssets - this.totalLiabilitiesAndEquity;
     return {
       label: 'Balancing Figure',
       debit: diff < 0 ? -diff : 0,
@@ -169,7 +186,7 @@ export class FinanceBsComponent implements OnInit {
     };
   }
 
-  private get grandTotal(): number { return Math.max(this.totalAssets, this.totalLiabilities); }
+  private get grandTotal(): number { return Math.max(this.totalAssets, this.totalLiabilitiesAndEquity); }
 
   private fmtDate(d: string): string {
     if (!d) return 'All';

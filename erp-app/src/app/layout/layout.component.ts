@@ -59,7 +59,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Currency',        icon: 'm-currency',  route: '/app/master/currency',         permId: 'currency' },
         { label: 'Customer Groups', icon: 'm-custgrp',   route: '/app/master/customergroups',   permId: 'customergroups' },
         { label: 'Department',      icon: 'm-dept',      route: '/app/master/department',       permId: 'department' },
-        { label: 'Department Menu Access', icon: 'm-dept', route: '/app/master/department-menu-access' },
+        { label: 'Department Menu Access', icon: 'm-dept', route: '/app/master/department-menu-access', permId: 'department-menu-access' },
         { label: 'Driver',          icon: 'm-driver',    route: '/app/master/driver',           permId: 'driver' },
         { label: 'Exchange Rate',   icon: 'm-exchange',  route: '/app/master/exchangerate',     permId: 'exchangerate' },
         { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue',        permId: 'flagissue' },
@@ -69,6 +69,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Outlet',          icon: 'm-location',  route: '/app/master/location',         permId: 'location' },
         { label: 'Payment Terms',   icon: 'm-payment',   route: '/app/master/paymentTerms',     permId: 'paymentTerms' },
         { label: 'Recurring',       icon: 'm-recurring', route: '/app/master/recurring',        permId: 'recurring' },
+        { label: 'Service',         icon: 'm-service',   route: '/app/master/service',          permId: 'service' },
         { label: 'States',          icon: 'm-states',    route: '/app/master/states',           permId: 'states' },
         { label: 'Stock Issue',     icon: 'm-stock',     route: '/app/master/stockIssue',       permId: 'stockissue' },
         { label: 'Frequency',       icon: 'm-strategy',  route: '/app/master/strategy',         permId: 'strategy' },
@@ -123,6 +124,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
       children: [
         { label: 'Item Master',            icon: 'inv-item',    route: '/app/inventory/List-itemmaster',           permId: 'im-list' },
         { label: 'Stock Take',             icon: 'inv-take',    route: '/app/inventory/list-stocktake',            permId: 'stocktake-list' },
+        { label: 'Stock Adjustment',       icon: 'inv-take',    route: '/app/inventory/list-stockadjustment',      permId: 'stock-adjustment' },
         { label: 'Stock Reorder Planning', icon: 'inv-reorder', route: '/app/inventory/list-stockreorderplanning', permId: 'reorder-list' },
         { label: 'Stock COGS',             icon: 'inv-cogs',    route: '/app/inventory/stockcogs',                 permId: 'stockcogs' },
         { label: 'Stock History',          icon: 'inv-history', route: '/app/inventory/list-stock-history',        permId: 'list-stock-history' },
@@ -231,12 +233,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private periodLockState: PeriodLockStateService,
     private masterSvc: MasterService
   ) {
-    const isMasterOwner = localStorage.getItem('isMasterOwner') === 'true';
-    const roles: string[] = JSON.parse(localStorage.getItem('approvalRoles') || '[]');
-    const isSuperAdmin = Array.isArray(roles) && roles.some((r: string) =>
-      ['super admin', 'super_admin', 'admin', 'owner'].includes(r.toLowerCase())
-    );
-    this.showAll = isMasterOwner || isSuperAdmin;
+    this.showAll = this.auth.isSuperAdmin();
     window.addEventListener('menu-permission-updated', this.menuReloadHandler);
   }
 

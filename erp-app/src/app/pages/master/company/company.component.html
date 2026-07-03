@@ -310,6 +310,13 @@
               placeholder="-- Select Advance Account --">
             </erp-dropdown>
           </div>
+          <div class="mf-group">
+            <label class="mf-label">Retained Earnings Account (GL)</label>
+            <erp-dropdown name="retainedEarningsAccountId" [(ngModel)]="financeTax.retainedEarningsAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select Retained Earnings Account --">
+            </erp-dropdown>
+          </div>
         </div>
       </div>
     </ng-container>
