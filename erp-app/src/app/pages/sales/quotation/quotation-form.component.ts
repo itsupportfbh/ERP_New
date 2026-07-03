@@ -472,11 +472,11 @@ export class QuotationFormComponent implements OnInit {
     });
   }
 
-  // System's automatic fulfillment from item flags: sellable-only → Direct DO,
-  // consumable-only → PP, both/neither → Direct DO (default).
+  // System's automatic fulfillment from item flags: sellable-only (Sales Item) → PP,
+  // consumable-only (Purchase Item) → Direct DO, both/neither → Direct DO (default).
   private autoFulfillmentFromFlags(l: UiLine): number {
-    if (l.isSellable && !l.isConsumable) return 2; // Direct DO
-    if (!l.isSellable && l.isConsumable) return 1; // PP
+    if (l.isSellable && !l.isConsumable) return 1; // Sales Item → PP
+    if (!l.isSellable && l.isConsumable) return 2; // Purchase Item → Direct DO
     return 2; // both / neither → default Direct DO (staff can switch if manual)
   }
 
@@ -1241,7 +1241,8 @@ export class QuotationFormComponent implements OnInit {
         // 'Both' items stay Pending (procurement decides); auto items show their value.
         this.modal.fulfillmentMode = f.allowManualFulfillment
           ? null
-          : ((sellable && !consumable) ? 2 : (!sellable && consumable) ? 1 : 2);
+          // Sales Item (sellable-only) → PP (1); Purchase Item (consumable-only) → Direct DO (2)
+          : ((sellable && !consumable) ? 1 : (!sellable && consumable) ? 2 : 2);
       },
       error: () => { /* leave defaults; policy resolves after add */ }
     });
