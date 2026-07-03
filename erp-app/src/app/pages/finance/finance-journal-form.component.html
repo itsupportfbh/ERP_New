@@ -86,12 +86,12 @@
     <div class="totals-strip">
       <div class="total-item">
         <span class="total-label">Total Debit</span>
-        <span class="total-val">{{ totalDebit | number:'1.2-2' }}</span>
+        <span class="total-val">{{ totalDebit | money }}</span>
       </div>
       <div class="total-divider"></div>
       <div class="total-item">
         <span class="total-label">Total Credit</span>
-        <span class="total-val">{{ totalCredit | number:'1.2-2' }}</span>
+        <span class="total-val">{{ totalCredit | money }}</span>
       </div>
       <div class="balance-badge"
         [class.ok]="isBalanced"

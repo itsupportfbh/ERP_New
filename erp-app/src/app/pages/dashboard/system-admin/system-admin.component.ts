@@ -3,6 +3,7 @@ import {
   DashboardService,
   AdminSummaryDashboard
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -14,14 +15,17 @@ export class SystemAdminComponent implements OnInit {
 
   companyId = Number(localStorage.getItem('companyId')) || 0;
 
-  totalRevenue = '₹0';
-  totalPayables = '₹0';
+  totalRevenue = '';
+  totalPayables = '';
   arInvoices = 0;
   apInvoices = 0;
   totalSkus = 0;
   allExceptions = 0;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadAdminSummaryDashboard();
@@ -46,16 +50,6 @@ export class SystemAdminComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    const amount = Number(value || 0);
-
-    if (amount >= 10000000) {
-      return `₹${(amount / 10000000).toFixed(2)}Cr`;
-    }
-
-    if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)}L`;
-    }
-
-    return `₹${amount.toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 }

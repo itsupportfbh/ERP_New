@@ -4,6 +4,7 @@ import {
   DashboardService,
   FinanceSummaryDashboard
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -15,9 +16,9 @@ export class FinanceManagerDashboardComponent implements OnInit, AfterViewInit {
 
   companyId = Number(localStorage.getItem('companyId')) || 0;
 
-  totalRevenue = '₹0';
-  collections = '₹0';
-  totalPayables = '₹0';
+  totalRevenue = '';
+  collections = '';
+  totalPayables = '';
   exceptions = 0;
 
   totalRevenueChangePercent = 0;
@@ -25,7 +26,10 @@ export class FinanceManagerDashboardComponent implements OnInit, AfterViewInit {
   totalPayablesChangePercent = 0;
   exceptionsChange = 0;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
   this.loadFinanceSummaryDashboard();
@@ -64,17 +68,7 @@ export class FinanceManagerDashboardComponent implements OnInit, AfterViewInit {
 }
 
   formatAmount(value: number): string {
-    const amount = Number(value || 0);
-
-    if (amount >= 10000000) {
-      return `₹${(amount / 10000000).toFixed(2)}Cr`;
-    }
-
-    if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)}L`;
-    }
-
-    return `₹${amount.toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 
   absValue(value: number): number {

@@ -13,7 +13,10 @@
             <div class="mitem-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><line x1="3" y1="10" x2="17" y2="10"/><path d="M10 3c-2 2.5-3 5-3 7s1 4.5 3 7M10 3c2 2.5 3 5 3 7s-1 4.5-3 7"/></svg></div>
             <div class="mitem-info">
               <div class="mitem-name">{{ item.countryName || item.name }}</div>
-              <div class="mitem-sub" *ngIf="item.gstPercentage">GST: {{ item.gstPercentage }}%</div>
+              <div class="mitem-sub" *ngIf="item.gstPercentage || item.taxName || item.currencySymbol">
+                {{ item.taxName || 'GST' }}: {{ item.gstPercentage || 0 }}%
+                <span *ngIf="item.currencySymbol"> &nbsp;·&nbsp; {{ item.currencySymbol }}</span>
+              </div>
             </div>
           </div>
           <div class="mitem-actions">
@@ -27,7 +30,9 @@
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Country</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group"><label class="mf-label">Country Name</label><input class="mf-input" type="text" [(ngModel)]="form.countryName" name="countryName" placeholder="Country Name"/></div>
-        <div class="mf-group"><label class="mf-label">GST Percentage</label><input class="mf-input" type="number" [(ngModel)]="form.gstPercentage" name="gstPercentage" placeholder="GST %"/></div>
+        <div class="mf-group"><label class="mf-label">Tax Name</label><input class="mf-input" type="text" [(ngModel)]="form.taxName" name="taxName" placeholder="GST / SST / VAT"/></div>
+        <div class="mf-group"><label class="mf-label">{{ form.taxName || 'Tax' }} Percentage</label><input class="mf-input" type="number" [(ngModel)]="form.gstPercentage" name="gstPercentage" placeholder="%"/></div>
+        <div class="mf-group"><label class="mf-label">Currency Symbol</label><input class="mf-input" type="text" [(ngModel)]="form.currencySymbol" name="currencySymbol" placeholder="S$ / RM / ₹"/></div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit"><svg viewBox="0 0 20 20"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Submit</button>
           <button type="button" class="mf-btn cancel" (click)="cancel()"><svg viewBox="0 0 20 20"><line x1="5" y1="5" x2="15" y2="15" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="5" x2="5" y2="15" fill="none" stroke="currentColor" stroke-width="2"/></svg>Cancel</button>

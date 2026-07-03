@@ -24,9 +24,9 @@ export class SalesOrderComponent implements OnInit {
     { key: 'date',     header: 'Date',     type: 'date',   sortable: true },
     { key: 'customer', header: 'Customer', type: 'text',   sortable: true },
     { key: 'items',    header: 'Items',    type: 'number', align: 'right' },
-    { key: 'amount',   header: 'Amount ₹', type: 'number', sortable: true, align: 'right' },
-    { key: 'tax',      header: 'GST ₹',    type: 'number', align: 'right' },
-    { key: 'total',    header: 'Total ₹',  type: 'number', sortable: true, align: 'right' },
+    { key: 'amount',   header: 'Amount', type: 'number', sortable: true, align: 'right' },
+    { key: 'tax',      header: 'Tax',    type: 'number', align: 'right' },
+    { key: 'total',    header: 'Total',  type: 'number', sortable: true, align: 'right' },
     { key: 'status',   header: 'Status',   type: 'badge',
       badgeMap: { Delivered: 'success', Pending: 'warning', Cancelled: 'danger' }
     },

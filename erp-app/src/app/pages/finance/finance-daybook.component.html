@@ -29,15 +29,15 @@
   <div class="sum-row">
     <div class="sum-card sum-debit">
       <div class="sum-icon-wrap debit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
-      <div><div class="sum-lbl">Total Debit</div><div class="sum-val">{{ summary.totalDebit | number:'1.2-2' }}</div></div>
+      <div><div class="sum-lbl">Total Debit</div><div class="sum-val">{{ summary.totalDebit | money }}</div></div>
     </div>
     <div class="sum-card sum-credit">
       <div class="sum-icon-wrap credit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-      <div><div class="sum-lbl">Total Credit</div><div class="sum-val">{{ summary.totalCredit | number:'1.2-2' }}</div></div>
+      <div><div class="sum-lbl">Total Credit</div><div class="sum-val">{{ summary.totalCredit | money }}</div></div>
     </div>
     <div class="sum-card sum-net">
       <div class="sum-icon-wrap net-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-      <div><div class="sum-lbl">Net Movement</div><div class="sum-val">{{ netAbs | number:'1.2-2' }} <span class="net-type">{{ netType }}</span></div></div>
+      <div><div class="sum-lbl">Net Movement</div><div class="sum-val">{{ netAbs | money }} <span class="net-type">{{ netType }}</span></div></div>
     </div>
   </div>
 
@@ -78,11 +78,11 @@
             <td class="voucher-link">{{ r.voucherNo }}</td>
             <td><span class="type-badge" [ngClass]="voucherTypeClass(r.voucherType)">{{ typeLabel(r.voucherType) }}</span></td>
             <td>{{ r.accountName }}</td>
-            <td class="num debit-val">{{ r.debit ? (r.debit | number:'1.2-2') : '–' }}</td>
-            <td class="num credit-val">{{ r.credit ? (r.credit | number:'1.2-2') : '–' }}</td>
+            <td class="num debit-val">{{ r.debit ? (r.debit | money) : '–' }}</td>
+            <td class="num credit-val">{{ r.credit ? (r.credit | money) : '–' }}</td>
             <td class="num balance-val">
               <strong [class.dr-val]="r._rowType === 'Dr'" [class.cr-val]="r._rowType === 'Cr'">
-                {{ r._rowAmt | number:'1.2-2' }} <span class="bal-type">{{ r._rowType }}</span>
+                {{ r._rowAmt | money }} <span class="bal-type">{{ r._rowType }}</span>
               </strong>
             </td>
           </tr>
@@ -101,17 +101,17 @@
           <div class="sum-type-head">
             <span class="sum-type-name">{{ typeLabel(g.type) }}</span>
             <span class="sum-type-net" [class.net-dr]="groupType(g) === 'Dr'" [class.net-cr]="groupType(g) === 'Cr'">
-              ₹ {{ groupNetAbs(g) | number:'1.2-2' }} {{ groupType(g) }}
+              {{ groupNetAbs(g) | money }} {{ groupType(g) }}
             </span>
           </div>
           <div class="sum-type-body">
             <div class="sum-type-col">
               <div class="stc-lbl">Total Debit</div>
-              <div class="stc-val">₹ {{ g.debit | number:'1.2-2' }}</div>
+              <div class="stc-val">{{ g.debit | money }}</div>
             </div>
             <div class="sum-type-col">
               <div class="stc-lbl">Total Credit</div>
-              <div class="stc-val">₹ {{ g.credit | number:'1.2-2' }}</div>
+              <div class="stc-val">{{ g.credit | money }}</div>
             </div>
           </div>
         </div>

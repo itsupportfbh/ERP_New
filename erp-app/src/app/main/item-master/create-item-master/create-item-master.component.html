@@ -477,7 +477,7 @@
           <div class="supCard4" *ngFor="let p of pricesArr; trackBy: trackByIdx">
             <div class="supCard4__top">
               <div class="supCard4__avatar">{{ (p?.supplierName || 'S').trim().charAt(0) | uppercase }}</div>
-              <div class="supCard4__price">₹{{ (p?.price ?? 0) | number:'1.2-2' }}</div>
+              <div class="supCard4__price">{{ (p?.price ?? 0) | money }}</div>
             </div>
             <div class="supCard4__name" [title]="p?.supplierName || ''">{{ p?.supplierName || '-' }}</div>
             <div class="supCard4__chips">

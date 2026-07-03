@@ -62,7 +62,7 @@
           <tr *ngFor="let item of filteredBalances; let i = index">
             <td class="muted">{{ i + 1 }}</td>
             <td class="account-cell">{{ getAccountLabel(item.budgetLineId) }}</td>
-            <td class="right teal-bold">{{ (item.openingBalanceAmount || 0) | number:'1.2-2' }}</td>
+            <td class="right teal-bold">{{ (item.openingBalanceAmount || 0) | money }}</td>
             <td class="center">
               <span class="status-badge" [ngClass]="item.isActive !== false ? 'badge-success' : 'badge-default'">
                 {{ item.isActive !== false ? 'Active' : 'Inactive' }}

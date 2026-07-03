@@ -21,17 +21,17 @@
   <div class="sum-row">
     <div class="sum-card sum-expense">
       <div class="sum-icon-wrap expense-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
-      <div><div class="sum-lbl">Total Expense</div><div class="sum-val">{{ totalExpense | number:'1.2-2' }}</div></div>
+      <div><div class="sum-lbl">Total Expense</div><div class="sum-val">{{ totalExpense | money }}</div></div>
     </div>
     <div class="sum-card sum-sales">
       <div class="sum-icon-wrap sales-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-      <div><div class="sum-lbl">Total Sales</div><div class="sum-val">{{ totalIncome | number:'1.2-2' }}</div></div>
+      <div><div class="sum-lbl">Total Sales</div><div class="sum-val">{{ totalIncome | money }}</div></div>
     </div>
     <div class="sum-card sum-net">
       <div class="sum-icon-wrap net-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div>
         <div class="sum-lbl">Net Profit</div>
-        <div class="sum-val" [class.text-profit]="netProfit >= 0" [class.text-loss]="netProfit < 0">{{ netProfit | number:'1.2-2' }}</div>
+        <div class="sum-val" [class.text-profit]="netProfit >= 0" [class.text-loss]="netProfit < 0">{{ netProfit | money }}</div>
       </div>
     </div>
   </div>
@@ -57,14 +57,14 @@
             </div>
           </div>
           <div class="acc-right">
-            <span class="acc-amt">{{ (r.amount || r.purchase || 0) | number:'1.2-2' }}</span>
+            <span class="acc-amt">{{ (r.amount || r.purchase || 0) | money }}</span>
             <span class="avatar" [style.background]="avatarColor(r.accountName || r.headName)">{{ initials(r.accountName || r.headName) }}</span>
           </div>
         </li>
         <li class="acc-empty" *ngIf="!expenseRows.length">No purchase data.</li>
       </ul>
       <div class="col-total col-total-expense">
-        <span>Total</span><span>{{ totalExpense | number:'1.2-2' }}</span>
+        <span>Total</span><span>{{ totalExpense | money }}</span>
       </div>
     </div>
 
@@ -86,20 +86,20 @@
             </div>
           </div>
           <div class="acc-right">
-            <span class="acc-amt">{{ (r.amount || r.sales || 0) | number:'1.2-2' }}</span>
+            <span class="acc-amt">{{ (r.amount || r.sales || 0) | money }}</span>
             <span class="avatar" [style.background]="avatarColor(r.accountName || r.headName)">{{ initials(r.accountName || r.headName) }}</span>
           </div>
         </li>
         <!-- Net Loss row on sales side -->
         <li class="acc-item net-row-item" *ngIf="netProfit < 0">
           <div class="acc-left"><div class="acc-text"><span class="acc-name">Net Loss</span></div></div>
-          <div class="acc-right"><span class="acc-amt">{{ (-netProfit) | number:'1.2-2' }}</span></div>
+          <div class="acc-right"><span class="acc-amt">{{ (-netProfit) | money }}</span></div>
         </li>
         <li class="acc-empty" *ngIf="!incomeRows.length && netProfit >= 0">No sales data.</li>
       </ul>
       <div class="col-total col-total-sales">
         <span>Total</span>
-        <span>{{ (netProfit < 0 ? totalExpense : totalIncome) | number:'1.2-2' }}</span>
+        <span>{{ (netProfit < 0 ? totalExpense : totalIncome) | money }}</span>
       </div>
     </div>
   </div>

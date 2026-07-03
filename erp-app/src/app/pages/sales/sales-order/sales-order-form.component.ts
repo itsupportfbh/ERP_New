@@ -1207,8 +1207,9 @@ export class SalesOrderFormComponent implements OnInit {
   fetchFxRate(fromCurrencyId: number): void {
     if (!fromCurrencyId || !this.baseCurrencyId) return;
     this.fxRateLoading = true;
-    const today = new Date().toISOString().substring(0, 10);
-    this.svc.getExchangeRate(fromCurrencyId, this.baseCurrencyId, today).subscribe({
+    // Use the document (order) date so re-opened orders keep their historical rate.
+    const rateDate = this.header.orderDate || new Date().toISOString().substring(0, 10);
+    this.svc.getExchangeRate(fromCurrencyId, this.baseCurrencyId, rateDate).subscribe({
       next: (res: any) => {
         this.fxRateLoading = false;
         if (res?.isSuccess && res?.data?.rate) this.header.fxRate = Number(res.data.rate);

@@ -7,7 +7,7 @@ export class CurrencyComponent implements OnInit {
   items: any[] = []; loading = false; isFormVisible = false; isEditMode = false; selectedId: any = null; message = ''; isError = false;
   showDeleteModal = false; itemToDelete: any = null;
   showResultPopup = false; popupIsSuccess = false; popupMessage = '';
-  form = { currencyName: '', description: '' };
+  form = { currencyName: '', description: '', symbol: '' };
   permission: FunctionPermission;
   isPermissionLoaded = false;
   userId: number = 0;
@@ -20,10 +20,10 @@ export class CurrencyComponent implements OnInit {
 
   ngOnInit(): void { this.loadPermission(); }
   load(): void { this.loading = true; this.masterSvc.getCurrencies().subscribe({ next: (res: any) => { this.items = res?.data || res || []; this.loading = false; }, error: () => { this.loading = false; this.message = 'Failed to load.'; this.isError = true; } }); }
-  showForm(): void { this.isFormVisible = true; this.isEditMode = false; this.form = { currencyName: '', description: '' }; this.message = ''; }
-  edit(item: any): void { this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id; this.form = { currencyName: item.currencyName || item.name || '', description: item.description || '' }; this.message = ''; }
+  showForm(): void { this.isFormVisible = true; this.isEditMode = false; this.form = { currencyName: '', description: '', symbol: '' }; this.message = ''; }
+  edit(item: any): void { this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id; this.form = { currencyName: item.currencyName || item.name || '', description: item.description || '', symbol: item.symbol || '' }; this.message = ''; }
   cancel(): void { this.isFormVisible = false; this.message = ''; }
-  clearForm(): void { this.form = { currencyName: '', description: '' }; }
+  clearForm(): void { this.form = { currencyName: '', description: '', symbol: '' }; }
   onSubmit(): void {
     if (!this.form.currencyName?.trim()) { this.message = 'Currency Name is required.'; this.isError = true; return; }
     const obs = this.isEditMode ? this.masterSvc.updateCurrency(this.selectedId, this.form) : this.masterSvc.createCurrency(this.form);

@@ -44,7 +44,7 @@
           <tr *ngFor="let item of pagedItems">
             <td><strong>{{ item.number }}</strong></td>
             <td>{{ item.customerName || '—' }}</td>
-            <td>{{ item.grandTotal | number:'1.2-2' }} <span class="qt-cur">{{ item.currency || 'SGD' }}</span></td>
+            <td>{{ item.grandTotal | money }} <span class="qt-cur">{{ item.currency || 'SGD' }}</span></td>
             <td>{{ item.deliveryDate ? (item.deliveryDate | date:'dd-MM-yyyy') : '—' }}</td>
             <td>{{ item.validityDate ? (item.validityDate | date:'dd-MM-yyyy') : '—' }}</td>
             <td><span class="qt-badge" [ngClass]="'st-' + item.status">{{ item.statusLabel }}</span></td>

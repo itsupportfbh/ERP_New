@@ -115,7 +115,7 @@
 
       <!-- GST % -->
       <div class="mf-group">
-        <label class="mf-label">GST %</label>
+        <label class="mf-label">{{ 'GST %' | taxName }}</label>
         <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" readonly />
       </div>
     </div>
@@ -235,7 +235,7 @@
                       <input type="number" class="mf-input qf-num qf-setInput" [(ngModel)]="l.unitPrice"
                         (ngModelChange)="onSetPriceChange(l)" min="0" step="0.01" placeholder="0.00" />
                     </label>
-                    <span class="qf-setTotal">Total: <b>{{ (l.lineTotal || 0) | number:'1.2-2' }}</b></span>
+                    <span class="qf-setTotal">Total: <b>{{ (l.lineTotal || 0) | money:header.currencyId }}</b></span>
                   </div>
                   <button class="btn btn-danger btn-sm" type="button" (click)="removeItemSet(l.itemSetId!)">Remove Package</button>
                 </div>
@@ -280,7 +280,7 @@
                 <small *ngIf="l.allowManualFulfillment && l.fulfillmentMode != null" class="qf-autoTag">Resolved</small>
                 <small *ngIf="!l.allowManualFulfillment" class="qf-autoTag">Auto</small>
               </td>
-              <td class="qf-c qf-total">{{ (l.lineTotal || 0) | number:'1.2-2' }}</td>
+              <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
               <td class="qf-c">
                 <button class="dt-icon-btn del" type="button" (click)="remove(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
@@ -301,7 +301,7 @@
         <span>Summary</span>
         <span class="qf-curPill">Currency: <b>{{ header.currency || '-' }}</b></span>
       </div>
-      <div class="qf-sumRow"><span>Subtotal</span><strong>{{ header.subtotal | number:'1.2-2' }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Subtotal</span><strong>{{ header.subtotal | money:header.currencyId }} {{ header.currency }}</strong></div>
       <div class="qf-sumRow qf-discRow">
         <span>Discount</span>
         <div class="qf-discCtrls">
@@ -311,22 +311,22 @@
             <option value="percent">%</option>
             <option value="amount">{{ header.currency || 'Amt' }}</option>
           </select>
-          <span class="qf-discAmt">({{ header.discountAmount | number:'1.2-2' }})</span>
+          <span class="qf-discAmt">({{ header.discountAmount | money:header.currencyId }})</span>
         </div>
       </div>
-      <div class="qf-sumRow"><span>Net Total</span><strong>{{ header.netTotal | number:'1.2-2' }} {{ header.currency }}</strong></div>
-      <div class="qf-sumRow"><span>Tax</span><strong>{{ header.taxAmount | number:'1.2-2' }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Net Total</span><strong>{{ header.netTotal | money:header.currencyId }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Tax</span><strong>{{ header.taxAmount | money:header.currencyId }} {{ header.currency }}</strong></div>
       <div class="qf-divider"></div>
       <div class="qf-grand">
         <div class="lhs"><span class="k">Grand Total</span><small class="h">Net Total + Tax</small></div>
-        <h3 class="v">{{ header.grandTotal | number:'1.2-2' }} <span class="cur">{{ header.currency }}</span></h3>
+        <h3 class="v">{{ header.grandTotal | money:header.currencyId }} <span class="cur">{{ header.currency }}</span></h3>
       </div>
       <div class="qf-grand qf-grand--base" *ngIf="isForeignCurrency()">
         <div class="lhs">
           <span class="k">Base ({{ baseCurrencyName }})</span>
-          <small class="h">{{ header.grandTotal | number:'1.2-2' }} {{ header.currency }} × {{ header.fxRate | number:'1.4-4' }}</small>
+          <small class="h">{{ header.grandTotal | money:header.currencyId }} {{ header.currency }} × {{ header.fxRate | number:'1.4-4' }}</small>
         </div>
-        <h3 class="v">{{ grandTotalBase | number:'1.2-2' }} <span class="cur">{{ baseCurrencyName }}</span></h3>
+        <h3 class="v">{{ grandTotalBase | money }} <span class="cur">{{ baseCurrencyName }}</span></h3>
       </div>
     </div>
   </div>
@@ -405,7 +405,7 @@
           <erp-dropdown [(ngModel)]="modal.taxMode" name="modalTaxMode"
             [items]="taxModeItems" bindLabel="label" bindValue="value"
             (ngModelChange)="previewLineTotals()"></erp-dropdown>
-          <small class="qf-hint">GST% used: <b>{{ modal.taxMode === 'Standard-Rated' ? (header.taxPct || 0) : 0 }}%</b></small>
+          <small class="qf-hint">{{ 'GST% used:' | taxName }} <b>{{ modal.taxMode === 'Standard-Rated' ? (header.taxPct || 0) : 0 }}%</b></small>
         </div>
 
         <!-- Description -->
@@ -418,10 +418,10 @@
         <!-- Preview -->
         <div class="qf-mCol12" *ngIf="modalPreview">
           <div class="qf-preview">
-            <div class="r"><span>Net</span><strong>{{ modalPreview.net | number:'1.2-2' }} <span class="qf-muted" *ngIf="isForeignCurrency()">{{ header.currency }}</span></strong></div>
-            <div class="r"><span>Tax</span><strong>{{ modalPreview.tax | number:'1.2-2' }}</strong></div>
-            <div class="r r--total"><span>Total</span><strong>{{ modalPreview.total | number:'1.2-2' }} <span class="qf-muted" *ngIf="isForeignCurrency()">{{ header.currency }}</span></strong></div>
-            <div class="r" *ngIf="isForeignCurrency()"><span>Base ({{ baseCurrencyName }})</span><strong>{{ (modalPreview.total * header.fxRate) | number:'1.2-2' }} {{ baseCurrencyName }}</strong></div>
+            <div class="r"><span>Net</span><strong>{{ modalPreview.net | money:header.currencyId }} <span class="qf-muted" *ngIf="isForeignCurrency()">{{ header.currency }}</span></strong></div>
+            <div class="r"><span>Tax</span><strong>{{ modalPreview.tax | money:header.currencyId }}</strong></div>
+            <div class="r r--total"><span>Total</span><strong>{{ modalPreview.total | money:header.currencyId }} <span class="qf-muted" *ngIf="isForeignCurrency()">{{ header.currency }}</span></strong></div>
+            <div class="r" *ngIf="isForeignCurrency()"><span>Base ({{ baseCurrencyName }})</span><strong>{{ (modalPreview.total * header.fxRate) | money }} {{ baseCurrencyName }}</strong></div>
           </div>
         </div>
       </div>

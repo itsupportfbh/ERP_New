@@ -3,6 +3,7 @@ import {
   DashboardService,
   TopRecipe
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -16,7 +17,10 @@ export class TopRecipesComponent implements OnInit {
 
   recipes: any[] = [];
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadTopRecipes();
@@ -38,7 +42,7 @@ export class TopRecipesComponent implements OnInit {
 
           status: 'Active',
 
-          cost: '₹' + Number(x.recipeCost).toFixed(0),
+          cost: this.cur.baseSymbol() + ' ' + Number(x.recipeCost).toFixed(2),
 
           badgeClass: 'badge-active',
 
@@ -57,7 +61,7 @@ export class TopRecipesComponent implements OnInit {
 }
 
   formatAmount(value: number): string {
-    return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 
   getBadgeClass(status: string): string {
