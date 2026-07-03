@@ -77,7 +77,8 @@
       "PowerShell(\"===== MenuMaster: are the 8 inventory permIds registered? \\(Hidden/IsActive\\) =====\")",
       "PowerShell(\"`n===== RoleMenuAccess: CanView for those menus \\(by role\\) =====\")",
       "PowerShell(\"===== MenuMaster inventory-ish rows =====\")",
-      "PowerShell(\"`n===== Count rows in MenuMaster / RoleMenuAccess =====\")"
+      "PowerShell(\"`n===== Count rows in MenuMaster / RoleMenuAccess =====\")",
+      "PowerShell(Set-Location C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi; dotnet build --nologo -p:UseAppHost=false -p:NuGetAudit=false -o \"$env:TEMP\\\\fin_ocr\" 2>&1 | Select-String -Pattern \"error CS|Error\\\\\\(s\\\\\\)\" | Select-Object -Last 4)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

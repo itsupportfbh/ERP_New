@@ -152,6 +152,13 @@ export class SalesService {
   getSalesInvoices(): Observable<any> {
     return this.http.get(`${this.api}/salesinvoice/List`);
   }
+  /** OCR: upload a PDF/image of an invoice; backend (Groq vision) returns extracted header + lines. */
+  extractInvoiceOcr(file: File): Observable<any> {
+    const fd = new FormData();
+    fd.append('File', file);
+    fd.append('Module', 'SI');
+    return this.http.post(`${this.api}/Ocr/extract-groq-si`, fd);
+  }
   getSalesInvoiceById(id: number | string): Observable<any> {
     return this.http.get(`${this.api}/salesinvoice/${id}`);
   }

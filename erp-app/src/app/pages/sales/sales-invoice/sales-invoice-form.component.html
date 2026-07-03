@@ -121,4 +121,85 @@
       <div class="si-sum-row si-grand"><span>Grand Total <small>({{ currencyName }})</small></span><strong>{{ grandTotal | money:currencyName }}</strong></div>
     </div>
   </div>
+
+  <!-- ══════════════ OCR PREVIEW MODAL ══════════════ -->
+  <div class="si-ocr-overlay" *ngIf="showOcrPreview"
+       style="position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;">
+    <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e5e7eb;">
+        <div>
+          <div style="font-weight:700;font-size:16px;">Scan Invoice (OCR)</div>
+          <div style="font-size:12px;color:#6b7280;">AI reads the uploaded invoice and extracts the lines</div>
+        </div>
+        <button type="button" (click)="closeOcrPreview()"
+                style="border:none;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;">&times;</button>
+      </div>
+
+      <div style="padding:20px;">
+        <!-- Loading -->
+        <div *ngIf="ocrLoading" style="text-align:center;padding:32px 0;color:#374151;">
+          <div style="font-size:15px;font-weight:600;">Reading invoice with AI OCR…</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;">This may take a few seconds</div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="!ocrLoading && ocrError"
+             style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:12px;">
+          {{ ocrError }}
+        </div>
+
+        <!-- Result -->
+        <div *ngIf="!ocrLoading && ocrResult">
+          <!-- Header fields -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px 16px;margin-bottom:16px;">
+            <div *ngIf="ocrResult.invoiceNo"><div style="font-size:11px;color:#6b7280;">Invoice No</div><div style="font-weight:600;">{{ ocrResult.invoiceNo }}</div></div>
+            <div *ngIf="ocrResult.invoiceDate"><div style="font-size:11px;color:#6b7280;">Invoice Date</div><div style="font-weight:600;">{{ ocrResult.invoiceDate }}</div></div>
+            <div *ngIf="ocrResult.customerName"><div style="font-size:11px;color:#6b7280;">Party</div><div style="font-weight:600;">{{ ocrResult.customerName }}</div></div>
+            <div *ngIf="ocrResult.subTotal != null"><div style="font-size:11px;color:#6b7280;">Sub Total</div><div style="font-weight:600;">{{ ocrResult.subTotal | number:'1.2-2' }}</div></div>
+            <div *ngIf="ocrResult.taxAmount != null"><div style="font-size:11px;color:#6b7280;">Tax</div><div style="font-weight:600;">{{ ocrResult.taxAmount | number:'1.2-2' }}</div></div>
+            <div *ngIf="ocrResult.total != null"><div style="font-size:11px;color:#6b7280;">Total</div><div style="font-weight:600;">{{ ocrResult.total | number:'1.2-2' }}</div></div>
+          </div>
+
+          <!-- Line items -->
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Line Items ({{ ocrResult.lines.length }})</div>
+          <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="background:#f9fafb;text-align:left;">
+                  <th style="padding:8px 10px;width:36px;">#</th>
+                  <th style="padding:8px 10px;">Item</th>
+                  <th style="padding:8px 10px;text-align:right;width:80px;">Qty</th>
+                  <th style="padding:8px 10px;text-align:right;width:110px;">Unit Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let l of ocrResult.lines; let i = index" style="border-top:1px solid #f0f0f0;">
+                  <td style="padding:8px 10px;color:#6b7280;">{{ i + 1 }}</td>
+                  <td style="padding:8px 10px;">{{ l.item || l.itemName || '—' }}</td>
+                  <td style="padding:8px 10px;text-align:right;">{{ l.qty | number:'1.0-3' }}</td>
+                  <td style="padding:8px 10px;text-align:right;">{{ l.unitPrice | number:'1.2-2' }}</td>
+                </tr>
+                <tr *ngIf="!ocrResult.lines.length">
+                  <td colspan="4" style="padding:12px;text-align:center;color:#9ca3af;">No lines read.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size:12px;color:#6b7280;margin-top:8px;">
+            After applying, map each scanned line to an item in your catalogue, then Save.
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #e5e7eb;">
+        <button type="button" class="btn btn-outline btn-sm" (click)="closeOcrPreview()">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm"
+                [disabled]="ocrLoading || !ocrResult"
+                (click)="applyOcrToInvoice()">Apply to Invoice</button>
+      </div>
+    </div>
+  </div>
 </div>
