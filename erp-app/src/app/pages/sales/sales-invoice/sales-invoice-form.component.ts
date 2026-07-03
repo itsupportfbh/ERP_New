@@ -47,6 +47,12 @@ export class SalesInvoiceFormComponent implements OnInit {
   currencyName = 'SGD';
   status = 'Draft';
 
+  // OCR (scan invoice)
+  ocrLoading = false;
+  ocrResult: any = null;
+  ocrError = '';
+  showOcrPreview = false;
+
   // Lines
   lines: SiLine[] = [];
 
@@ -234,13 +240,79 @@ export class SalesInvoiceFormComponent implements OnInit {
   get taxAmount(): number { return +this.lines.reduce((s, l) => s + (l.taxAmount ?? 0), 0).toFixed(2); }
   get grandTotal(): number { return +(this.netAfterDiscount + this.taxAmount + Number(this.shippingCost ?? 0)).toFixed(2); }
 
-  // ── OCR upload (stub) ─────────────────────────────────
+  // ── OCR upload (scan an invoice → extract header + lines) ─────────────
   onOcrUpload(input: HTMLInputElement): void {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    void Swal.fire('Info', `Selected "${file.name}". OCR extraction isn't wired to the backend yet.`, 'info');
+    if (!/\.(pdf|png|jpe?g|tiff?|bmp|webp)$/i.test(file.name)) {
+      void Swal.fire('Unsupported file', 'Upload a PDF or image (PDF, PNG, JPG, TIFF).', 'warning');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      void Swal.fire('File too large', 'Maximum file size is 20 MB.', 'warning');
+      return;
+    }
+    this.ocrError = '';
+    this.ocrResult = null;
+    this.ocrLoading = true;
+    this.showOcrPreview = true;
+    this.svc.extractInvoiceOcr(file).subscribe({
+      next: (res: any) => {
+        this.ocrLoading = false;
+        const pages: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+        const parsedList = (Array.isArray(pages) ? pages : []).map(p => p?.parsed ?? p).filter(Boolean);
+        const head = parsedList.find(p => p?.invoiceNo || p?.total || (p?.lines?.length)) ?? parsedList[0] ?? {};
+        const allLines: any[] = parsedList.flatMap(p => Array.isArray(p?.lines) ? p.lines : []);
+        this.ocrResult = {
+          invoiceNo: head?.invoiceNo ?? '',
+          invoiceDate: head?.invoiceDate ? String(head.invoiceDate).substring(0, 10) : '',
+          customerName: head?.supplierName ?? head?.customerName ?? '',
+          subTotal: head?.subTotal ?? null,
+          taxAmount: head?.taxAmount ?? null,
+          total: head?.total ?? null,
+          lines: allLines
+        };
+        if (!allLines.length) {
+          this.ocrError = 'No line items could be read. You can still apply the header, or scan a clearer copy.';
+        }
+      },
+      error: (err: any) => {
+        this.ocrLoading = false;
+        this.ocrError = err?.error?.message || 'OCR failed. Please try a clearer scan.';
+      }
+    });
   }
+
+  /** Apply the scanned data into the invoice form (header + lines). */
+  applyOcrToInvoice(): void {
+    const r = this.ocrResult;
+    if (!r) return;
+    if (r.invoiceNo && !this.invoiceNo) this.invoiceNo = String(r.invoiceNo);
+    if (r.invoiceDate) this.invoiceDate = String(r.invoiceDate).substring(0, 10);
+    const mapped: SiLine[] = (r.lines ?? []).map((l: any) => this.makeOcrLine(l));
+    if (mapped.length) {
+      const hasRealLines = this.lines.some(l => l.itemId || l.itemName || l.unitPrice);
+      this.lines = hasRealLines ? [...this.lines, ...mapped] : mapped;
+    }
+    this.showOcrPreview = false;
+    void Swal.fire('Applied',
+      `${mapped.length} line(s) added from the scan. Map each item to your catalogue, then Save.`, 'success');
+  }
+
+  private makeOcrLine(l: any): SiLine {
+    const line = this.emptyLine();
+    line.itemId = null;                         // user maps the scanned name to a real item
+    line.itemName = String(l?.item ?? l?.itemName ?? '');
+    line.description = String(l?.item ?? l?.itemName ?? '');
+    line.qty = Number(l?.qty ?? 0) || 0;
+    line.unitPrice = Number(l?.unitPrice ?? 0) || 0;
+    line.discountPct = Number(l?.discountPct ?? 0) || 0;
+    this.recalcLine(line);
+    return line;
+  }
+
+  closeOcrPreview(): void { this.showOcrPreview = false; this.ocrResult = null; this.ocrError = ''; }
 
   // ── Edit ──────────────────────────────────────────────
   loadForEdit(): void {
