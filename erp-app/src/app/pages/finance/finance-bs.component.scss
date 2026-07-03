@@ -7,7 +7,7 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 .btn-export { display: flex; align-items: center; gap: 6px; padding: .38rem 1rem; font-size: .82rem; font-weight: 500; border-radius: .5rem; border: none; cursor: pointer; }
 .btn-excel { background: #16a34a; color: #fff; }
 .btn-pdf   { background: #ea580c; color: #fff; }
-.sum-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; @media(max-width:500px){ grid-template-columns: 1fr; } }
+.sum-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; @media(max-width:700px){ grid-template-columns: 1fr; } }
 .sum-card { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 1rem; padding: .9rem 1.1rem; border: 1px solid $border; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
 .sum-icon-wrap { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .liab-icon  { background: #fee2e2; color: #dc2626; }
@@ -18,6 +18,8 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 .col-section { flex: 1; min-width: 0; }
 .col-divider { width: 1px; background: $border; margin: 0 1rem; flex-shrink: 0; }
 .col-head { font-size: .88rem; font-weight: 700; color: #374151; padding-bottom: .5rem; border-bottom: 2px solid $teal; margin-bottom: .5rem; }
+.col-subhead { font-size: .78rem; font-weight: 700; color: $muted; text-transform: uppercase; letter-spacing: .03em; padding: .4rem .25rem .2rem; }
+.col-subtotal { display: flex; justify-content: space-between; padding: .35rem .25rem; font-weight: 600; font-size: .84rem; color: #374151; border-top: 1px solid #f3f4f6; margin-bottom: .3rem; }
 .acc-list { list-style: none; padding: 0; margin: 0; }
 .acc-item { display: flex; justify-content: space-between; align-items: center; padding: .45rem .25rem; border-bottom: 1px solid #f3f4f6; cursor: default;
   &.acc-parent { cursor: pointer; background: #f9fafb; }
