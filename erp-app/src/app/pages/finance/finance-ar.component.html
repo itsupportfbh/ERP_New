@@ -30,19 +30,19 @@
     <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">▣</span>
-        <span class="sum-text"><span class="sum-label">Total Invoice Amount ({{ baseCurrencyName }})</span><strong class="sum-val orange">{{ invoiceSummary.total | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount ({{ baseCurrencyName }})</span><strong class="sum-val orange">{{ invoiceSummary.total | money }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">▰</span>
-        <span class="sum-text"><span class="sum-label">Total Paid ({{ baseCurrencyName }})</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Paid ({{ baseCurrencyName }})</span><strong class="sum-val green">{{ invoiceSummary.paid | money }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">▤</span>
-        <span class="sum-text"><span class="sum-label">Credit Notes ({{ baseCurrencyName }})</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Credit Notes ({{ baseCurrencyName }})</span><strong class="sum-val slate">{{ invoiceSummary.creditNote | money }}</strong></span>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-icon">⚖</span>
-        <span class="sum-text"><span class="sum-label">Net Outstanding ({{ baseCurrencyName }})</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Net Outstanding ({{ baseCurrencyName }})</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | money }}</strong></span>
       </div>
     </div>
 
@@ -77,24 +77,24 @@
                 </td>
                 <td class="customer-name">{{ grp.customer }}</td>
                 <td class="right muted small">{{ grp.invoices.length }} invoice(s)</td>
-                <td class="right">{{ grp.total | number:'1.2-2' }}</td>
-                <td class="right">{{ grp.baseAmount | number:'1.2-2' }}</td>
-                <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
-                <td class="right info-text">{{ grp.creditNote | number:'1.2-2' }}</td>
-                <td class="right muted">{{ grp.advance | number:'1.2-2' }}</td>
-                <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.total | money }}</td>
+                <td class="right">{{ grp.baseAmount | money }}</td>
+                <td class="right success-text">{{ grp.paid | money }}</td>
+                <td class="right info-text">{{ grp.creditNote | money }}</td>
+                <td class="right muted">{{ grp.advance | money }}</td>
+                <td class="right teal-bold">{{ grp.outstanding | money }}</td>
               </tr>
               <ng-container *ngIf="isExpanded(grp.customer)">
                 <tr class="invoice-row" *ngFor="let inv of grp.invoices">
                   <td></td>
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}<br><span class="muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</span></td>
                   <td class="right muted small">{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
-                  <td class="right">{{ (inv.amount || 0) | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                  <td class="right">{{ (inv.baseAmount || 0) | number:'1.2-2' }} <span class="currency">{{ baseCurrencyName }}</span></td>
-                  <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
-                  <td class="right info-text">{{ (inv.creditNote || 0) | number:'1.2-2' }}</td>
-                  <td class="right muted">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
-                  <td class="right teal-bold">{{ (inv.balance || 0) | number:'1.2-2' }}</td>
+                  <td class="right">{{ (inv.amount || 0) | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                  <td class="right">{{ (inv.baseAmount || 0) | money }} <span class="currency">{{ baseCurrencyName }}</span></td>
+                  <td class="right success-text">{{ (inv.paid || 0) | money }}</td>
+                  <td class="right info-text">{{ (inv.creditNote || 0) | money }}</td>
+                  <td class="right muted">{{ (inv.advance || 0) | money }}</td>
+                  <td class="right teal-bold">{{ (inv.balance || 0) | money }}</td>
                 </tr>
               </ng-container>
             </ng-container>
@@ -160,24 +160,24 @@
       <div class="rcp-totals-bar">
         <div class="rcp-total-item">
           <span class="rcp-total-label">Amount Received</span>
-          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | number:'1.2-2' }} {{ receiptCurrencyName }}</strong>
+          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | money }} {{ receiptCurrencyName }}</strong>
         </div>
         <div class="rcp-total-item">
           <span class="rcp-total-label">Base Amount</span>
-          <strong class="rcp-total-val">{{ receiptAmountBase | number:'1.2-2' }}</strong>
+          <strong class="rcp-total-val">{{ receiptAmountBase | money }}</strong>
         </div>
         <div class="rcp-total-item">
           <span class="rcp-total-label">Total Allocated</span>
-          <strong class="rcp-total-val teal">{{ receiptTotalAllocated | number:'1.2-2' }}</strong>
+          <strong class="rcp-total-val teal">{{ receiptTotalAllocated | money }}</strong>
         </div>
         <div class="rcp-total-item">
           <span class="rcp-total-label">Unallocated</span>
-          <strong class="rcp-total-val" [class.danger-text]="receiptUnallocated > 0">{{ receiptUnallocated | number:'1.2-2' }}</strong>
+          <strong class="rcp-total-val" [class.danger-text]="receiptUnallocated > 0">{{ receiptUnallocated | money }}</strong>
         </div>
         <div class="rcp-total-item" *ngIf="receiptExchangeGainLoss !== 0">
           <span class="rcp-total-label">FX Gain/Loss</span>
           <strong class="rcp-total-val" [class.success-text]="receiptExchangeGainLoss > 0" [class.danger-text]="receiptExchangeGainLoss < 0">
-            {{ receiptExchangeGainLoss | number:'1.2-2' }}
+            {{ receiptExchangeGainLoss | money }}
           </strong>
         </div>
       </div>
@@ -212,11 +212,11 @@
                 </td>
                 <td class="mono">{{ row.invoiceNo || '—' }}</td>
                 <td>{{ row.invoiceDate | date:'dd-MMM-yyyy' }}</td>
-                <td class="right">{{ row.invoiceAmount | number:'1.2-2' }}</td>
+                <td class="right">{{ row.invoiceAmount | money }}</td>
                 <td class="center">{{ row.currencyName }}</td>
-                <td class="right muted">{{ row.advance | number:'1.2-2' }}</td>
-                <td class="right success-text">{{ row.paid | number:'1.2-2' }}</td>
-                <td class="right teal-bold">{{ receiptRowBalance(row) | number:'1.2-2' }}</td>
+                <td class="right muted">{{ row.advance | money }}</td>
+                <td class="right success-text">{{ row.paid | money }}</td>
+                <td class="right teal-bold">{{ receiptRowBalance(row) | money }}</td>
                 <td class="right">
                   <input *ngIf="row.selected" class="alloc-input" type="number" min="0" step="0.01"
                     [(ngModel)]="row.allocatedAmount" (ngModelChange)="onReceiptAllocateChange(row)" placeholder="0.00">
@@ -270,12 +270,12 @@
               <td>{{ r.receiptDate | date:'dd-MMM-yyyy' }}</td>
               <td>{{ r.paymentMode || '—' }}</td>
               <td class="right">
-                {{ (r.amountReceived || 0) | number:'1.2-2' }}
+                {{ (r.amountReceived || 0) | money }}
                 <span *ngIf="r.currencyName && r.currencyName !== 'SGD'" class="ccy-tag">{{ r.currencyName }}</span>
               </td>
               <td class="right teal-bold">
-                <ng-container *ngIf="r.currencyName && r.currencyName !== 'SGD'">{{ (r.amountBase || 0) | number:'1.2-2' }} SGD</ng-container>
-                <ng-container *ngIf="!r.currencyName || r.currencyName === 'SGD'">{{ (r.amountReceived || 0) | number:'1.2-2' }} SGD</ng-container>
+                <ng-container *ngIf="r.currencyName && r.currencyName !== 'SGD'">{{ (r.amountBase || 0) | money }} SGD</ng-container>
+                <ng-container *ngIf="!r.currencyName || r.currencyName === 'SGD'">{{ (r.amountReceived || 0) | money }} SGD</ng-container>
               </td>
               <td><span class="status-badge" [ngClass]="statusClass(r.status)">{{ r.status || 'Posted' }}</span></td>
             </tr>
@@ -295,15 +295,15 @@
     <div class="adv-pills">
       <div class="adv-pill">
         <span>Total Advance</span>
-        <strong>{{ advanceSummary.total | number:'1.2-2' }}</strong>
+        <strong>{{ advanceSummary.total | money }}</strong>
       </div>
       <div class="adv-pill adv-pill-teal">
         <span>Balance</span>
-        <strong>{{ advanceSummary.balance | number:'1.2-2' }}</strong>
+        <strong>{{ advanceSummary.balance | money }}</strong>
       </div>
       <div class="adv-pill adv-pill-green">
         <span>Utilised</span>
-        <strong>{{ advanceSummary.utilised | number:'1.2-2' }}</strong>
+        <strong>{{ advanceSummary.utilised | money }}</strong>
       </div>
     </div>
 
@@ -393,7 +393,7 @@
           <!-- Base Amount (readonly) -->
           <label class="adv-form-field">
             <span>Base Amount</span>
-            <input type="text" [value]="advAmountBase | number:'1.2-2'" readonly class="adv-readonly adv-readonly-teal">
+            <input type="text" [value]="advAmountBase | money" readonly class="adv-readonly adv-readonly-teal">
           </label>
 
         </ng-container>
@@ -432,11 +432,11 @@
               <td class="mono">{{ a.advanceNo || '—' }}</td>
               <td>{{ a.advanceDate | date:'dd-MMM-yyyy' }}</td>
               <td class="muted">{{ a.orderNo || '—' }}</td>
-              <td class="right">{{ (a.amount || 0) | number:'1.2-2' }}
+              <td class="right">{{ (a.amount || 0) | money }}
                 <span *ngIf="a.currencyName" class="ccy-tag">{{ a.currencyName }}</span>
               </td>
-              <td class="right">{{ (a.amountBase || (a.amount * (a.fxRate || 1))) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (a.balanceAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (a.amountBase || (a.amount * (a.fxRate || 1))) | money }}</td>
+              <td class="right teal-bold">{{ (a.balanceAmount || 0) | money }}</td>
             </tr>
           </tbody>
         </table>
@@ -471,12 +471,12 @@
               <td>{{ adv.advanceDate | date:'dd-MMM-yyyy' }}</td>
               <td class="muted">{{ adv.orderNo || '—' }}</td>
               <td>{{ adv.paymentMode || '—' }}</td>
-              <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}
+              <td class="right">{{ (adv.amount || 0) | money }}
                 <span *ngIf="adv.currencyName" class="ccy-tag">{{ adv.currencyName }}</span>
               </td>
-              <td class="right muted">{{ (adv.amountBase || 0) | number:'1.2-2' }}</td>
-              <td class="right success-text">{{ (adv.utilised || adv.utilisedAmount || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (adv.balance || adv.balanceAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right muted">{{ (adv.amountBase || 0) | money }}</td>
+              <td class="right success-text">{{ (adv.utilised || adv.utilisedAmount || 0) | money }}</td>
+              <td class="right teal-bold">{{ (adv.balance || adv.balanceAmount || 0) | money }}</td>
             </tr>
             <tr *ngIf="advances.length === 0 && !loading">
               <td colspan="9" class="ar-empty">No advances found.</td>
@@ -531,7 +531,7 @@
                 <th style="width:90px" class="right">Unit Price</th>
                 <th style="width:70px" class="right">Disc %</th>
                 <th style="width:140px">Tax Code</th>
-                <th style="width:60px" class="right">GST %</th>
+                <th style="width:60px" class="right">{{ 'GST %' | taxName }}</th>
                 <th style="width:90px" class="right">Amount</th>
                 <th style="width:90px" class="right">Tax Amt</th>
                 <th style="width:28px"></th>
@@ -562,8 +562,8 @@
                     (ngModelChange)="onTaxCodeChange(line)"></erp-dropdown>
                 </td>
                 <td class="right inv-gst-pct">{{ line.gstPct | number:'1.1-2' }}%</td>
-                <td class="right inv-amount">{{ line.lineAmount | number:'1.2-2' }}</td>
-                <td class="right inv-tax">{{ line.taxAmount | number:'1.2-2' }}</td>
+                <td class="right inv-amount">{{ line.lineAmount | money }}</td>
+                <td class="right inv-tax">{{ line.taxAmount | money }}</td>
                 <td>
                   <button class="inv-remove-btn" type="button" (click)="removeInvoiceLine(i)" [disabled]="invoiceLines.length === 1" title="Remove line">&#215;</button>
                 </td>
@@ -576,15 +576,15 @@
         <div class="inv-totals">
           <div class="inv-total-row">
             <span>Subtotal</span>
-            <strong>{{ invoiceSubtotal | number:'1.2-2' }}</strong>
+            <strong>{{ invoiceSubtotal | money }}</strong>
           </div>
           <div class="inv-total-row">
-            <span>GST / Tax</span>
-            <strong>{{ invoiceTaxTotal | number:'1.2-2' }}</strong>
+            <span>{{ 'GST / Tax' | taxName }}</span>
+            <strong>{{ invoiceTaxTotal | money }}</strong>
           </div>
           <div class="inv-total-row inv-grand-total">
             <span>Grand Total</span>
-            <strong>{{ invoiceGrandTotal | number:'1.2-2' }}</strong>
+            <strong>{{ invoiceGrandTotal | money }}</strong>
           </div>
         </div>
       </div>
@@ -606,19 +606,19 @@
     <div class="sum-grid ar-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">⚖</span>
-        <span class="sum-text"><span class="sum-label">Total Outstanding</span><strong class="sum-val blue">{{ agingSummary.total | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Outstanding</span><strong class="sum-val blue">{{ agingSummary.total | money }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">✓</span>
-        <span class="sum-text"><span class="sum-label">0 – 30 Days</span><strong class="sum-val green">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">0 – 30 Days</span><strong class="sum-val green">{{ agingSummary.days0_30 | money }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">!</span>
-        <span class="sum-text"><span class="sum-label">31 – 60 Days</span><strong class="sum-val slate">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">31 – 60 Days</span><strong class="sum-val slate">{{ agingSummary.days31_60 | money }}</strong></span>
       </div>
       <div class="sum-card sum-c4">
         <span class="sum-icon">!!</span>
-        <span class="sum-text"><span class="sum-label">61+ Days</span><strong class="sum-val orange">{{ agingSummary.days61plus | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">61+ Days</span><strong class="sum-val orange">{{ agingSummary.days61plus | money }}</strong></span>
       </div>
     </div>
 
@@ -651,11 +651,11 @@
           <tbody>
             <tr *ngFor="let row of agingRows">
               <td>{{ row.customerName || row.supplierName }}</td>
-              <td class="right teal-bold">{{ (row.total || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (row.current || row.days30 || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (row.days60 || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (row.days90 || 0) | number:'1.2-2' }}</td>
-              <td class="right danger-text">{{ (row.days90plus || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (row.total || 0) | money }}</td>
+              <td class="right">{{ (row.current || row.days30 || 0) | money }}</td>
+              <td class="right">{{ (row.days60 || 0) | money }}</td>
+              <td class="right">{{ (row.days90 || 0) | money }}</td>
+              <td class="right danger-text">{{ (row.days90plus || 0) | money }}</td>
             </tr>
             <tr *ngIf="agingRows.length === 0 && !loading">
               <td colspan="6" class="ar-empty">No aging data. Run with date filters.</td>

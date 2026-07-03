@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { DashboardService, FinanceAPAging } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -13,7 +14,10 @@ export class FinanceAPAgingComponent implements OnInit {
 
   agingData: any[] = [];
   
-    constructor(private dashboardService: DashboardService) {}
+    constructor(
+      private dashboardService: DashboardService,
+      private cur: CurrencyDisplayService
+    ) {}
   
     ngOnInit(): void {
       this.loadAPAging();
@@ -51,12 +55,6 @@ export class FinanceAPAgingComponent implements OnInit {
     }
   
     formatAmount(value: number): string {
-      value = Number(value || 0);
-  
-      if (value >= 100000) {
-        return `₹${(value / 100000).toFixed(1)}L`;
-      }
-  
-      return `₹${value.toFixed(2)}`;
+      return this.cur.compactMoney(value);
     }
   }

@@ -20,7 +20,7 @@
       <div class="bucket-icon-wrap bucket-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
       <div class="bucket-info">
         <div class="bucket-lbl">Total Expected ({{ baseCurrencyName }})</div>
-        <div class="bucket-val">{{ total | number:'1.2-2' }}</div>
+        <div class="bucket-val">{{ total | money }}</div>
         <div class="bucket-count">{{ rows.length }} customer{{ rows.length !== 1 ? 's' : '' }}</div>
       </div>
     </div>
@@ -28,28 +28,28 @@
       <div class="bucket-icon-wrap bucket-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="bucket-info">
         <div class="bucket-lbl">Due in 0–7 Days</div>
-        <div class="bucket-val">{{ buckets.days0_7.amount | number:'1.2-2' }}</div>
+        <div class="bucket-val">{{ buckets.days0_7.amount | money }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-30">
       <div class="bucket-icon-wrap bucket-icon-orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <div class="bucket-info">
         <div class="bucket-lbl">Due in 8–14 Days</div>
-        <div class="bucket-val">{{ buckets.days8_14.amount | number:'1.2-2' }}</div>
+        <div class="bucket-val">{{ buckets.days8_14.amount | money }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-60">
       <div class="bucket-icon-wrap bucket-icon-purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <div class="bucket-info">
         <div class="bucket-lbl">Due in 15–30 Days</div>
-        <div class="bucket-val">{{ buckets.days15_30.amount | number:'1.2-2' }}</div>
+        <div class="bucket-val">{{ buckets.days15_30.amount | money }}</div>
       </div>
     </div>
     <div class="bucket-card bucket-90">
       <div class="bucket-icon-wrap bucket-icon-gray"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
       <div class="bucket-info">
         <div class="bucket-lbl">Due in 30+ Days</div>
-        <div class="bucket-val">{{ buckets.days30plus.amount | number:'1.2-2' }}</div>
+        <div class="bucket-val">{{ buckets.days30plus.amount | money }}</div>
       </div>
     </div>
   </div>
@@ -109,11 +109,11 @@
                 <button class="expand-btn" type="button">{{ isExpanded(r) ? '−' : '+' }}</button>
               </td>
               <td class="cust-cell">{{ r.customerName }}</td>
-              <td class="num">{{ r.bucket0_7 | number:'1.2-2' }}</td>
-              <td class="num">{{ r.bucket8_14 | number:'1.2-2' }}</td>
-              <td class="num">{{ r.bucket15_30 | number:'1.2-2' }}</td>
-              <td class="num">{{ r.bucket30Plus | number:'1.2-2' }}</td>
-              <td class="num amt-cell">{{ r.totalOutstanding | number:'1.2-2' }}</td>
+              <td class="num">{{ r.bucket0_7 | money }}</td>
+              <td class="num">{{ r.bucket8_14 | money }}</td>
+              <td class="num">{{ r.bucket15_30 | money }}</td>
+              <td class="num">{{ r.bucket30Plus | money }}</td>
+              <td class="num amt-cell">{{ r.totalOutstanding | money }}</td>
             </tr>
             <tr class="detail-row" *ngIf="isExpanded(r)">
               <td colspan="7">
@@ -127,7 +127,7 @@
                       <td>{{ d.invoiceNo }}</td>
                       <td>{{ d.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                       <td>{{ d.dueDate | date:'dd-MMM-yyyy' }}</td>
-                      <td class="num">{{ d.balance | number:'1.2-2' }}</td>
+                      <td class="num">{{ d.balance | money }}</td>
                       <td>{{ d.bucketName }}</td>
                     </tr>
                     <tr *ngIf="!detailRows[r.customerId]?.length">

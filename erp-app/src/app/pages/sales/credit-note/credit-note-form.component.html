@@ -79,8 +79,8 @@
             <td class="ta-right">
               <input type="number" class="mf-input cn-cell cn-num" [(ngModel)]="l.discountPct" name="disc{{i}}" min="0" max="100" (ngModelChange)="recalcLine(l)" />
             </td>
-            <td class="ta-right">{{ l.taxAmount | number:'1.2-2' }}</td>
-            <td class="ta-right cn-amt">{{ lineAmount(l) | number:'1.2-2' }}</td>
+            <td class="ta-right">{{ l.taxAmount | money }}</td>
+            <td class="ta-right cn-amt">{{ lineAmount(l) | money }}</td>
             <td>
               <erp-dropdown [(ngModel)]="l.reasonId"
                 [items]="reasonOptions" bindLabel="label" bindValue="value"
@@ -102,9 +102,9 @@
     </div>
 
     <div class="cn-totals" *ngIf="lines.length">
-      <div class="cn-tot-row"><span>Subtotal</span><strong>{{ subtotal | number:'1.2-2' }}</strong></div>
-      <div class="cn-tot-row"><span>Tax</span><strong>{{ taxTotal | number:'1.2-2' }}</strong></div>
-      <div class="cn-tot-row cn-grand"><span>Total</span><strong>{{ total | number:'1.2-2' }}</strong></div>
+      <div class="cn-tot-row"><span>Subtotal</span><strong>{{ subtotal | money }}</strong></div>
+      <div class="cn-tot-row"><span>Tax</span><strong>{{ taxTotal | money }}</strong></div>
+      <div class="cn-tot-row cn-grand"><span>Total</span><strong>{{ total | money }}</strong></div>
     </div>
   </div>
 

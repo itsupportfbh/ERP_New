@@ -3,6 +3,7 @@ import {
   DashboardService,
   FinanceException
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -16,7 +17,10 @@ export class AllFinanceExceptionsComponent implements OnInit {
 
   exceptions: any[] = [];
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadFinanceExceptions();
@@ -30,7 +34,7 @@ export class AllFinanceExceptionsComponent implements OnInit {
   type: x.type,
   document: x.document,
   party: x.party || '-',
-  impact: `₹${Number(x.impactAmount || 0).toLocaleString('en-IN')}`,
+  impact: this.cur.compactMoney(x.impactAmount || 0),
   level: (x.severity || '').toLowerCase()
 }));
 
@@ -43,6 +47,6 @@ export class AllFinanceExceptionsComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 }

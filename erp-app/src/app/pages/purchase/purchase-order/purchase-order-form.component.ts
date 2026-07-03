@@ -467,8 +467,9 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.applyTaxDecision(this.gstPct);
       return;
     }
-    const today = new Date().toISOString().substring(0, 10);
-    this.svc.getExchangeRate(this.currencyId, baseCurrencyId, today).subscribe({
+    // Use the document (PO) date so re-opened orders keep their historical rate.
+    const rateDate = this.poDate || new Date().toISOString().substring(0, 10);
+    this.svc.getExchangeRate(this.currencyId, baseCurrencyId, rateDate).subscribe({
       next: (res: any) => {
         const rate = res?.data?.rate ?? res?.data?.exchangeRate ?? res?.rate ?? res?.exchangeRate ?? (typeof res === 'number' ? res : null);
         if (rate && Number(rate) > 0) this.fxRate = Number(rate);

@@ -8,6 +8,8 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 type GstTab = 'taxcodes' | 'returns' | 'details';
 
@@ -39,7 +41,7 @@ interface GstAdj {
 @Component({
   selector: 'erp-finance-gst',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MoneyPipe, TaxNamePipe],
   templateUrl: './finance-gst.component.html',
   styleUrls: ['./finance-gst.component.scss']
 })

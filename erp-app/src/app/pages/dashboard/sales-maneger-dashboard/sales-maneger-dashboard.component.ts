@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { DashboardService } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -17,7 +18,8 @@ export class SalesManagerDashboardComponent implements OnInit {
   loading = false;
 
   constructor(
-    private dashboardService: DashboardService
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
   ) {}
 
   ngOnInit(): void {
@@ -68,20 +70,6 @@ export class SalesManagerDashboardComponent implements OnInit {
 }
 
   formatCurrency(value: number): string {
-    const v = Number(value) || 0;
-
-    if (v >= 10000000) {
-      return '₹' + (v / 10000000).toFixed(2) + 'Cr';
-    }
-
-    if (v >= 100000) {
-      return '₹' + (v / 100000).toFixed(1) + 'L';
-    }
-
-    // Show the exact amount for values under a lakh (e.g. ₹2,180.00).
-    return '₹' + new Intl.NumberFormat('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(v);
+    return this.cur.compactMoney(value);
   }
 }

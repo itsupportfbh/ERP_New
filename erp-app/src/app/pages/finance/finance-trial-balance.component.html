@@ -15,19 +15,19 @@
   <div class="sum-grid">
     <div class="sum-card sum-c1">
       <span class="sum-label">Opening Debit</span>
-      <strong class="sum-val">{{ totalOpeningDebit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalOpeningDebit | money }}</strong>
     </div>
     <div class="sum-card sum-c2">
       <span class="sum-label">Opening Credit</span>
-      <strong class="sum-val">{{ totalOpeningCredit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalOpeningCredit | money }}</strong>
     </div>
     <div class="sum-card sum-c3">
       <span class="sum-label">Closing Debit</span>
-      <strong class="sum-val">{{ totalClosingDebit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalClosingDebit | money }}</strong>
     </div>
     <div class="sum-card sum-c4">
       <span class="sum-label">Closing Credit</span>
-      <strong class="sum-val">{{ totalClosingCredit | number:'1.2-2' }}</strong>
+      <strong class="sum-val">{{ totalClosingCredit | money }}</strong>
     </div>
   </div>
 
@@ -106,10 +106,10 @@
                 </span>
               </td>
 
-              <td class="right debit-val">{{ openingDebit(row) | number:'1.2-2' }}</td>
-              <td class="right credit-val">{{ openingCredit(row) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ closingDebit(row) | number:'1.2-2' }}</td>
-              <td class="right muted">{{ closingCredit(row) | number:'1.2-2' }}</td>
+              <td class="right debit-val">{{ openingDebit(row) | money }}</td>
+              <td class="right credit-val">{{ openingCredit(row) | money }}</td>
+              <td class="right teal-bold">{{ closingDebit(row) | money }}</td>
+              <td class="right muted">{{ closingCredit(row) | money }}</td>
             </tr>
 
             <!-- Detail transactions (inline, leaf click) -->
@@ -137,8 +137,8 @@
                       <td>{{ d.sourceType }}</td>
                       <td>{{ d.sourceNo }}</td>
                       <td>{{ d.description }}</td>
-                      <td class="right debit-val">{{ d.debit | number:'1.2-2' }}</td>
-                      <td class="right credit-val">{{ d.credit | number:'1.2-2' }}</td>
+                      <td class="right debit-val">{{ d.debit | money }}</td>
+                      <td class="right credit-val">{{ d.credit | money }}</td>
                     </tr>
                     <tr *ngIf="!row.detailRows?.length">
                       <td colspan="6" class="rpt-empty">No transactions.</td>
@@ -157,10 +157,10 @@
         <tfoot *ngIf="displayRows.length > 0">
           <tr class="foot-row">
             <td><strong>Total</strong></td>
-            <td class="right debit-val fw-bold">{{ totalOpeningDebit | number:'1.2-2' }}</td>
-            <td class="right credit-val fw-bold">{{ totalOpeningCredit | number:'1.2-2' }}</td>
-            <td class="right teal-bold fw-bold">{{ totalClosingDebit | number:'1.2-2' }}</td>
-            <td class="right muted fw-bold">{{ totalClosingCredit | number:'1.2-2' }}</td>
+            <td class="right debit-val fw-bold">{{ totalOpeningDebit | money }}</td>
+            <td class="right credit-val fw-bold">{{ totalOpeningCredit | money }}</td>
+            <td class="right teal-bold fw-bold">{{ totalClosingDebit | money }}</td>
+            <td class="right muted fw-bold">{{ totalClosingCredit | money }}</td>
           </tr>
         </tfoot>
       </table>

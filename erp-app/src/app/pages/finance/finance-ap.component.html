@@ -31,19 +31,19 @@
     <div class="sum-grid ap-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">▣</span>
-        <span class="sum-text"><span class="sum-label">Total Invoice Amount ({{ baseCurrencyName }})</span><strong class="sum-val orange">{{ invoiceSummary.totalInvoice | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Invoice Amount ({{ baseCurrencyName }})</span><strong class="sum-val orange">{{ invoiceSummary.totalInvoice | money }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">▰</span>
-        <span class="sum-text"><span class="sum-label">Total Paid ({{ baseCurrencyName }})</span><strong class="sum-val green">{{ invoiceSummary.paid | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Paid ({{ baseCurrencyName }})</span><strong class="sum-val green">{{ invoiceSummary.paid | money }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">▤</span>
-        <span class="sum-text"><span class="sum-label">Total Debit Notes ({{ baseCurrencyName }})</span><strong class="sum-val slate">{{ invoiceSummary.debitNote | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Debit Notes ({{ baseCurrencyName }})</span><strong class="sum-val slate">{{ invoiceSummary.debitNote | money }}</strong></span>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-icon">⚖</span>
-        <span class="sum-text"><span class="sum-label">Net Outstanding ({{ baseCurrencyName }})</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Net Outstanding ({{ baseCurrencyName }})</span><strong class="sum-val blue">{{ invoiceSummary.outstanding | money }}</strong></span>
       </div>
     </div>
 
@@ -76,12 +76,12 @@
                   <span>{{ grp.supplier }}</span>
                 </td>
                 <td class="right muted">{{ grp.invoices.length }}</td>
-                <td class="right">{{ grp.total | number:'1.2-2' }}</td>
-                <td class="right">{{ grp.baseAmount | number:'1.2-2' }}</td>
-                <td class="right">{{ grp.paid | number:'1.2-2' }}</td>
-                <td class="right">{{ grp.debitNote | number:'1.2-2' }}</td>
-                <td class="right">{{ grp.advance | number:'1.2-2' }}</td>
-                <td class="right">{{ grp.outstanding | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.total | money }}</td>
+                <td class="right">{{ grp.baseAmount | money }}</td>
+                <td class="right">{{ grp.paid | money }}</td>
+                <td class="right">{{ grp.debitNote | money }}</td>
+                <td class="right">{{ grp.advance | money }}</td>
+                <td class="right">{{ grp.outstanding | money }}</td>
               </tr>
               <tr class="invoice-detail-row" *ngIf="isExpanded(grp.supplier)">
                 <td colspan="8">
@@ -107,12 +107,12 @@
                         <td><span class="type-pill">{{ inv.invoiceType || 'Local' }}</span></td>
                         <td>{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                         <td>{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
-                        <td class="right">{{ inv.amount | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right">{{ inv.baseAmount | number:'1.2-2' }} <span class="currency">{{ baseCurrencyName }}</span></td>
-                        <td class="right">{{ inv.paid | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right">{{ inv.debitNote | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right">{{ inv.advance | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right strong">{{ inv.balance | number:'1.2-2' }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <td class="right">{{ inv.amount | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <td class="right">{{ inv.baseAmount | money }} <span class="currency">{{ baseCurrencyName }}</span></td>
+                        <td class="right">{{ inv.paid | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <td class="right">{{ inv.debitNote | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <td class="right">{{ inv.advance | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <td class="right strong">{{ inv.balance | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
                         <td class="center"><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span></td>
                       </tr>
                     </tbody>
@@ -134,23 +134,23 @@
     <div class="sum-grid">
       <div class="sum-card sum-c1">
         <span class="sum-label">Total Invoice</span>
-        <strong class="sum-val">{{ invoiceSummary.totalInvoice | number:'1.2-2' }}</strong>
+        <strong class="sum-val">{{ invoiceSummary.totalInvoice | money }}</strong>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-label">Total Paid</span>
-        <strong class="sum-val">{{ invoiceSummary.paid | number:'1.2-2' }}</strong>
+        <strong class="sum-val">{{ invoiceSummary.paid | money }}</strong>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-label">Debit Notes</span>
-        <strong class="sum-val">{{ invoiceSummary.debitNote | number:'1.2-2' }}</strong>
+        <strong class="sum-val">{{ invoiceSummary.debitNote | money }}</strong>
       </div>
       <div class="sum-card sum-c4">
         <span class="sum-label">Advance Applied</span>
-        <strong class="sum-val">{{ invoiceSummary.advance | number:'1.2-2' }}</strong>
+        <strong class="sum-val">{{ invoiceSummary.advance | money }}</strong>
       </div>
       <div class="sum-card sum-c5">
         <span class="sum-label">Net Outstanding</span>
-        <strong class="sum-val">{{ invoiceSummary.outstanding | number:'1.2-2' }}</strong>
+        <strong class="sum-val">{{ invoiceSummary.outstanding | money }}</strong>
       </div>
     </div>
 
@@ -187,11 +187,11 @@
                 </td>
                 <td class="supplier-name">{{ grp.supplier }}</td>
                 <td class="right muted">{{ grp.invoices.length }}</td>
-                <td class="right">{{ grp.total | number:'1.2-2' }}</td>
-                <td class="right success-text">{{ grp.paid | number:'1.2-2' }}</td>
+                <td class="right">{{ grp.total | money }}</td>
+                <td class="right success-text">{{ grp.paid | money }}</td>
                 <td class="right danger-text">0.00</td>
                 <td class="right success-text">0.00</td>
-                <td class="right teal-bold">{{ grp.outstanding | number:'1.2-2' }}</td>
+                <td class="right teal-bold">{{ grp.outstanding | money }}</td>
               </tr>
               <!-- Invoice Detail Rows -->
               <ng-container *ngIf="isExpanded(grp.supplier)">
@@ -199,10 +199,10 @@
                   <td></td>
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}</td>
                   <td class="right muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
-                  <td class="right">{{ inv.amount | number:'1.2-2' }}</td>
-                  <td class="right success-text">{{ (inv.paid || 0) | number:'1.2-2' }}</td>
-                  <td class="right danger-text">{{ (inv.debitNote || 0) | number:'1.2-2' }}</td>
-                  <td class="right">{{ (inv.advance || 0) | number:'1.2-2' }}</td>
+                  <td class="right">{{ inv.amount | money }}</td>
+                  <td class="right success-text">{{ (inv.paid || 0) | money }}</td>
+                  <td class="right danger-text">{{ (inv.debitNote || 0) | money }}</td>
+                  <td class="right">{{ (inv.advance || 0) | money }}</td>
                   <td class="right">
                     <span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span>
                     <button class="pay-btn" type="button" (click)="payInvoice(inv); $event.stopPropagation()">Pay</button>
@@ -251,11 +251,11 @@
                 (ngModelChange)="onPaymentSupplierChange()"></erp-dropdown>
             </div>
             <div class="sup-pills sup-pills-inline">
-              <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | number:'1.2-2' }}</span></div>
-              <div class="sup-pill green"><span class="sup-pill-label">PAID</span><span class="sup-pill-val">{{ supTotalPaid | number:'1.2-2' }}</span></div>
-              <div class="sup-pill red"><span class="sup-pill-label">DN</span><span class="sup-pill-val">{{ supTotalDebitNote | number:'1.2-2' }}</span></div>
-              <div class="sup-pill amber"><span class="sup-pill-label">ADV</span><span class="sup-pill-val">{{ supTotalAdvance | number:'1.2-2' }}</span></div>
-              <div class="sup-pill teal"><span class="sup-pill-label">PAYABLE</span><span class="sup-pill-val">{{ supTotalPayable | number:'1.2-2' }}</span></div>
+              <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | money }}</span></div>
+              <div class="sup-pill green"><span class="sup-pill-label">PAID</span><span class="sup-pill-val">{{ supTotalPaid | money }}</span></div>
+              <div class="sup-pill red"><span class="sup-pill-label">DN</span><span class="sup-pill-val">{{ supTotalDebitNote | money }}</span></div>
+              <div class="sup-pill amber"><span class="sup-pill-label">ADV</span><span class="sup-pill-val">{{ supTotalAdvance | money }}</span></div>
+              <div class="sup-pill teal"><span class="sup-pill-label">PAYABLE</span><span class="sup-pill-val">{{ supTotalPayable | money }}</span></div>
             </div>
           </div>
 
@@ -290,8 +290,8 @@
           <!-- FX row -->
           <div class="ap-form-row" *ngIf="paymentFxRate !== 1">
             <div class="ap-field"><span class="ap-field-label">FX Rate</span><input class="ap-input" type="number" min="0" step="0.000001" [(ngModel)]="paymentFxRate" (ngModelChange)="onPaymentFxRateChange()"></div>
-            <div class="ap-field"><span class="ap-field-label">Base (SGD)</span><input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | number:'1.2-2'" readonly></div>
-            <div class="ap-field" *ngIf="paymentExchangeGainLoss !== 0"><span class="ap-field-label">FX Gain/Loss</span><input class="ap-input" type="text" [value]="paymentExchangeGainLoss | number:'1.2-2'" readonly [style.color]="paymentExchangeGainLoss > 0 ? '#1e8449' : '#c0392b'"></div>
+            <div class="ap-field"><span class="ap-field-label">Base (SGD)</span><input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | money" readonly></div>
+            <div class="ap-field" *ngIf="paymentExchangeGainLoss !== 0"><span class="ap-field-label">FX Gain/Loss</span><input class="ap-input" type="text" [value]="paymentExchangeGainLoss | money" readonly [style.color]="paymentExchangeGainLoss > 0 ? '#1e8449' : '#c0392b'"></div>
           </div>
 
           <!-- Row 3: Reference | Notes | Buttons -->
@@ -336,10 +336,10 @@
                     <td class="inv-no">{{ inv.invoiceNo }}</td>
                     <td>{{ inv.invoiceDate | date:'dd/MM/yyyy' }}</td>
                     <td>{{ inv.dueDate | date:'dd/MM/yyyy' }}</td>
-                    <td class="num">{{ inv.grandTotal | number:'1.2-2' }} <span class="curr">{{ inv.currencyName }}</span></td>
-                    <td class="num">{{ inv.paidAmount | number:'1.2-2' }}</td>
-                    <td class="num">{{ inv.advanceAmount | number:'1.2-2' }}</td>
-                    <td class="num bold-val">{{ inv.payableAfterAdvance | number:'1.2-2' }}</td>
+                    <td class="num">{{ inv.grandTotal | money }} <span class="curr">{{ inv.currencyName }}</span></td>
+                    <td class="num">{{ inv.paidAmount | money }}</td>
+                    <td class="num">{{ inv.advanceAmount | money }}</td>
+                    <td class="num bold-val">{{ inv.payableAfterAdvance | money }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -389,7 +389,7 @@
                   <td>{{ p.paymentDate | date:'dd-MMM-yyyy' }}</td>
                   <td>{{ p.paymentMethodName || p.paymentMode || 'Bank Transfer' }}</td>
                   <td class="mono muted">{{ p.referenceNo || '—' }}</td>
-                  <td class="right teal-bold">{{ (p.amount || 0) | number:'1.2-2' }}</td>
+                  <td class="right teal-bold">{{ (p.amount || 0) | money }}</td>
                   <td class="muted">{{ p.currencyName || 'SGD' }}</td>
                   <td><span class="status-badge badge-success">Posted</span></td>
                 </tr>
@@ -406,7 +406,7 @@
                       </div>
                       <div class="pmt-detail-item" *ngIf="p.amountBase">
                         <span class="pmt-detail-label">Base (SGD)</span>
-                        <span class="pmt-detail-val teal-bold">{{ p.amountBase | number:'1.2-2' }}</span>
+                        <span class="pmt-detail-val teal-bold">{{ p.amountBase | money }}</span>
                       </div>
                       <div class="pmt-detail-item" *ngIf="p.notes">
                         <span class="pmt-detail-label">Notes</span>
@@ -434,19 +434,19 @@
     <div class="sum-grid ap-invoice-summary">
       <div class="sum-card sum-c1">
         <span class="sum-icon">⚖</span>
-        <span class="sum-text"><span class="sum-label">Total Outstanding</span><strong class="sum-val blue">{{ agingSummary.total | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">Total Outstanding</span><strong class="sum-val blue">{{ agingSummary.total | money }}</strong></span>
       </div>
       <div class="sum-card sum-c2">
         <span class="sum-icon">✓</span>
-        <span class="sum-text"><span class="sum-label">0 – 30 Days</span><strong class="sum-val green">{{ agingSummary.days0_30 | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">0 – 30 Days</span><strong class="sum-val green">{{ agingSummary.days0_30 | money }}</strong></span>
       </div>
       <div class="sum-card sum-c3">
         <span class="sum-icon">!</span>
-        <span class="sum-text"><span class="sum-label">31 – 60 Days</span><strong class="sum-val slate">{{ agingSummary.days31_60 | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">31 – 60 Days</span><strong class="sum-val slate">{{ agingSummary.days31_60 | money }}</strong></span>
       </div>
       <div class="sum-card sum-c4">
         <span class="sum-icon">!!</span>
-        <span class="sum-text"><span class="sum-label">61+ Days</span><strong class="sum-val orange">{{ agingSummary.days61plus | number:'1.2-2' }}</strong></span>
+        <span class="sum-text"><span class="sum-label">61+ Days</span><strong class="sum-val orange">{{ agingSummary.days61plus | money }}</strong></span>
       </div>
     </div>
 
@@ -485,11 +485,11 @@
                 <button class="expand-btn aging-expand" type="button">{{ isAgingExpanded(row.supplierName || row.customerName) ? '-' : '+' }}</button>
                 {{ row.supplierName || row.customerName }}
               </td>
-              <td class="right teal-bold">{{ (row.total || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (row.current || row.days30 || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (row.days60 || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (row.days90 || 0) | number:'1.2-2' }}</td>
-              <td class="right danger-text">{{ (row.days90plus || 0) | number:'1.2-2' }}</td>
+              <td class="right teal-bold">{{ (row.total || 0) | money }}</td>
+              <td class="right">{{ (row.current || row.days30 || 0) | money }}</td>
+              <td class="right">{{ (row.days60 || 0) | money }}</td>
+              <td class="right">{{ (row.days90 || 0) | money }}</td>
+              <td class="right danger-text">{{ (row.days90plus || 0) | money }}</td>
             </tr>
             <tr class="invoice-detail-row" *ngIf="isAgingExpanded(row.supplierName || row.customerName)">
               <td colspan="6">
@@ -514,11 +514,11 @@
                       <td class="mono">{{ detail.invoiceNo || '-' }}</td>
                       <td>{{ detail.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                       <td>{{ detail.dueDate | date:'dd-MMM-yyyy' }}</td>
-                      <td class="right">{{ detail.originalAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
-                      <td class="right">{{ detail.paidAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
-                      <td class="right">{{ detail.debitNoteAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
-                      <td class="right">{{ detail.advanceAmount | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
-                      <td class="right teal-bold">{{ detail.balance | number:'1.2-2' }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.originalAmount | money }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.paidAmount | money }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.debitNoteAmount | money }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right">{{ detail.advanceAmount | money }} <span class="currency">{{ detail.currencyName }}</span></td>
+                      <td class="right teal-bold">{{ detail.balance | money }} <span class="currency">{{ detail.currencyName }}</span></td>
                     </tr>
                     <tr *ngIf="!agingDetailLoading && agingDetailRows.length === 0">
                       <td colspan="8" class="ap-empty">No invoice detail found.</td>
@@ -608,7 +608,7 @@
                 (ngModelChange)="onAdvGrnChange()"></erp-dropdown>
               <div *ngIf="apAdvGrnNo && apAdvGrnTotal > 0"
                    style="margin-top:6px;font-size:12px;color:#334155;">
-                GRN Total: <strong>{{ apAdvGrnTotal | number:'1.2-2' }} {{ apAdvCurrencyName || 'SGD' }}</strong>
+                GRN Total: <strong>{{ apAdvGrnTotal | money }} {{ apAdvCurrencyName || 'SGD' }}</strong>
               </div>
               <div *ngIf="apAdvExceedsGrn"
                    style="margin-top:6px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">
@@ -654,11 +654,11 @@
             <div class="adv-sum-row"><span>Method</span><strong>{{ paymentMethodLabel(apAdvMethodId) }}</strong></div>
             <div class="adv-sum-row"><span>Bank Account</span><span>{{ apAdvBankName || '-' }}</span></div>
             <div class="adv-sum-row"><span>GRN No</span><span>{{ apAdvGrnNo || '-' }}</span></div>
-            <div class="adv-sum-row" *ngIf="apAdvGrnTotal > 0"><span>GRN Total</span><strong>{{ apAdvGrnTotal | number:'1.2-2' }} {{ apAdvCurrencyName || 'SGD' }}</strong></div>
+            <div class="adv-sum-row" *ngIf="apAdvGrnTotal > 0"><span>GRN Total</span><strong>{{ apAdvGrnTotal | money }} {{ apAdvCurrencyName || 'SGD' }}</strong></div>
             <hr class="adv-sum-divider">
             <div class="adv-sum-total">
               <span>Advance Amount</span>
-              <strong class="adv-sum-amount">{{ (advanceForm.amount || 0) | number:'1.2-2' }} {{ apAdvCurrencyName || 'SGD' }}</strong>
+              <strong class="adv-sum-amount">{{ (advanceForm.amount || 0) | money }} {{ apAdvCurrencyName || 'SGD' }}</strong>
             </div>
           </div>
         </div>
@@ -671,9 +671,9 @@
 
       <!-- Summary Pills -->
       <div class="adv-pills">
-        <div class="adv-pill"><span>Total Advance</span><strong>{{ advanceSummary.total | number:'1.2-2' }}</strong></div>
-        <div class="adv-pill adv-pill-green"><span>Utilised</span><strong>{{ advanceSummary.utilised | number:'1.2-2' }}</strong></div>
-        <div class="adv-pill adv-pill-teal"><span>Balance</span><strong>{{ advanceSummary.balance | number:'1.2-2' }}</strong></div>
+        <div class="adv-pill"><span>Total Advance</span><strong>{{ advanceSummary.total | money }}</strong></div>
+        <div class="adv-pill adv-pill-green"><span>Utilised</span><strong>{{ advanceSummary.utilised | money }}</strong></div>
+        <div class="adv-pill adv-pill-teal"><span>Balance</span><strong>{{ advanceSummary.balance | money }}</strong></div>
       </div>
 
       <!-- Advances Table -->
@@ -704,10 +704,10 @@
                 <td class="mono">{{ adv.advanceNo || '—' }}</td>
                 <td>{{ adv.supplierName || '—' }}</td>
                 <td>{{ adv.advanceDate | date:'dd-MMM-yyyy' }}</td>
-                <td class="right">{{ (adv.amount || 0) | number:'1.2-2' }}<span *ngIf="adv.currencyName" class="currency"> {{ adv.currencyName }}</span></td>
-                <td class="right muted">{{ (adv.amountBase || 0) | number:'1.2-2' }}</td>
-                <td class="right success-text">{{ (adv.utilised || 0) | number:'1.2-2' }}</td>
-                <td class="right teal-bold">{{ (adv.balance || 0) | number:'1.2-2' }}</td>
+                <td class="right">{{ (adv.amount || 0) | money }}<span *ngIf="adv.currencyName" class="currency"> {{ adv.currencyName }}</span></td>
+                <td class="right muted">{{ (adv.amountBase || 0) | money }}</td>
+                <td class="right success-text">{{ (adv.utilised || 0) | money }}</td>
+                <td class="right teal-bold">{{ (adv.balance || 0) | money }}</td>
                 <td><span class="status-badge" [ngClass]="statusClass(adv.status)">{{ adv.status || 'Open' }}</span></td>
               </tr>
               <tr *ngIf="advances.length === 0 && !loading">
@@ -747,8 +747,8 @@
               <td class="mono">{{ m.grnNo || '—' }}</td>
               <td class="mono">{{ m.invoiceNo || '—' }}</td>
               <td>{{ m.supplierName || '—' }}</td>
-              <td class="right">{{ (m.poAmount || 0) | number:'1.2-2' }}</td>
-              <td class="right">{{ (m.invoiceAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (m.poAmount || 0) | money }}</td>
+              <td class="right">{{ (m.invoiceAmount || 0) | money }}</td>
               <td class="center"><span class="status-badge" [ngClass]="statusClass(m.matchStatus)">{{ m.matchStatus || 'Pending' }}</span></td>
             </tr>
             <tr *ngIf="matchRows.length === 0 && !loading">
@@ -808,23 +808,23 @@
           <div class="sup-pills sup-pills-inline">
             <div class="sup-pill">
               <span class="sup-pill-label">INV</span>
-              <span class="sup-pill-val">{{ supTotalInvoice | number:'1.2-2' }}</span>
+              <span class="sup-pill-val">{{ supTotalInvoice | money }}</span>
             </div>
             <div class="sup-pill green">
               <span class="sup-pill-label">PAID</span>
-              <span class="sup-pill-val">{{ supTotalPaid | number:'1.2-2' }}</span>
+              <span class="sup-pill-val">{{ supTotalPaid | money }}</span>
             </div>
             <div class="sup-pill red">
               <span class="sup-pill-label">DN</span>
-              <span class="sup-pill-val">{{ supTotalDebitNote | number:'1.2-2' }}</span>
+              <span class="sup-pill-val">{{ supTotalDebitNote | money }}</span>
             </div>
             <div class="sup-pill amber">
               <span class="sup-pill-label">ADV</span>
-              <span class="sup-pill-val">{{ supTotalAdvance | number:'1.2-2' }}</span>
+              <span class="sup-pill-val">{{ supTotalAdvance | money }}</span>
             </div>
             <div class="sup-pill teal">
               <span class="sup-pill-label">PAYABLE</span>
-              <span class="sup-pill-val">{{ supTotalPayable | number:'1.2-2' }}</span>
+              <span class="sup-pill-val">{{ supTotalPayable | money }}</span>
             </div>
           </div>
 
@@ -905,11 +905,11 @@
           </div>
           <div class="ap-field">
             <span class="ap-field-label">Base (SGD)</span>
-            <input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | number:'1.2-2'" readonly>
+            <input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | money" readonly>
           </div>
           <div class="ap-field" *ngIf="paymentExchangeGainLoss !== 0">
             <span class="ap-field-label">FX Gain / Loss</span>
-            <input class="ap-input" type="text" [value]="paymentExchangeGainLoss | number:'1.2-2'" readonly
+            <input class="ap-input" type="text" [value]="paymentExchangeGainLoss | money" readonly
                    [style.color]="paymentExchangeGainLoss > 0 ? '#1e8449' : '#c0392b'">
           </div>
         </div>
@@ -965,11 +965,11 @@
                   <td><span class="type-pill">{{ inv.invoiceType || 'Invoice' }}</span></td>
                   <td>{{ inv.invoiceDate | date:'dd/MM/yyyy' }}</td>
                   <td>{{ inv.dueDate | date:'dd/MM/yyyy' }}</td>
-                  <td class="num">{{ inv.grandTotal | number:'1.2-2' }} <span class="curr">{{ inv.currencyName }}</span></td>
-                  <td class="num">{{ inv.paidAmount | number:'1.2-2' }}</td>
-                  <td class="num">{{ inv.debitNoteAmount | number:'1.2-2' }}</td>
-                  <td class="num">{{ inv.advanceAmount | number:'1.2-2' }}</td>
-                  <td class="num bold-val">{{ inv.payableAfterAdvance | number:'1.2-2' }}</td>
+                  <td class="num">{{ inv.grandTotal | money }} <span class="curr">{{ inv.currencyName }}</span></td>
+                  <td class="num">{{ inv.paidAmount | money }}</td>
+                  <td class="num">{{ inv.debitNoteAmount | money }}</td>
+                  <td class="num">{{ inv.advanceAmount | money }}</td>
+                  <td class="num bold-val">{{ inv.payableAfterAdvance | money }}</td>
                   <td>
                     <span class="status-badge"
                           [class.badge-warning]="inv.payableAfterAdvance > 0"
@@ -1094,7 +1094,7 @@
           <div class="ap-field">
             <span class="ap-field-label">Base Amount (SGD)</span>
             <input class="ap-input ap-input-readonly" type="text"
-                   [value]="apAdvAmountBase | number:'1.2-2'" readonly>
+                   [value]="apAdvAmountBase | money" readonly>
           </div>
           <div class="ap-field">
             <span class="ap-field-label">GRN Reference</span>

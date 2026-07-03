@@ -148,7 +148,7 @@
                   (ngModelChange)="onRowValueChange(retRows[i])"
                   placeholder="0" [disabled]="isGlPosted || isPosted" />
               </td>
-              <td class="num-cell">{{ r.lineAmount | number:'1.2-2' }}</td>
+              <td class="num-cell">{{ r.lineAmount | money:currencyName }}</td>
               <td class="remarks-col">
                 <input class="lines-cell-input" [(ngModel)]="retRows[i].remarks" placeholder="Remarks" [disabled]="isGlPosted || isPosted" />
               </td>
@@ -161,22 +161,22 @@
             </tr>
             <tr class="total-foot" *ngIf="retRows.length">
               <td colspan="6" style="text-align:right;padding:8px;font-weight:600;color:#6b7280;">Subtotal</td>
-              <td class="num-cell" style="font-weight:700;">{{ totalAmount | number:'1.2-2' }}</td>
+              <td class="num-cell" style="font-weight:700;">{{ totalAmount | money:currencyName }}</td>
               <td colspan="2"></td>
             </tr>
             <tr *ngIf="totalTaxAmount > 0" style="background:#fffbf0;">
               <td colspan="6" style="text-align:right;padding:8px;color:#6b7280;">Tax</td>
-              <td class="num-cell" style="color:#b45309;">{{ totalTaxAmount | number:'1.2-2' }}</td>
+              <td class="num-cell" style="color:#b45309;">{{ totalTaxAmount | money:currencyName }}</td>
               <td colspan="2"></td>
             </tr>
             <tr class="total-foot" *ngIf="retRows.length" style="background:#f0f9ff;">
               <td colspan="6" style="text-align:right;padding:8px;font-weight:700;color:#0e4a60;">Total</td>
-              <td class="num-cell" style="font-weight:700;color:#0e4a60;font-size:14px;">{{ totalNetAmount | number:'1.2-2' }}</td>
+              <td class="num-cell" style="font-weight:700;color:#0e4a60;font-size:14px;">{{ totalNetAmount | money:currencyName }}</td>
               <td colspan="2"></td>
             </tr>
             <tr *ngIf="currencyName && fxRate !== 1 && totalNetAmount > 0" style="background:#f0fdf4;">
               <td colspan="6" style="text-align:right;padding:8px;color:#6b7280;font-size:12px;">≈ SGD Base</td>
-              <td class="num-cell" style="font-weight:600;color:#15803d;font-size:12px;">{{ totalNetAmountBase | number:'1.2-2' }} SGD</td>
+              <td class="num-cell" style="font-weight:600;color:#15803d;font-size:12px;">{{ totalNetAmountBase | money }} SGD</td>
               <td colspan="2"></td>
             </tr>
           </tbody>

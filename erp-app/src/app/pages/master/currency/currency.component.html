@@ -12,7 +12,7 @@
           <div class="mitem-left">
             <div class="mitem-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="6"/><path d="M10 7v6M8.5 9h2.5a1 1 0 010 2H8.5m0 0h3"/></svg></div>
             <div class="mitem-info">
-              <div class="mitem-name">{{ item.currencyName || item.name }}</div>
+              <div class="mitem-name">{{ item.currencyName || item.name }}<span *ngIf="item.symbol"> &nbsp;·&nbsp; {{ item.symbol }}</span></div>
               <div class="mitem-sub" *ngIf="item.description">{{ item.description }}</div>
             </div>
           </div>
@@ -27,6 +27,7 @@
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Currency</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group"><label class="mf-label">Currency Name</label><input class="mf-input" type="text" [(ngModel)]="form.currencyName" name="currencyName" placeholder="Currency Name"/></div>
+        <div class="mf-group"><label class="mf-label">Symbol</label><input class="mf-input" type="text" [(ngModel)]="form.symbol" name="symbol" placeholder="RM / S$ / $ / ₹" maxlength="10"/></div>
         <div class="mf-group"><label class="mf-label">Description</label><textarea class="mf-input mf-textarea" [(ngModel)]="form.description" name="description" placeholder="Description (optional)" rows="3"></textarea></div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit"><svg viewBox="0 0 20 20"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Submit</button>

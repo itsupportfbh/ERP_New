@@ -56,7 +56,7 @@
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #eef2f7;">
       <span style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 12px;font-size:12px;color:#374151;"><strong>Supplier:</strong> {{ modalSupplier || '—' }}</span>
-      <span *ngIf="modalTotal != null" style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 12px;font-size:12px;color:#374151;"><strong>Amount:</strong> {{ modalTotal | number:'1.2-2' }}</span>
+      <span *ngIf="modalTotal != null" style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 12px;font-size:12px;color:#374151;"><strong>Amount:</strong> {{ modalTotal | money }}</span>
       <span style="border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;"
             [style.background]="modalStatus==='Posted'?'#dcfce7':'#fef9c3'"
             [style.color]="modalStatus==='Posted'?'#15803d':'#a16207'">{{ modalStatus || 'Draft' }}</span>
@@ -81,8 +81,8 @@
               <td style="padding:10px 12px;color:#9ca3af;">{{ i+1 }}</td>
               <td style="padding:10px 12px;font-weight:600;">{{ l.itemName || l.itemSearch || l.itemCode || '—' }}</td>
               <td style="padding:10px 12px;text-align:right;">{{ l.quantity ?? l.qty ?? l.totalQty ?? l.varianceQty ?? 0 }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ (l.unitPrice | number:'1.2-2') || '—' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? l.totalQty ?? l.varianceQty ?? 0) * (l.unitPrice ?? 0)) | number:'1.2-2' }}</td>
+              <td style="padding:10px 12px;text-align:right;">{{ (l.unitPrice | money) || '—' }}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? l.totalQty ?? l.varianceQty ?? 0) * (l.unitPrice ?? 0)) | money }}</td>
               <td style="padding:10px 12px;color:#6b7280;">{{ l.reason || l.remarks || '—' }}</td>
             </tr>
             <tr *ngIf="!modalLines?.length">
