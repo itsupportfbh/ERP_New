@@ -211,7 +211,10 @@
           </div>
           <div class="mf-group">
             <label class="mf-label">Country</label>
-            <input class="mf-input" type="text" [(ngModel)]="general.country" name="country" placeholder="Country"/>
+            <erp-dropdown name="generalCountryId" [ngModel]="financeTax.countryId" (ngModelChange)="onCountryChange($event)"
+              [items]="countries" bindLabel="countryName" bindValue="id"
+              placeholder="-- Select Country --">
+            </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Contact Person</label>
@@ -244,14 +247,14 @@
         <div class="dt-form-grid">
           <div class="mf-group">
             <label class="mf-label">Base Currency <span style="color:red">*</span></label>
-            <erp-dropdown name="currencyId" [(ngModel)]="financeTax.currencyId"
+            <erp-dropdown name="currencyId" [ngModel]="financeTax.currencyId" (ngModelChange)="onCurrencyChange($event)"
               [items]="currencies" bindLabel="currencyName" bindValue="id"
               placeholder="-- Select Currency --">
             </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">Country</label>
-            <erp-dropdown name="financeCountryId" [(ngModel)]="financeTax.countryId"
+            <erp-dropdown name="financeCountryId" [ngModel]="financeTax.countryId" (ngModelChange)="onCountryChange($event)"
               [items]="countries" bindLabel="countryName" bindValue="id"
               placeholder="-- Select Country --">
             </erp-dropdown>

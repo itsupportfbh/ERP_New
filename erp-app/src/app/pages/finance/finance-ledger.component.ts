@@ -67,7 +67,7 @@ export class FinanceLedgerComponent implements OnInit {
   pageSize = 10;
   currentPage = 1;
 
-  baseCurrency = 'SGD';
+  baseCurrency = localStorage.getItem('companyCurrencyName') || 'SGD';
 
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
@@ -86,7 +86,7 @@ export class FinanceLedgerComponent implements OnInit {
   }
 
   get useBaseValues(): boolean {
-    return this.baseCurrency.toUpperCase() === 'SGD';
+    return true;
   }
 
   load(): void {
