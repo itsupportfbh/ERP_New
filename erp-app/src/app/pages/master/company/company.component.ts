@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 
 type CompanyTab = 'general' | 'financeTax' | 'defaults' | 'numberSeries' | 'adminUser' | 'audit';
 
-const blankGeneral = () => ({ code: '', name: '', legalName: '', registrationNo: '', taxRegistrationNo: '', status: 'Active', phone: '', email: '', website: '', country: 'Singapore', contactPerson: '', contactMobileNo: '', contactEmail: '', address1: '', address2: '', city: '', state: '', postal: '' });
+const blankGeneral = () => ({ code: '', name: '', legalName: '', registrationNo: '', taxRegistrationNo: '', status: 'Active', phone: '', email: '', website: '', contactPerson: '', contactMobileNo: '', contactEmail: '', address1: '', address2: '', city: '', state: '', postal: '' });
 const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any, retainedEarningsAccountId: null as any });
 const blankDefaults = () => ({ defaultBranch: 'Head Office', defaultWarehouse: 'Main Warehouse', defaultBin: 'MAIN', defaultLanguage: 'EN', timeZone: 'Asia/Kolkata' });
 const blankAdmin = () => ({ username: '', email: '', password: '', departmentId: 1, locationId: 1 });
@@ -181,7 +181,7 @@ export class CompanyComponent implements OnInit {
           code: g.code || '', name: g.name || '', legalName: g.legalName || '',
           registrationNo: g.registrationNo || '', taxRegistrationNo: g.taxRegistrationNo || '',
           status: g.status || 'Active', phone: g.phone || '', email: g.email || '',
-          website: g.website || '', country: g.country || 'Singapore',
+          website: g.website || '',
           contactPerson: g.contactPerson || '', contactMobileNo: g.contactMobileNo || '',
           contactEmail: g.contactEmail || '', address1: g.address1 || '',
           address2: g.address2 || '', city: g.city || '', state: g.state || '', postal: g.postal || ''
@@ -220,6 +220,18 @@ export class CompanyComponent implements OnInit {
       },
       error: () => { this.loading = false; this.message = 'Failed to load company.'; this.isError = true; }
     });
+  }
+
+  onCurrencyChange(id: any): void {
+    this.financeTax.currencyId = id;
+    const item = this.currencies.find((c: any) => String(c.id) === String(id));
+    this.financeTax.baseCurrency = item?.currencyName || '';
+  }
+
+  onCountryChange(id: any): void {
+    this.financeTax.countryId = id;
+    const item = this.countries.find((c: any) => String(c.id) === String(id));
+    this.financeTax.country = item?.countryName || '';
   }
 
   loadDropdowns(): void {
