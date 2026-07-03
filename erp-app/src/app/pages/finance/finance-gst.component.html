@@ -3,7 +3,7 @@
   <!-- Page Header -->
   <div class="gst-page-head">
     <div>
-      <h2>GST Management</h2>
+      <h2>{{ 'GST Management' | taxName }}</h2>
       <p>Tax Codes &middot; GST F5 Returns &middot; GST Details</p>
     </div>
   </div>
@@ -15,8 +15,8 @@
   <!-- Tabs -->
   <div class="gst-tabs">
     <button class="gst-tab" [class.active]="activeTab === 'taxcodes'" type="button" (click)="setTab('taxcodes')">Tax Codes</button>
-    <button class="gst-tab" [class.active]="activeTab === 'returns'"  type="button" (click)="setTab('returns')">GST F5 Returns</button>
-    <button class="gst-tab" [class.active]="activeTab === 'details'"  type="button" (click)="setTab('details')">GST Details</button>
+    <button class="gst-tab" [class.active]="activeTab === 'returns'"  type="button" (click)="setTab('returns')">{{ 'GST F5 Returns' | taxName }}</button>
+    <button class="gst-tab" [class.active]="activeTab === 'details'"  type="button" (click)="setTab('details')">{{ 'GST Details' | taxName }}</button>
   </div>
 
   <!-- ══ TAB 1: TAX CODES ══ -->
@@ -135,7 +135,7 @@
             <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
             <polyline points="10 9 9 9 8 9"/>
           </svg>
-          <strong class="f5-title">GST F5 Summary vs Return</strong>
+          <strong class="f5-title">{{ 'GST F5 Summary vs Return' | taxName }}</strong>
         </div>
 
         <!-- Selectors row -->
@@ -192,15 +192,15 @@
             <div class="f5-summary-period">{{ gstModel.systemSummary?.periodLabel || '—' }}</div>
             <div class="f5-summary-row">
               <span>Collected on Sales</span>
-              <strong>{{ (gstModel.systemSummary?.collectedOnSales || 0) | number:'1.2-2' }}</strong>
+              <strong>{{ (gstModel.systemSummary?.collectedOnSales || 0) | money }}</strong>
             </div>
             <div class="f5-summary-row">
               <span>Paid on Purchases</span>
-              <strong>{{ (gstModel.systemSummary?.paidOnPurchases || 0) | number:'1.2-2' }}</strong>
+              <strong>{{ (gstModel.systemSummary?.paidOnPurchases || 0) | money }}</strong>
             </div>
             <div class="f5-summary-row f5-summary-due">
               <span>Amount Due</span>
-              <strong>{{ (gstModel.systemSummary?.amountDue || 0) | number:'1.2-2' }}</strong>
+              <strong>{{ (gstModel.systemSummary?.amountDue || 0) | money }}</strong>
             </div>
           </div>
 
@@ -216,7 +216,7 @@
             </div>
             <div class="f5-match-text">
               <strong>{{ isMatched ? 'Matched' : 'Not Matched' }}</strong>
-              <span *ngIf="!isMatched">Diff: {{ diff | number:'1.2-2' }}</span>
+              <span *ngIf="!isMatched">Diff: {{ diff | money }}</span>
             </div>
             <div class="f5-match-btns">
               <button class="f5-action-btn" type="button" (click)="matchWithSystem()" [disabled]="isLocked">
@@ -318,7 +318,7 @@
     <div class="f5-modal-overlay" *ngIf="showAdjModal" (click)="closeAdjustments()">
       <div class="f5-modal" (click)="$event.stopPropagation()">
         <div class="f5-modal-header">
-          <strong>GST Adjustments</strong>
+          <strong>{{ 'GST Adjustments' | taxName }}</strong>
           <button class="f5-modal-close" type="button" (click)="closeAdjustments()">&#215;</button>
         </div>
 
@@ -351,7 +351,7 @@
             <tbody>
               <tr *ngFor="let a of adjustments">
                 <td class="mono">{{ getAdjTypeText(a.lineType) }}</td>
-                <td class="right">{{ a.amount | number:'1.2-2' }}</td>
+                <td class="right">{{ a.amount | money }}</td>
                 <td>{{ a.description || '—' }}</td>
                 <td *ngIf="!isLocked" class="center">
                   <button class="f5-adj-edit" type="button" (click)="editAdjustment(a)" title="Edit">&#9998;</button>
@@ -377,7 +377,7 @@
                   <td class="mono teal-bold">{{ d.docNo }}</td>
                   <td>{{ d.docDate | date:'dd-MMM-yy' }}</td>
                   <td>{{ d.partyName || '—' }}</td>
-                  <td class="right">{{ (d.taxAmount || 0) | number:'1.2-2' }}</td>
+                  <td class="right">{{ (d.taxAmount || 0) | money }}</td>
                 </tr>
               </ng-container>
               <ng-container *ngIf="docsTab === 'SUPPLIER'">
@@ -385,7 +385,7 @@
                   <td class="mono teal-bold">{{ d.docNo }}</td>
                   <td>{{ d.docDate | date:'dd-MMM-yy' }}</td>
                   <td>{{ d.partyName || '—' }}</td>
-                  <td class="right">{{ (d.taxAmount || 0) | number:'1.2-2' }}</td>
+                  <td class="right">{{ (d.taxAmount || 0) | money }}</td>
                 </tr>
               </ng-container>
             </tbody>
@@ -411,19 +411,19 @@
     <div class="sum-grid">
       <div class="sum-card sum-c1">
         <span class="sum-label">Total Sales</span>
-        <strong class="sum-val">{{ reportSummary.totalSales | number:'1.2-2' }}</strong>
+        <strong class="sum-val">{{ reportSummary.totalSales | money }}</strong>
       </div>
       <div class="sum-card sum-c2">
-        <span class="sum-label">Output GST</span>
-        <strong class="sum-val">{{ reportSummary.outputTax | number:'1.2-2' }}</strong>
+        <span class="sum-label">{{ 'Output GST' | taxName }}</span>
+        <strong class="sum-val">{{ reportSummary.outputTax | money }}</strong>
       </div>
       <div class="sum-card sum-c3">
-        <span class="sum-label">Input GST</span>
-        <strong class="sum-val">{{ reportSummary.inputTax | number:'1.2-2' }}</strong>
+        <span class="sum-label">{{ 'Input GST' | taxName }}</span>
+        <strong class="sum-val">{{ reportSummary.inputTax | money }}</strong>
       </div>
       <div class="sum-card sum-c4">
-        <span class="sum-label">Net GST</span>
-        <strong class="sum-val">{{ reportSummary.netGST | number:'1.2-2' }}</strong>
+        <span class="sum-label">{{ 'Net GST' | taxName }}</span>
+        <strong class="sum-val">{{ reportSummary.netGST | money }}</strong>
       </div>
     </div>
 
@@ -453,7 +453,7 @@
 
     <div class="gst-card">
       <div class="gst-card-head">
-        <strong class="gst-card-title">GST Transaction Detail</strong>
+        <strong class="gst-card-title">{{ 'GST Transaction Detail' | taxName }}</strong>
         <span class="gst-count-lbl" *ngIf="filteredGstReport.length">
           {{ filteredGstReport.length }} record{{ filteredGstReport.length !== 1 ? 's' : '' }}
         </span>
@@ -469,7 +469,7 @@
               <th>Type</th>
               <th>Tax Code</th>
               <th class="right">Taxable Amt</th>
-              <th class="right teal-hdr">GST Amt</th>
+              <th class="right teal-hdr">{{ 'GST Amt' | taxName }}</th>
             </tr>
           </thead>
           <tbody>
@@ -483,8 +483,8 @@
                 </span>
               </td>
               <td class="mono">{{ row.taxCode || '—' }}</td>
-              <td class="right">{{ (row.taxableAmount || row.amount || 0) | number:'1.2-2' }}</td>
-              <td class="right teal-bold">{{ (row.taxAmount || row.gstAmount || 0) | number:'1.2-2' }}</td>
+              <td class="right">{{ (row.taxableAmount || row.amount || 0) | money }}</td>
+              <td class="right teal-bold">{{ (row.taxAmount || row.gstAmount || 0) | money }}</td>
             </tr>
             <tr *ngIf="filteredGstReport.length === 0 && !loading">
               <td colspan="7" class="gst-empty">No GST detail data. Run with date filters.</td>

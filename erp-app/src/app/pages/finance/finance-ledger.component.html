@@ -88,13 +88,13 @@
                         [style.color]="row.level === 0 ? '#1e3a4f' : '#374151'">{{ row.headName }}</span>
                 </div>
               </td>
-              <td class="right muted">{{ (row.openingBalance || 0) | number:'1.2-2' }}</td>
-              <td class="right debit-val">{{ (row.displayDebit || 0) | number:'1.2-2' }}</td>
-              <td class="right credit-val">{{ (row.displayCredit || 0) | number:'1.2-2' }}</td>
+              <td class="right muted">{{ (row.openingBalance || 0) | money }}</td>
+              <td class="right debit-val">{{ (row.displayDebit || 0) | money }}</td>
+              <td class="right credit-val">{{ (row.displayCredit || 0) | money }}</td>
               <td class="right teal-bold"
                   [style.fontWeight]="row.level === 0 ? '700' : '500'"
                   [style.color]="(row.displayBalance || 0) !== 0 ? '#111827' : '#9ca3af'">
-                {{ (row.displayBalance || 0) | number:'1.2-2' }}
+                {{ (row.displayBalance || 0) | money }}
               </td>
             </tr>
           </ng-container>
@@ -106,9 +106,9 @@
           <tr class="foot-row">
             <td colspan="2"><strong>Total</strong></td>
             <td class="right muted"></td>
-            <td class="right debit-val fw-bold">{{ totalDebit | number:'1.2-2' }}</td>
-            <td class="right credit-val fw-bold">{{ totalCredit | number:'1.2-2' }}</td>
-            <td class="right teal-bold fw-bold">{{ totalBalance | number:'1.2-2' }}</td>
+            <td class="right debit-val fw-bold">{{ totalDebit | money }}</td>
+            <td class="right credit-val fw-bold">{{ totalCredit | money }}</td>
+            <td class="right teal-bold fw-bold">{{ totalBalance | money }}</td>
           </tr>
         </tfoot>
       </table>

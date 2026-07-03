@@ -118,8 +118,8 @@
               <td>
                 <erp-dropdown [options]="taxModeOptions" [(ngModel)]="l.taxMode" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted"></erp-dropdown>
               </td>
-              <td class="num-cell">{{ l.taxAmt | number:'1.2-2' }}</td>
-              <td class="num-cell grand-col">{{ l.lineGrandTotal | number:'1.2-2' }}</td>
+              <td class="num-cell">{{ l.taxAmt | money:currencyName }}</td>
+              <td class="num-cell grand-col">{{ l.lineGrandTotal | money:currencyName }}</td>
               <td class="col-ledger" style="display:none">
                 <erp-dropdown [options]="ledgerOptions" [(ngModel)]="l.budgetLineId" [disabled]="isGlPosted" placeholder="Ledger"></erp-dropdown>
               </td>
@@ -131,7 +131,7 @@
           <tfoot *ngIf="lines.length">
             <tr class="total-foot">
               <td colspan="7" style="text-align:right;padding:8px 10px;font-size:11px;font-weight:700;color:var(--text-muted);">TOTALS</td>
-              <td class="num-cell" style="font-weight:700;color:var(--primary)">{{ grandTotal | number:'1.2-2' }}</td>
+              <td class="num-cell" style="font-weight:700;color:var(--primary)">{{ grandTotal | money:currencyName }}</td>
               <td colspan="1"></td>
             </tr>
           </tfoot>
@@ -140,9 +140,9 @@
 
       <!-- Summary totals -->
       <div class="pin-totals" *ngIf="lines.length">
-        <div class="pin-total-row"><span class="t-lbl">Sub Total</span><span class="t-val">{{ subTotal | number:'1.2-2' }}</span></div>
-        <div class="pin-total-row"><span class="t-lbl">Tax ({{ taxRate }}%)</span><span class="t-val">{{ totalTax | number:'1.2-2' }}</span></div>
-        <div class="pin-total-row grand"><span class="t-lbl">Net Payable</span><span class="t-val">{{ grandTotal | number:'1.2-2' }} <span class="t-cur" *ngIf="currencyName">{{ currencyName }}</span></span></div>
+        <div class="pin-total-row"><span class="t-lbl">Sub Total</span><span class="t-val">{{ subTotal | money:currencyName }}</span></div>
+        <div class="pin-total-row"><span class="t-lbl">Tax ({{ taxRate }}%)</span><span class="t-val">{{ totalTax | money:currencyName }}</span></div>
+        <div class="pin-total-row grand"><span class="t-lbl">Net Payable</span><span class="t-val">{{ grandTotal | money:currencyName }} <span class="t-cur" *ngIf="currencyName">{{ currencyName }}</span></span></div>
       </div>
     </div>
 

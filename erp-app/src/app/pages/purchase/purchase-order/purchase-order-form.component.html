@@ -10,7 +10,7 @@
         <span class="pill-v">{{ getCurrencyCode() }}</span>
       </div>
       <div class="pill-badge" *ngIf="gstPct > 0">
-        <span class="pill-k">GST %</span>
+        <span class="pill-k">{{ 'GST %' | taxName }}</span>
         <span class="pill-v">{{ gstPct }}</span>
       </div>
     </div>
@@ -125,7 +125,7 @@
             <span>{{ isOverseas ? 'Yes' : 'No' }}</span>
           </label>
         </div>
-        <erp-input label="GST %" type="number" [(ngModel)]="gstPct"
+        <erp-input label="{{ 'GST %' | taxName }}" type="number" [(ngModel)]="gstPct"
           (ngModelChange)="onGstPctChange()" placeholder="0"></erp-input>
         <ng-container *ngIf="isOverseas">
           <erp-input label="Shipping Cost" type="number" [(ngModel)]="shipping" placeholder="0.00"></erp-input>
@@ -177,10 +177,10 @@
                 <div class="item-code" *ngIf="line.itemCode">{{ line.itemCode }}</div>
               </td>
               <td class="r-col num-cell">{{ line.quantity }}</td>
-              <td class="r-col num-cell">{{ line.unitPrice | number:'1.2-2' }}</td>
+              <td class="r-col num-cell">{{ line.unitPrice | money:currencyId }}</td>
               <td class="r-col num-cell">{{ line.discountPct || 0 }}%</td>
-              <td class="r-col num-cell">{{ line.taxAmt | number:'1.2-2' }}</td>
-              <td class="r-col num-cell"><strong>{{ line.lineTotal | number:'1.2-2' }}</strong></td>
+              <td class="r-col num-cell">{{ line.taxAmt | money:currencyId }}</td>
+              <td class="r-col num-cell"><strong>{{ line.lineTotal | money:currencyId }}</strong></td>
               <td class="c-col action-cell">
                 <button class="btn-icon info" (click)="viewLineDetail(line)" title="View details">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -203,7 +203,7 @@
           <tfoot *ngIf="lines.length">
             <tr class="tfoot-total">
               <td colspan="7" class="r-col tfoot-label">Sub Total</td>
-              <td class="r-col num-cell tfoot-val">{{ lineGrandTotal | number:'1.2-2' }}</td>
+              <td class="r-col num-cell tfoot-val">{{ lineGrandTotal | money:currencyId }}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -271,7 +271,7 @@
 
     <!-- Line tiles -->
     <div class="card section-card">
-      <div class="section-label">Line Items ({{ lines.length }}) &nbsp;·&nbsp; Net Total: {{ netTotal | number:'1.2-2' }} {{ getCurrencyCode() }}</div>
+      <div class="section-label">Line Items ({{ lines.length }}) &nbsp;·&nbsp; Net Total: {{ netTotal | money:currencyId }} {{ getCurrencyCode() }}</div>
       <div class="tiles-grid">
         <div *ngFor="let line of lines; let i = index" class="line-tile">
           <div class="tile-num">{{ i + 1 }}</div>
@@ -286,8 +286,8 @@
           </div>
           <div class="tile-amounts">
             <div class="tile-qty">{{ line.quantity }}</div>
-            <div class="tile-price">@ {{ line.unitPrice | number:'1.2-2' }}</div>
-            <div class="tile-total">{{ line.lineTotal | number:'1.2-2' }} {{ getCurrencyCode() }}</div>
+            <div class="tile-price">@ {{ line.unitPrice | money:currencyId }}</div>
+            <div class="tile-total">{{ line.lineTotal | money:currencyId }} {{ getCurrencyCode() }}</div>
           </div>
         </div>
         <div *ngIf="!lines.length" class="empty-tile">No lines added</div>
@@ -309,36 +309,36 @@
         <div class="sum-list">
           <div class="sum-row">
             <span>Sub Total</span>
-            <span class="sv">{{ subTotal | number:'1.2-2' }}</span>
+            <span class="sv">{{ subTotal | money:currencyId }}</span>
           </div>
           <div class="sum-row">
             <span>Line Discounts</span>
-            <span class="sv">- {{ lineDiscountTotal | number:'1.2-2' }}</span>
+            <span class="sv">- {{ lineDiscountTotal | money:currencyId }}</span>
           </div>
           <div class="sum-row">
             <span>Tax (Lines)</span>
-            <span class="sv">{{ totalLineTax | number:'1.2-2' }}</span>
+            <span class="sv">{{ totalLineTax | money:currencyId }}</span>
           </div>
           <ng-container *ngIf="discount && discount > 0">
             <div class="sum-row">
               <span>Header Discount</span>
-              <span class="sv">- {{ discount | number:'1.2-2' }}</span>
+              <span class="sv">- {{ discount | money:currencyId }}</span>
             </div>
           </ng-container>
           <ng-container *ngIf="isOverseas">
             <div class="sum-row">
               <span>Shipping</span>
-              <span class="sv">{{ shippingWithTax | number:'1.2-2' }}</span>
+              <span class="sv">{{ shippingWithTax | money:currencyId }}</span>
             </div>
           </ng-container>
           <div class="sum-divider"></div>
           <div class="sum-row sum-net">
             <span>Net Total</span>
-            <span class="sv sv--big">{{ netTotal | number:'1.2-2' }} {{ getCurrencyCode() }}</span>
+            <span class="sv sv--big">{{ netTotal | money:currencyId }} {{ getCurrencyCode() }}</span>
           </div>
           <div class="sum-row" *ngIf="showNetTotalBase">
             <span>Net Total (Base)</span>
-            <span class="sv">{{ netTotalBase | number:'1.2-2' }} SGD</span>
+            <span class="sv">{{ netTotalBase | money }} SGD</span>
           </div>
         </div>
       </div>
@@ -437,7 +437,7 @@
 
       <!-- Row 4: Tax Amt (readonly), Line Total (readonly) -->
       <div class="form-row cols-2 block-gap">
-        <erp-input [label]="'Tax Amount (GST ' + gstPct + '%)'"
+        <erp-input [label]="('Tax Amount (GST' | taxName) + ' ' + gstPct + '%)'"
           type="number" [ngModel]="modalLine.taxAmt" [disabled]="true"
           placeholder="0.0000"></erp-input>
         <erp-input label="Line Total" type="number"

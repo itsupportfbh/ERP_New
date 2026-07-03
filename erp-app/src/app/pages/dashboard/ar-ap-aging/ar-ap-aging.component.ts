@@ -3,6 +3,7 @@ import {
   DashboardService,
   FinanceArApAging
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -17,7 +18,10 @@ export class ARAPAgingComponent implements OnInit {
   receivables: any[] = [];
   payables: any[] = [];
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadArApAging();
@@ -67,6 +71,6 @@ export class ARAPAgingComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 }

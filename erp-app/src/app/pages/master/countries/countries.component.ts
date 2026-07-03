@@ -7,7 +7,7 @@ export class CountriesComponent implements OnInit {
   items: any[] = []; loading = false; isFormVisible = false; isEditMode = false; selectedId: any = null; message = ''; isError = false;
   showDeleteModal = false; itemToDelete: any = null;
   showResultPopup = false; popupIsSuccess = false; popupMessage = '';
-  form: { countryName: string; gstPercentage: number | null } = { countryName: '', gstPercentage: null };
+  form: { countryName: string; gstPercentage: number | null; taxName: string; currencySymbol: string } = { countryName: '', gstPercentage: null, taxName: 'GST', currencySymbol: '' };
   permission: FunctionPermission;
   isPermissionLoaded = false;
   userId: number = 0;
@@ -20,10 +20,10 @@ export class CountriesComponent implements OnInit {
 
   ngOnInit(): void { this.loadPermission(); }
   load(): void { this.loading = true; this.masterSvc.getCountries().subscribe({ next: (res: any) => { this.items = res?.data || res || []; this.loading = false; }, error: () => { this.loading = false; this.message = 'Failed to load.'; this.isError = true; } }); }
-  showForm(): void { this.isFormVisible = true; this.isEditMode = false; this.form = { countryName: '', gstPercentage: null }; this.message = ''; }
-  edit(item: any): void { this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id; this.form = { countryName: item.countryName || item.name || '', gstPercentage: item.gstPercentage ?? null }; this.message = ''; }
+  showForm(): void { this.isFormVisible = true; this.isEditMode = false; this.form = { countryName: '', gstPercentage: null, taxName: 'GST', currencySymbol: '' }; this.message = ''; }
+  edit(item: any): void { this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id; this.form = { countryName: item.countryName || item.name || '', gstPercentage: item.gstPercentage ?? null, taxName: item.taxName || 'GST', currencySymbol: item.currencySymbol || '' }; this.message = ''; }
   cancel(): void { this.isFormVisible = false; this.message = ''; }
-  clearForm(): void { this.form = { countryName: '', gstPercentage: null }; }
+  clearForm(): void { this.form = { countryName: '', gstPercentage: null, taxName: 'GST', currencySymbol: '' }; }
   onSubmit(): void {
     if (!this.form.countryName?.trim()) { this.message = 'Country Name is required.'; this.isError = true; return; }
     const obs = this.isEditMode ? this.masterSvc.updateCountry({ ...this.form, id: this.selectedId }) : this.masterSvc.createCountry(this.form);

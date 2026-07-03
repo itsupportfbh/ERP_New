@@ -10,6 +10,8 @@ import { SwitchToggleComponent } from './components/switch-toggle/switch-toggle.
 import { PagerComponent } from './components/pager/pager.component';
 import { DocViewModalComponent } from './components/doc-view-modal/doc-view-modal.component';
 import { MasterPopupComponent } from './components/master-popup/master-popup.component';
+import { MoneyPipe } from './pipes/money.pipe';
+import { TaxNamePipe } from './pipes/tax-name.pipe';
 
 
 const COMPONENTS = [
@@ -23,10 +25,15 @@ const COMPONENTS = [
   MasterPopupComponent,
 ];
 
+const PIPES = [
+  MoneyPipe,
+  TaxNamePipe,
+];
+
 @NgModule({
-  declarations: COMPONENTS,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
-  exports: [...COMPONENTS, CommonModule, FormsModule, ReactiveFormsModule],
+  declarations: [...COMPONENTS],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ...PIPES],
+  exports: [...COMPONENTS, ...PIPES, CommonModule, FormsModule, ReactiveFormsModule],
   // CommonModule, FormsModule, ReactiveFormsModule are both imported and exported so consumers get them transitively
 })
 export class SharedModule {}

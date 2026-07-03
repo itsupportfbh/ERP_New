@@ -3,6 +3,7 @@ import {
   DashboardService,
   FinanceARAging
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -16,7 +17,10 @@ export class FinanceArAgingComponent implements OnInit {
 
   agingData: any[] = [];
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadFinanceARAging();
@@ -54,12 +58,6 @@ export class FinanceArAgingComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    const amount = Number(value || 0);
-
-    if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)}L`;
-    }
-
-    return `₹${amount.toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 }

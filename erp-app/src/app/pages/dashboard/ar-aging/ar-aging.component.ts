@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { DashboardService, ARAgingDto } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -19,7 +20,8 @@ export class ARAgingComponent implements OnInit {
   loading = false;
 
   constructor(
-    private dashboardService: DashboardService
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
   ) { }
 
   ngOnInit(): void {
@@ -52,19 +54,6 @@ export class ARAgingComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-
-    if (!value) {
-      return '₹0';
-    }
-
-    if (value >= 10000000) {
-      return `₹${(value / 10000000).toFixed(1)}Cr`;
-    }
-
-    if (value >= 100000) {
-      return `₹${(value / 100000).toFixed(1)}L`;
-    }
-
-    return `₹${value.toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 }

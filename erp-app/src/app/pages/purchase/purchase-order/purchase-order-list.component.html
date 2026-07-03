@@ -320,7 +320,7 @@
         <span *ngIf="confirmRow?.supplierName"> &mdash; {{ confirmRow?.supplierName }}</span>?
       </p>
       <p *ngIf="confirmRow?.netTotal" style="margin:4px 0 0;font-size:13px;color:#6b7280;">
-        Amount: <strong>{{ confirmRow?.netTotal | number:'1.2-2' }}</strong>
+        Amount: <strong>{{ confirmRow?.netTotal | money }}</strong>
       </p>
       <div *ngIf="confirmError" style="margin-top:12px;padding:10px 14px;background:#fee2e2;border-radius:8px;color:#b91c1c;font-size:13px;">{{ confirmError }}</div>
     </div>
@@ -364,7 +364,7 @@
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #eef2f7;">
       <span style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 12px;font-size:12px;color:#374151;"><strong>Supplier:</strong> {{ modalSupplier || '—' }}</span>
-      <span *ngIf="modalNetTotal != null" style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 12px;font-size:12px;color:#374151;"><strong>Net Total:</strong> {{ modalNetTotal | number:'1.2-2' }}</span>
+      <span *ngIf="modalNetTotal != null" style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 12px;font-size:12px;color:#374151;"><strong>Net Total:</strong> {{ modalNetTotal | money }}</span>
       <span style="border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;"
             [style.background]="modalStatus==='Approved'?'#dcfce7':modalStatus==='Rejected'?'#fee2e2':'#fef9c3'"
             [style.color]="modalStatus==='Approved'?'#15803d':modalStatus==='Rejected'?'#b91c1c':'#a16207'">{{ modalStatus }}</span>
@@ -390,8 +390,8 @@
               <td style="padding:10px 12px;color:#9ca3af;">{{ i+1 }}</td>
               <td style="padding:10px 12px;font-weight:600;">{{ l.itemName || l.itemSearch || l.itemCode || '—' }}</td>
               <td style="padding:10px 12px;text-align:right;">{{ l.quantity ?? l.qty ?? 0 }}</td>
-              <td style="padding:10px 12px;text-align:right;">{{ (l.unitPrice | number:'1.2-2') || '—' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? 0) * (l.unitPrice ?? 0)) | number:'1.2-2' }}</td>
+              <td style="padding:10px 12px;text-align:right;">{{ (l.unitPrice | money) || '—' }}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:600;">{{ ((l.quantity ?? l.qty ?? 0) * (l.unitPrice ?? 0)) | money }}</td>
               <td style="padding:10px 12px;color:#2563eb;">{{ l.prNumber || l.prNo || '—' }}</td>
               <td style="padding:10px 12px;color:#6b7280;">{{ l.remarks || '—' }}</td>
             </tr>
@@ -448,7 +448,7 @@
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:13px;color:#0c4a6e;margin-bottom:2px;">{{ po.purchaseOrderNo }}</div>
           <div style="font-size:12px;color:#075985;">
-            {{ po.supplierName }}<span *ngIf="po.netTotal"> &middot; Amount: {{ po.netTotal | number:'1.2-2' }}</span>
+            {{ po.supplierName }}<span *ngIf="po.netTotal"> &middot; Amount: {{ po.netTotal | money }}</span>
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;">

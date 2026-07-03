@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 interface LedgerFlat {
   id: number;
@@ -51,7 +53,7 @@ interface LedgerNode extends LedgerFlat {
 @Component({
   selector: 'erp-finance-ledger',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MoneyPipe, TaxNamePipe],
   templateUrl: './finance-ledger.component.html',
   styleUrls: ['./finance-ledger.component.scss']
 })

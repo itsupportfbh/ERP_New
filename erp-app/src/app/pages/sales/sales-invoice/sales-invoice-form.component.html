@@ -66,7 +66,7 @@
               <th class="ta-right" style="width:6%">Qty</th>
               <th class="ta-right" style="width:8%">Unit Price</th>
               <th class="ta-right" style="width:7%">Disc %</th>
-              <th class="ta-right" style="width:7%">GST %</th>
+              <th class="ta-right" style="width:7%">{{ 'GST %' | taxName }}</th>
               <th class="ta-right" style="width:7%">Tax</th>
               <th class="ta-right" style="width:8%">Amount</th>
               <th style="width:6%">Action</th>
@@ -90,8 +90,8 @@
               <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.unitPrice" name="price{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
               <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.discountPct" name="disc{{i}}" min="0" max="100" (ngModelChange)="recalcLine(l)" /></td>
               <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.gstPct" name="gst{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
-              <td class="ta-right">{{ l.taxAmount | number:'1.2-2' }}</td>
-              <td class="ta-right si-amt">{{ l.lineAmount | number:'1.2-2' }}</td>
+              <td class="ta-right">{{ l.taxAmount | money:currencyName }}</td>
+              <td class="ta-right si-amt">{{ l.lineAmount | money:currencyName }}</td>
               <td class="ta-center">
                 <button class="si-del" type="button" (click)="removeLine(i)" title="Remove">&times;</button>
               </td>
@@ -109,16 +109,16 @@
     <div class="si-totals-spacer"></div>
     <div class="card si-card si-summary">
       <div class="si-sum-row"><span>Currency</span><strong>{{ currencyName }}</strong></div>
-      <div class="si-sum-row"><span>Sub Total</span><strong>{{ subTotal | number:'1.2-2' }}</strong></div>
-      <div class="si-sum-row"><span>Discount</span><strong>{{ discountAmount | number:'1.2-2' }}</strong></div>
-      <div class="si-sum-row"><span>Net Total</span><strong>{{ netAfterDiscount | number:'1.2-2' }}</strong></div>
-      <div class="si-sum-row"><span>Tax (GST)</span><strong>{{ taxAmount | number:'1.2-2' }}</strong></div>
+      <div class="si-sum-row"><span>Sub Total</span><strong>{{ subTotal | money:currencyName }}</strong></div>
+      <div class="si-sum-row"><span>Discount</span><strong>{{ discountAmount | money:currencyName }}</strong></div>
+      <div class="si-sum-row"><span>Net Total</span><strong>{{ netAfterDiscount | money:currencyName }}</strong></div>
+      <div class="si-sum-row"><span>{{ 'Tax (GST)' | taxName }}</span><strong>{{ taxAmount | money:currencyName }}</strong></div>
       <div class="si-sum-row">
         <span>Shipping</span>
         <input type="number" class="mf-input si-ship" [(ngModel)]="shippingCost" name="shipping" min="0" />
       </div>
       <div class="si-divider"></div>
-      <div class="si-sum-row si-grand"><span>Grand Total <small>({{ currencyName }})</small></span><strong>{{ grandTotal | number:'1.2-2' }}</strong></div>
+      <div class="si-sum-row si-grand"><span>Grand Total <small>({{ currencyName }})</small></span><strong>{{ grandTotal | money:currencyName }}</strong></div>
     </div>
   </div>
 </div>

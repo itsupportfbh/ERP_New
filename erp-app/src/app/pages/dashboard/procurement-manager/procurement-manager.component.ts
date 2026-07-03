@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { DashboardService, PurchaseDashboard } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -14,14 +15,17 @@ export class ProcurementManagerComponent implements OnInit {
   openPRs = 0;
   openPOs = 0;
   pendingGRN = 0;
-  apOutstanding = '₹0.0L';
+  apOutstanding = '';
 
   openPrsChange = 0;
   openPosChange = 0;
   pendingGrnChange = 0;
   apOutstandingChangePercent = 0;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadPurchaseDashboard();
@@ -48,16 +52,6 @@ this.apOutstanding = this.formatAmount(res?.apOutstanding ?? 0);
   }
 
   formatAmount(value: number): string {
-  const amount = Number(value || 0);
-
-  if (amount >= 10000000) {
-    return `₹${(amount / 10000000).toFixed(2)}Cr`;
+    return this.cur.compactMoney(value);
   }
-
-  if (amount >= 100000) {
-    return `₹${(amount / 100000).toFixed(1)}L`;
-  }
-
-  return `₹${amount.toLocaleString('en-IN')}`;
-}
 }

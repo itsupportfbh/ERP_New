@@ -3,6 +3,7 @@ import {
   DashboardService,
   OpenPurchaseOrder
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -16,7 +17,10 @@ export class OpenPurchaseOrdersComponent implements OnInit {
 
   purchaseOrders: OpenPurchaseOrder[] = [];
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadOpenPurchaseOrders();
@@ -35,7 +39,7 @@ export class OpenPurchaseOrdersComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 
   formatDate(value: string | null): string {

@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 interface TbNode {
   headCode:      string;
@@ -26,7 +28,7 @@ interface TbNode {
 @Component({
   selector: 'erp-finance-trial-balance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MoneyPipe, TaxNamePipe],
   templateUrl: './finance-trial-balance.component.html',
   styleUrls: ['./finance-trial-balance.component.scss']
 })

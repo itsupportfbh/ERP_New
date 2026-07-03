@@ -3,6 +3,7 @@ import {
   DashboardService,
   ProductionManagerKpi
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -16,11 +17,18 @@ export class ProductionManagerComponent implements OnInit {
 
   totalRecipes = 0;
   productionOrders = 0;
-  avgRecipeCost = '₹0';
+  avgRecipeCost = '';
   rawMaterials = 0;
   pendingOrders = 0;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
+
+  get baseSymbol(): string {
+    return this.cur.baseSymbol();
+  }
 
   ngOnInit(): void {
     this.loadProductionManagerKpi();
@@ -44,6 +52,6 @@ export class ProductionManagerComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 }

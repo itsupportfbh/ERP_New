@@ -3,6 +3,7 @@ import {
   DashboardService,
   FinanceOpsDashboard
 } from '../dashboard.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   standalone: false,
@@ -15,16 +16,19 @@ export class FinanceExecutiveComponent implements OnInit {
   companyId = Number(localStorage.getItem('companyId')) || 0;
 
   openARInvoices = 0;
-  totalReceivables = '₹0.00';
+  totalReceivables = '';
   apDueToday = 0;
-  _3WayMismatch = '₹0.00';
+  _3WayMismatch = '';
 
   totalReceivablesChange = 0;
   openArInvoicesChange = 0;
   apDueTodayChange = 0;
   threeWayMismatchChangePercent = 0;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cur: CurrencyDisplayService
+  ) {}
 
   ngOnInit(): void {
     this.loadFinanceOpsDashboard();
@@ -53,13 +57,7 @@ export class FinanceExecutiveComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    const amount = Number(value || 0);
-
-    if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)}L`;
-    }
-
-    return `₹${amount.toLocaleString('en-IN')}`;
+    return this.cur.compactMoney(value);
   }
 
   positiveValue(value: number): number {

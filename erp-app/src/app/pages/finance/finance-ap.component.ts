@@ -9,6 +9,8 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import Swal from 'sweetalert2';
 import { ActivatedRoute } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 type ApTab = 'invoices' | 'payments' | 'aging' | 'advances' | 'match';
 type ApView = 'list' | 'payment-form' | 'advance-form';
@@ -16,7 +18,7 @@ type ApView = 'list' | 'payment-form' | 'advance-form';
 @Component({
   selector: 'erp-finance-ap',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
+  imports: [CommonModule, FormsModule, SharedModule, MoneyPipe, TaxNamePipe],
   templateUrl: './finance-ap.component.html',
   styleUrls: ['./finance-ap.component.scss']
 })

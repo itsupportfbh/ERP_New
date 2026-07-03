@@ -6,6 +6,8 @@ import { SharedModule } from '../../shared/shared.module';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 interface JournalLine {
   ledgerId: number | null;
@@ -17,7 +19,7 @@ interface JournalLine {
 @Component({
   selector: 'erp-finance-journal-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
+  imports: [CommonModule, FormsModule, SharedModule, MoneyPipe, TaxNamePipe],
   templateUrl: './finance-journal-form.component.html',
   styleUrls: ['./finance-journal-form.component.scss']
 })

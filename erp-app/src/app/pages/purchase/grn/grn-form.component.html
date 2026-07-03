@@ -35,7 +35,7 @@
         <div class="grn-chip"><span class="chip-key">Supplier</span><span class="chip-val" title="{{ supplierName }}">{{ supplierName || '—' }}</span></div>
         <div class="grn-chip"><span class="chip-key">Receipt Date</span><span class="chip-val">{{ receiptDate }}</span></div>
         <div class="grn-chip"><span class="chip-key">Total Lines</span><span class="chip-val">{{ lines.length }}</span></div>
-        <div class="grn-chip"><span class="chip-key">Total Value</span><span class="chip-val">{{ totalValue | number:'1.2-2' }}</span></div>
+        <div class="grn-chip"><span class="chip-key">Total Value</span><span class="chip-val">{{ totalValue | money }}</span></div>
       </div>
 
       <!-- Lines summary card -->
@@ -258,7 +258,7 @@
                 <erp-input type="number" [(ngModel)]="line.unitPrice" placeholder="0.00" [disabled]="line.isPosted"></erp-input>
               </td>
               <!-- Line Total -->
-              <td class="col-total num-cell">{{ lineTotal(line) | number:'1.2-2' }}</td>
+              <td class="col-total num-cell">{{ lineTotal(line) | money }}</td>
               <!-- Flag Issue -->
               <td class="col-flag">
                 <erp-dropdown [options]="flagIssueOptions" [(ngModel)]="line.flagIssueId" placeholder="None"></erp-dropdown>
@@ -288,7 +288,7 @@
               <td colspan="6" class="totals-label">TOTALS</td>
               <td class="num-cell">{{ totalQtyReceived | number:'1.0-4' }}</td>
               <td colspan="14"></td>
-              <td class="num-cell total-value">{{ totalValue | number:'1.2-2' }}</td>
+              <td class="num-cell total-value">{{ totalValue | money }}</td>
               <td colspan="3"></td>
             </tr>
           </tfoot>

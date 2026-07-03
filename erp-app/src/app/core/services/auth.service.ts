@@ -6,6 +6,7 @@ import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { PermissionService } from './permission.service';
 import { PeriodLockStateService } from './period-lock-state.service';
+import { CurrencyDisplayService } from './currency-display.service';
 
 export interface LoginPayload {
   email: string;
@@ -53,7 +54,8 @@ export class AuthService {
     private http: HttpClient,
     private router: Router,
     private perm: PermissionService,
-    private periodLockState: PeriodLockStateService
+    private periodLockState: PeriodLockStateService,
+    private currencyDisplay: CurrencyDisplayService
   ) {}
 
   login(payload: LoginPayload): Observable<LoginResponse> {
@@ -94,6 +96,8 @@ export class AuthService {
     localStorage.setItem('organizationId', data.organizationId ?? '');
     localStorage.setItem('companyCurrencyId', String(data.companyCurrencyId));
     localStorage.setItem('companyCurrencyName', data.companyCurrencyName ?? '');
+    // Refresh currency symbols + tax name for the freshly selected company.
+    this.currencyDisplay.reload();
   }
 
   logout(): void {
@@ -104,6 +108,8 @@ export class AuthService {
       'orgGuid', 'databaseName', 'isMasterOwner', 'isTenantUser',
       'organizations', 'companies', 'organizationId',
       'companyCurrencyId', 'companyCurrencyName',
+      'appCurrencySymbol', 'appTaxName',
+      'currencySymByIdMap', 'currencySymByNameMap',
       'userPermissions'
     ];
     keys.forEach(k => localStorage.removeItem(k));
