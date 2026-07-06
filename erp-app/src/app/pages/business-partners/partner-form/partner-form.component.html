@@ -39,11 +39,14 @@
 
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 1">
     <div class="section-label">Account Details</div>
-    <div class="form-row cols-3">
+    <div class="form-row cols-2">
       <erp-input label="Customer Name" [required]="true" [(ngModel)]="customer.customerName"></erp-input>
-      <erp-dropdown label="Country" [required]="true" [options]="countryOptions" [(ngModel)]="customer.countryId" (ngModelChange)="onCustomerCountryChange($event)"></erp-dropdown>
-      <erp-dropdown label="Location" [required]="true" [options]="locationOptions" [(ngModel)]="customer.locationId"></erp-dropdown>
+      <erp-dropdown label="Country" [required]="true" [options]="countryOptions" [(ngModel)]="customer.countryId"></erp-dropdown>
     </div>
+    <label class="textarea-field block-gap">
+      <span>Address</span>
+      <textarea [(ngModel)]="customer.address" rows="2"></textarea>
+    </label>
     <div class="form-row cols-3 block-gap">
       <erp-input label="Point of Contact Person" [required]="true" [(ngModel)]="customer.contactPerson"></erp-input>
       <erp-input label="Email" type="email" [(ngModel)]="customer.email"></erp-input>

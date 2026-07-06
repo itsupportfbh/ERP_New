@@ -43,7 +43,6 @@ export interface CustomerPayload {
   address?: string;
   taxRegNo?: string;
   countryId?: number | null;
-  locationId?: number | null;
   statusId?: number | null;
   paymentTermId?: number | null;
   budgetLineId?: number | null;
