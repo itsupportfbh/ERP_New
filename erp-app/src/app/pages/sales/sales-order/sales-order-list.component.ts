@@ -90,6 +90,9 @@ export class SalesOrderListComponent implements OnInit {
             orderDate: r.orderDate ?? r.requestedDate ?? r.poDate ?? null,
             deliveryDate: r.deliveryDate ?? null,
             currencyName: r.currencyName ?? r.currencyCode ?? '',
+            currency: r.currency ?? r.currencyName ?? r.currencyCode ?? '',
+            currencyId: r.currencyId ?? r.currencyID ?? 0,
+            fxRate: Number(r.fxRate ?? r.fxrate ?? 1) || 1,
             netTotal: r.netTotal ?? r.grandTotal ?? 0,
             status: r.approvalStatus ?? r.status ?? 0,
             statusLabel: allFullyReceived

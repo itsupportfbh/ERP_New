@@ -1,16 +1,19 @@
 import { Injectable } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
 import { MasterService } from './master.service';
 
 /**
  * App-wide currency symbol + tax-name (GST/SST/VAT) resolver. Multi-currency aware.
  *
- *  - Per-currency SYMBOL comes from the Currency master (Currency.Symbol): RM, S$, $, ...
- *    Used for BOTH the company base currency and any document-selected currency, so a
- *    Malaysia company (base RM) invoicing in SGD shows S$ on that document automatically.
- *  - TAX NAME comes from the company's COUNTRY (Country.TaxName): SST / GST / VAT.
+ * The base currency + country are read from the CURRENT company's finance settings
+ * (getCompanyById → financeTax.baseCurrency / country) — the DB truth — NOT from fragile
+ * localStorage values that can go stale when switching between companies.
  *
- * Everything is cached in localStorage for instant, synchronous reads and refreshed on
- * login / company switch.
+ *  - SYMBOL: the base currency NAME (e.g. 'SGD', 'MYR') → Currency master Symbol (S$, RM).
+ *            Document-selected currencies resolve their own symbol by id/name.
+ *  - TAX NAME: the company's country (Country master TaxName): GST / SST / VAT.
+ *
+ * Results are cached in localStorage for instant reads and refreshed on login / company switch.
  */
 @Injectable({ providedIn: 'root' })
 export class CurrencyDisplayService {
@@ -18,7 +21,14 @@ export class CurrencyDisplayService {
   private symbolByName = new Map<string, string>();
   private loaded = false;
   private loading = false;
-  private _symbol = '';   // company base currency symbol
+  private _loadedKey = '';   // company+tenant the current data was loaded for (auto-refresh on switch)
+  private _symbol = '';     // company base currency symbol (from DB base currency)
+
+  /** Company + tenant database identity — different tenants can share the same companyId. */
+  private currentKey(): string {
+    return (localStorage.getItem('companyId') || '0') + '|' + (localStorage.getItem('databaseName') || '');
+  }
+  private _baseName = '';    // company base currency name (e.g. 'SGD')
   private _taxName = '';
 
   constructor(private master: MasterService) {
@@ -26,6 +36,9 @@ export class CurrencyDisplayService {
   }
 
   private hydrateFromCache(): void {
+    // Only trust the cache if it was written for the SAME company+tenant; otherwise it is
+    // stale from another tenant (which can share the same companyId) and must not be shown.
+    if ((localStorage.getItem('appCurrencyKey') || '') !== this.currentKey()) return;
     try {
       const byId = JSON.parse(localStorage.getItem('currencySymByIdMap') || '{}') || {};
       for (const k of Object.keys(byId)) this.symbolById.set(Number(k), String(byId[k]));
@@ -36,19 +49,47 @@ export class CurrencyDisplayService {
     this._taxName = (localStorage.getItem('appTaxName') || '').trim();
   }
 
-  /** One-time background load of per-currency symbols + the company's tax name. */
-  ensureLoaded(): void {
-    if (this.loaded || this.loading) return;
-    this.loading = true;
+  private loadPromise: Promise<void> | null = null;
 
-    // 1) Currencies -> per-currency symbol maps + company base symbol.
-    this.master.getCurrencies().subscribe({
-      next: (res: any) => {
-        const list: any[] = res?.data ?? res ?? [];
-        const arr = Array.isArray(list) ? list : [];
+  /**
+   * Preload the currency data and RESOLVE when ready. Used by APP_INITIALIZER so the
+   * base symbol is correct before any screen (e.g. the dashboard, which formats money
+   * once via compactMoney) renders — otherwise a hard reload would format with a stale symbol.
+   */
+  preload(): Promise<void> {
+    const companyId = Number(localStorage.getItem('companyId') || 0);
+    if (this.loaded && this.currentKey() === this._loadedKey) return Promise.resolve();
+    const load = (this.loading && this.loadPromise) ? this.loadPromise : this.startLoad(companyId);
+    // Never block app bootstrap for more than 4s (data still loads in the background after).
+    return Promise.race([load, new Promise<void>(resolve => setTimeout(resolve, 4000))]);
+  }
+
+  /** Load currency symbols + the CURRENT company's base symbol + tax name.
+   *  Auto-refreshes when the active company changes (no re-login / reload needed). */
+  ensureLoaded(): void {
+    const companyId = Number(localStorage.getItem('companyId') || 0);
+    // Already loaded for this company + tenant → nothing to do.
+    if (this.loaded && this.currentKey() === this._loadedKey) return;
+    if (this.loading) return;
+    void this.startLoad(companyId);
+  }
+
+  private startLoad(companyId: number): Promise<void> {
+    this.loading = true;
+    this._loadedKey = this.currentKey();
+
+    this.loadPromise = new Promise<void>(resolve => {
+    forkJoin([
+      this.master.getCurrencies(),
+      this.master.getCountries(),
+      companyId ? this.master.getCompanyById(companyId) : of(null)
+    ]).subscribe({
+      next: ([cRes, coRes, compRes]: any[]) => {
+        // 1) Currency master → id/name → symbol maps.
+        const cList: any[] = cRes?.data ?? cRes ?? [];
         const symById: Record<string, string> = {};
         const symByName: Record<string, string> = {};
-        for (const c of arr) {
+        for (const c of (Array.isArray(cList) ? cList : [])) {
           const id = Number(c.id ?? c.Id ?? 0);
           const sym = String(c.symbol ?? c.Symbol ?? '').trim();
           const nm = String(c.currencyName ?? c.CurrencyName ?? c.name ?? '').trim();
@@ -60,62 +101,56 @@ export class CurrencyDisplayService {
           localStorage.setItem('currencySymByIdMap', JSON.stringify(symById));
           localStorage.setItem('currencySymByNameMap', JSON.stringify(symByName));
         } catch {}
-        const baseId = Number(localStorage.getItem('companyCurrencyId') || 0);
-        const baseSym = this.symbolById.get(baseId);
-        if (baseSym) { this._symbol = baseSym; try { localStorage.setItem('appCurrencySymbol', baseSym); } catch {} }
+
+        // 2) Company finance settings (DB truth) → base currency + country.
+        const f = compRes?.financeTax ?? compRes?.finance ?? {};
+        const baseCur = String(f.baseCurrency ?? localStorage.getItem('companyCurrencyName') ?? '').trim();
+        const countryId = Number(f.countryId ?? 0);
+        const countryName = String(f.country ?? compRes?.general?.country ?? '').trim();
+
+        // 3) Match the company's country EXACTLY (id or name) — never guess another country.
+        const countries: any[] = coRes?.data ?? coRes ?? [];
+        const arr = Array.isArray(countries) ? countries : [];
+        let country = arr.find((x: any) => Number(x.id ?? x.Id ?? 0) === countryId && countryId > 0);
+        if (!country && countryName) {
+          country = arr.find((x: any) => String(x.countryName ?? x.name ?? '').trim().toLowerCase() === countryName.toLowerCase());
+        }
+
+        // 4) Base symbol: base-currency name → Currency symbol; else matched country's symbol.
+        let sym = baseCur ? (this.symbolByName.get(baseCur.toLowerCase()) || '') : '';
+        if (!sym && country) sym = String(country.currencySymbol ?? country.CurrencySymbol ?? '').trim();
+        this._baseName = baseCur;
+        this._symbol = sym;
+        try {
+          if (sym) localStorage.setItem('appCurrencySymbol', sym);
+          else localStorage.removeItem('appCurrencySymbol');
+          if (baseCur) localStorage.setItem('companyCurrencyName', baseCur);
+        } catch {}
+
+        // 5) Tax name from the matched country.
+        const tax = country ? String(country.taxName ?? country.TaxName ?? '').trim() : '';
+        this._taxName = tax;
+        try {
+          if (tax) localStorage.setItem('appTaxName', tax);
+          else localStorage.removeItem('appTaxName');
+        } catch {}
+
+        try { localStorage.setItem('appCurrencyKey', this._loadedKey); } catch {}
         this.loaded = true;
         this.loading = false;
+        resolve();
       },
-      error: () => { this.loaded = true; this.loading = false; }
+      error: () => { this.loading = false; resolve(); }
     });
-
-    // 2) Country (independent) -> tax name + base-symbol fallback when currency has none.
-    this.loadCountryMeta();
-  }
-
-  private loadCountryMeta(): void {
-    this.master.getCountries().subscribe({
-      next: (cr: any) => {
-        const list: any[] = cr?.data ?? cr ?? [];
-        const arr = Array.isArray(list) ? list : [];
-        const companyId = Number(localStorage.getItem('companyId') || 0);
-        if (companyId) {
-          this.master.getCompanyById(companyId).subscribe({
-            next: (res: any) => {
-              const f = res?.financeTax || res?.finance || {};
-              this.applyCountry(arr, Number(f.countryId ?? 0), String(f.country ?? res?.general?.country ?? '').trim());
-            },
-            error: () => this.applyCountry(arr, 0, '')
-          });
-        } else {
-          this.applyCountry(arr, 0, '');
-        }
-      },
-      error: () => {}
     });
+    return this.loadPromise;
   }
 
-  private applyCountry(arr: any[], prefId: number, prefName: string): void {
-    const hasSymbol = (x: any) => String(x?.currencySymbol ?? x?.CurrencySymbol ?? '').trim().length > 0;
-    let match = arr.find((x: any) => Number(x.id ?? x.Id ?? 0) === prefId && prefId > 0);
-    if (!match && prefName) {
-      match = arr.find((x: any) => String(x.countryName ?? x.name ?? '').trim().toLowerCase() === prefName.toLowerCase());
-    }
-    if (!match) match = arr.find(hasSymbol);
-    if (!match && arr.length === 1) match = arr[0];
-    const tax = String(match?.taxName ?? match?.TaxName ?? '').trim();
-    if (tax) { this._taxName = tax; try { localStorage.setItem('appTaxName', tax); } catch {} }
-    // Only use the country symbol as a fallback if the base currency had no symbol.
-    if (!this._symbol) {
-      const sym = String(match?.currencySymbol ?? match?.CurrencySymbol ?? '').trim();
-      if (sym) { this._symbol = sym; try { localStorage.setItem('appCurrencySymbol', sym); } catch {} }
-    }
-  }
-
-  /** Force a refresh (e.g. after switching company). */
+  /** Force a refresh (e.g. after login / switching company). */
   reload(): void {
     this.loaded = false;
     this.loading = false;
+    this._loadedKey = '';
     this.ensureLoaded();
   }
 
@@ -124,13 +159,18 @@ export class CurrencyDisplayService {
 
   get baseCurrencyId(): number { return Number(localStorage.getItem('companyCurrencyId') || 0); }
 
-  /** Company base currency symbol. Falls back to the base currency name, then '$'. */
+  /** Company base currency symbol (from the company's DB base currency). */
   baseSymbol(): string {
     this.ensureLoaded();
-    const sym = this.symbolById.get(this.baseCurrencyId);
-    if (sym) return sym;
     if (this._symbol) return this._symbol;
-    const nm = (localStorage.getItem('companyCurrencyName') || '').trim();
+    // Fallbacks before the async load completes.
+    const nm = (this._baseName || localStorage.getItem('companyCurrencyName') || '').trim();
+    if (nm) {
+      const s = this.symbolByName.get(nm.toLowerCase());
+      if (s) return s;
+    }
+    const byId = this.symbolById.get(this.baseCurrencyId);
+    if (byId) return byId;
     return nm || '$';
   }
 
@@ -152,8 +192,7 @@ export class CurrencyDisplayService {
     if (key) {
       const sym = this.symbolByName.get(key);
       if (sym) return sym;
-      const baseName = (localStorage.getItem('companyCurrencyName') || '').trim().toLowerCase();
-      if (key !== baseName) return String(name || '').trim(); // show the given code if unknown
+      if (key !== (this._baseName || '').toLowerCase()) return String(name || '').trim();
     }
     return this.baseSymbol();
   }

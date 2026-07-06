@@ -77,6 +77,11 @@
               <span class="bool-dot" [class.on]="getCellValue(row, col)"></span>
               {{ getCellValue(row, col) ? 'Yes' : 'No' }}
             </ng-container>
+            <!-- Money: base-currency (converted) + document-currency in brackets -->
+            <ng-container *ngIf="col.type === 'money'">
+              {{ moneyBaseValue(row, col) | money }}
+              <span class="qt-cur" *ngIf="moneyFx(row, col) !== 1" style="font-size:.85em;color:#6b7280;">({{ getCellValue(row, col) | money:moneyDocCurrency(row, col) }})</span>
+            </ng-container>
             <!-- Default: text / number / date -->
             <ng-container *ngIf="!col.type || col.type === 'text' || col.type === 'number' || col.type === 'date'">
               {{ displayValue(row, col) }}

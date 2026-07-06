@@ -87,7 +87,7 @@ export class PurchaseOrderListComponent implements OnInit {
     { key: 'poDate', header: 'PO Date', sortable: true, type: 'date' },
     { key: 'deliveryDate', header: 'Delivery Date', sortable: true, type: 'date' },
     { key: 'currencyName', header: 'Currency' },
-    { key: 'netTotal', header: 'Net Total', type: 'number', align: 'right' },
+    { key: 'netTotal', header: 'Net Total', type: 'money', align: 'right', currencyKey: 'currency', fxRateKey: 'fxRate' },
     {
       key: 'statusLabel',
       header: 'Status',
@@ -148,6 +148,9 @@ export class PurchaseOrderListComponent implements OnInit {
           ...r,
           id: r.id ?? r.iD,
           purchaseOrderNo: r.purchaseOrderNo ?? r.pO_No,
+          currency: r.currency ?? r.currencyName ?? '',
+          currencyId: r.currencyId ?? 0,
+          fxRate: Number(r.fxRate ?? 1) || 1,
           statusLabel: STATUS_MAP[r.approvalStatus ?? r.status] ?? r.status ?? 'Pending',
         }));
         this.applyFilter();

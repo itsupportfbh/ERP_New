@@ -37,7 +37,7 @@ export class DebitNoteListComponent implements OnInit {
     { key: 'supplierName', header: 'Supplier', sortable: true },
     { key: 'reason', header: 'Reason' },
     { key: 'noteDate', header: 'Note Date', sortable: true, type: 'date' },
-    { key: 'amount', header: 'Amount', type: 'number', align: 'right' },
+    { key: 'amount', header: 'Amount', type: 'money', align: 'right', currencyKey: 'currency', fxRateKey: 'fxRate' },
     {
       key: 'status',
       header: 'Status',
@@ -79,6 +79,9 @@ export class DebitNoteListComponent implements OnInit {
           id: r.id ?? r.iD,
           debitNoteNo: r.debitNoteNo ?? r.DebitNoteNo ?? '',
           supplierName: r.name ?? r.supplierName ?? '',
+          currency: r.currency ?? r.currencyName ?? '',
+          currencyId: r.currencyId ?? 0,
+          fxRate: Number(r.fxRate ?? 1) || 1,
           status: toStatusLabel(r.status),
         }));
         this.applyFilter();

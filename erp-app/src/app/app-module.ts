@@ -1,4 +1,5 @@
-import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { NgModule, provideBrowserGlobalErrorListeners, APP_INITIALIZER } from '@angular/core';
+import { CurrencyDisplayService } from './core/services/currency-display.service';
 import { BrowserModule } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -300,7 +301,16 @@ MobileReceivingComponent,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([jwtInterceptor, payloadInterceptor, responseInterceptor]))
+    provideHttpClient(withInterceptors([jwtInterceptor, payloadInterceptor, responseInterceptor])),
+    // Preload the company's base currency symbol + tax name before the app renders,
+    // so screens that format money once (e.g. the dashboard) use the correct symbol
+    // even on a hard reload — not only after a fresh login.
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (cur: CurrencyDisplayService) => () => cur.preload(),
+      deps: [CurrencyDisplayService],
+      multi: true
+    }
   ],
   bootstrap: [App]
 })

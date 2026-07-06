@@ -96,7 +96,7 @@
             <td>{{ row.supplierInvoiceNo || '—' }}</td>
             <td class="si-grn-cell" [title]="row.grnNos">{{ row.grnNos || '—' }}</td>
             <td>{{ row.invoiceDate | date:'dd-MM-yyyy' }}</td>
-            <td class="r">{{ row.amount | money }}</td>
+            <td class="r">{{ row.amount | money:(row.currencyId || row.currency) }}</td>
             <td class="r">{{ row.baseAmount | money }}</td>
             <td>
               <span class="si-type-badge" [class.overseas]="row.isOverseas">

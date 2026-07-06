@@ -160,7 +160,7 @@
       <div class="rcp-totals-bar">
         <div class="rcp-total-item">
           <span class="rcp-total-label">Amount Received</span>
-          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | money }} {{ receiptCurrencyName }}</strong>
+          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | money:receiptCurrencyName }} {{ receiptCurrencyName }}</strong>
         </div>
         <div class="rcp-total-item">
           <span class="rcp-total-label">Base Amount</span>
@@ -270,7 +270,7 @@
               <td>{{ r.receiptDate | date:'dd-MMM-yyyy' }}</td>
               <td>{{ r.paymentMode || '—' }}</td>
               <td class="right">
-                {{ (r.amountReceived || 0) | money }}
+                {{ (r.amountReceived || 0) | money:r.currencyName }}
                 <span *ngIf="r.currencyName && r.currencyName !== 'SGD'" class="ccy-tag">{{ r.currencyName }}</span>
               </td>
               <td class="right teal-bold">

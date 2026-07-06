@@ -44,7 +44,10 @@
             <td><strong>{{ item.invoiceNo }}</strong></td>
             <td>{{ item.customerName || '—' }}</td>
             <td>{{ item.invoiceDate ? (item.invoiceDate | date:'dd-MM-yyyy') : '—' }}</td>
-            <td>{{ item.total | number:'1.2-2' }}</td>
+            <td>
+              {{ (item.total * (item.fxRate || 1)) | money }}
+              <span class="qt-cur" *ngIf="(item.fxRate || 1) !== 1">({{ item.total | money:item.currency }})</span>
+            </td>
             <td>{{ item.sourceRef || '—' }}</td>
             <td><div class="dt-actions-cell">
               <button *ngIf="perm.canView(fnId)" class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>

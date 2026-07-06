@@ -869,6 +869,8 @@ setTab(tab: ArTab): void {
       receiptDate:  row.receiptDate  ?? row.ReceiptDate,
       paymentMode:  row.paymentMode  ?? row.PaymentMode,
       currencyName: row.currencyName ?? row.CurrencyName ?? '',
+      currencyId:   Number(row.currencyId ?? row.CurrencyId ?? 0) || null,
+      fxRate:       Number(row.fxRate ?? row.FxRate ?? 1) || 1,
       amountReceived,
       amountBase,
       status: row.status ?? row.Status ?? 'Posted'
