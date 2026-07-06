@@ -203,23 +203,6 @@ export class PartnerFormComponent implements OnInit {
     });
   }
 
-  onCustomerCountryChange(countryId: number | null): void {
-    this.customer.countryId = this.toNumber(countryId);
-    this.customer.locationId = null;
-    if (!this.customer.countryId) return;
-    this.loadLocationsByCountry(this.customer.countryId);
-  }
-
-  private loadLocationsByCountry(countryId: number, selectedLocationId?: number | null): void {
-    this.partners.getLocationsByCountry(countryId).subscribe({
-      next: res => {
-        this.locationOptions = this.toOptions(this.partners.unwrapRows(res), 'name', 'id', 'locationName');
-        if (selectedLocationId) this.customer.locationId = selectedLocationId;
-      },
-      error: () => {}
-    });
-  }
-
   async nextCustomerStep(): Promise<void> {
     this.error = '';
     if (this.customerStep === 1 && !this.validateCustomerAccount()) {
@@ -319,7 +302,7 @@ export class PartnerFormComponent implements OnInit {
 
     formData.append('CustomerName', this.customer.customerName || '');
     formData.append('CountryId', (this.customer.countryId ?? '').toString());
-    formData.append('LocationId', (this.customer.locationId ?? '').toString());
+    formData.append('Address', this.customer.address || '');
     formData.append('ContactNumber', this.customer.phone || '');
     formData.append('PointOfContactPerson', this.customer.contactPerson || '');
     formData.append('Email', this.customer.email || '');
@@ -480,7 +463,7 @@ export class PartnerFormComponent implements OnInit {
     const result = await Swal.fire({
       icon: 'warning',
       title: 'Customer Exists',
-      text: 'Customer already exists for selected Country and Location. Load existing record instead?',
+      text: 'Customer already exists for selected Country. Load existing record instead?',
       showCancelButton: true,
       confirmButtonText: 'Load Existing',
       cancelButtonText: 'Stay Here',
@@ -522,7 +505,6 @@ export class PartnerFormComponent implements OnInit {
       address: this.pick(data, 'address', 'Address') ?? '',
       taxRegNo: this.pick(data, 'taxRegNo', 'TaxRegNo') ?? '',
       countryId: this.pick(data, 'countryId', 'CountryId') ?? null,
-      locationId: this.pick(data, 'locationId', 'LocationId') ?? null,
       statusId: this.pick(data, 'statusId', 'StatusId') ?? 1,
       paymentTermId: this.pick(data, 'paymentTermId', 'PaymentTermId') ?? null,
       budgetLineId: this.pick(data, 'budgetLineId', 'BudgetLineId') ?? null,
@@ -536,7 +518,6 @@ export class PartnerFormComponent implements OnInit {
     this.kycPreview.utilityBill = this.toAssetUrl(this.pick(data, 'utilityBillImage', 'UtilityBillImage'), base);
     this.kycPreview.bankStatement = this.toAssetUrl(this.pick(data, 'bsImage', 'BSImage'), base);
     this.kycPreview.acra = this.toAssetUrl(this.pick(data, 'acraImage', 'AcraImage', 'ACRAImage'), base);
-    if (this.customer.countryId) this.loadLocationsByCountry(this.customer.countryId, this.customer.locationId);
   }
 
   private patchSupplier(data: any): void {
@@ -622,8 +603,8 @@ export class PartnerFormComponent implements OnInit {
       this.error = 'Customer name is required.';
       return false;
     }
-    if (!this.customer.countryId || !this.customer.locationId) {
-      this.error = 'Country and location are required.';
+    if (!this.customer.countryId) {
+      this.error = 'Country is required.';
       return false;
     }
     if (!this.customer.contactPerson?.trim() || !this.customer.email?.trim() || !this.customer.phone?.trim()) {
@@ -648,14 +629,12 @@ export class PartnerFormComponent implements OnInit {
   private findDuplicateCustomer(): any | null {
     const name = (this.customer.customerName || '').trim().toLowerCase();
     const countryId = Number(this.customer.countryId);
-    const locationId = Number(this.customer.locationId);
-    if (!name || !countryId || !locationId) return null;
+    if (!name || !countryId) return null;
     return this.existingCustomers.find(row => {
       const rowId = Number(row?.customerId ?? row?.CustomerId ?? row?.id ?? row?.Id);
       if (this.isEdit && rowId === Number(this.customer.customerId ?? this.id)) return false;
       return (String(row?.customerName ?? row?.CustomerName ?? '').trim().toLowerCase() === name)
-        && Number(row?.countryId ?? row?.CountryId) === countryId
-        && Number(row?.locationId ?? row?.LocationId) === locationId;
+        && Number(row?.countryId ?? row?.CountryId) === countryId;
     }) || null;
   }
 
