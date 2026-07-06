@@ -1,5 +1,6 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
@@ -7,6 +8,10 @@ import Swal from 'sweetalert2';
 interface CnFormLine {
   doLineId: number | null;
   siId: number | null;
+  // Dropdown value: item id for a plain item, or "S<itemSetId>" for a package option.
+  selValue: string | number | null;
+  isSet: boolean;
+  itemSetId: number | null;
   itemId: number | null;
   itemName: string;
   uom: string | null;
@@ -59,7 +64,10 @@ export class CreditNoteFormComponent implements OnInit {
   // Dropdown options
   doOptions: any[] = [];
   itemOptions: any[] = [];
-  availableItems: any[] = [];   // delivered items of the selected DO (dropdown pool)
+  availableItems: any[] = [];   // dropdown pool = package options + non-package delivered items
+  private rawDoLines: any[] = [];        // delivered lines of the selected DO
+  packageOptions: any[] = [];            // packages of the source SO (header holds the money)
+  private packageChildIds = new Set<number>(); // item ids that belong to any package (hidden individually)
   reasonOptions: any[] = [];
   dispositions = [
     { id: 1, name: 'RESTOCK' },
@@ -141,10 +149,14 @@ export class CreditNoteFormComponent implements OnInit {
   }
 
   private mapLine(l: any): CnFormLine {
+    const itemId = l.itemId ?? l.ItemId ?? null;
     return {
       doLineId: l.doLineId ?? l.DoLineId ?? null,
       siId: l.siId ?? l.SiId ?? this.siId,
-      itemId: l.itemId ?? l.ItemId ?? null,
+      selValue: itemId,
+      isSet: false,
+      itemSetId: null,
+      itemId,
       itemName: l.itemName ?? l.ItemName ?? '',
       uom: l.uom ?? l.Uom ?? null,
       deliveredQty: Number(l.deliveredQty ?? l.DeliveredQty ?? 0),
@@ -179,9 +191,13 @@ export class CreditNoteFormComponent implements OnInit {
     // Load the DO's delivered items into the dropdown pool (NOT the table).
     this.lines = [];
     this.availableItems = [];
+    this.rawDoLines = [];
+    this.packageOptions = [];
+    this.packageChildIds.clear();
+
     this.svc.getCreditNoteDoLines(this.doId).subscribe({
       next: res => {
-        this.availableItems = this.svc.unwrap(res).map((r: any) => ({
+        this.rawDoLines = this.svc.unwrap(res).map((r: any) => ({
           doLineId: r.doLineId ?? r.DoLineId ?? r.id ?? null,
           itemId: r.itemId ?? r.ItemId ?? null,
           itemName: r.itemName ?? r.ItemName ?? '',
@@ -196,9 +212,104 @@ export class CreditNoteFormComponent implements OnInit {
           supplierId: r.supplierId ?? r.SupplierId ?? null,
           binId: r.binId ?? r.BinId ?? null
         }));
+        this.buildAvailableItems();
       },
-      error: () => { this.availableItems = []; }
+      error: () => { this.rawDoLines = []; this.buildAvailableItems(); }
     });
+
+    // Package options are derived from the source SO's item sets (they carry the money).
+    this.loadPackageOptionsForDo(raw);
+  }
+
+  // ── Package dropdown options (derived from the source SO's SalesOrderItemSetMap) ──
+  private loadPackageOptionsForDo(raw: any): void {
+    const soId = Number(raw?.soId ?? raw?.SoId ?? 0);
+    if (soId > 0) { this.fetchSoPackages(soId); return; }
+    if (!this.doId) return;
+    this.svc.getDeliveryOrderById(this.doId).subscribe({
+      next: res => {
+        const d = this.svc.unwrapOne(res);
+        const h = d?.header ?? d;
+        const sid = Number(h?.soId ?? h?.SoId ?? 0);
+        if (sid > 0) this.fetchSoPackages(sid);
+      },
+      error: () => { /* leave without packages */ }
+    });
+  }
+
+  private fetchSoPackages(soId: number): void {
+    this.svc.getSalesOrderById(soId).subscribe({
+      next: soRes => {
+        const so = this.svc.unwrapOne(soRes);
+        const apiSets = so?.itemSets ?? so?.ItemSets ?? [];
+        const sets = (apiSets || []).map((x: any) => ({
+          id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0),
+          setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim(),
+          qty: Number(x.qty ?? x.Qty ?? 0) || 0,
+          unitPrice: Number(x.unitPrice ?? x.UnitPrice ?? 0) || 0,
+          discountPct: Number(x.discountPct ?? x.DiscountPct ?? 0) || 0,
+          taxMode: String(x.taxMode ?? x.TaxMode ?? 'Standard-Rated')
+        })).filter((s: any) => s.id > 0);
+
+        if (!sets.length) { this.packageOptions = []; this.packageChildIds.clear(); this.buildAvailableItems(); return; }
+
+        forkJoin(sets.map((s: any) => this.svc.getItemSetById(s.id))).subscribe({
+          next: (responses: any[]) => {
+            this.packageChildIds.clear();
+            this.packageOptions = sets.map((s: any, idx: number) => {
+              const sdto = this.svc.unwrapOne(responses[idx]);
+              const rows: any[] = sdto?.items ?? sdto?.itemSetItems ?? sdto?.lines ?? [];
+              const childItemIds = rows.map((r: any) => Number(r.itemId ?? r.ItemId ?? 0)).filter((n: number) => n > 0);
+              childItemIds.forEach((n: number) => this.packageChildIds.add(n));
+              const standard = /standard/i.test(s.taxMode);
+              return {
+                itemSetId: s.id,
+                setName: s.setName || String(sdto?.setName ?? `Set #${s.id}`),
+                qty: s.qty, unitPrice: s.unitPrice, discountPct: s.discountPct,
+                gstPct: standard ? 9 : 0, tax: s.taxMode, childItemIds
+              };
+            });
+            this.buildAvailableItems();
+          },
+          error: () => { this.packageOptions = []; this.packageChildIds.clear(); this.buildAvailableItems(); }
+        });
+      },
+      error: () => { /* leave without packages */ }
+    });
+  }
+
+  // Dropdown pool = package options (money on the package) + individual items that are
+  // NOT part of any package (a package child returned alone would carry 0 price).
+  private buildAvailableItems(): void {
+    const pkgOpts = this.packageOptions.map((p: any) => {
+      const childRows = this.rawDoLines.filter((r: any) => p.childItemIds.includes(Number(r.itemId)));
+      const first = childRows[0] ?? {};
+      return {
+        value: `S${p.itemSetId}`,
+        label: p.setName,
+        isSet: true,
+        itemSetId: p.itemSetId,
+        itemId: first.itemId ?? p.childItemIds[0] ?? null,   // real child id → GL maps it to the package COA
+        itemName: p.setName,
+        uom: first.uom ?? '',
+        deliveredQty: p.qty || Number(first.deliveredQty ?? 0),
+        unitPrice: p.unitPrice,
+        discountPct: p.discountPct,
+        gstPct: p.gstPct,
+        tax: p.tax,
+        taxCodeId: null,
+        doLineId: first.doLineId ?? null,
+        warehouseId: first.warehouseId ?? null,
+        supplierId: first.supplierId ?? null,
+        binId: first.binId ?? null
+      };
+    });
+
+    const itemOpts = this.rawDoLines
+      .filter((r: any) => !this.packageChildIds.has(Number(r.itemId)))
+      .map((r: any) => ({ value: r.itemId, label: r.itemName, isSet: false, itemSetId: null, ...r }));
+
+    this.availableItems = [...pkgOpts, ...itemOpts];
   }
 
   private clearDo(): void {
@@ -209,12 +320,17 @@ export class CreditNoteFormComponent implements OnInit {
     this.customerId = null;
     this.customerName = '';
     this.lines = [];
+    this.availableItems = [];
+    this.rawDoLines = [];
+    this.packageOptions = [];
+    this.packageChildIds.clear();
   }
 
   // ── Lines ─────────────────────────────────────────────
   addLine(): void {
     this.lines.push({
-      doLineId: null, siId: this.siId, itemId: null, itemName: '', uom: null,
+      doLineId: null, siId: this.siId, selValue: null, isSet: false, itemSetId: null,
+      itemId: null, itemName: '', uom: null,
       deliveredQty: 0, returnedQty: 0, unitPrice: 0, discountPct: 0, gstPct: 0,
       tax: null, taxCodeId: null, lineNet: 0, taxAmount: 0, reasonId: null, dispositionId: 1,
       warehouseId: null, supplierId: null, binId: null
@@ -222,10 +338,13 @@ export class CreditNoteFormComponent implements OnInit {
   }
 
   onItemSelect(line: CnFormLine): void {
-    const src = this.availableItems.find(o => String(o.itemId) === String(line.itemId));
+    const src = this.availableItems.find(o => String(o.value) === String(line.selValue));
     if (src) {
+      line.isSet = !!src.isSet;
+      line.itemSetId = src.itemSetId ?? null;
+      line.itemId = src.itemId;              // real item id (package → its child) so GL maps correctly
       line.doLineId = src.doLineId;
-      line.itemName = src.itemName;
+      line.itemName = src.itemName ?? src.label;
       line.uom = src.uom;
       line.deliveredQty = src.deliveredQty;
       line.unitPrice = src.unitPrice;

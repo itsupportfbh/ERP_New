@@ -1,5 +1,6 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
@@ -19,6 +20,10 @@ interface SiLine {
   taxCodeId: number | null;
   lineAmount: number;
   taxAmount: number;
+  // package grouping (derived from the source SO's item sets)
+  isSetHeader?: boolean;
+  itemSetId?: number | null;
+  setName?: string;
 }
 
 @Component({
@@ -55,6 +60,19 @@ export class SalesInvoiceFormComponent implements OnInit {
 
   // Lines
   lines: SiLine[] = [];
+
+  // Collapsed package sets (by itemSetId) — child lines hide when collapsed.
+  collapsedSets = new Set<number>();
+  toggleSet(itemSetId: number | null | undefined): void {
+    const id = Number(itemSetId ?? 0);
+    if (!id) return;
+    if (this.collapsedSets.has(id)) this.collapsedSets.delete(id);
+    else this.collapsedSets.add(id);
+  }
+  isSetCollapsed(itemSetId: number | null | undefined): boolean {
+    return this.collapsedSets.has(Number(itemSetId ?? 0));
+  }
+  isPackageChild(l: SiLine): boolean { return !!l.itemSetId && !l.isSetHeader; }
 
   // Dropdown data
   sourceTypeOptions = [
@@ -169,6 +187,8 @@ export class SalesInvoiceFormComponent implements OnInit {
           const first = rows[0];
           this.customerName = first.customerName ?? first.CustomerName ?? first.customer ?? '';
         }
+        // group lines under their package header (derived from the source SO's item sets)
+        this.loadPackageGrouping();
       },
       error: () => {
         void Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load source lines. Please try again.', confirmButtonColor: '#16a34a' });
@@ -202,6 +222,102 @@ export class SalesInvoiceFormComponent implements OnInit {
     return { sourceLineId: null, itemId: null, itemName: '', description: '', ledgerId: null,
              uom: '', qty: 1, unitPrice: 0, discountPct: 0, gstPct: 0, tax: '', taxCodeId: null,
              lineAmount: 0, taxAmount: 0 };
+  }
+
+  // ── Package grouping (derived from the source SO's SalesOrderItemSetMap) ──
+  private loadPackageGrouping(done?: () => void): void {
+    const finish = () => { if (done) done(); };
+    if (!this.sourceId) { finish(); return; }
+
+    // From SO → the source id IS the SO id.
+    if (this.sourceType === 1) { this.fetchSoAndGroup(Number(this.sourceId), finish); return; }
+
+    // From DO → get the SO id straight from the selected DO option (no extra round-trip).
+    const opt = this.sourceDocOptions.find(o => String(o.value) === String(this.sourceId));
+    const soId = Number(opt?.raw?.soId ?? opt?.raw?.SoId ?? 0);
+    if (soId > 0) { this.fetchSoAndGroup(soId, finish); return; }
+
+    // fallback: resolve the SO via the DO only when the option didn't carry it
+    this.svc.getDeliveryOrderById(this.sourceId).subscribe({
+      next: res => {
+        const d = this.svc.unwrapOne(res);
+        const h = d?.header ?? d;
+        const sid = Number(h?.soId ?? h?.SoId ?? 0);
+        if (sid > 0) { this.fetchSoAndGroup(sid, finish); } else { finish(); }
+      },
+      error: () => { finish(); }
+    });
+  }
+
+  private fetchSoAndGroup(soId: number, done?: () => void): void {
+    this.svc.getSalesOrderById(soId).subscribe({
+      next: soRes => this.applyPackageGrouping(this.svc.unwrapOne(soRes), done),
+      error: () => { if (done) done(); }
+    });
+  }
+
+  private applyPackageGrouping(soDto: any, done?: () => void): void {
+    const finish = () => { if (done) done(); };
+    const apiItemSets = soDto?.itemSets ?? soDto?.ItemSets ?? [];
+    const sets = (apiItemSets || [])
+      .map((x: any) => ({
+        id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0),
+        setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim(),
+        qty: Number(x.qty ?? x.Qty ?? 0) || 0,
+        unitPrice: Number(x.unitPrice ?? x.UnitPrice ?? 0) || 0,
+        discountPct: Number(x.discountPct ?? x.DiscountPct ?? 0) || 0,
+        taxMode: String(x.taxMode ?? x.TaxMode ?? 'Standard-Rated')
+      }))
+      .filter((s: any) => s.id > 0);
+    if (!sets.length) { finish(); return; }
+
+    forkJoin(sets.map((s: any) => this.svc.getItemSetById(s.id))).subscribe({
+      next: (responses: any[]) => {
+        const itemIdToSet = new Map<number, { itemSetId: number; setName: string }>();
+        responses.forEach((res: any, idx: number) => {
+          const setId = sets[idx].id;
+          const sdto = this.svc.unwrapOne(res);
+          const setName = sets[idx].setName || String(sdto?.setName ?? `Set #${setId}`);
+          const rows: any[] = sdto?.items ?? sdto?.itemSetItems ?? sdto?.lines ?? [];
+          for (const r of rows) {
+            const itemId = Number(r.itemId ?? r.ItemId ?? 0);
+            if (itemId && !itemIdToSet.has(itemId)) itemIdToSet.set(itemId, { itemSetId: setId, setName });
+          }
+        });
+
+        for (const l of this.lines) {
+          if (l.isSetHeader) continue;
+          const m = itemIdToSet.get(Number(l.itemId));
+          if (m) { l.itemSetId = m.itemSetId; l.setName = m.setName; }
+        }
+
+        const items = this.lines.filter(l => !l.isSetHeader);
+        const rebuilt: SiLine[] = [];
+        this.collapsedSets.clear();
+        for (const s of sets) {
+          const group = items.filter(l => Number(l.itemSetId) === s.id);
+          if (!group.length) continue;
+          const standard = /standard/i.test(s.taxMode);
+          const gst = standard ? (group[0]?.gstPct || 9) : 0;
+          const header: SiLine = {
+            sourceLineId: null, itemId: null, itemName: s.setName || `Set #${s.id}`,
+            description: '', ledgerId: null, uom: '',
+            qty: s.qty, unitPrice: s.unitPrice, discountPct: s.discountPct,
+            gstPct: gst, tax: s.taxMode, taxCodeId: null, lineAmount: 0, taxAmount: 0,
+            isSetHeader: true, itemSetId: s.id, setName: s.setName
+          };
+          this.recalcLine(header);
+          rebuilt.push(header);
+          for (const g of group) rebuilt.push(g);
+          this.collapsedSets.add(s.id); // start collapsed
+        }
+        for (const l of items.filter(l => !l.itemSetId)) rebuilt.push(l);
+        this.lines = rebuilt;
+        this.recalcLines();
+        finish();
+      },
+      error: () => { finish(); }
+    });
   }
 
   addLine(): void { this.lines.push(this.emptyLine()); }
@@ -351,7 +467,9 @@ export class SalesInvoiceFormComponent implements OnInit {
           taxAmount: Number(r.taxAmount ?? 0)
         }));
         this.recalcLines();
-        this.loading = false;
+        // Keep the loader visible while the package grouping resolves so the user sees a spinner
+        // instead of the flat, zero-value child line flickering before it regroups.
+        this.loadPackageGrouping(() => { this.loading = false; });
       },
       error: () => {
         this.loading = false;
@@ -391,7 +509,9 @@ export class SalesInvoiceFormComponent implements OnInit {
       total: this.grandTotal,
       remarks: (this.remarks || '').trim() || '-',
       taxAmount: this.taxAmount,
-      lines: this.lines.map(l => ({
+      // package header rows are display-only; the package values are persisted
+      // to SalesInvoiceItemSetMap by the backend (derived from the SO's package map)
+      lines: this.lines.filter(l => !l.isSetHeader).map(l => ({
         sourceLineId: l.sourceLineId ?? null,
         itemId: l.itemId,
         itemName: l.itemName ?? null,

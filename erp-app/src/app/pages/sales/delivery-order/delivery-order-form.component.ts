@@ -238,7 +238,8 @@ export class DeliveryOrderFormComponent implements OnInit {
     const sets = (apiItemSets || [])
       .map((x: any) => ({
         id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0),
-        setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim()
+        setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim(),
+        qty: Number(x.qty ?? x.Qty ?? 0) || 0
       }))
       .filter((s: any) => s.id > 0);
     if (!sets.length) return;
@@ -263,25 +264,56 @@ export class DeliveryOrderFormComponent implements OnInit {
           if (m) { l.itemSetId = m.itemSetId; l.setName = m.setName; }
         }
 
-        // rebuild: each package header followed by ITS delivery lines, then loose lines
+        // rebuild: each package header (holds Ordered/Pending/Deliver) + its child lines, then loose lines
         const items = this.lines.filter(l => !l.isSetHeader);
         const rebuilt: DoLine[] = [];
+        this.collapsedSets.clear();
         for (const s of sets) {
           const group = items.filter(l => Number(l.itemSetId) === s.id);
           if (!group.length) continue;
-          rebuilt.push({
+          // package qty = SalesOrderItemSetMap.Qty, fallback to the max child pending
+          const pkgOrdered = s.qty > 0 ? s.qty : Math.max(...group.map(g => g.orderedQty || 0), 0);
+          const pkgPending = s.qty > 0 ? s.qty : Math.max(...group.map(g => g.pendingQty || 0), 0);
+          const header: DoLine = {
             soLineId: null, itemId: null, itemName: s.setName || `Set #${s.id}`, uom: '',
-            orderedQty: 0, pendingQty: 0, deliverQty: 0, notes: '',
+            orderedQty: pkgOrdered, pendingQty: pkgPending, deliverQty: pkgPending, notes: '',
             warehouseId: null, binId: null, supplierId: null,
             isSetHeader: true, itemSetId: s.id, setName: s.setName
-          });
+          };
+          rebuilt.push(header);
           for (const g of group) rebuilt.push(g);
+          // flow the package deliver qty down to its child lines (children are display-only)
+          this.flowSetDeliverQty(header, group);
+          // start collapsed — user expands with the + icon
+          this.collapsedSets.add(s.id);
         }
         for (const l of items.filter(l => !l.itemSetId)) rebuilt.push(l);
         this.lines = rebuilt;
       },
       error: () => { /* leave lines ungrouped */ }
     });
+  }
+
+  // Distribute the package header's deliver qty across its child lines
+  // (child qty = pkgDeliver × childOrdered / pkgOrdered, capped at child pending).
+  private flowSetDeliverQty(header: DoLine, kids: DoLine[]): void {
+    const pkgDeliver = Math.max(0, Number(header.deliverQty) || 0);
+    const pkgOrdered = Number(header.orderedQty) || 0;
+    for (const k of kids) {
+      const ratio = pkgOrdered > 0 ? (Number(k.orderedQty) || 0) / pkgOrdered : 1;
+      const q = Math.round(pkgDeliver * ratio);
+      k.deliverQty = Math.min(q, Number(k.pendingQty) || q);
+    }
+  }
+
+  // Package header deliver qty changed → clamp and flow to its child lines.
+  onSetDeliverChange(header: DoLine): void {
+    let v = Number(header.deliverQty);
+    if (isNaN(v) || v < 0) v = 0;
+    if (v > header.pendingQty) v = header.pendingQty;
+    header.deliverQty = v;
+    const kids = this.lines.filter(l => !l.isSetHeader && Number(l.itemSetId) === Number(header.itemSetId));
+    this.flowSetDeliverQty(header, kids);
   }
 
   private resetSo(): void {
@@ -297,7 +329,13 @@ export class DeliveryOrderFormComponent implements OnInit {
   }
 
   get totalDeliverQty(): number {
-    return this.lines.reduce((s, l) => s + (Number(l.deliverQty) || 0), 0);
+    // exclude package header rows — the qty is counted on the child delivery lines
+    return this.lines.filter(l => !l.isSetHeader).reduce((s, l) => s + (Number(l.deliverQty) || 0), 0);
+  }
+
+  // actual delivery lines (excludes package header rows)
+  get deliveryLineCount(): number {
+    return this.lines.filter(l => !l.isSetHeader).length;
   }
 
   // ── Edit load ─────────────────────────────────────────
@@ -348,6 +386,19 @@ export class DeliveryOrderFormComponent implements OnInit {
             warehouseId: null, binId: null, supplierId: null
           } as DoLine;
         });
+
+        // ensure this DO's own Sales Order is selectable (it's excluded from the
+        // "available for delivery" list) and rebuild the package grouping from it.
+        if (this.soId) {
+          if (!this.soOptions.some(o => o.id === this.soId)) {
+            this.soOptions = [{ id: this.soId, label: `${this.soNo} — ${this.customerName}`.trim(), raw: {} }, ...this.soOptions];
+          }
+          this.svc.getSalesOrderById(this.soId).subscribe({
+            next: soRes => this.applyPackageGrouping(this.svc.unwrapOne(soRes)),
+            error: () => { /* leave lines ungrouped */ }
+          });
+        }
+
         this.loading = false;
       },
       error: () => { this.loading = false; }
@@ -457,7 +508,7 @@ export class DeliveryOrderFormComponent implements OnInit {
       ReceivedPersonMobileNo: this.receivedPersonMobileNo || null,
       ReceivedSignature: this.receivedSignature || null,
       Lines: this.lines
-        .filter(l => (Number(l.deliverQty) || 0) > 0)
+        .filter(l => !l.isSetHeader && (Number(l.deliverQty) || 0) > 0)
         .map(l => ({
           SoLineId: l.soLineId ?? null,
           PackLineId: null,

@@ -73,32 +73,63 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let l of lines; let i = index">
-              <td class="si-item">
-                <erp-dropdown [(ngModel)]="l.itemId"
-                  [items]="itemOptions" bindLabel="label" bindValue="value"
-                  placeholder="Select item…" (ngModelChange)="onItemSelect(l)"></erp-dropdown>
-              </td>
-              <td><input class="mf-input si-cell" [(ngModel)]="l.description" name="desc{{i}}" placeholder="-" /></td>
-              <td style="display:none">
-                <erp-dropdown [(ngModel)]="l.ledgerId"
-                  [items]="ledgerOptions" bindLabel="label" bindValue="value"
-                  placeholder="Select ledger…"></erp-dropdown>
-              </td>
-              <td>{{ l.uom || '—' }}</td>
-              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.qty" name="qty{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
-              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.unitPrice" name="price{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
-              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.discountPct" name="disc{{i}}" min="0" max="100" (ngModelChange)="recalcLine(l)" /></td>
-              <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.gstPct" name="gst{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
-              <td class="ta-right">{{ l.taxAmount | money:currencyName }}</td>
-              <td class="ta-right si-amt">{{ l.lineAmount | money:currencyName }}</td>
-              <td class="ta-center">
-                <button class="si-del" type="button" (click)="removeLine(i)" title="Remove">&times;</button>
-              </td>
+            <tr *ngIf="loading">
+              <td colspan="11" class="si-empty">Loading lines…</td>
             </tr>
+            <ng-container *ngIf="!loading">
+            <ng-container *ngFor="let l of lines; let i = index">
+              <!-- Package header row (holds Qty / Unit Price / Disc / GST / Amount) -->
+              <tr *ngIf="l.isSetHeader" class="si-setRow">
+                <td class="si-item">
+                  <button type="button" class="si-setToggle" (click)="toggleSet(l.itemSetId)"
+                    [title]="isSetCollapsed(l.itemSetId) ? 'Expand package items' : 'Collapse package items'">
+                    {{ isSetCollapsed(l.itemSetId) ? '+' : '−' }}
+                  </button>
+                  <span class="si-setTag">Package</span> {{ l.itemName }}
+                </td>
+                <td>{{ l.description || '-' }}</td>
+                <td style="display:none"></td>
+                <td>—</td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.qty" name="hqty{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.unitPrice" name="hprice{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.discountPct" name="hdisc{{i}}" min="0" max="100" (ngModelChange)="recalcLine(l)" /></td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.gstPct" name="hgst{{i}}" min="0" (ngModelChange)="recalcLine(l)" /></td>
+                <td class="ta-right">{{ l.taxAmount | money:currencyName }}</td>
+                <td class="ta-right si-amt">{{ ((l.lineAmount || 0) + (l.taxAmount || 0)) | money:currencyName }}</td>
+                <td class="ta-center">
+                  <button class="si-del" type="button" (click)="removeLine(i)" title="Remove">&times;</button>
+                </td>
+              </tr>
+              <!-- Item row (package children show UOM/Qty only; money is disabled) -->
+              <tr *ngIf="!l.isSetHeader && !(l.itemSetId && isSetCollapsed(l.itemSetId))" [class.si-fromSet]="l.itemSetId">
+                <td class="si-item">
+                  <span *ngIf="l.itemSetId">{{ l.itemName }}</span>
+                  <erp-dropdown *ngIf="!l.itemSetId" [(ngModel)]="l.itemId"
+                    [items]="itemOptions" bindLabel="label" bindValue="value"
+                    placeholder="Select item…" (ngModelChange)="onItemSelect(l)"></erp-dropdown>
+                </td>
+                <td><input class="mf-input si-cell" [(ngModel)]="l.description" name="desc{{i}}" placeholder="-" [readonly]="!!l.itemSetId" [class.si-locked]="l.itemSetId" /></td>
+                <td style="display:none">
+                  <erp-dropdown [(ngModel)]="l.ledgerId"
+                    [items]="ledgerOptions" bindLabel="label" bindValue="value"
+                    placeholder="Select ledger…"></erp-dropdown>
+                </td>
+                <td>{{ l.uom || '—' }}</td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.qty" name="qty{{i}}" min="0" (ngModelChange)="recalcLine(l)" [readonly]="!!l.itemSetId" [class.si-locked]="l.itemSetId" /></td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.unitPrice" name="price{{i}}" min="0" (ngModelChange)="recalcLine(l)" [readonly]="!!l.itemSetId" [class.si-locked]="l.itemSetId" /></td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.discountPct" name="disc{{i}}" min="0" max="100" (ngModelChange)="recalcLine(l)" [readonly]="!!l.itemSetId" [class.si-locked]="l.itemSetId" /></td>
+                <td class="ta-right"><input type="number" class="mf-input si-cell si-num" [(ngModel)]="l.gstPct" name="gst{{i}}" min="0" (ngModelChange)="recalcLine(l)" [readonly]="!!l.itemSetId" [class.si-locked]="l.itemSetId" /></td>
+                <td class="ta-right">{{ l.taxAmount | money:currencyName }}</td>
+                <td class="ta-right si-amt">{{ ((l.lineAmount || 0) + (l.taxAmount || 0)) | money:currencyName }}</td>
+                <td class="ta-center">
+                  <button *ngIf="!l.itemSetId" class="si-del" type="button" (click)="removeLine(i)" title="Remove">&times;</button>
+                </td>
+              </tr>
+            </ng-container>
             <tr *ngIf="!lines.length">
               <td colspan="11" class="si-empty">No lines. Select a source document to load items or click "Add Line".</td>
             </tr>
+            </ng-container>
           </tbody>
         </table>
       </div>
