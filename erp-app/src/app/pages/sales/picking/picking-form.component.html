@@ -72,35 +72,55 @@
         <tr>
           <th>Item</th>
           <th>Warehouse</th>
-          <th>Bin</th>
           <th class="ta-right">Qty</th>
           <th>Pack to Carton</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let r of rows; let i = index">
-          <td>
-            <div class="pk-item">{{ r.itemName }}</div>
-            <div class="pk-itemsub" *ngIf="r.uom">· {{ r.uom }}</div>
-          </td>
-          <td>{{ r.warehouseName || '—' }}</td>
-          <td>{{ r.binName || '—' }}</td>
-          <td class="ta-right">
-            <input type="number" class="mf-input pk-qty" [(ngModel)]="r.qty" name="qty{{i}}" min="0" />
-          </td>
-          <td>
-            <erp-dropdown [(ngModel)]="r.cartonId"
-              [items]="cartonOptions" bindLabel="name" bindValue="id"
-              placeholder="Select carton…"></erp-dropdown>
-          </td>
-        </tr>
+        <ng-container *ngFor="let r of rows; let i = index">
+          <!-- Package header row (expand/collapse) -->
+          <tr *ngIf="r.isSetHeader" class="pk-setRow">
+            <td>
+              <button type="button" class="pk-setToggle" (click)="toggleSet(r.itemSetId)"
+                [title]="isSetCollapsed(r.itemSetId) ? 'Expand package items' : 'Collapse package items'">
+                {{ isSetCollapsed(r.itemSetId) ? '+' : '−' }}
+              </button>
+              <span class="pk-setTag">Package</span> {{ r.itemName }}
+            </td>
+            <td>—</td>
+            <td class="ta-right">{{ r.qty }}</td>
+            <td>
+              <erp-dropdown [(ngModel)]="r.cartonId"
+                [items]="cartonOptions" bindLabel="name" bindValue="id"
+                placeholder="Select carton…"></erp-dropdown>
+            </td>
+          </tr>
+          <!-- Item row (package children hide when the package is collapsed) -->
+          <tr *ngIf="!r.isSetHeader && !(r.itemSetId && isSetCollapsed(r.itemSetId))" [class.pk-childRow]="r.itemSetId">
+            <td>
+              <div class="pk-item">{{ r.itemName }}</div>
+              <div class="pk-itemsub" *ngIf="r.uom">· {{ r.uom }}</div>
+            </td>
+            <td>{{ r.warehouseName || '—' }}</td>
+            <td class="ta-right">
+              <input type="number" class="mf-input pk-qty" [(ngModel)]="r.qty" name="qty{{i}}" min="0" />
+            </td>
+            <td>
+              <!-- Package children are packed via their package header; standalone items pick their own carton -->
+              <erp-dropdown *ngIf="!r.itemSetId" [(ngModel)]="r.cartonId"
+                [items]="cartonOptions" bindLabel="name" bindValue="id"
+                placeholder="Select carton…"></erp-dropdown>
+              <span *ngIf="r.itemSetId" class="pk-muted">—</span>
+            </td>
+          </tr>
+        </ng-container>
         <tr *ngIf="!rows.length">
-          <td colspan="5" class="pk-empty">Select a Sales Order to load its lines.</td>
+          <td colspan="4" class="pk-empty">Select a Sales Order to load its lines.</td>
         </tr>
       </tbody>
       <tfoot *ngIf="rows.length">
         <tr>
-          <td colspan="3" class="pk-totlabel">Total Qty</td>
+          <td colspan="2" class="pk-totlabel">Total Qty</td>
           <td class="ta-right pk-totval">{{ totalQty }}</td>
           <td></td>
         </tr>
