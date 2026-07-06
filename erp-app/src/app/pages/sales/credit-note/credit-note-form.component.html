@@ -64,8 +64,8 @@
           <tr *ngFor="let l of lines; let i = index">
             <td>
               <span *ngIf="isEdit" class="cn-itemname">{{ l.itemName || '—' }}</span>
-              <erp-dropdown *ngIf="!isEdit" [(ngModel)]="l.itemId"
-                [items]="availableItems" bindLabel="itemName" bindValue="itemId"
+              <erp-dropdown *ngIf="!isEdit" [(ngModel)]="l.selValue"
+                [items]="availableItems" bindLabel="label" bindValue="value"
                 placeholder="Select item…" (ngModelChange)="onItemSelect(l)"></erp-dropdown>
             </td>
             <td>{{ l.uom || '—' }}</td>

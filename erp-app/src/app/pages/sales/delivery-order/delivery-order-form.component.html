@@ -99,7 +99,7 @@
         <div class="do-sec-title">Items from Sales Order</div>
         <div class="do-sec-sub">Select delivery quantity for each line</div>
       </div>
-      <div class="do-pill" *ngIf="lines.length">Lines: {{ lines.length }} &middot; Total Deliver: {{ totalDeliverQty }}</div>
+      <div class="do-pill" *ngIf="lines.length">Lines: {{ deliveryLineCount }} &middot; Total Deliver: {{ totalDeliverQty }}</div>
     </div>
 
     <table class="do-table">
@@ -115,28 +115,41 @@
       </thead>
       <tbody>
         <ng-container *ngFor="let l of lines; let i = index">
-          <!-- Package header row (grouping label + expand/collapse) -->
+          <!-- Package header row (holds Ordered/Pending/Deliver Qty/Notes) -->
           <tr *ngIf="l.isSetHeader" class="do-setRow">
-            <td colspan="6" class="do-setName">
+            <td class="do-setName">
               <button type="button" class="do-setToggle" (click)="toggleSet(l.itemSetId)"
                 [title]="isSetCollapsed(l.itemSetId) ? 'Expand package items' : 'Collapse package items'">
                 {{ isSetCollapsed(l.itemSetId) ? '+' : '−' }}
               </button>
               <span class="do-setTag">Package</span> {{ l.itemName }}
             </td>
-          </tr>
-          <!-- Delivery line (hidden when its package is collapsed) -->
-          <tr *ngIf="!l.isSetHeader && !(l.itemSetId && isSetCollapsed(l.itemSetId))" [class.do-fromSet]="l.itemSetId">
-            <td class="do-item">{{ l.itemName }}</td>
-            <td>{{ l.uom || '—' }}</td>
+            <td>—</td>
             <td class="ta-right">{{ l.orderedQty }}</td>
             <td class="ta-right">{{ l.pendingQty }}</td>
             <td class="ta-right">
-              <input type="number" class="mf-input do-qty" [(ngModel)]="l.deliverQty" name="dq{{i}}"
-                min="0" [max]="l.pendingQty" (ngModelChange)="clampQty(l)" />
+              <input type="number" class="mf-input do-qty" [(ngModel)]="l.deliverQty" name="dqh{{i}}"
+                min="0" [max]="l.pendingQty" (ngModelChange)="onSetDeliverChange(l)" />
             </td>
             <td>
-              <input type="text" class="mf-input" [(ngModel)]="l.notes" name="nt{{i}}" placeholder="Optional notes" />
+              <input type="text" class="mf-input" [(ngModel)]="l.notes" name="nth{{i}}" placeholder="Optional notes" />
+            </td>
+          </tr>
+          <!-- Delivery line (package children show UOM only; the rest is disabled) -->
+          <tr *ngIf="!l.isSetHeader && !(l.itemSetId && isSetCollapsed(l.itemSetId))" [class.do-fromSet]="l.itemSetId">
+            <td class="do-item">{{ l.itemName }}</td>
+            <td>{{ l.uom || '—' }}</td>
+            <td class="ta-right">{{ l.itemSetId ? '' : l.orderedQty }}</td>
+            <td class="ta-right">{{ l.itemSetId ? '' : l.pendingQty }}</td>
+            <td class="ta-right">
+              <input type="number" class="mf-input do-qty" [(ngModel)]="l.deliverQty" name="dq{{i}}"
+                min="0" [max]="l.pendingQty" (ngModelChange)="clampQty(l)"
+                [readonly]="!!l.itemSetId" [class.do-locked]="!!l.itemSetId"
+                [title]="l.itemSetId ? 'Set at package level' : ''" />
+            </td>
+            <td>
+              <input type="text" class="mf-input" [(ngModel)]="l.notes" name="nt{{i}}" placeholder="Optional notes"
+                [readonly]="!!l.itemSetId" [class.do-locked]="!!l.itemSetId" />
             </td>
           </tr>
         </ng-container>

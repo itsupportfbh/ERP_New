@@ -16,6 +16,7 @@
   border-radius: 6px; padding: 2px 8px; margin-right: 8px;
 }
 .do-fromSet td.do-item { padding-left: 22px; }
+.do-locked { background: #f1f1f1 !important; color: #777 !important; cursor: not-allowed; }
 
 .do-page { display: flex; flex-direction: column; flex: 1; gap: 14px; padding: 20px 20px 40px; overflow-y: auto; }
 .do-back { flex-shrink: 0; }
