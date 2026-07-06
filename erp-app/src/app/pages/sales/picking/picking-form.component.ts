@@ -17,6 +17,10 @@ interface PickRow {
   supplierId: number | null;
   qty: number | null;
   cartonId: number | null;
+  // Package grouping (display only): a header row carries the package name; children hold pick data.
+  isSetHeader?: boolean;
+  itemSetId?: number | null;
+  setName?: string;
 }
 
 interface Carton { id: number; name: string; }
@@ -53,6 +57,7 @@ export class PickingFormComponent implements OnInit {
   // Lines
   rows: PickRow[] = [];
   cartonOptions: Carton[] = [];
+  collapsedSets = new Set<number>();
 
   // Sales order options
   soOptions: any[] = [];
@@ -126,6 +131,9 @@ export class PickingFormComponent implements OnInit {
 
         this.cartonOptions = this.buildCartons(this.rows.length);
 
+        // Group package lines under an "Executive Lunch Buffet" style header (collapsed by default).
+        this.applyPackageGrouping(h.itemSets ?? h.ItemSets ?? []);
+
         this.barCode = c.barCode ?? c.BarCode ?? '';
         this.qrText = c.qrText ?? c.QrText ?? '';
         this.barCodeSrc = c.barCodeSrcBase64 ?? c.BarCodeSrcBase64 ?? '';
@@ -155,7 +163,80 @@ export class PickingFormComponent implements OnInit {
   }
 
   get totalQty(): number {
-    return this.rows.reduce((s, r) => s + (+(r.qty ?? 0) || 0), 0);
+    // Count a package once (its header qty) plus standalone items; exclude package children.
+    return this.rows
+      .filter(r => r.isSetHeader || !r.itemSetId)
+      .reduce((s, r) => s + (+(r.qty ?? 0) || 0), 0);
+  }
+
+  // ── Package grouping (display only) ───────────────────
+  isPackageChild(r: PickRow): boolean { return !!r.itemSetId && !r.isSetHeader; }
+  isSetCollapsed(id: number | null | undefined): boolean { return this.collapsedSets.has(Number(id)); }
+  toggleSet(id: number | null | undefined): void {
+    const key = Number(id);
+    if (this.collapsedSets.has(key)) this.collapsedSets.delete(key);
+    else this.collapsedSets.add(key);
+  }
+
+  // Package children are packed via their header's carton; standalone items use their own.
+  private cartonForRow(r: PickRow): number | null {
+    if (r.isSetHeader) return null;
+    if (r.itemSetId) {
+      const hdr = this.rows.find(x => x.isSetHeader && Number(x.itemSetId) === Number(r.itemSetId));
+      return hdr?.cartonId ?? null;
+    }
+    return r.cartonId ?? null;
+  }
+
+  private applyPackageGrouping(apiItemSets: any[]): void {
+    const sets = (apiItemSets || []).map((x: any) => ({
+      id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0),
+      setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim(),
+      qty: Number(x.qty ?? x.Qty ?? 0) || 0
+    })).filter((s: any) => s.id > 0);
+    if (!sets.length) return;
+
+    forkJoin(sets.map((s: any) => this.svc.getItemSetById(s.id))).subscribe({
+      next: (responses: any[]) => {
+        const itemIdToSet = new Map<number, { itemSetId: number; setName: string }>();
+        responses.forEach((res: any, idx: number) => {
+          const setId = sets[idx].id;
+          const sdto = this.svc.unwrapOne(res);
+          const setName = sets[idx].setName || String(sdto?.setName ?? `Set #${setId}`);
+          const rows: any[] = sdto?.items ?? sdto?.itemSetItems ?? sdto?.lines ?? [];
+          for (const r of rows) {
+            const itemId = Number(r.itemId ?? r.ItemId ?? 0);
+            if (itemId && !itemIdToSet.has(itemId)) itemIdToSet.set(itemId, { itemSetId: setId, setName });
+          }
+        });
+
+        for (const r of this.rows) {
+          if (r.isSetHeader) continue;
+          const m = itemIdToSet.get(Number(r.itemId));
+          if (m) { r.itemSetId = m.itemSetId; r.setName = m.setName; }
+        }
+
+        const items = this.rows.filter(r => !r.isSetHeader);
+        const rebuilt: PickRow[] = [];
+        this.collapsedSets.clear();
+        for (const s of sets) {
+          const group = items.filter(r => Number(r.itemSetId) === s.id);
+          if (!group.length) continue;
+          rebuilt.push({
+            soLineId: null, itemId: null, itemName: s.setName || `Set #${s.id}`, uom: '',
+            warehouseId: null, warehouseName: '', binId: null, binName: '', supplierId: null,
+            // The package qty is its own ordered qty (e.g. 10 buffets), not the sum of its contents.
+            qty: s.qty || (group[0]?.qty ?? 0), cartonId: null,
+            isSetHeader: true, itemSetId: s.id, setName: s.setName
+          });
+          for (const g of group) rebuilt.push(g);
+          this.collapsedSets.add(s.id); // start collapsed
+        }
+        for (const r of items.filter(r => !r.itemSetId)) rebuilt.push(r);
+        this.rows = rebuilt;
+      },
+      error: () => { /* leave ungrouped */ }
+    });
   }
 
   // ── Edit load ─────────────────────────────────────────
@@ -192,6 +273,17 @@ export class PickingFormComponent implements OnInit {
         }));
         this.cartonOptions = this.buildCartons(this.rows.length);
 
+        // Regroup package lines under their header (item sets come from the source SO).
+        if (this.soId) {
+          this.svc.getSalesOrderById(this.soId).subscribe({
+            next: soRes => {
+              const so = this.svc.unwrapOne(soRes);
+              this.applyPackageGrouping(so?.itemSets ?? so?.ItemSets ?? []);
+            },
+            error: () => { /* leave ungrouped */ }
+          });
+        }
+
         // Refresh codes/images if not stored
         if ((!this.barCodeSrc || !this.qrCodeSrc) && this.soId) {
           this.svc.generatePackingCodes(this.soId).subscribe((cr: any) => {
@@ -223,14 +315,14 @@ export class PickingFormComponent implements OnInit {
       Status: this.status ?? 0,
       CreatedBy: this.loginUserId ?? 0,
       UpdatedBy: this.loginUserId ?? 0,
-      LineItems: this.rows.map(r => ({
+      LineItems: this.rows.filter(r => !r.isSetHeader).map(r => ({
         SoLineId: r.soLineId ?? 0,
         ItemId: r.itemId ?? 0,
         WarehouseId: r.warehouseId ?? 0,
         BinId: r.binId ?? null,
         SupplierId: r.supplierId ?? null,
         Quantity: +(r.qty ?? 0) || 0,
-        CartonId: r.cartonId ?? null
+        CartonId: this.cartonForRow(r)
       }))
     };
     if (this.isEdit) payload.Id = this.id;
@@ -263,14 +355,13 @@ export class PickingFormComponent implements OnInit {
 
   downloadPickList(): void {
     if (!this.rows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Select a Sales Order first.', confirmButtonColor: '#16a34a' }); return; }
-    const rowsHtml = this.rows.map((r, i) => `
+    const rowsHtml = this.rows.filter(r => !r.isSetHeader).map((r, i) => `
       <tr>
         <td>${i + 1}</td>
         <td>${this.esc(r.itemName)}${r.uom ? ` <small>&middot; ${this.esc(r.uom)}</small>` : ''}</td>
         <td>${this.esc(r.warehouseName)}</td>
-        <td>${this.esc(r.binName)}</td>
         <td style="text-align:right">${r.qty ?? 0}</td>
-        <td>${this.esc(this.cartonName(r.cartonId))}</td>
+        <td>${this.esc(this.cartonName(this.cartonForRow(r)))}</td>
       </tr>`).join('');
 
     const html = `
@@ -292,7 +383,7 @@ export class PickingFormComponent implements OnInit {
       </div>
       ${this.barCodeSrc ? '<img src="' + this.barCodeSrc + '" />' : ''}
       <table>
-        <thead><tr><th>#</th><th>Item</th><th>Warehouse</th><th>Bin</th><th style="text-align:right">Qty</th><th>Pack to Carton</th></tr></thead>
+        <thead><tr><th>#</th><th>Item</th><th>Warehouse</th><th style="text-align:right">Qty</th><th>Pack to Carton</th></tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
       <div class="tot">Total Qty: ${this.totalQty}</div>

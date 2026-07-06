@@ -329,13 +329,16 @@ export class DeliveryOrderFormComponent implements OnInit {
   }
 
   get totalDeliverQty(): number {
-    // exclude package header rows — the qty is counted on the child delivery lines
-    return this.lines.filter(l => !l.isSetHeader).reduce((s, l) => s + (Number(l.deliverQty) || 0), 0);
+    // Count a package once (its header qty) plus standalone items; exclude package
+    // children so a package delivers as one unit rather than summing its contents.
+    return this.lines
+      .filter(l => l.isSetHeader || !l.itemSetId)
+      .reduce((s, l) => s + (Number(l.deliverQty) || 0), 0);
   }
 
-  // actual delivery lines (excludes package header rows)
+  // Logical delivery lines: each package counts once (its header) plus standalone items.
   get deliveryLineCount(): number {
-    return this.lines.filter(l => !l.isSetHeader).length;
+    return this.lines.filter(l => l.isSetHeader || !l.itemSetId).length;
   }
 
   // ── Edit load ─────────────────────────────────────────

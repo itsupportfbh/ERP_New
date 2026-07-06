@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +22,79 @@ export class SalesService {
     if (res?.data && !Array.isArray(res.data)) return res.data;
     if (Array.isArray(res?.data)) return res.data[0] ?? {};
     return res ?? {};
+  }
+
+  /**
+   * Resolve the source Sales Order's item sets (package money) for a downstream document.
+   * Uses soId directly when available, otherwise resolves the SO via the delivery order.
+   */
+  getSourceSoItemSets(opts: { soId?: any; doId?: any }): Observable<any[]> {
+    const itemSetsOf = (r: any) => {
+      const d = this.unwrapOne(r);
+      return d?.itemSets ?? d?.ItemSets ?? [];
+    };
+    const soId = Number(opts.soId ?? 0);
+    if (soId > 0) return this.getSalesOrderById(soId).pipe(map(itemSetsOf));
+
+    const doId = Number(opts.doId ?? 0);
+    if (doId > 0) {
+      return this.getDeliveryOrderById(doId).pipe(
+        map(r => { const h = this.unwrapOne(r); return h?.header ?? h; }),
+        switchMap((h: any) => {
+          const sid = Number(h?.soId ?? h?.SoId ?? 0);
+          return sid > 0 ? this.getSalesOrderById(sid).pipe(map(itemSetsOf)) : of([]);
+        })
+      );
+    }
+    return of([]);
+  }
+
+  /**
+   * Group a document's view lines under their package header.
+   * Package child lines (items that belong to one of `itemSets`) are removed and
+   * replaced by a single header row built by `headerFactory` from each set — so a
+   * view shows "Executive Lunch Buffet" (with its money) instead of the zero-value child.
+   * Returns the original lines unchanged when the document has no item sets.
+   */
+  groupViewLinesByPackage(
+    lines: any[],
+    itemSets: any[],
+    headerFactory: (set: any, children: any[]) => any
+  ): Observable<any[]> {
+    const sets = (itemSets || [])
+      .map((x: any) => ({ raw: x, id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0) }))
+      .filter((s: any) => s.id > 0);
+    if (!sets.length) return of(lines ?? []);
+
+    return forkJoin(sets.map((s: any) => this.getItemSetById(s.id))).pipe(
+      map((responses: any[]) => {
+        // Per-set child item ids (so each header can see its own children).
+        const perSetMembers: Set<number>[] = responses.map((res: any) => {
+          const sdto = this.unwrapOne(res);
+          const rows: any[] = sdto?.items ?? sdto?.itemSetItems ?? sdto?.lines ?? [];
+          const ids = new Set<number>();
+          for (const r of rows) {
+            const id = Number(r.itemId ?? r.ItemId ?? 0);
+            if (id) ids.add(id);
+          }
+          return ids;
+        });
+        const allMembers = new Set<number>();
+        perSetMembers.forEach(s => s.forEach(id => allMembers.add(id)));
+
+        const nonPkg = (lines ?? []).filter((l: any) => !allMembers.has(Number(l.itemId ?? l.ItemId ?? 0)));
+        // Resolve the package name from the item-set definition when the document's own
+        // map row doesn't carry it (only Quotation stores setName on its map).
+        const headers = sets.map((s: any, idx: number) => {
+          const sdto = this.unwrapOne(responses[idx]);
+          const name = s.raw?.setName ?? s.raw?.SetName ?? sdto?.setName ?? sdto?.SetName
+            ?? sdto?.itemSetName ?? sdto?.ItemSetName ?? sdto?.name ?? sdto?.Name ?? 'Package';
+          const children = (lines ?? []).filter((l: any) => perSetMembers[idx].has(Number(l.itemId ?? l.ItemId ?? 0)));
+          return headerFactory({ ...s.raw, setName: name }, children);
+        });
+        return [...headers, ...nonPkg];
+      })
+    );
   }
 
   // ── Quotation ────────────────────────────────────────

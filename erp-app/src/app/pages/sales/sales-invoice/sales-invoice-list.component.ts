@@ -134,13 +134,14 @@ export class SalesInvoiceListComponent implements OnInit {
         const d = this.svc.unwrapOne(res);
         const hdr = d.header ?? d;
         const rawLines = d.lines ?? hdr.lines ?? [];
-        this.viewLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => {
+        const baseLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => {
           const qty = Number(l.qty ?? 0);
           const price = Number(l.unitPrice ?? 0);
           const disc = Number(l.discountPct ?? 0);
           const lineNet = l.lineAmount != null ? Number(l.lineAmount) : +(qty * price * (1 - disc / 100)).toFixed(2);
           const lineTax = Number(l.taxAmount ?? 0);
           return {
+            itemId: Number(l.itemId ?? l.ItemId ?? 0) || 0,
             itemName: l.itemName ?? '',
             uomName: l.uom ?? l.uomName ?? '',
             qty,
@@ -151,33 +152,55 @@ export class SalesInvoiceListComponent implements OnInit {
             lineTotal: +(lineNet + lineTax).toFixed(2),
           };
         });
-        const net = this.viewLines.reduce((s, l) => s + (+l.lineNet || 0), 0);
-        const tax = this.viewLines.reduce((s, l) => s + (+l.lineTax || 0), 0);
-        const total = this.viewLines.reduce((s, l) => s + (+l.lineTotal || 0), 0);
         const cur = row.currency ?? hdr.currency ?? hdr.currencyName ?? hdr.currencyCode ?? 'SGD';
         const invDate = hdr.invoiceDate ?? row.invoiceDate;
-        this.viewInfo = [
-          { label: 'Invoice No', value: row.invoiceNo },
-          { label: 'Customer', value: (hdr.customerName ?? row.customerName) || '—' },
-          { label: 'Invoice Date', value: this.fmtDate(invDate) },
-          { label: 'Currency', value: cur },
-        ];
-        this.viewTotals = [
-          { label: 'Subtotal', value: net.toFixed(2) },
-          { label: 'Tax', value: tax.toFixed(2) },
-          { label: `Grand Total (${cur})`, value: total.toFixed(2) },
-        ];
         const custName = (hdr.customerName ?? row.customerName) || '—';
         const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
         const contact  = hdr.contactNumber ?? hdr.ContactNumber ?? '';
         const deliverTo = hdr.deliveryTo ?? hdr.DeliveryTo ?? '';
-        this.printBillTo = { name: custName, lines: [custAddr, contact ? `Tel: ${contact}` : ''].filter(Boolean) };
-        this.printDeliverTo = { name: custName, lines: [deliverTo || custAddr].filter(Boolean) };
 
-        this.viewTitle = `Invoice Lines — ${row.invoiceNo}`;
-        this.viewSubtitle = `Customer: ${custName} · Currency: ${cur}`;
-        this.viewLoading = false;
-        cb();
+        // Package money lives on the source SO's item sets → resolve, then group the lines.
+        this.svc.getSourceSoItemSets({ soId: hdr.soId ?? hdr.SoId, doId: hdr.doId ?? hdr.DoId }).subscribe(itemSets => {
+          this.svc.groupViewLinesByPackage(baseLines, itemSets, (s: any) => {
+            const setNet = +(s.lineNet ?? s.LineNet ?? 0) || 0;
+            const setTax = +(s.lineTax ?? s.LineTax ?? 0) || 0;
+            const setTotal = +(s.lineTotal ?? s.LineTotal ?? 0) || (setNet + setTax);
+            return {
+              itemId: 0,
+              itemName: s.setName ?? s.SetName ?? 'Package',
+              uomName: '',
+              qty: +(s.qty ?? s.Qty ?? 0) || 0,
+              unitPrice: +(s.unitPrice ?? s.UnitPrice ?? 0) || 0,
+              discountPct: +(s.discountPct ?? s.DiscountPct ?? 0) || 0,
+              lineNet: setNet,
+              lineTax: setTax,
+              lineTotal: setTotal,
+            };
+          }).subscribe(grouped => {
+            this.viewLines = grouped;
+            const net = grouped.reduce((s, l) => s + (+l.lineNet || 0), 0);
+            const tax = grouped.reduce((s, l) => s + (+l.lineTax || 0), 0);
+            const total = grouped.reduce((s, l) => s + (+l.lineTotal || 0), 0);
+            this.viewInfo = [
+              { label: 'Invoice No', value: row.invoiceNo },
+              { label: 'Customer', value: custName },
+              { label: 'Invoice Date', value: this.fmtDate(invDate) },
+              { label: 'Currency', value: cur },
+            ];
+            this.viewTotals = [
+              { label: 'Subtotal', value: net.toFixed(2) },
+              { label: 'Tax', value: tax.toFixed(2) },
+              { label: `Grand Total (${cur})`, value: total.toFixed(2) },
+            ];
+            this.printBillTo = { name: custName, lines: [custAddr, contact ? `Tel: ${contact}` : ''].filter(Boolean) };
+            this.printDeliverTo = { name: custName, lines: [deliverTo || custAddr].filter(Boolean) };
+
+            this.viewTitle = `Invoice Lines — ${row.invoiceNo}`;
+            this.viewSubtitle = `Customer: ${custName} · Currency: ${cur}`;
+            this.viewLoading = false;
+            cb();
+          });
+        });
       },
       error: () => { this.viewLoading = false; cb(); }
     });

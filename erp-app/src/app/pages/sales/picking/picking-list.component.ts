@@ -48,7 +48,6 @@ export class PickingListComponent implements OnInit {
     { header: 'Ordered Qty', key: 'orderedQty', align: 'right', type: 'qty' },
     { header: 'Picked Qty', key: 'pickedQty', align: 'right', type: 'qty' },
     { header: 'Warehouse', key: 'warehouseName' },
-    { header: 'Bin', key: 'binName', align: 'center' },
   ];
 
   readonly fnId = 'sales-pp-list';
@@ -146,7 +145,7 @@ export class PickingListComponent implements OnInit {
       next: res => {
         const d = this.svc.unwrapOne(res);
         const rawLines = this.parseLines(d.pickLines ?? d.lineItems ?? d.lines ?? d.salesOrderLines);
-        this.viewLines = rawLines.map((l: any) => {
+        const baseLines = rawLines.map((l: any) => {
           const itemId = Number(l.itemId ?? l.ItemId ?? 0);
           const uomName = l.uom ?? l.Uom ?? l.uomName
             ?? this.itemUomNameMap.get(itemId)
@@ -154,6 +153,7 @@ export class PickingListComponent implements OnInit {
             ?? '';
           const qty = +(l.quantity ?? l.Quantity ?? l.qty ?? 0) || 0;
           return {
+            itemId,
             itemCode: l.itemCode ?? this.itemCodeMap.get(itemId) ?? '',
             itemName: l.itemName ?? l.ItemName ?? '',
             uomName,
@@ -164,18 +164,37 @@ export class PickingListComponent implements OnInit {
           };
         });
         const customer = row.customerName || d.customerName || '—';
-        this.viewInfo = [
-          { label: 'SO Number', value: row.salesOrderNo || '—' },
-          { label: 'Customer', value: customer },
-          { label: 'Requested Date', value: this.fmtDate(row.requestedDate) },
-          { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
-          { label: 'Status', value: row.statusLabel },
-        ];
-        this.viewTotals = [];
-        this.viewTitle = `Picking / Packing Lines — ${row.salesOrderNo || ''}`;
-        this.viewSubtitle = `Customer: ${customer} · Sales Order: ${row.salesOrderNo || '—'}`;
-        this.viewLoading = false;
-        cb();
+        const soId = d.soId ?? d.SoId ?? row.soId ?? row.SoId;
+        // Package name/qty come from the source SO's item sets → group children under the header.
+        this.svc.getSourceSoItemSets({ soId }).subscribe(itemSets => {
+          this.svc.groupViewLinesByPackage(baseLines, itemSets, (s: any) => {
+            const setQty = +(s.qty ?? s.Qty ?? 0) || 0;
+            return {
+              itemId: 0,
+              itemCode: '',
+              itemName: s.setName ?? s.SetName ?? 'Package',
+              uomName: '',
+              orderedQty: setQty,
+              pickedQty: setQty,
+              warehouseName: '',
+              binName: '',
+            };
+          }).subscribe(grouped => {
+            this.viewLines = grouped;
+            this.viewInfo = [
+              { label: 'SO Number', value: row.salesOrderNo || '—' },
+              { label: 'Customer', value: customer },
+              { label: 'Requested Date', value: this.fmtDate(row.requestedDate) },
+              { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
+              { label: 'Status', value: row.statusLabel },
+            ];
+            this.viewTotals = [];
+            this.viewTitle = `Picking / Packing Lines — ${row.salesOrderNo || ''}`;
+            this.viewSubtitle = `Customer: ${customer} · Sales Order: ${row.salesOrderNo || '—'}`;
+            this.viewLoading = false;
+            cb();
+          });
+        });
       },
       error: () => { this.viewLoading = false; cb(); }
     });

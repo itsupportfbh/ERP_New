@@ -127,7 +127,8 @@ export class QuotationListComponent implements OnInit {
       next: res => {
         const d = this.svc.unwrapOne(res);
         const rawLines = d.lines ?? d.Lines ?? [];
-        this.viewLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => ({
+        const baseLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => ({
+          itemId: Number(l.itemId ?? l.ItemId ?? 0) || 0,
           itemCode: l.itemCode ?? this.itemCodeMap.get(Number(l.itemId)) ?? '',
           itemName: l.itemName ?? '',
           uomName: l.uomName ?? this.uomMap.get(Number(l.uomId)) ?? '',
@@ -138,28 +139,43 @@ export class QuotationListComponent implements OnInit {
           lineTax: l.lineTax ?? 0,
           lineTotal: l.lineTotal ?? 0,
         }));
-        const net = this.viewLines.reduce((s, l) => s + (+l.lineNet || 0), 0);
-        const tax = this.viewLines.reduce((s, l) => s + (+l.lineTax || 0), 0);
-        const total = this.viewLines.reduce((s, l) => s + (+l.lineTotal || 0), 0);
         const cur = row.currency || 'SGD';
-        this.viewInfo = [
-          { label: 'QT No', value: row.number },
-          { label: 'Status', value: row.statusLabel },
-          { label: 'Customer', value: row.customerName || '—' },
-          { label: 'Currency', value: cur },
-          { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
-          { label: 'Validity Date', value: this.fmtDate(row.validityDate) },
-          { label: 'Remarks', value: d.remarks ?? '—' },
-        ];
-        this.viewTotals = [
-          { label: 'Subtotal', value: net.toFixed(2) },
-          { label: 'Tax', value: tax.toFixed(2) },
-          { label: `Grand Total (${cur})`, value: total.toFixed(2) },
-        ];
-        this.viewTitle = `Quotation Lines — ${row.number}`;
-        this.viewSubtitle = `Customer: ${row.customerName || '—'} · Currency: ${cur}`;
-        this.viewLoading = false;
-        cb();
+        // Replace package child lines with the "Executive Lunch Buffet" header (money on the header).
+        this.svc.groupViewLinesByPackage(baseLines, d.itemSets ?? d.ItemSets ?? [], (s: any) => ({
+          itemId: 0,
+          itemCode: '',
+          itemName: s.setName ?? s.SetName ?? 'Package',
+          uomName: '',
+          qty: +(s.qty ?? s.Qty ?? 0) || 0,
+          unitPrice: +(s.unitPrice ?? s.UnitPrice ?? 0) || 0,
+          discountPct: +(s.discountPct ?? s.DiscountPct ?? 0) || 0,
+          lineNet: +(s.lineNet ?? s.LineNet ?? 0) || 0,
+          lineTax: +(s.lineTax ?? s.LineTax ?? 0) || 0,
+          lineTotal: +(s.lineTotal ?? s.LineTotal ?? 0) || 0,
+        })).subscribe(grouped => {
+          this.viewLines = grouped;
+          const net = grouped.reduce((s, l) => s + (+l.lineNet || 0), 0);
+          const tax = grouped.reduce((s, l) => s + (+l.lineTax || 0), 0);
+          const total = grouped.reduce((s, l) => s + (+l.lineTotal || 0), 0);
+          this.viewInfo = [
+            { label: 'QT No', value: row.number },
+            { label: 'Status', value: row.statusLabel },
+            { label: 'Customer', value: row.customerName || '—' },
+            { label: 'Currency', value: cur },
+            { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
+            { label: 'Validity Date', value: this.fmtDate(row.validityDate) },
+            { label: 'Remarks', value: d.remarks ?? '—' },
+          ];
+          this.viewTotals = [
+            { label: 'Subtotal', value: net.toFixed(2) },
+            { label: 'Tax', value: tax.toFixed(2) },
+            { label: `Grand Total (${cur})`, value: total.toFixed(2) },
+          ];
+          this.viewTitle = `Quotation Lines — ${row.number}`;
+          this.viewSubtitle = `Customer: ${row.customerName || '—'} · Currency: ${cur}`;
+          this.viewLoading = false;
+          cb();
+        });
       },
       error: () => { this.viewLoading = false; cb(); }
     });

@@ -154,7 +154,7 @@ export class SalesOrderListComponent implements OnInit {
           ? JSON.parse(rawLines || '[]')
           : (Array.isArray(rawLines) ? rawLines : []);
 
-        this.viewLines = parsed.map((l: any) => {
+        const baseLines = parsed.map((l: any) => {
           const qty = +(l.qty ?? l.quantity ?? 0) || 0;
           const unitPrice = +(l.unitPrice ?? 0) || 0;
           const discountPct = +(l.discountPct ?? l.discount ?? 0) || 0;
@@ -165,6 +165,7 @@ export class SalesOrderListComponent implements OnInit {
           const shortage = shortageRaw != null ? (+shortageRaw || 0) : Math.max(qty - allocated, 0);
           const lineTotal = +(l.total ?? l.lineTotal ?? lineNet) || 0;
           return {
+            itemId: Number(l.itemId ?? l.ItemId ?? 0) || 0,
             itemCode: l.itemCode ?? this.itemCodeMap.get(Number(l.itemId)) ?? '',
             itemName: l.itemName ?? l.item ?? this.itemNameMap.get(Number(l.itemId)) ?? '',
             uomName: l.uomName ?? l.uom ?? this.uomMap.get(Number(l.uomId)) ?? '',
@@ -179,27 +180,50 @@ export class SalesOrderListComponent implements OnInit {
           };
         });
 
-        const net = this.viewLines.reduce((s, l) => s + (+l.lineNet || 0), 0);
-        const total = this.viewLines.reduce((s, l) => s + (+l.lineTotal || 0), 0);
         const cur = row.currencyName || d.currencyName || 'SGD';
-        this.viewInfo = [
-          { label: 'SO No', value: row.salesOrderNo },
-          { label: 'Status', value: row.statusLabel },
-          { label: 'Customer', value: row.customerName || '—' },
-          { label: 'Currency', value: cur },
-          { label: 'Order Date', value: this.fmtDate(row.orderDate) },
-          { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
-          { label: 'Remarks', value: d.remarks ?? '—' },
-        ];
-        this.viewTotals = [
-          { label: 'Subtotal', value: net.toFixed(2) },
-          { label: 'Tax', value: Math.max(total - net, 0).toFixed(2) },
-          { label: `Grand Total (${cur})`, value: total.toFixed(2) },
-        ];
-        this.viewTitle = `Sales Order Lines — ${row.salesOrderNo}`;
-        this.viewSubtitle = `Customer: ${row.customerName || '—'} · Currency: ${cur}`;
-        this.viewLoading = false;
-        cb();
+        // Replace package child lines with the "Executive Lunch Buffet" header (money on the header).
+        this.svc.groupViewLinesByPackage(baseLines, d.itemSets ?? d.ItemSets ?? [], (s: any, children: any[]) => {
+          const setNet = +(s.lineNet ?? s.LineNet ?? 0) || 0;
+          const setTotal = +(s.lineTotal ?? s.LineTotal ?? 0) || 0;
+          // The package's procurement status mirrors its child items.
+          const childStatuses = Array.from(new Set((children ?? []).map(c => c.procStatus).filter(Boolean)));
+          return {
+            itemId: 0,
+            itemCode: '',
+            itemName: s.setName ?? s.SetName ?? 'Package',
+            uomName: '',
+            qty: +(s.qty ?? s.Qty ?? 0) || 0,
+            unitPrice: +(s.unitPrice ?? s.UnitPrice ?? 0) || 0,
+            discountPct: +(s.discountPct ?? s.DiscountPct ?? 0) || 0,
+            allocated: (children ?? []).reduce((sum, c) => sum + (+c.allocated || 0), 0),
+            shortage: (children ?? []).reduce((sum, c) => sum + (+c.shortage || 0), 0),
+            lineNet: setNet,
+            lineTotal: setTotal || setNet,
+            procStatus: childStatuses.length ? childStatuses.join(', ') : '',
+          };
+        }).subscribe(grouped => {
+          this.viewLines = grouped;
+          const net = grouped.reduce((s, l) => s + (+l.lineNet || 0), 0);
+          const total = grouped.reduce((s, l) => s + (+l.lineTotal || 0), 0);
+          this.viewInfo = [
+            { label: 'SO No', value: row.salesOrderNo },
+            { label: 'Status', value: row.statusLabel },
+            { label: 'Customer', value: row.customerName || '—' },
+            { label: 'Currency', value: cur },
+            { label: 'Order Date', value: this.fmtDate(row.orderDate) },
+            { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
+            { label: 'Remarks', value: d.remarks ?? '—' },
+          ];
+          this.viewTotals = [
+            { label: 'Subtotal', value: net.toFixed(2) },
+            { label: 'Tax', value: Math.max(total - net, 0).toFixed(2) },
+            { label: `Grand Total (${cur})`, value: total.toFixed(2) },
+          ];
+          this.viewTitle = `Sales Order Lines — ${row.salesOrderNo}`;
+          this.viewSubtitle = `Customer: ${row.customerName || '—'} · Currency: ${cur}`;
+          this.viewLoading = false;
+          cb();
+        });
       },
       error: () => { this.viewLoading = false; cb(); }
     });

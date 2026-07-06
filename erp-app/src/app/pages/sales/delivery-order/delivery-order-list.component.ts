@@ -141,6 +141,7 @@ export class DeliveryOrderListComponent implements OnInit {
     const uomId = l.uomId ?? l.UomId ?? l.uom ?? l.Uom;
     const warehouseId = l.warehouseId ?? l.WarehouseId;
     return {
+      itemId: Number(itemId) || 0,
       itemCode: l.itemCode ?? l.ItemCode ?? this.itemCodeMap.get(Number(itemId)) ?? '',
       itemName: l.itemName ?? l.ItemName ?? '',
       uomName: l.uomName ?? l.UomName ?? this.uomMap.get(Number(uomId)) ?? '',
@@ -162,25 +163,40 @@ export class DeliveryOrderListComponent implements OnInit {
         const embedded = d.lines ?? d.Lines ?? hdr.lines ?? hdr.Lines ?? null;
 
         const finish = (rawLines: any[]) => {
-          this.viewLines = (Array.isArray(rawLines) ? rawLines : []).map(l => this.mapLine(l));
-          this.viewInfo = [
-            { label: 'DO No', value: row.doNumber },
-            { label: 'SO No', value: row.salesOrderNo || '—' },
-            { label: 'Route', value: row.routeName || '—' },
-            { label: 'Customer', value: hdr.customerName ?? hdr.CustomerName ?? '—' },
-            { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
-            { label: 'Status', value: row.statusLabel },
-            { label: 'Posted', value: row.postedLabel },
-          ];
-          this.viewTotals = [];
-          const custName = hdr.customerName ?? hdr.CustomerName ?? '—';
-          const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
-          this.printBillTo = { name: custName, lines: [custAddr].filter(Boolean) };
-          this.printDeliverTo = { name: custName, lines: [custAddr, row.routeName ? `Route: ${row.routeName}` : ''].filter(Boolean) };
-          this.viewTitle = `Delivery Order Lines — ${row.doNumber}`;
-          this.viewSubtitle = `SO: ${row.salesOrderNo || '—'} · Route: ${row.routeName || '—'}`;
-          this.viewLoading = false;
-          cb();
+          const baseLines = (Array.isArray(rawLines) ? rawLines : []).map(l => this.mapLine(l));
+          // Package money/name comes from the source SO's item sets → group children under the header.
+          this.svc.getSourceSoItemSets({ soId: hdr.soId ?? hdr.SoId, doId: row.id }).subscribe(itemSets => {
+            this.svc.groupViewLinesByPackage(baseLines, itemSets, (s: any) => ({
+              itemId: 0,
+              itemCode: '',
+              itemName: s.setName ?? s.SetName ?? 'Package',
+              uomName: '',
+              qty: +(s.qty ?? s.Qty ?? 0) || 0,
+              warehouseName: '',
+              binName: '',
+              notes: '',
+            })).subscribe(grouped => {
+              this.viewLines = grouped;
+              this.viewInfo = [
+                { label: 'DO No', value: row.doNumber },
+                { label: 'SO No', value: row.salesOrderNo || '—' },
+                { label: 'Route', value: row.routeName || '—' },
+                { label: 'Customer', value: hdr.customerName ?? hdr.CustomerName ?? '—' },
+                { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
+                { label: 'Status', value: row.statusLabel },
+                { label: 'Posted', value: row.postedLabel },
+              ];
+              this.viewTotals = [];
+              const custName = hdr.customerName ?? hdr.CustomerName ?? '—';
+              const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
+              this.printBillTo = { name: custName, lines: [custAddr].filter(Boolean) };
+              this.printDeliverTo = { name: custName, lines: [custAddr, row.routeName ? `Route: ${row.routeName}` : ''].filter(Boolean) };
+              this.viewTitle = `Delivery Order Lines — ${row.doNumber}`;
+              this.viewSubtitle = `SO: ${row.salesOrderNo || '—'} · Route: ${row.routeName || '—'}`;
+              this.viewLoading = false;
+              cb();
+            });
+          });
         };
 
         if (Array.isArray(embedded) && embedded.length) {
