@@ -389,7 +389,10 @@
                   <td>{{ p.paymentDate | date:'dd-MMM-yyyy' }}</td>
                   <td>{{ p.paymentMethodName || p.paymentMode || 'Bank Transfer' }}</td>
                   <td class="mono muted">{{ p.referenceNo || '—' }}</td>
-                  <td class="right teal-bold">{{ (p.amount || 0) | money }}</td>
+                  <td class="right teal-bold">
+                    {{ (p.amountBase || (p.amount * (p.fxRate || 1))) | money }}
+                    <span *ngIf="(p.fxRate || 1) !== 1" class="muted">({{ (p.amount || 0) | money:p.currencyName }})</span>
+                  </td>
                   <td class="muted">{{ p.currencyName || 'SGD' }}</td>
                   <td><span class="status-badge badge-success">Posted</span></td>
                 </tr>

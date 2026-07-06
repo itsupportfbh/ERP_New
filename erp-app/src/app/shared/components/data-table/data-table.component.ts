@@ -3,10 +3,14 @@ import { Component, Input, Output, EventEmitter, OnChanges, ChangeDetectionStrat
 export interface TableColumn {
   key: string;
   header: string;
-  type?: 'text' | 'number' | 'date' | 'badge' | 'boolean' | 'action';
+  type?: 'text' | 'number' | 'date' | 'badge' | 'boolean' | 'action' | 'money';
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';
   badgeMap?: { [val: string]: 'success' | 'danger' | 'warning' | 'default' };
+  /** For type 'money': row key holding the document-currency name/code (e.g. 'currency'). */
+  currencyKey?: string;
+  /** For type 'money': row key holding the FX rate to base currency (e.g. 'fxRate'). */
+  fxRateKey?: string;
 }
 
 export interface RowAction {
@@ -175,6 +179,27 @@ export class DataTableComponent implements OnChanges {
 
   getCellValue(row: any, col: TableColumn): any {
     return col.key.split('.').reduce((o: any, k: string) => o?.[k], row);
+  }
+
+  /** Resolve a (possibly dotted) row key. */
+  private getByKey(row: any, key?: string): any {
+    if (!key) return undefined;
+    return key.split('.').reduce((o: any, k: string) => o?.[k], row);
+  }
+
+  /** FX rate for a money column (defaults to 1). */
+  moneyFx(row: any, col: TableColumn): number {
+    return Number(this.getByKey(row, col.fxRateKey) ?? 1) || 1;
+  }
+
+  /** Document-currency name/code for a money column. */
+  moneyDocCurrency(row: any, col: TableColumn): string {
+    return this.getByKey(row, col.currencyKey) ?? '';
+  }
+
+  /** Base-currency amount (document amount × FX rate) for a money column. */
+  moneyBaseValue(row: any, col: TableColumn): number {
+    return Number(this.getCellValue(row, col) ?? 0) * this.moneyFx(row, col);
   }
 
   getBadgeClass(col: TableColumn, val: any): string {

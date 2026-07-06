@@ -242,7 +242,7 @@ export class SalesOrderFormComponent implements OnInit {
   ngOnInit(): void {
     this.setMinDate();
     this.baseCurrencyId = Number(localStorage.getItem('companyCurrencyId') || 0);
-    this.baseCurrencyName = 'SGD';
+    this.baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
 
     const paramId = this.route.snapshot.paramMap.get('id');
     this.isEdit = !!paramId && paramId !== 'new';

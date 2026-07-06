@@ -66,6 +66,8 @@ export class QuotationListComponent implements OnInit {
           number: r.number ?? r.quotationNo ?? '',
           customerName: r.customerName ?? r.customer ?? '',
           currency: r.currency ?? r.currencyName ?? r.currencyCode ?? '',
+          currencyId: r.currencyId ?? r.currencyID ?? 0,
+          fxRate: Number(r.fxRate ?? r.fxrate ?? 1) || 1,
           grandTotal: r.grandTotal ?? 0,
           deliveryDate: r.deliveryDate ?? null,
           validityDate: r.validityDate ?? null,

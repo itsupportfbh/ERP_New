@@ -75,6 +75,9 @@ export class CreditNoteListComponent implements OnInit {
             creditNoteDate: r.creditNoteDate ?? r.CreditNoteDate ?? null,
             subtotal: Number(r.subtotal ?? r.Subtotal ?? 0),
             currencyName: r.currencyName ?? r.CurrencyName ?? 'SGD',
+            currency: r.currency ?? r.currencyName ?? r.CurrencyName ?? '',
+            currencyId: r.currencyId ?? r.CurrencyId ?? 0,
+            fxRate: Number(r.fxRate ?? r.FxRate ?? 1) || 1,
             status,
             statusLabel: STATUS_MAP[status] ?? 'Draft',
           };

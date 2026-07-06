@@ -114,6 +114,9 @@ export class SupplierInvoiceListComponent implements OnInit {
       supplierName: r.supplierName ?? '',
       grnNos: r.grnNos ?? r.grnNo ?? '',
       invoiceDate: r.invoiceDate,
+      currency: r.currency ?? r.currencyName ?? '',
+      currencyId: r.currencyId ?? 0,
+      fxRate: Number(r.fxRate ?? r.FxRate ?? 1) || 1,
       amount: Number(r.amount ?? r.netTotal ?? r.totalAmount ?? 0),
       baseAmount: (() => {
         const stored = Number(r.baseAmount ?? 0);

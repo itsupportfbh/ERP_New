@@ -69,6 +69,9 @@ export class SalesInvoiceListComponent implements OnInit {
             invoiceNo: r.invoiceNo ?? r.siNo ?? r.invoiceNumber ?? '',
             customerName: r.customerName ?? '',
             invoiceDate: r.invoiceDate ?? null,
+            currency: r.currency ?? r.currencyName ?? r.currencyCode ?? '',
+            currencyId: r.currencyId ?? r.currencyID ?? 0,
+            fxRate: Number(r.fxRate ?? r.fxrate ?? 1) || 1,
             // Stored Total is net + shipping (excludes tax); show grand total = Total + TaxAmount
             total: Number(r.total ?? 0) + Number(r.taxAmount ?? 0),
             sourceRef: r.sourceRef ?? r.SourceRef ?? r.sourceNo ?? r.soNo ?? r.doNo ?? '',
