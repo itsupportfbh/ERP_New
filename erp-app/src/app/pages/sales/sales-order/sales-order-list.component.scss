@@ -21,8 +21,8 @@
   &.st-0 { background: #f1f5f9; color: #475569; }   /* Draft */
   &.st-1 { background: #fef3c7; color: #b45309; }   /* Pending */
   &.st-2 { background: #dcfce7; color: #15803d; }   /* Approved */
-  &.st-3 { background: #fee2e2; color: #b91c1c; }   /* Rejected */
-  &.st-4 { background: #dbeafe; color: #1d4ed8; }             /* Posted */
+  &.st-3 { background: #d1fae5; color: #065f46; }   /* Completed (procurement done) */
+  &.st-4 { background: #fee2e2; color: #b91c1c; }   /* Rejected */
   &.st-completed { background: #d1fae5; color: #065f46; }    /* Completed (procStatus=4) */
 }
 

@@ -107,15 +107,24 @@
 .qf-cellInput { padding: 5px 6px; font-size: 12px; border-radius: 5px; width: 100%; box-sizing: border-box; }
 select.qf-cellInput { width: 100%; min-width: 0; }
 .qf-num { text-align: center; min-width: 0; }
-.qf-fromSet td { background: var(--primary-pale) !important; }
+.qf-fromSet td { background: transparent !important; }
 
-/* Package header row */
+/* Package header row — no background, like a normal line */
 .qf-setRow td {
-  background: var(--primary-pale) !important;
+  background: transparent !important;
   padding: 8px 14px !important;
 }
 .qf-setBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.qf-setName { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--primary); }
+.qf-setName { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; font-weight: 700; color: var(--primary); white-space: nowrap; }
+.qf-setName .qf-itemName { white-space: nowrap; }
+.qf-setToggle {
+  width: 22px; height: 22px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--primary); border-radius: 6px;
+  background: #fff; color: var(--primary);
+  font-size: 16px; font-weight: 700; cursor: pointer; padding: 0;
+}
+.qf-setToggle:hover { background: var(--primary); color: #fff; }
 
 /* Package header inline controls */
 .qf-setCtrls { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }

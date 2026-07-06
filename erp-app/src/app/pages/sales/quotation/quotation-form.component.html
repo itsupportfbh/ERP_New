@@ -216,34 +216,50 @@
           </tr>
 
           <ng-container *ngFor="let l of lines; let i = index">
-            <!-- Package header row -->
+            <!-- Package header row (aligned like a normal line; only Fulfillment disabled) -->
             <tr *ngIf="l.isSetHeader" class="qf-setRow">
-              <td [attr.colspan]="10">
-                <div class="qf-setBar">
-                  <div class="qf-setName">
-                    <span class="qf-setTag">Package</span>
-                    <span>{{ l.setName }}</span>
-                  </div>
-                  <div class="qf-setCtrls">
-                    <label class="qf-setField">
-                      <span>Qty</span>
-                      <input type="number" class="mf-input qf-num qf-setInput" [(ngModel)]="l.qty"
-                        (ngModelChange)="onSetQtyChange(l)" min="0" step="0.0001" placeholder="0" />
-                    </label>
-                    <label class="qf-setField">
-                      <span>Package Price</span>
-                      <input type="number" class="mf-input qf-num qf-setInput" [(ngModel)]="l.unitPrice"
-                        (ngModelChange)="onSetPriceChange(l)" min="0" step="0.01" placeholder="0.00" />
-                    </label>
-                    <span class="qf-setTotal">Total: <b>{{ (l.lineTotal || 0) | money:header.currencyId }}</b></span>
-                  </div>
-                  <button class="btn btn-danger btn-sm" type="button" (click)="removeItemSet(l.itemSetId!)">Remove Package</button>
+              <td>
+                <div class="qf-setName">
+                  <button type="button" class="qf-setToggle" (click)="toggleSet(l.itemSetId)"
+                    [title]="isSetCollapsed(l.itemSetId) ? 'Expand package items' : 'Collapse package items'">
+                    {{ isSetCollapsed(l.itemSetId) ? '+' : '−' }}
+                  </button>
+                  <span class="qf-itemName">{{ l.setName }}</span>
                 </div>
+              </td>
+              <td class="qf-uom">-</td>
+              <td class="qf-uom">-</td>
+              <td class="qf-c">
+                <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.qty"
+                  (ngModelChange)="onSetQtyChange(l)" min="0" step="0.0001" placeholder="0" />
+              </td>
+              <td class="qf-c">
+                <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"
+                  (ngModelChange)="onSetPriceChange(l)" min="0" step="0.01" placeholder="0.00" />
+              </td>
+              <td class="qf-c">
+                <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.discountPct"
+                  (ngModelChange)="onSetLineChanged(l)" min="0" max="100" step="0.01" placeholder="0" />
+              </td>
+              <td>
+                <erp-dropdown [(ngModel)]="l.taxMode"
+                  [items]="taxModeItems" bindLabel="label" bindValue="value"
+                  (ngModelChange)="onSetLineChanged(l)"></erp-dropdown>
+              </td>
+              <td>
+                <erp-dropdown [(ngModel)]="l.fulfillmentMode"
+                  [items]="fulfillmentOptions" bindLabel="label" bindValue="value"
+                  [disabled]="true"></erp-dropdown>
+                <small class="qf-autoTag">Auto</small>
+              </td>
+              <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
+              <td class="qf-c">
+                <button class="btn btn-danger btn-sm" type="button" (click)="removeItemSet(l.itemSetId!)" title="Remove Package">Remove</button>
               </td>
             </tr>
 
-            <!-- Item row -->
-            <tr *ngIf="!l.isSetHeader" [class.qf-fromSet]="l.isFromSet">
+            <!-- Item row (package children hide when their package is collapsed) -->
+            <tr *ngIf="!l.isSetHeader && !(l.isFromSet && isSetCollapsed(l.itemSetId))">
               <td><span class="qf-itemName">{{ l.itemName || getItemName(l.itemId) || '-' }}</span></td>
               <td>
                 <input class="mf-input qf-cellInput" [(ngModel)]="l.description"
@@ -264,7 +280,9 @@
               </td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.discountPct"
-                  (ngModelChange)="onLineChanged(i)" min="0" max="100" step="0.01" />
+                  (ngModelChange)="onLineChanged(i)" min="0" max="100" step="0.01"
+                  [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
+                  [title]="l.isFromSet ? 'Set at package level' : ''" />
               </td>
               <td>
                 <erp-dropdown [(ngModel)]="l.taxMode"

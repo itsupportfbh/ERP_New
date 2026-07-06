@@ -199,7 +199,21 @@ export class QuotationFormComponent implements OnInit {
   private loadedItemSetIds = new Set<number>();
   private uomNameToId = new Map<string, number>();
   private itemIdToSet = new Map<number, { itemSetId: number; setName: string }>();
+  // package money values loaded from QuotationItemSet, keyed by itemSetId
+  private setValuesById = new Map<number, { qty: number | null; unitPrice: number | null; discountPct: number | null; taxMode: any; lineNet: number | null; lineTax: number | null; lineTotal: number | null }>();
   private lastAutoRemarks: string | null = null;
+
+  // Collapsed package sets (by itemSetId). Child lines hide when their set is collapsed.
+  collapsedSets = new Set<number>();
+  toggleSet(itemSetId: number | null | undefined): void {
+    const id = Number(itemSetId ?? 0);
+    if (!id) return;
+    if (this.collapsedSets.has(id)) this.collapsedSets.delete(id);
+    else this.collapsedSets.add(id);
+  }
+  isSetCollapsed(itemSetId: number | null | undefined): boolean {
+    return this.collapsedSets.has(Number(itemSetId ?? 0));
+  }
 
   @ViewChild('customerBox') customerBox!: ElementRef<HTMLElement>;
   @ViewChild('currencyBox') currencyBox!: ElementRef<HTMLElement>;
@@ -571,6 +585,23 @@ export class QuotationFormComponent implements OnInit {
         this.loadedItemSetIds.clear();
         this.selectedItemSets.forEach(s => this.loadedItemSetIds.add(s.id));
 
+        // capture package-level money values (from QuotationItemSet) for header population
+        this.setValuesById.clear();
+        const num = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v));
+        for (const x of (apiItemSets || [])) {
+          const sid = Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0);
+          if (sid <= 0) continue;
+          this.setValuesById.set(sid, {
+            qty: num(x.qty ?? x.Qty),
+            unitPrice: num(x.unitPrice ?? x.UnitPrice),
+            discountPct: num(x.discountPct ?? x.DiscountPct),
+            taxMode: x.taxMode ?? x.TaxMode ?? null,
+            lineNet: num(x.lineNet ?? x.LineNet),
+            lineTax: num(x.lineTax ?? x.LineTax),
+            lineTotal: num(x.lineTotal ?? x.LineTotal)
+          });
+        }
+
         // lines
         const apiLines = dto.lines ?? dto.Lines ?? [];
         const rawLines: UiLine[] = [];
@@ -712,7 +743,7 @@ export class QuotationFormComponent implements OnInit {
   private makeSetHeader(itemSetId: number, setName: string): UiLine {
     return {
       itemId: 0, uomId: null, qty: null, unitPrice: null, discountPct: 0,
-      taxMode: 'Zero-Rated', isSetHeader: true, isFromSet: true,
+      taxMode: 'Standard-Rated', isSetHeader: true, isFromSet: true,
       itemSetId, setName, description: '', fulfillmentMode: null
     };
   }
@@ -746,15 +777,20 @@ export class QuotationFormComponent implements OnInit {
   onSetQtyChange(header: UiLine): void {
     const q = header.qty == null || (header.qty as any) === '' ? null : Math.max(0, +header.qty);
     header.qty = q;
-    for (const k of this.setChildren(header.itemSetId)) { k.qty = q; this.computeLine(k); }
+    // package qty flows into every child line's qty (children stay money-zero)
+    for (const k of this.setChildren(header.itemSetId)) { k.qty = q; }
     this.computeTotals();
   }
 
-  // Package Price → distributed across child lines.
+  // Package Price stays on the header (children are money-zero).
   onSetPriceChange(header: UiLine): void {
     header.unitPrice = header.unitPrice == null || (header.unitPrice as any) === ''
       ? null : Math.max(0, +header.unitPrice);
-    this.distributeSetPrice(header);
+    this.computeTotals();
+  }
+
+  // Any other header field (discount / tax) changed → recompute.
+  onSetLineChanged(_header: UiLine): void {
     this.computeTotals();
   }
 
@@ -778,17 +814,31 @@ export class QuotationFormComponent implements OnInit {
     header.lineTotal = this.round2(kids.reduce((s, k) => s + (k.lineTotal || 0), 0));
   }
 
-  // On load, derive the header's Qty / Price / Fulfillment from saved child lines.
+  // On load, populate each package header from its saved QuotationItemSet money values.
+  // Fallback (older data without package values): derive qty from the child lines.
   private syncAllSetHeaders(): void {
     for (const header of this.lines) {
       if (!header.isSetHeader) continue;
       const kids = this.setChildren(header.itemSetId);
-      if (!kids.length) continue;
-      header.qty = kids[0].qty ?? null;
-      header.unitPrice = this.round2(kids.reduce((s, k) => s + (+(k.unitPrice ?? 0) || 0), 0));
-      const fms = Array.from(new Set(kids.map(k => k.fulfillmentMode ?? null)));
-      header.fulfillmentMode = fms.length === 1 ? fms[0] : null;
-      this.refreshSetHeaderTotal(header);
+      const v = this.setValuesById.get(Number(header.itemSetId ?? 0));
+
+      // Populate the header ONCE (while still un-edited: unitPrice == null).
+      // Never overwrite a price the user has already typed.
+      if (header.unitPrice == null) {
+        if (v && (v.qty != null || v.unitPrice != null || v.lineTotal != null)) {
+          // saved package values from QuotationItemSet
+          header.qty = v.qty ?? (kids.length ? kids[0].qty ?? null : null);
+          header.unitPrice = v.unitPrice ?? null;
+          header.discountPct = v.discountPct ?? null;
+          if (v.taxMode) header.taxMode = v.taxMode;
+        } else if (kids.length) {
+          // legacy data (no package values stored): derive qty from children
+          header.qty = header.qty ?? kids[0].qty ?? null;
+        }
+      }
+      // keep children qty in sync with the header (money stays zero)
+      if (header.qty != null) for (const k of kids) k.qty = header.qty;
+      this.computeLine(header);
     }
   }
 
@@ -1094,9 +1144,21 @@ export class QuotationFormComponent implements OnInit {
     this.computeTotals();
   }
 
-  private computeLine(l: UiLine): { base: number; discount: number } {
-    if (l.isSetHeader) { l.lineNet = l.lineTax = l.lineTotal = 0; return { base: 0, discount: 0 }; }
+  private isPackageChild(l: UiLine): boolean { return !!l.isFromSet && !l.isSetHeader; }
 
+  private computeLine(l: UiLine): { base: number; discount: number } {
+    // Package child lines carry ONLY the qty; every money field is zero
+    // (the package header holds price / discount / tax / totals).
+    if (this.isPackageChild(l)) {
+      l.unitPrice = 0;
+      l.discountPct = 0;
+      l.lineNet = 0;
+      l.lineTax = 0;
+      l.lineTotal = 0;
+      return { base: 0, discount: 0 };
+    }
+
+    // Package headers AND custom lines both compute money the same way.
     if (!l.taxMode && l.taxCodeId != null) l.taxMode = this.taxCodeIdToTaxMode(l.taxCodeId);
     l.taxCodeId = this.taxModeToTaxCodeId(l.taxMode);
 
@@ -1119,18 +1181,18 @@ export class QuotationFormComponent implements OnInit {
     let baseSubtotal = 0;
     let hod = false;
     for (const l of this.lines) {
-      if (l.isSetHeader) continue;
+      // children are zeroed but still need their fields reset
+      if (this.isPackageChild(l)) { this.computeLine(l); continue; }
+      // package headers + custom lines carry the money
       const { base } = this.computeLine(l);
       baseSubtotal += base;
       if ((+(l.discountPct ?? 0) || 0) > 10) hod = true;
     }
-    // package header rows show the sum of their children (display only)
-    for (const h of this.lines) if (h.isSetHeader) this.refreshSetHeaderTotal(h);
     this.header.subtotal = this.round2(baseSubtotal);
 
     const gstPct = +this.header.taxPct || 0;
     const docTax = gstPct > 0
-      ? this.lines.filter(l => !l.isSetHeader).reduce((s, l) => s + (l.lineTax || 0), 0)
+      ? this.lines.filter(l => !this.isPackageChild(l)).reduce((s, l) => s + (l.lineTax || 0), 0)
       : 0;
     this.header.taxAmount = this.round2(docTax);
 
@@ -1294,16 +1356,15 @@ export class QuotationFormComponent implements OnInit {
 
   // ── Save ─────────────────────────────────────────────
   private validateBeforeSave(): boolean {
-    const itemRows = this.lines.filter(l => !l.isSetHeader);
-    if (!itemRows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please add at least one line.', confirmButtonColor: '#16a34a' }); return false; }
-    for (let idx = 0; idx < itemRows.length; idx++) {
-      const l = itemRows[idx];
+    // Money lives on package headers + custom lines; package children are qty-only and skipped.
+    const payRows = this.lines.filter(l => !this.isPackageChild(l));
+    if (!payRows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please add at least one line.', confirmButtonColor: '#16a34a' }); return false; }
+    for (let idx = 0; idx < payRows.length; idx++) {
+      const l = payRows[idx];
       const q = l.qty == null ? 0 : +l.qty;
       const p = l.unitPrice == null ? 0 : +l.unitPrice;
-      const name = l.itemName || this.getItemName(l.itemId) || `Line ${idx + 1}`;
-      if (q <= 0 || p <= 0) { void Swal.fire('Validation', `Please enter Qty & Unit Price for ${name}.`, 'warning'); return false; }
-      // 'Both' items may be saved Pending (procurement decides later); only auto
-      // items must carry a value — and they always do, so no fulfillment block here.
+      const name = l.isSetHeader ? (l.setName || `Package ${idx + 1}`) : (l.itemName || this.getItemName(l.itemId) || `Line ${idx + 1}`);
+      if (q <= 0 || p <= 0) { void Swal.fire('Validation', `Please enter Qty & ${l.isSetHeader ? 'Package Price' : 'Unit Price'} for ${name}.`, 'warning'); return false; }
     }
     return true;
   }
@@ -1325,6 +1386,21 @@ export class QuotationFormComponent implements OnInit {
       customerPoNo: (this.header.customerPoNo || '').trim(),
       lineSourceId: this.header.lineSourceId,
       itemSetIds: (this.selectedItemSets || []).map(x => x.id),
+      // package-level money values persisted to QuotationItemSet
+      itemSetValues: this.lines.filter(l => l.isSetHeader).map(h => {
+        this.computeLine(h);
+        const taxMode = (h.taxMode || (h.taxCodeId != null ? this.taxCodeIdToTaxMode(h.taxCodeId) : 'Zero-Rated')) as LineTaxMode;
+        return {
+          itemSetId: h.itemSetId ?? null,
+          qty: +(h.qty ?? 0) || 0,
+          unitPrice: +(h.unitPrice ?? 0) || 0,
+          discountPct: +(h.discountPct ?? 0) || 0,
+          taxMode,
+          lineNet: +(h.lineNet ?? 0),
+          lineTax: +(h.lineTax ?? 0),
+          lineTotal: +(h.lineTotal ?? 0)
+        };
+      }),
       taxPct: this.header.taxPct,
       gstPct: this.header.taxPct,
       status: this.header.status,

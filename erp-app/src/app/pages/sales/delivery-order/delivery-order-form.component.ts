@@ -1,5 +1,6 @@
 ﻿import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import { environment } from '../../../../environments/environment';
@@ -17,6 +18,10 @@ interface DoLine {
   warehouseId: number | null;
   binId: number | null;
   supplierId: number | null;
+  // package grouping (derived from the SO's SalesOrderItemSetMap + ItemSetItem)
+  isSetHeader?: boolean;
+  itemSetId?: number | null;
+  setName?: string;
 }
 
 const STATUS_LABEL: Record<number, string> = { 0: 'Draft', 1: 'Submitted', 2: 'Approved', 3: 'Rejected', 4: 'Posted' };
@@ -34,6 +39,18 @@ export class DeliveryOrderFormComponent implements OnInit {
   saving = false;
   status = 0;
   isPosted = false;
+
+  // Collapsed package sets (by itemSetId) — child lines hide when collapsed.
+  collapsedSets = new Set<number>();
+  toggleSet(itemSetId: number | null | undefined): void {
+    const id = Number(itemSetId ?? 0);
+    if (!id) return;
+    if (this.collapsedSets.has(id)) this.collapsedSets.delete(id);
+    else this.collapsedSets.add(id);
+  }
+  isSetCollapsed(itemSetId: number | null | undefined): boolean {
+    return this.collapsedSets.has(Number(itemSetId ?? 0));
+  }
 
   // Header
   soId: number | null = null;
@@ -162,6 +179,9 @@ export class DeliveryOrderFormComponent implements OnInit {
           } as DoLine;
         });
 
+        // group delivery lines under their package header (from the SO's item sets)
+        this.applyPackageGrouping(d);
+
         // 'Both' items still awaiting a PP / Direct DO decision (procurement not done)
         const hasPendingFulfillment = arr.some((l: any) => {
           const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
@@ -207,6 +227,60 @@ export class DeliveryOrderFormComponent implements OnInit {
         this.loading = false;
       },
       error: () => { this.loading = false; void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load sales order lines.', confirmButtonColor: '#16a34a' }); }
+    });
+  }
+
+  // Group the delivery lines under their package header, derived from the SO's
+  // item sets (SalesOrderItemSetMap → itemSets) + each ItemSet's items.
+  // Only items actually present in this delivery appear under the package.
+  private applyPackageGrouping(dto: any): void {
+    const apiItemSets = dto?.itemSets ?? dto?.ItemSets ?? [];
+    const sets = (apiItemSets || [])
+      .map((x: any) => ({
+        id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0),
+        setName: String(x.setName ?? x.SetName ?? x.itemSetName ?? x.ItemSetName ?? '').trim()
+      }))
+      .filter((s: any) => s.id > 0);
+    if (!sets.length) return;
+
+    forkJoin(sets.map((s: any) => this.svc.getItemSetById(s.id))).subscribe({
+      next: (responses: any[]) => {
+        const itemIdToSet = new Map<number, { itemSetId: number; setName: string }>();
+        responses.forEach((res: any, idx: number) => {
+          const setId = sets[idx].id;
+          const sdto = this.svc.unwrapOne(res);
+          const setName = sets[idx].setName || String(sdto?.setName ?? `Set #${setId}`);
+          const rows: any[] = sdto?.items ?? sdto?.itemSetItems ?? sdto?.lines ?? [];
+          for (const r of rows) {
+            const itemId = Number(r.itemId ?? r.ItemId ?? 0);
+            if (itemId && !itemIdToSet.has(itemId)) itemIdToSet.set(itemId, { itemSetId: setId, setName });
+          }
+        });
+
+        for (const l of this.lines) {
+          if (l.isSetHeader) continue;
+          const m = itemIdToSet.get(Number(l.itemId));
+          if (m) { l.itemSetId = m.itemSetId; l.setName = m.setName; }
+        }
+
+        // rebuild: each package header followed by ITS delivery lines, then loose lines
+        const items = this.lines.filter(l => !l.isSetHeader);
+        const rebuilt: DoLine[] = [];
+        for (const s of sets) {
+          const group = items.filter(l => Number(l.itemSetId) === s.id);
+          if (!group.length) continue;
+          rebuilt.push({
+            soLineId: null, itemId: null, itemName: s.setName || `Set #${s.id}`, uom: '',
+            orderedQty: 0, pendingQty: 0, deliverQty: 0, notes: '',
+            warehouseId: null, binId: null, supplierId: null,
+            isSetHeader: true, itemSetId: s.id, setName: s.setName
+          });
+          for (const g of group) rebuilt.push(g);
+        }
+        for (const l of items.filter(l => !l.itemSetId)) rebuilt.push(l);
+        this.lines = rebuilt;
+      },
+      error: () => { /* leave lines ungrouped */ }
     });
   }
 

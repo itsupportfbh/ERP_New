@@ -4,7 +4,7 @@ import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
 
-const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'Completed' };
+const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Completed', 4: 'Rejected' };
 
 @Component({
   selector: 'erp-sales-order-list',

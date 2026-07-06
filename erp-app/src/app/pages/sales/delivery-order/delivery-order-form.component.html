@@ -114,19 +114,32 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let l of lines; let i = index">
-          <td class="do-item">{{ l.itemName }}</td>
-          <td>{{ l.uom || '—' }}</td>
-          <td class="ta-right">{{ l.orderedQty }}</td>
-          <td class="ta-right">{{ l.pendingQty }}</td>
-          <td class="ta-right">
-            <input type="number" class="mf-input do-qty" [(ngModel)]="l.deliverQty" name="dq{{i}}"
-              min="0" [max]="l.pendingQty" (ngModelChange)="clampQty(l)" />
-          </td>
-          <td>
-            <input type="text" class="mf-input" [(ngModel)]="l.notes" name="nt{{i}}" placeholder="Optional notes" />
-          </td>
-        </tr>
+        <ng-container *ngFor="let l of lines; let i = index">
+          <!-- Package header row (grouping label + expand/collapse) -->
+          <tr *ngIf="l.isSetHeader" class="do-setRow">
+            <td colspan="6" class="do-setName">
+              <button type="button" class="do-setToggle" (click)="toggleSet(l.itemSetId)"
+                [title]="isSetCollapsed(l.itemSetId) ? 'Expand package items' : 'Collapse package items'">
+                {{ isSetCollapsed(l.itemSetId) ? '+' : '−' }}
+              </button>
+              <span class="do-setTag">Package</span> {{ l.itemName }}
+            </td>
+          </tr>
+          <!-- Delivery line (hidden when its package is collapsed) -->
+          <tr *ngIf="!l.isSetHeader && !(l.itemSetId && isSetCollapsed(l.itemSetId))" [class.do-fromSet]="l.itemSetId">
+            <td class="do-item">{{ l.itemName }}</td>
+            <td>{{ l.uom || '—' }}</td>
+            <td class="ta-right">{{ l.orderedQty }}</td>
+            <td class="ta-right">{{ l.pendingQty }}</td>
+            <td class="ta-right">
+              <input type="number" class="mf-input do-qty" [(ngModel)]="l.deliverQty" name="dq{{i}}"
+                min="0" [max]="l.pendingQty" (ngModelChange)="clampQty(l)" />
+            </td>
+            <td>
+              <input type="text" class="mf-input" [(ngModel)]="l.notes" name="nt{{i}}" placeholder="Optional notes" />
+            </td>
+          </tr>
+        </ng-container>
         <tr *ngIf="!lines.length">
           <td colspan="6" class="do-empty">Select a Sales Order to load lines.</td>
         </tr>

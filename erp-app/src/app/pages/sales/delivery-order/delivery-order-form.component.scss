@@ -1,5 +1,22 @@
 :host { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
+/* Package grouping in the delivery lines table */
+.do-setRow td.do-setName { font-weight: 700; color: var(--primary); padding: 8px 12px; background: #fff; }
+.do-setToggle {
+  width: 22px; height: 22px; line-height: 1; margin-right: 8px;
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  border: 1px solid var(--primary); border-radius: 6px;
+  background: #fff; color: var(--primary);
+  font-size: 16px; font-weight: 700; cursor: pointer; padding: 0;
+}
+.do-setToggle:hover { background: var(--primary); color: #fff; }
+.do-setTag {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: #fff; background: var(--primary);
+  border-radius: 6px; padding: 2px 8px; margin-right: 8px;
+}
+.do-fromSet td.do-item { padding-left: 22px; }
+
 .do-page { display: flex; flex-direction: column; flex: 1; gap: 14px; padding: 20px 20px 40px; overflow-y: auto; }
 .do-back { flex-shrink: 0; }
 
