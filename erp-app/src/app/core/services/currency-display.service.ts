@@ -57,11 +57,11 @@ export class CurrencyDisplayService {
    * once via compactMoney) renders — otherwise a hard reload would format with a stale symbol.
    */
   preload(): Promise<void> {
-    const companyId = Number(localStorage.getItem('companyId') || 0);
-    if (this.loaded && this.currentKey() === this._loadedKey) return Promise.resolve();
-    const load = (this.loading && this.loadPromise) ? this.loadPromise : this.startLoad(companyId);
-    // Never block app bootstrap for more than 4s (data still loads in the background after).
-    return Promise.race([load, new Promise<void>(resolve => setTimeout(resolve, 4000))]);
+    // Kick the load off at bootstrap so the symbol is ready ASAP, but NEVER block app
+    // startup on it (that made login slow). The tenant-keyed cache gives the correct symbol
+    // instantly on reload; impure pipes update reactively once the background load completes.
+    try { this.ensureLoaded(); } catch {}
+    return Promise.resolve();
   }
 
   /** Load currency symbols + the CURRENT company's base symbol + tax name.
