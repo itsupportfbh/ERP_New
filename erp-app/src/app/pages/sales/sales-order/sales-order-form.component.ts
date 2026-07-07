@@ -209,6 +209,7 @@ export class SalesOrderFormComponent implements OnInit {
 
   // Collapsed package sets (by itemSetId). Child lines hide when their set is collapsed.
   collapsedSets = new Set<number>();
+  private seenSets = new Set<number>();
   toggleSet(itemSetId: number | null | undefined): void {
     const id = Number(itemSetId ?? 0);
     if (!id) return;
@@ -895,6 +896,11 @@ export class SalesOrderFormComponent implements OnInit {
   }
 
   private makeSetHeader(itemSetId: number, setName: string): UiLine {
+    // Collapse a package the first time it appears; later rebuilds keep the user's toggle.
+    if (!this.seenSets.has(itemSetId)) {
+      this.seenSets.add(itemSetId);
+      this.collapsedSets.add(itemSetId);
+    }
     return {
       itemId: 0, uomId: null, qty: null, unitPrice: null, discountPct: 0,
       taxMode: 'Standard-Rated', isSetHeader: true, isFromSet: true,
