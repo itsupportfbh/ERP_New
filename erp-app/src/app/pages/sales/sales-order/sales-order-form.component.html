@@ -190,7 +190,9 @@
               <td><span class="qf-itemName">{{ l.itemName || getItemName(l.itemId) || '-' }}</span></td>
               <td>
                 <input class="mf-input qf-cellInput" [(ngModel)]="l.description"
-                  (ngModelChange)="onLineChanged(i)" placeholder="-" />
+                  (ngModelChange)="onLineChanged(i)" placeholder="-"
+                  [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
+                  [title]="l.isFromSet ? 'Set at package level' : ''" />
               </td>
               <td class="qf-uom">{{ getUomName(l.uomId) || (l.uomName || '-') }}</td>
               <td class="qf-c">
@@ -214,6 +216,7 @@
               <td>
                 <erp-dropdown [(ngModel)]="l.taxMode"
                   [items]="taxModeItems" bindLabel="label" bindValue="value"
+                  [disabled]="l.isFromSet"
                   (ngModelChange)="onLineChanged(i)"></erp-dropdown>
               </td>
               <td>
@@ -227,7 +230,8 @@
               </td>
               <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
               <td class="qf-c">
-                <button class="dt-icon-btn del" type="button" (click)="remove(i)" title="Remove">
+                <!-- Package children can't be removed individually — remove the whole package instead. -->
+                <button *ngIf="!l.isFromSet" class="dt-icon-btn del" type="button" (click)="remove(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
                 </button>
               </td>
