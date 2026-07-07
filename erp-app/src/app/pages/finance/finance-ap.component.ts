@@ -4,6 +4,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { concat } from 'rxjs';
 import { FinanceService, FINANCE_PAGES } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
@@ -436,40 +437,67 @@ export class FinanceApComponent implements OnInit {
   savePayment(): void {
     if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
     if (!this.paymentForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
-    if (!this.paymentForm.supplierInvoiceId) { Swal.fire('Required', 'Please select a supplier invoice.', 'warning'); return; }
     if (!this.paymentForm.paymentDate) { Swal.fire('Required', 'Payment date is required.', 'warning'); return; }
     if (!(Number(this.paymentForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+
+    // The backend posts one payment per invoice, so split the entered total across the
+    // selected invoices (in list order, capped at each invoice's outstanding balance).
+    const selected = (this.supplierInvoicesAll || []).filter(x => x.isSelected);
+    if (!selected.length) { Swal.fire('Required', 'Please select at least one supplier invoice.', 'warning'); return; }
+
+    let remaining = Number(this.paymentForm.amount) || 0;
+    const allocations: { inv: any; amount: number }[] = [];
+    for (const inv of selected) {
+      if (remaining <= 0.001) break;
+      const bal = Number(inv.payableAfterAdvance ?? inv.balance ?? 0);
+      const alloc = Math.min(remaining, bal);
+      if (alloc > 0) {
+        allocations.push({ inv, amount: parseFloat(alloc.toFixed(2)) });
+        remaining = parseFloat((remaining - alloc).toFixed(2));
+      }
+    }
+
+    if (!allocations.length) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+    if (remaining > 0.01) {
+      Swal.fire('Amount too high', `Amount exceeds the total outstanding of the selected invoice(s) by ${remaining.toFixed(2)}.`, 'warning');
+      return;
+    }
 
     this.savingPayment = true;
     this.error = '';
 
-    const payload = {
-      supplierId: Number(this.paymentForm.supplierId),
-      supplierInvoiceId: Number(this.paymentForm.supplierInvoiceId),
-      paymentDate: this.paymentForm.paymentDate,
-      paymentMethodId: Number(this.paymentForm.paymentMethodId) || 2,
-      bankId: this.paymentForm.paymentMethodId === 2 ? this.paymentForm.bankId : null,
-      amount: Number(this.paymentForm.amount) || 0,
-      amountBase: this.paymentAmountBase,
-      fxRate: this.paymentFxRate,
-      currencyId: this.paymentCurrencyId,
-      exchangeGainLoss: this.paymentExchangeGainLoss,
-      referenceNo: this.paymentForm.referenceNo || '',
-      notes: this.paymentForm.notes || ''
-    };
+    const requests = allocations.map(a => {
+      const payload = {
+        supplierId: Number(this.paymentForm.supplierId),
+        supplierInvoiceId: Number(a.inv.id),
+        paymentDate: this.paymentForm.paymentDate,
+        paymentMethodId: Number(this.paymentForm.paymentMethodId) || 2,
+        bankId: this.paymentForm.paymentMethodId === 2 ? this.paymentForm.bankId : null,
+        amount: a.amount,
+        amountBase: parseFloat((a.amount * (this.paymentFxRate || 1)).toFixed(2)),
+        fxRate: this.paymentFxRate,
+        currencyId: this.paymentCurrencyId,
+        exchangeGainLoss: allocations.length === 1 ? this.paymentExchangeGainLoss : 0,
+        referenceNo: this.paymentForm.referenceNo || '',
+        notes: this.paymentForm.notes || ''
+      };
+      return this.finance.create({ create: '/finance/ap/payments/create' }, payload);
+    });
 
-    this.finance.create({ create: '/finance/ap/payments/create' }, payload).subscribe({
-      next: () => {
+    // Post SEQUENTIALLY (not in parallel) — each payment's GL posting upserts the shared
+    // AccountBalance row, so concurrent posts would race and violate its primary key.
+    concat(...requests).subscribe({
+      error: err => {
+        this.savingPayment = false;
+        Swal.fire({ icon: 'error', title: 'Save Failed', text: err?.error?.message || 'Unable to save payment. Please try again.', confirmButtonColor: '#2e5f73' });
+      },
+      complete: () => {
         this.savingPayment = false;
         this.showPaymentForm = false;
         this.paymentFilteredInvoices = [];
         this.paymentInvoicesLoaded = false;
         this.loadPayments();
-        Swal.fire({ icon: 'success', title: 'Payment Posted', text: 'Supplier payment saved successfully.', confirmButtonColor: '#2e5f73', timer: 2500, timerProgressBar: true });
-      },
-      error: err => {
-        this.savingPayment = false;
-        Swal.fire({ icon: 'error', title: 'Save Failed', text: err?.error?.message || 'Unable to save payment. Please try again.', confirmButtonColor: '#2e5f73' });
+        Swal.fire({ icon: 'success', title: 'Payment Posted', text: `Supplier payment saved successfully across ${allocations.length} invoice(s).`, confirmButtonColor: '#2e5f73', timer: 2500, timerProgressBar: true });
       }
     });
   }
