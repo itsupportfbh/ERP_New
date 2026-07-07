@@ -133,7 +133,15 @@
       "PowerShell(& sqlcmd -S $S -d \"master\" -E -C -W -s\"|\" -Q \"SET NOCOUNT ON; SELECT SERVERPROPERTY\\('Collation'\\) AS ServerCollation;\")",
       "PowerShell(\"--- server default ---\")",
       "PowerShell(Set-Location C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi; dotnet build --nologo -p:UseAppHost=false -p:NuGetAudit=false -o \"$env:TEMP\\\\fin_collate\" 2>&1 | Select-String -Pattern \"error CS|Error\\\\\\(s\\\\\\)\" | Select-Object -Last 4)",
-      "PowerShell(Set-Location C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi; dotnet build --nologo -p:UseAppHost=false -p:NuGetAudit=false -o \"$env:TEMP\\\\fin_arap\" 2>&1 | Select-String -Pattern \"error CS|Error\\\\\\(s\\\\\\)\" | Select-Object -Last 4)"
+      "PowerShell(Set-Location C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi; dotnet build --nologo -p:UseAppHost=false -p:NuGetAudit=false -o \"$env:TEMP\\\\fin_arap\" 2>&1 | Select-String -Pattern \"error CS|Error\\\\\\(s\\\\\\)\" | Select-Object -Last 4)",
+      "PowerShell(Set-Location C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi; dotnet build --nologo -p:UseAppHost=false -p:NuGetAudit=false -o \"$env:TEMP\\\\fin_company\" 2>&1 | Select-String -Pattern \"error CS|Error\\\\\\(s\\\\\\)\" | Select-Object -Last 4)",
+      "PowerShell(& sqlcmd -S $S -d $D -E -C -W -s\"|\" -Q \"SET NOCOUNT ON; SELECT TOP 10 Id, OrgCode, IsActive, Status FROM dbo.Organizations ORDER BY Id;\" 2>&1)",
+      "PowerShell(& sqlcmd -S $S -d $D -E -C -W -s\"|\" -Q \"SET NOCOUNT ON; SELECT TOP 10 Id, CompanyName, OrganizationId, IsActive FROM dbo.Companies ORDER BY Id;\" 2>&1)",
+      "PowerShell(& sqlcmd -S $S -d $D -E -C -W -s\"|\" -Q \"SET NOCOUNT ON; SELECT TOP 10 Id, Username, Email, IsActive FROM dbo.MasterUsers ORDER BY Id;\" 2>&1)",
+      "PowerShell($D=\"ERP_Master\")",
+      "PowerShell(\"===== ERP_Master Organizations =====\")",
+      "PowerShell(\"`n===== ERP_Master Companies =====\")",
+      "PowerShell(\"`n===== ERP_Master MasterUsers \\(active?\\) =====\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
