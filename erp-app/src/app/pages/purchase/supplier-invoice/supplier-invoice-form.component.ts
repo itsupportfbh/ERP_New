@@ -29,6 +29,7 @@ interface GrnHeader {
 
 interface PinLine {
   itemId: number | null;
+  itemCode?: string | null;
   itemName: string;
   locationId: number | null;
   poQty: number;
@@ -499,6 +500,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
       grnItems.forEach((x: any) => {
         const itemId = x.itemId ?? null;
+        const itemCode = x.itemCode ?? x.ItemCode ?? '';
         const itemName = x.itemName ?? x.itemSearch ?? x.item ?? '';
         const rawGrnQty = Number(x.qtyReceived ?? x.qty ?? 0);
         // Fix: use itemId != null (not truthy) to avoid skipping itemId=0
@@ -524,7 +526,13 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const itemDefault = leafLedger || itemLedger || catLedger || null;
         const ledgerId = x.budgetLineId ?? x.BudgetLineId ?? poLine?.budgetLineId ?? poLine?.BudgetLineId ?? itemDefault;
 
-        const existing = merged.find(pl => pl.itemId === itemId && pl.unitPrice === unitPrice);
+        // Merge only genuinely-identical lines. GRNs can store itemId=null (only itemCode
+        // distinguishes items), so fall back to itemCode/name to avoid collapsing different items.
+        const existing = merged.find(pl =>
+          pl.unitPrice === unitPrice &&
+          (itemId != null
+            ? pl.itemId === itemId
+            : (pl.itemId == null && (pl.itemCode || '') === (itemCode || '') && pl.itemName === itemName)));
         if (existing) {
           existing.grnQty += grnQty;
           existing.qty += grnQty;
@@ -536,6 +544,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
         const line: PinLine = {
           itemId,
+          itemCode,
           itemName,
           locationId: null,
           poQty,
