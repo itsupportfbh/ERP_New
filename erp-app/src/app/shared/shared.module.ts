@@ -10,6 +10,8 @@ import { SwitchToggleComponent } from './components/switch-toggle/switch-toggle.
 import { PagerComponent } from './components/pager/pager.component';
 import { DocViewModalComponent } from './components/doc-view-modal/doc-view-modal.component';
 import { MasterPopupComponent } from './components/master-popup/master-popup.component';
+import { GuideComponent } from './components/guide/guide.component';
+import { GuidedJourneyComponent } from './components/guided-journey/guided-journey.component';
 import { MoneyPipe } from './pipes/money.pipe';
 import { TaxNamePipe } from './pipes/tax-name.pipe';
 
@@ -23,6 +25,8 @@ const COMPONENTS = [
   PagerComponent,
   DocViewModalComponent,
   MasterPopupComponent,
+  GuideComponent,
+  GuidedJourneyComponent,
 ];
 
 const PIPES = [

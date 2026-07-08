@@ -39,22 +39,21 @@
 
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 1">
     <div class="section-label">Account Details</div>
-    <div class="form-row cols-2">
+    <div class="form-row cols-3">
       <erp-input label="Customer Name" [required]="true" [(ngModel)]="customer.customerName"></erp-input>
-      <erp-dropdown label="Country" [required]="true" [options]="countryOptions" [(ngModel)]="customer.countryId"></erp-dropdown>
+      <erp-dropdown label="Country" [required]="true" [options]="countryOptions" [(ngModel)]="customer.countryId"
+        [allowAdd]="true" addTypeLabel="Country" (addNew)="openQuickCountry($event)"></erp-dropdown>
+      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
     </div>
-    <label class="textarea-field block-gap">
-      <span>Address</span>
-      <textarea [(ngModel)]="customer.address" rows="2"></textarea>
-    </label>
     <div class="form-row cols-3 block-gap">
       <erp-input label="Point of Contact Person" [required]="true" [(ngModel)]="customer.contactPerson"></erp-input>
       <erp-input label="Email" type="email" [(ngModel)]="customer.email"></erp-input>
       <erp-input label="Contact Number" [(ngModel)]="customer.phone"></erp-input>
     </div>
-    <div class="form-row cols-3 block-gap">
-      <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
-    </div>
+    <label class="textarea-field block-gap">
+      <span>Address</span>
+      <textarea [(ngModel)]="customer.address" rows="2"></textarea>
+    </label>
     <div class="wizard-inline-actions">
       <button class="btn btn-primary btn-sm" (click)="nextCustomerStep()">Next</button>
     </div>
@@ -266,5 +265,26 @@
         <span class="role-name">{{ opt.label }}</span>
       </label>
   </div>
+  </div>
+
+  <!-- Inline Quick-Add Country popup -->
+  <div class="dt-modal-overlay" *ngIf="showQuickCountry" (click)="closeQuickCountry()">
+    <div class="dt-modal" style="width:440px" (click)="$event.stopPropagation()">
+      <div class="dt-modal-title">Add Country</div>
+      <div class="form-row cols-2">
+        <erp-input label="Country Name" [required]="true" [(ngModel)]="quickCountry.name"></erp-input>
+        <erp-input label="Tax Name (e.g. GST/SST)" [(ngModel)]="quickCountry.taxName"></erp-input>
+      </div>
+      <div class="form-row cols-2 block-gap">
+        <erp-input label="Tax %" type="number" [(ngModel)]="quickCountry.gstPct"></erp-input>
+        <erp-input label="Currency Symbol (e.g. RM)" [(ngModel)]="quickCountry.currencySymbol"></erp-input>
+      </div>
+      <div class="mf-actions">
+        <button class="btn btn-outline btn-sm" type="button" (click)="closeQuickCountry()">Cancel</button>
+        <button class="btn btn-primary btn-sm" type="button" [disabled]="quickCountrySaving" (click)="saveQuickCountry()">
+          {{ quickCountrySaving ? 'Saving…' : 'Add & Select' }}
+        </button>
+      </div>
+    </div>
   </div>
 </div>

@@ -1,0 +1,54 @@
+<ng-container *ngIf="!hidden">
+
+  <!-- Floating launcher -->
+  <button type="button" class="gj-launcher" (click)="toggle()" [class.gj-launcher--done]="j.allDone()">
+    <span class="gj-launcher__ico">{{ j.allDone() ? '✅' : '🎯' }}</span>
+    <span class="gj-launcher__txt">
+      {{ j.allDone() ? 'Setup complete' : 'Getting Started' }}
+      <b>{{ j.doneCount() }}/{{ j.total() }}</b>
+    </span>
+  </button>
+
+  <!-- Quest panel -->
+  <div class="gj-panel" *ngIf="open">
+    <div class="gj-panel__head">
+      <div>
+        <h4>🎯 Getting Started</h4>
+        <p>Follow these steps in order — the app will take you to each screen.</p>
+      </div>
+      <button type="button" class="gj-x" (click)="toggle()" title="Close">&times;</button>
+    </div>
+
+    <div class="gj-progress">
+      <div class="gj-progress__bar" [style.width.%]="j.progressPct()"></div>
+    </div>
+    <div class="gj-progress__lbl">{{ j.doneCount() }} of {{ j.total() }} done · {{ j.progressPct() }}%</div>
+
+    <div class="gj-steps">
+      <div class="gj-step"
+           *ngFor="let s of steps; let i = index"
+           [class.is-done]="j.isDone(s.id)"
+           [class.is-current]="j.isCurrent(s.id)">
+        <div class="gj-step__mark">
+          <span *ngIf="j.isDone(s.id)">✓</span>
+          <span *ngIf="!j.isDone(s.id)">{{ i + 1 }}</span>
+        </div>
+        <div class="gj-step__body">
+          <div class="gj-step__title"><span class="gj-step__ico">{{ s.icon }}</span>{{ s.title }}</div>
+          <div class="gj-step__hint" *ngIf="j.isCurrent(s.id) && !j.isDone(s.id)">{{ s.hint }}</div>
+          <div class="gj-step__actions" *ngIf="j.isCurrent(s.id) && !j.isDone(s.id)">
+            <button type="button" class="gj-btn gj-btn--go" (click)="go(s)">Take me there →</button>
+            <button type="button" class="gj-btn gj-btn--done" (click)="done(s, $event)">Mark done ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gj-panel__foot">
+      <div class="gj-done-msg" *ngIf="j.allDone()">🎉 Nice! You've learned the full flow.</div>
+      <button type="button" class="gj-link" (click)="restart()">↺ Restart</button>
+      <button type="button" class="gj-link" (click)="hideForever()">Hide guide</button>
+    </div>
+  </div>
+
+</ng-container>

@@ -851,19 +851,11 @@ export class QuotationFormComponent implements OnInit {
   // ── Line source ──────────────────────────────────────
   onLineSourceChange(): void {
     if (this.showModal) this.closeModal();
-    const src = Number(this.header.lineSourceId) as LineSourceId;
-    this.header.lineSourceId = src;
-
-    if (src === 1) {
-      this.selectedItemSets = [];
-      this.selectedPackageIds = [];
-      this.itemSetSearch = '';
-      this.lines = this.lines.filter(l => !l.isFromSet && !l.isSetHeader);
-      this.loadedItemSetIds.clear();
-    }
-    if (src === 2) {
-      this.lines = this.lines.filter(l => l.isFromSet || l.isSetHeader);
-    }
+    // Custom items and bundle packages can coexist in one quotation. Switching the
+    // line source only changes which "Add" control is shown — it must NOT delete lines
+    // the user already added. (Previously switching to Bundle wiped custom items, and
+    // switching to Custom wiped bundle lines.)
+    this.header.lineSourceId = Number(this.header.lineSourceId) as LineSourceId;
     this.computeTotals();
   }
 

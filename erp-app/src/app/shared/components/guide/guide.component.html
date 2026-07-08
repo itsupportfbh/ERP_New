@@ -1,0 +1,34 @@
+<!-- Expanded guide card -->
+<div class="erp-guide" *ngIf="open">
+  <div class="erp-guide__icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V16h6v-.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3Z"/>
+    </svg>
+  </div>
+
+  <div class="erp-guide__body">
+    <div class="erp-guide__head">
+      <h4>How to use — {{ title }}</h4>
+      <button type="button" class="erp-guide__close" (click)="close()" title="Hide">&times;</button>
+    </div>
+
+    <p class="erp-guide__intro" *ngIf="intro">{{ intro }}</p>
+
+    <div class="erp-guide__needs" *ngIf="needs?.length">
+      <span class="erp-guide__needs-lbl">You need first:</span>
+      <span class="erp-guide__chip" *ngFor="let n of needs">{{ n }}</span>
+    </div>
+
+    <ol class="erp-guide__steps" *ngIf="steps?.length">
+      <li *ngFor="let s of steps">{{ s }}</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Collapsed pill to reopen -->
+<button type="button" class="erp-guide-pill" *ngIf="!open" (click)="reopen()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7"/><line x1="12" y1="17" x2="12" y2="17"/>
+  </svg>
+  How to use this screen
+</button>
