@@ -3,14 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 type ReconTab = 'unreconciled' | 'reconciled';
 
 @Component({
   selector: 'erp-finance-bank-recon',
   standalone: true,
-  imports: [CommonModule, FormsModule, MoneyPipe, TaxNamePipe],
+  imports: [CommonModule, FormsModule, MoneyPipe],
   templateUrl: './finance-bank-recon.component.html',
   styleUrls: ['./finance-bank-recon.component.scss']
 })

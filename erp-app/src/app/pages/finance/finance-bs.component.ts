@@ -6,12 +6,11 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 @Component({
   selector: 'erp-finance-bs',
   standalone: true,
-  imports: [CommonModule, FormsModule, FinanceReportsHubComponent, MoneyPipe, TaxNamePipe],
+  imports: [CommonModule, FormsModule, FinanceReportsHubComponent, MoneyPipe],
   templateUrl: './finance-bs.component.html',
   styleUrls: ['./finance-bs.component.scss']
 })

@@ -433,7 +433,10 @@ export class PurchaseOrderFormComponent implements OnInit {
     const found = this.supplierOptions.find(o => o.value === this.supplierId);
     if (!found?.raw) return;
     const s = found.raw;
-    if (s.paymentTermId) this.paymentTermId = s.paymentTermId;
+    // Supplier record exposes the payment terms as `termsId` (Suppliers.TermsId);
+    // keep the older aliases as fallbacks in case the API shape changes.
+    const supplierTermId = s.termsId ?? s.TermsId ?? s.paymentTermId ?? s.paymentTermsId;
+    if (supplierTermId) this.paymentTermId = supplierTermId;
     if (s.currencyId) { this.currencyId = s.currencyId; this.onCurrencyChange(); }
     if (s.incotermsId) this.incotermsId = s.incotermsId;
     const countryId = Number(s.countryId ?? s.CountryId ?? 0);
@@ -513,8 +516,11 @@ export class PurchaseOrderFormComponent implements OnInit {
       defaultTaxRate
     });
     this.isOverseas = decision.isOverseas;
-    this.gstPct = decision.taxRate;
-    this.defaultLineTaxMode = decision.taxMode;
+    // GST % always reflects the supplier country's tax rate, even for overseas
+    // orders — the decision's zero-rating is not applied to the displayed rate.
+    const rate = Math.max(0, Number(defaultTaxRate || 0));
+    this.gstPct = rate;
+    this.defaultLineTaxMode = rate > 0 ? 'Exclusive' : 'ZeroRated';
     this.onGstPctChange();
   }
 

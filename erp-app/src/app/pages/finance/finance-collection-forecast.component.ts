@@ -5,12 +5,11 @@ import { FinanceService } from './finance.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 @Component({
   selector: 'erp-finance-collection-forecast',
   standalone: true,
-  imports: [CommonModule, FormsModule, FinanceReportsHubComponent, MoneyPipe, TaxNamePipe],
+  imports: [CommonModule, FormsModule, FinanceReportsHubComponent, MoneyPipe],
   templateUrl: './finance-collection-forecast.component.html',
   styleUrls: ['./finance-collection-forecast.component.scss']
 })
