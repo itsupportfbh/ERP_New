@@ -160,6 +160,11 @@ export class BusinessPartnersService {
     return this.http.get(`${this.apiUrl}/Country/getAll`);
   }
 
+  /** Inline quick-create of a country from within a form (no page navigation). */
+  createCountry(payload: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/Country/insert`, payload);
+  }
+
   getCustomerGroups(): Observable<any> {
     return this.http.get(`${this.apiUrl}/CustomerGroups/getAllCustomerGroups`);
   }

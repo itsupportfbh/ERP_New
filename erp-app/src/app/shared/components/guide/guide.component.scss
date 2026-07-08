@@ -1,0 +1,110 @@
+:host { display: block; }
+
+.erp-guide {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--primary-pale, #e0f5f8);
+  border: 1px solid var(--border, #cce8ed);
+  border-left: 4px solid var(--primary, #1a5c6e);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 0 0 16px;
+}
+
+.erp-guide__icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--primary, #1a5c6e);
+  display: grid;
+  place-items: center;
+  svg { width: 19px; height: 19px; }
+}
+
+.erp-guide__body { flex: 1; min-width: 0; }
+
+.erp-guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.erp-guide__head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #1a3038);
+}
+.erp-guide__close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-muted, #5a8290);
+  cursor: pointer;
+  padding: 0 4px;
+  &:hover { color: var(--text, #1a3038); }
+}
+
+.erp-guide__intro {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted, #5a8290);
+}
+
+.erp-guide__needs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 2px;
+}
+.erp-guide__needs-lbl {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--danger, #dc2626);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.erp-guide__chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary, #1a5c6e);
+  background: #fff;
+  border: 1px solid var(--border, #cce8ed);
+  border-radius: 99px;
+  padding: 3px 10px;
+}
+
+.erp-guide__steps {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  li {
+    font-size: 13px;
+    color: var(--text, #1a3038);
+    margin-bottom: 5px;
+    line-height: 1.45;
+    &::marker { color: var(--primary, #1a5c6e); font-weight: 700; }
+  }
+}
+
+.erp-guide-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #fff;
+  border: 1px dashed var(--primary-light, #2d8a9e);
+  color: var(--primary, #1a5c6e);
+  border-radius: 99px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 0 14px;
+  transition: background .15s;
+  &:hover { background: var(--primary-pale, #e0f5f8); }
+  svg { width: 15px; height: 15px; }
+}

@@ -99,6 +99,12 @@ export class PartnerFormComponent implements OnInit {
   exchangeRate: number | null = null;
   exchangeRateLoading = false;
 
+  // Inline "quick add country" popup — lets the user create a missing country
+  // without leaving the customer form.
+  showQuickCountry = false;
+  quickCountrySaving = false;
+  quickCountry = { name: '', taxName: '', gstPct: null as number | null, currencySymbol: '' };
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -200,6 +206,61 @@ export class PartnerFormComponent implements OnInit {
   back(): void {
     this.router.navigate(['/app/business-partners'], {
       queryParams: { tab: this.type }
+    });
+  }
+
+  /** Opens the inline quick-add popup, pre-filling the name the user typed. */
+  openQuickCountry(typedText: string): void {
+    this.quickCountry = { name: (typedText || '').trim(), taxName: '', gstPct: null, currencySymbol: '' };
+    this.showQuickCountry = true;
+  }
+
+  closeQuickCountry(): void {
+    this.showQuickCountry = false;
+  }
+
+  /** Creates the country via API and immediately selects it in the form. */
+  async saveQuickCountry(): Promise<void> {
+    const name = (this.quickCountry.name || '').trim();
+    if (!name) {
+      await this.showWarning('Validation', 'Country name is required.');
+      return;
+    }
+    this.quickCountrySaving = true;
+    const userId = Number(localStorage.getItem('id')) || 0;
+    const payload = {
+      CountryName: name,
+      TaxName: (this.quickCountry.taxName || '').trim(),
+      GSTPercentage: this.toNumber(this.quickCountry.gstPct) ?? 0,
+      CurrencySymbol: (this.quickCountry.currencySymbol || '').trim(),
+      CreatedBy: userId,
+      UpdatedBy: userId,
+      IsActive: true
+    };
+    this.partners.createCountry(payload).subscribe({
+      next: async (res: any) => {
+        this.quickCountrySaving = false;
+        if (res && res.isSuccess === false) {
+          await this.showError('Add Failed', res.message || 'Unable to add country.');
+          return;
+        }
+        const newId = this.toNumber(res?.data ?? res?.Data ?? res?.id ?? res?.Id);
+        // Add to the dropdown and select it — no page navigation needed.
+        if (newId) {
+          this.countryOptions = [...this.countryOptions, { label: name, value: newId }];
+          this.customer.countryId = newId;
+        } else {
+          // Fallback: reload the list so the new country appears.
+          this.partners.getCountries().pipe(catchError(() => of([]))).subscribe(list => {
+            this.countryOptions = this.toOptions(this.partners.unwrapRows(list), 'countryName', 'id', 'name');
+          });
+        }
+        this.showQuickCountry = false;
+      },
+      error: async () => {
+        this.quickCountrySaving = false;
+        await this.showError('Add Failed', 'Unable to add country.');
+      }
     });
   }
 

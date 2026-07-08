@@ -327,8 +327,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
     return {
       id: Number(g.id ?? g.ID ?? 0),
       grnNo: g.grnNo ?? g.GrnNo ?? g.GRNNo ?? '',
-      poId: Number(g.poid ?? g.poId ?? g.POID ?? g.PoId ?? 0),
-      poNo: String(g.poNo ?? g.PoNo ?? g.PONo ?? g.poid ?? g.POID ?? ''),
+      // NOTE: the API serialises the SQL column POID as camelCase "pOID" (only the first
+      // letter is lower-cased, like GRNJson -> gRNJson). Missing this variant left poId = 0,
+      // so the PO was never fetched and the invoice tax rate stayed 0 (no tax on the SI).
+      poId: Number(g.pOID ?? g.poid ?? g.poId ?? g.POID ?? g.PoId ?? 0),
+      poNo: String(g.poNo ?? g.PoNo ?? g.PONo ?? g.pOID ?? g.POID ?? ''),
       supplierId: Number(g.supplierId ?? g.SupplierId ?? 0),
       supplierName: g.supplierName ?? g.SupplierName ?? '',
       supplierCountryId: Number(g.countryId ?? g.CountryId ?? g.supplierCountryId ?? 0) || null,

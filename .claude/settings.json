@@ -141,7 +141,20 @@
       "PowerShell($D=\"ERP_Master\")",
       "PowerShell(\"===== ERP_Master Organizations =====\")",
       "PowerShell(\"`n===== ERP_Master Companies =====\")",
-      "PowerShell(\"`n===== ERP_Master MasterUsers \\(active?\\) =====\")"
+      "PowerShell(\"`n===== ERP_Master MasterUsers \\(active?\\) =====\")",
+      "Bash(npx ng *)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(grep -iE \"error|failed|warning\" \"/c/Users/CCSPLN~1/AppData/Local/Temp/claude/c--Users-CCSPLNB03-source-repos-ERP-New/01a8ddb0-53e4-405f-bff5-2890a2372845/scratchpad/build.log\" | head -30; echo \"---TAIL---\"; tail -5 \"/c/Users/CCSPLN~1/AppData/Local/Temp/claude/c--Users-CCSPLNB03-source-repos-ERP-New/01a8ddb0-53e4-405f-bff5-2890a2372845/scratchpad/build.log\")",
+      "Read(//c/Users/CCSPLN~1/AppData/Local/Temp/claude/c--Users-CCSPLNB03-source-repos-ERP-New/01a8ddb0-53e4-405f-bff5-2890a2372845/scratchpad/**)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -E -h -1 -W -Q \"SET NOCOUNT ON; SELECT name FROM sys.databases WHERE name LIKE 'ERP%' ORDER BY name;\")",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -h -1 -W -Q 'SET NOCOUNT ON; *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -W -Q 'SET NOCOUNT ON; *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(xargs grep -nE \"public|class\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

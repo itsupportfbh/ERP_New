@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef, HostListener, ElementRef, ViewChild, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface DropdownOption { label: string; value: any; }
@@ -26,6 +26,13 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
   @Input() errorMsg = '';
   /** Optional minimum width (px) for the dropdown panel. Useful for long labels. */
   @Input() menuMinWidth = 0;
+  /** When true, shows a "+ Add new" row at the bottom of the menu so the user
+   *  can create a missing master value inline without leaving the form. */
+  @Input() allowAdd = false;
+  /** Word shown in the add row, e.g. addTypeLabel="Country" → "+ Add new Country". */
+  @Input() addTypeLabel = '';
+  /** Emits the current search text when the user clicks the add row. */
+  @Output() addNew = new EventEmitter<string>();
 
   @ViewChild('searchInput') searchInputRef?: ElementRef<HTMLInputElement>;
 
@@ -122,6 +129,14 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
     e.stopPropagation();
     this.value = null;
     this.onChange(null);
+  }
+
+  /** User clicked the "+ Add new" row — hand the typed text back to the parent. */
+  triggerAdd(e?: Event): void {
+    e?.preventDefault();
+    e?.stopPropagation();
+    this.addNew.emit(this.searchText.trim());
+    this.open = false;
   }
 
   @HostListener('window:scroll')
