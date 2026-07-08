@@ -1,16 +1,15 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 @Component({
   selector: 'erp-finance-opening-balance',
   standalone: true,
-  imports: [CommonModule, FormsModule, MoneyPipe, TaxNamePipe],
+  imports: [CommonModule, FormsModule, MoneyPipe],
   templateUrl: './finance-opening-balance.component.html',
   styleUrls: ['./finance-opening-balance.component.scss']
 })

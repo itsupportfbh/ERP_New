@@ -6,14 +6,13 @@ import { environment } from '../../../environments/environment';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
 
 type AgingTab = 'ar' | 'ap';
 
 @Component({
   selector: 'erp-finance-arap-aging',
   standalone: true,
-  imports: [CommonModule, FormsModule, FinanceReportsHubComponent, MoneyPipe, TaxNamePipe],
+  imports: [CommonModule, FormsModule, FinanceReportsHubComponent, MoneyPipe],
   templateUrl: './finance-arap-aging.component.html',
   styleUrls: ['./finance-arap-aging.component.scss']
 })

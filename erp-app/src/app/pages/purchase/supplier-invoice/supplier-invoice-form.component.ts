@@ -406,6 +406,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.currencyId = null;
       this.currencyName = '';
       this.fxRate = 1;
+      this.taxRate = 0;   // no GRN selected — clear the tax rate
     }
 
     this.grnSearch = selectedGrns.map(x => x.grnNo).join(', ');
@@ -430,6 +431,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.supplierName = '';
       this.supplierId = null;
       this.selectedSupplierCountryId = null;
+      this.taxRate = 0;   // no GRN selected — clear the tax rate
     }
     this.applyTaxDecision(this.taxRate);
     this.loadLinesWithPoFetch(selectedGrns);
@@ -444,8 +446,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
       defaultTaxRate
     });
     this.isOverseas = decision.isOverseas;
-    this.defaultTaxMode = decision.taxMode;
-    this.taxRate = decision.taxRate;
+    // Tax % always follows the source rate (from the GRN/PO), even for overseas
+    // orders — the decision's zero-rating is not applied to the displayed rate.
+    const rate = Math.max(0, Number(defaultTaxRate || 0));
+    this.taxRate = rate;
+    this.defaultTaxMode = rate > 0 ? 'Exclusive' : 'ZeroRated';
     this.lines.forEach(line => {
       line.taxMode = this.defaultTaxMode === 'ZeroRated' ? 'Zero' : (line.taxMode === 'Zero' ? 'Exclusive' : line.taxMode);
       this.recalcLine(line);
@@ -489,7 +494,11 @@ export class SupplierInvoiceFormComponent implements OnInit {
       const grnItems = this.safeJsonArray(g.grnJson);
       const poItems = this.safeJsonArray(g.poLines);
       if (!this.taxRate && grnItems.length) {
-        const grnTax = Number(grnItems[0].taxRate ?? 0);
+        // Pull the tax rate carried on the GRN lines. Scan all lines (not just
+        // the first) and accept common field-name variants so a differently
+        // cased/named key still resolves.
+        const readTax = (x: any) => Number(x?.taxRate ?? x?.TaxRate ?? x?.taxPct ?? x?.gstPct ?? x?.tax ?? 0);
+        const grnTax = grnItems.reduce((max: number, x: any) => Math.max(max, readTax(x) || 0), 0);
         if (grnTax > 0) {
           this.taxRate = grnTax;
           this.applyTaxDecision(grnTax);
