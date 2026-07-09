@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 type CompanyTab = 'general' | 'financeTax' | 'defaults' | 'numberSeries' | 'adminUser' | 'audit';
 
 const blankGeneral = () => ({ code: '', name: '', legalName: '', registrationNo: '', taxRegistrationNo: '', status: 'Active', phone: '', email: '', website: '', contactPerson: '', contactMobileNo: '', contactEmail: '', address1: '', address2: '', city: '', state: '', postal: '' });
-const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any, retainedEarningsAccountId: null as any, outputTaxAccountId: null as any, inputTaxAccountId: null as any, gstPayableAccountId: null as any, gstReceivableAccountId: null as any, supplierDepositAccountId: null as any });
+const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any, retainedEarningsAccountId: null as any });
 const blankDefaults = () => ({ defaultBranch: 'Head Office', defaultWarehouse: 'Main Warehouse', defaultBin: 'MAIN', defaultLanguage: 'EN', timeZone: 'Asia/Kolkata' });
 const blankAdmin = () => ({ username: '', email: '', password: '', departmentId: 1, locationId: 1 });
 const defaultNumberSeries = () => ([
@@ -66,7 +66,9 @@ export class CompanyComponent implements OnInit {
   integrations = { whatsapp: true, smtp: true, ocr: false, apiEndpoint: '', apiKey: '' };
   adminUser = blankAdmin();
 
-  readonly tabsOrder: CompanyTab[] = ['general', 'financeTax', 'defaults', 'numberSeries', 'adminUser', 'audit'];
+  // Trimmed tabs — Defaults removed, but Number Series is kept because it drives the
+  // document numbering used for quotations / invoices.
+  readonly tabsOrder: CompanyTab[] = ['general', 'financeTax', 'numberSeries', 'adminUser', 'audit'];
   permission: FunctionPermission;
   isPermissionLoaded = false;
   userId: number = 0;
@@ -81,6 +83,10 @@ export class CompanyComponent implements OnInit {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
   }
+
+  /** Only a Super Admin may create a NEW organization; others are limited to adding a
+   *  company under their existing organization (enforced on the backend too). */
+  get isSuperAdmin(): boolean { return this.auth.isSuperAdmin(); }
 
   ngOnInit(): void { this.loadPermission(); }
 
@@ -99,9 +105,13 @@ export class CompanyComponent implements OnInit {
     this.masterSvc.getOrganizationCompanyList(approvalLevelName, orgGuid).subscribe({
       next: (res: any) => {
         let all: any[] = Array.isArray(res) ? res : (res?.data || []);
-        // companyId > 1 means sub-company admin — show only their own company
+        // companyId > 1 means sub-company admin — show only their own company, and make the
+        // counts (stat cards + org header) reflect the filtered view, not the backend total.
         if (!isSuperAdmin && userCompanyId > 1) {
-          all = all.map(org => ({ ...org, companies: (org.companies || []).filter((c: any) => c.id === userCompanyId) }))
+          all = all.map(org => {
+                     const companies = (org.companies || []).filter((c: any) => c.id === userCompanyId);
+                     return { ...org, companies, companyCount: companies.length };
+                   })
                    .filter(org => org.companies.length > 0);
         }
         this.orgs = all;
@@ -156,7 +166,9 @@ export class CompanyComponent implements OnInit {
     this.adminUser = blankAdmin();
     this.logoPreview = null;
     this.logoName = '';
-    this.isNewOrganization = true;
+    // Super Admin defaults to a new organization; a company admin can only add under
+    // their existing organization.
+    this.isNewOrganization = this.isSuperAdmin;
     this.selectedOrganizationId = 0;
     this.selectedOrgGuid = '';
     this.message = ''; this.isError = false;
@@ -197,12 +209,7 @@ export class CompanyComponent implements OnInit {
           decimalPlaces: f.decimalPlaces ?? 2, roundingRule: f.roundingRule || 'Round half up',
           cashAccountId: f.cashAccountId || null,
           advanceAccountId: f.advanceAccountId || null,
-          retainedEarningsAccountId: f.retainedEarningsAccountId || null,
-          outputTaxAccountId: f.outputTaxAccountId || null,
-          inputTaxAccountId: f.inputTaxAccountId || null,
-          gstPayableAccountId: f.gstPayableAccountId || null,
-          gstReceivableAccountId: f.gstReceivableAccountId || null,
-          supplierDepositAccountId: f.supplierDepositAccountId || null
+          retainedEarningsAccountId: f.retainedEarningsAccountId || null
         };
         const d = res.defaults || {};
         this.defaults = { defaultBranch: d.defaultBranch || 'Head Office', defaultWarehouse: d.defaultWarehouse || 'Main Warehouse', defaultBin: d.defaultBin || 'MAIN', defaultLanguage: d.defaultLanguage || 'EN', timeZone: d.timeZone || 'Asia/Kolkata' };
@@ -357,6 +364,39 @@ export class CompanyComponent implements OnInit {
         const msg = err?.error?.message || 'Save failed. Please try again.';
         Swal.fire({ icon: 'error', title: 'Save Failed', text: msg, confirmButtonColor: '#1a5c6e' });
       }
+    });
+  }
+
+  // Owner/main company is the gateway to the whole org. Only allow deactivating it once every
+  // other company in the org is already inactive; sub-companies can always be toggled.
+  canToggle(org: any, c: any): boolean {
+    if (!this.canEdit()) return false;
+    if (!c.isOwner) return true;
+    if (!c.isActive) return true; // owner already inactive → allow reactivate
+    return !(org?.companies || []).some((x: any) => x !== c && x.isActive);
+  }
+
+  toggleActive(company: any): void {
+    const activate = !company.isActive;
+    const masterId = company.masterCompanyId ?? company.MasterCompanyId ?? company.id;
+    Swal.fire({
+      title: activate ? 'Activate Company?' : 'Deactivate Company?',
+      text: `"${company.companyName}" will be ${activate ? 'activated' : 'deactivated'}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: activate ? '#16a34a' : '#d97706',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: activate ? 'Yes, Activate' : 'Yes, Deactivate',
+      cancelButtonText: 'Cancel'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.masterSvc.setCompanyActive(masterId, activate).subscribe({
+        next: (res: any) => {
+          Swal.fire({ icon: 'success', title: activate ? 'Activated!' : 'Deactivated!', text: res?.message || 'Status updated.', confirmButtonColor: '#1a5c6e', timer: 1600, showConfirmButton: false });
+          this.load();
+        },
+        error: (err: any) => Swal.fire({ icon: 'error', title: 'Failed', text: err?.error?.message || 'Unable to update status.', confirmButtonColor: '#1a5c6e' })
+      });
     });
   }
 

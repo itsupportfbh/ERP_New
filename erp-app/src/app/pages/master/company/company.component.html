@@ -34,7 +34,7 @@
         <div class="cmp-org-avatar">{{ getAvatar(org) }}</div>
         <div>
           <span class="cmp-org-name">{{ org.orgName }}</span>
-          <span class="cmp-org-code">{{ org.orgCode }}</span>
+          <span class="cmp-org-code" *ngIf="org.orgCode && org.orgCode !== org.orgName">{{ org.orgCode }}</span>
         </div>
         <div class="cmp-org-meta">
           <span>{{ org.companyCount || org.companies?.length || 0 }} companies</span>
@@ -48,7 +48,7 @@
         </tr></thead>
         <tbody>
           <tr *ngFor="let c of org.companies">
-            <td><strong>{{ c.companyName }}</strong><small>{{ c.companyCode }}</small></td>
+            <td><strong>{{ c.companyName }}</strong><small *ngIf="c.companyCode && c.companyCode !== c.companyName">{{ c.companyCode }}</small></td>
             <td>{{ c.adminUsername }}<small>{{ c.adminEmail }}</small></td>
             <td>{{ c.createdByName || '-' }}</td>
             <td>{{ c.createdDate ? (c.createdDate | date:'dd-MM-yyyy') : '-' }}</td>
@@ -56,6 +56,18 @@
             <td>{{ c.updatedDate ? (c.updatedDate | date:'dd-MM-yyyy') : '-' }}</td>
             <td><span class="cmp-status-tag" [class.active]="c.isActive" [class.inactive]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
             <td><div class="cmp-tbl-actions">
+              <button class="dt-icon-btn cmp-toggle" (click)="toggleActive(c)"
+                [title]="c.isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'"
+                [style.color]="c.isActive ? '#16a34a' : '#9ca3af'"
+                *ngIf="canToggle(org, c)">
+                <svg viewBox="0 0 24 20" fill="none">
+                  <rect x="1.5" y="4.5" width="21" height="11" rx="5.5"
+                        [attr.fill]="c.isActive ? 'currentColor' : 'none'"
+                        stroke="currentColor" stroke-width="1.5"/>
+                  <circle [attr.cx]="c.isActive ? 17 : 7" cy="10" r="3"
+                          [attr.fill]="c.isActive ? '#ffffff' : 'currentColor'"/>
+                </svg>
+              </button>
               <button class="dt-icon-btn edit" (click)="editCompany(c)" title="Edit" *ngIf="canEdit()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
               <button class="dt-icon-btn del" (click)="openDelete(c)" title="Delete" *ngIf="canDelete()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>
@@ -72,15 +84,25 @@
 <ng-container *ngIf="isFormVisible">
   <div class="cmp-setup-pg">
 
-    <!-- Top bar -->
-    <div class="cmp-setup-top">
-      <button class="cmp-back-btn" (click)="cancel()">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 4L7 10l6 6"/></svg>
-        Back
+    <!-- ONE card wraps everything: header, stepper (tabs) and the form -->
+    <div class="cmp-form-card">
+
+    <!-- Header: back + title on one clean row -->
+    <div class="cmp-setup-head">
+      <button class="cmp-back-btn" (click)="cancel()" title="Back">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M13 4L7 10l6 6"/></svg>
       </button>
+      <div class="cmp-head-titles">
+        <h2 class="cmp-setup-title">{{ isEditMode ? 'Edit' : 'Add' }} Company</h2>
+        <p class="cmp-breadcrumb">Master → Company Setup</p>
+      </div>
     </div>
-    <h2 class="cmp-setup-title">{{ isEditMode ? 'Edit' : 'Add' }} Company</h2>
-    <p class="cmp-breadcrumb">Master → Company Setup</p>
+
+    <!-- Loader overlay while the company loads (edit) or saves -->
+    <div *ngIf="loading || saving" class="cmp-loader">
+      <div class="cmp-spinner"></div>
+      <span>{{ saving ? 'Saving…' : 'Loading…' }}</span>
+    </div>
 
     <!-- Stepper -->
     <div class="cmp-stepper">
@@ -100,32 +122,24 @@
         <span class="cstep-label">Finance &amp; Tax</span>
       </div>
       <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 1"></div>
-      <div class="cstep" [class.cstep-active]="activeTab==='defaults'" [class.cstep-done]="activeTabIndex > 2" (click)="setTab('defaults')">
+      <div class="cstep" [class.cstep-active]="activeTab==='numberSeries'" [class.cstep-done]="activeTabIndex > 2" (click)="setTab('numberSeries')">
         <div class="cstep-circle">
           <svg *ngIf="activeTabIndex > 2" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
           <span *ngIf="activeTabIndex <= 2">3</span>
         </div>
-        <span class="cstep-label">Defaults</span>
+        <span class="cstep-label">Number Series</span>
       </div>
       <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 2"></div>
-      <div class="cstep" [class.cstep-active]="activeTab==='numberSeries'" [class.cstep-done]="activeTabIndex > 3" (click)="setTab('numberSeries')">
+      <div class="cstep" [class.cstep-active]="activeTab==='adminUser'" [class.cstep-done]="activeTabIndex > 3" (click)="setTab('adminUser')">
         <div class="cstep-circle">
           <svg *ngIf="activeTabIndex > 3" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
           <span *ngIf="activeTabIndex <= 3">4</span>
         </div>
-        <span class="cstep-label">Number Series</span>
-      </div>
-      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 3"></div>
-      <div class="cstep" [class.cstep-active]="activeTab==='adminUser'" [class.cstep-done]="activeTabIndex > 4" (click)="setTab('adminUser')">
-        <div class="cstep-circle">
-          <svg *ngIf="activeTabIndex > 4" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="4 10 8 14 16 6"/></svg>
-          <span *ngIf="activeTabIndex <= 4">5</span>
-        </div>
         <span class="cstep-label">Admin User</span>
       </div>
-      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 4"></div>
+      <div class="cstep-line" [class.cstep-line-done]="activeTabIndex > 3"></div>
       <div class="cstep" [class.cstep-active]="activeTab==='audit'" (click)="setTab('audit')">
-        <div class="cstep-circle"><span>6</span></div>
+        <div class="cstep-circle"><span>5</span></div>
         <span class="cstep-label">Audit</span>
       </div>
     </div>
@@ -138,8 +152,11 @@
         <h3>Organization</h3>
         <p>Select how to create this company</p>
         <div style="display:flex;gap:16px;margin-bottom:12px">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="radio" [checked]="isNewOrganization" (change)="onOrgModeChange(true)"/> New Organization
+          <label style="display:flex;align-items:center;gap:8px"
+                 [style.opacity]="isSuperAdmin ? 1 : 0.45"
+                 [style.cursor]="isSuperAdmin ? 'pointer' : 'not-allowed'">
+            <input type="radio" [checked]="isNewOrganization" [disabled]="!isSuperAdmin" (change)="onOrgModeChange(true)"/>
+            New Organization <small *ngIf="!isSuperAdmin" style="color:#888">(Super Admin only)</small>
           </label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="radio" [checked]="!isNewOrganization" (change)="onOrgModeChange(false)"/> Existing Organization
@@ -183,31 +200,12 @@
             <input class="mf-input" type="text" [(ngModel)]="general.name" name="name" placeholder="Company Name"/>
           </div>
           <div class="mf-group">
-            <label class="mf-label">Status</label>
-            <erp-dropdown name="status" [(ngModel)]="general.status"
-              [options]="[{label:'Active',value:'Active'},{label:'Inactive',value:'Inactive'}]"
-              placeholder="Select Status">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Registration No</label>
-            <input class="mf-input" type="text" [(ngModel)]="general.registrationNo" name="registrationNo" placeholder="Registration No"/>
-          </div>
-          <div class="mf-group">
             <label class="mf-label">Phone</label>
             <input class="mf-input" type="text" [(ngModel)]="general.phone" name="phone" placeholder="Phone"/>
           </div>
           <div class="mf-group">
             <label class="mf-label">Email</label>
             <input class="mf-input" type="email" [(ngModel)]="general.email" name="email" placeholder="Email"/>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Legal Name</label>
-            <input class="mf-input" type="text" [(ngModel)]="general.legalName" name="legalName" placeholder="Legal Name"/>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Website</label>
-            <input class="mf-input" type="text" [(ngModel)]="general.website" name="website" placeholder="https://"/>
           </div>
           <div class="mf-group">
             <label class="mf-label">Country</label>
@@ -219,14 +217,6 @@
           <div class="mf-group">
             <label class="mf-label">Contact Person</label>
             <input class="mf-input" type="text" [(ngModel)]="general.contactPerson" name="contactPerson" placeholder="Contact Person"/>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Contact Mobile</label>
-            <input class="mf-input" type="text" [(ngModel)]="general.contactMobileNo" name="contactMobile" placeholder="+65 0000 0000"/>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Contact Email</label>
-            <input class="mf-input" type="email" [(ngModel)]="general.contactEmail" name="contactEmail" placeholder="contact@company.com"/>
           </div>
         </div>
         <div class="dt-form-grid">
@@ -262,42 +252,13 @@
           <div class="mf-group">
             <label class="mf-label">Tax Mode</label>
             <erp-dropdown name="taxMode" [(ngModel)]="financeTax.taxMode"
-              [options]="[{label:'Exclusive',value:'Exclusive'},{label:'Inclusive',value:'Inclusive'}]"
+              [options]="[{label:'Exclusive',value:'Exclusive'},{label:'Inclusive',value:'Inclusive'},{label:'Zero Rated',value:'ZeroRated'}]"
               placeholder="Select Tax Mode">
             </erp-dropdown>
           </div>
           <div class="mf-group">
             <label class="mf-label">GST / VAT No</label>
             <input class="mf-input" type="text" [(ngModel)]="financeTax.gstNo" name="gstNo" placeholder="GST No"/>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Filing Frequency</label>
-            <erp-dropdown name="filingFreq" [(ngModel)]="financeTax.filingFrequency"
-              [options]="[{label:'Monthly',value:'Monthly'},{label:'Quarterly',value:'Quarterly'},{label:'Yearly',value:'Yearly'}]"
-              placeholder="Select Frequency">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Decimal Places</label>
-            <erp-dropdown name="decimalPlaces" [(ngModel)]="financeTax.decimalPlaces"
-              [options]="[{label:'0',value:0},{label:'2',value:2},{label:'3',value:3},{label:'4',value:4}]"
-              placeholder="Select Decimal Places">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Rounding Rule</label>
-            <erp-dropdown name="roundingRule" [(ngModel)]="financeTax.roundingRule"
-              [options]="[{label:'Round half up',value:'Round half up'},{label:'Round down',value:'Round down'},{label:'Round up',value:'Round up'}]"
-              placeholder="Select Rounding Rule">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Default Output Tax Code</label>
-            <input class="mf-input" type="text" [(ngModel)]="financeTax.defaultOutputTaxCode" name="outputTax" placeholder="Output Tax Code"/>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Default Input Tax Code</label>
-            <input class="mf-input" type="text" [(ngModel)]="financeTax.defaultInputTaxCode" name="inputTax" placeholder="Input Tax Code"/>
           </div>
           <div class="mf-group">
             <label class="mf-label">Cash Account (GL)</label>
@@ -320,68 +281,6 @@
               placeholder="-- Select Retained Earnings Account --">
             </erp-dropdown>
           </div>
-          <div class="mf-group">
-            <label class="mf-label">Output Tax Account (GL)</label>
-            <erp-dropdown name="outputTaxAccountId" [(ngModel)]="financeTax.outputTaxAccountId"
-              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
-              placeholder="-- Select Output Tax Account --">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Input Tax Account (GL)</label>
-            <erp-dropdown name="inputTaxAccountId" [(ngModel)]="financeTax.inputTaxAccountId"
-              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
-              placeholder="-- Select Input Tax Account --">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">GST Payable Account (GL)</label>
-            <erp-dropdown name="gstPayableAccountId" [(ngModel)]="financeTax.gstPayableAccountId"
-              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
-              placeholder="-- Select GST Payable Account --">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">GST Receivable Account (GL)</label>
-            <erp-dropdown name="gstReceivableAccountId" [(ngModel)]="financeTax.gstReceivableAccountId"
-              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
-              placeholder="-- Select GST Receivable Account --">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Supplier Deposit Account (GL)</label>
-            <erp-dropdown name="supplierDepositAccountId" [(ngModel)]="financeTax.supplierDepositAccountId"
-              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
-              placeholder="-- Select Supplier Deposit Account --">
-            </erp-dropdown>
-          </div>
-        </div>
-      </div>
-    </ng-container>
-
-    <!-- ── DEFAULTS TAB -->
-    <ng-container *ngIf="activeTab==='defaults'">
-      <div class="cmp-section">
-        <h3>Defaults</h3>
-        <p>Default branch, warehouse, language and timezone settings</p>
-        <div class="dt-form-grid">
-          <div class="mf-group"><label class="mf-label">Default Branch</label><input class="mf-input" [(ngModel)]="defaults.defaultBranch" name="branch" placeholder="Head Office"/></div>
-          <div class="mf-group"><label class="mf-label">Default Warehouse</label><input class="mf-input" [(ngModel)]="defaults.defaultWarehouse" name="warehouse" placeholder="Main Warehouse"/></div>
-          <div class="mf-group"><label class="mf-label">Default Bin</label><input class="mf-input" [(ngModel)]="defaults.defaultBin" name="bin" placeholder="MAIN"/></div>
-          <div class="mf-group">
-            <label class="mf-label">Language</label>
-            <erp-dropdown name="language" [(ngModel)]="defaults.defaultLanguage"
-              [options]="[{label:'English',value:'EN'},{label:'Tamil',value:'TA'},{label:'Chinese',value:'ZH'},{label:'Malay',value:'MS'}]"
-              placeholder="Select Language">
-            </erp-dropdown>
-          </div>
-          <div class="mf-group">
-            <label class="mf-label">Timezone</label>
-            <erp-dropdown name="timezone" [(ngModel)]="defaults.timeZone"
-              [options]="[{label:'Asia/Kolkata (IST)',value:'Asia/Kolkata'},{label:'Asia/Singapore (SGT)',value:'Asia/Singapore'},{label:'Asia/Kuala_Lumpur (MYT)',value:'Asia/Kuala_Lumpur'},{label:'UTC',value:'UTC'}]"
-              placeholder="Select Timezone">
-            </erp-dropdown>
-          </div>
         </div>
       </div>
     </ng-container>
@@ -390,7 +289,7 @@
     <ng-container *ngIf="activeTab==='numberSeries'">
       <div class="cmp-section">
         <h3>Number Series</h3>
-        <p>Configure document numbering prefix and sequence</p>
+        <p>Document numbering used for quotations &amp; invoices</p>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:var(--primary);color:#fff">
             <th style="padding:10px 12px;text-align:left">Document</th>
@@ -467,6 +366,8 @@
         {{ saving ? 'Saving…' : 'Save' }}
       </button>
     </div>
+
+    </div><!-- /cmp-form-card -->
 
   </div>
 </ng-container>
