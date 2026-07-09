@@ -296,6 +296,17 @@
   color: var(--primary);
 }
 
+.topbar-company {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .topbar-right {
   margin-left: auto;
   display: flex;
