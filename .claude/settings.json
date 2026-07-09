@@ -154,7 +154,9 @@
       "Bash(netstat -ano)",
       "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -W -Q 'SET NOCOUNT ON; *)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(xargs grep -nE \"public|class\")"
+      "Bash(xargs grep -nE \"public|class\")",
+      "PowerShell(sqlcmd -S \"DESKTOP-ARJ842N\\\\SQLEXPRESS01\" -d ERP_TCS -E -C -W -s \"|\" -Q \"SELECT Id, Username, Email, CompanyId, LocationId, DepartmentId, IsActive FROM dbo.[User] ORDER BY Id;\" 2>&1)",
+      "PowerShell(sqlcmd -S \"DESKTOP-ARJ842N\\\\SQLEXPRESS01\" -d ERP_TCS -E -C -W -s \"|\" -Q \"SELECT uc.Id, uc.UserId, u.Username, uc.CompanyId, c.CompanyName, uc.IsDefault FROM dbo.UserCompanies uc JOIN dbo.[User] u ON u.Id=uc.UserId JOIN dbo.Company c ON c.Id=uc.CompanyId ORDER BY uc.UserId;\" 2>&1)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

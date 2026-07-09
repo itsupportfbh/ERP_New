@@ -39,6 +39,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   get userName(): string { return localStorage.getItem('username') ?? localStorage.getItem('email') ?? 'User'; }
   get userInitial(): string { return (this.userName.charAt(0) || 'U').toUpperCase(); }
+  get companyName(): string {
+    const c = localStorage.getItem('companyName');
+    return c && c !== 'null' && c !== 'undefined' ? c : '';
+  }
 
   hasChildren(menu: MenuItem): boolean { return !!(menu.children?.length); }
 

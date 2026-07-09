@@ -191,7 +191,7 @@ export class SalesOrderListComponent implements OnInit {
             itemId: 0,
             itemCode: '',
             itemName: s.setName ?? s.SetName ?? 'Package',
-            uomName: '',
+            uomName: 'Set',
             qty: +(s.qty ?? s.Qty ?? 0) || 0,
             unitPrice: +(s.unitPrice ?? s.UnitPrice ?? 0) || 0,
             discountPct: +(s.discountPct ?? s.DiscountPct ?? 0) || 0,
