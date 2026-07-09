@@ -74,6 +74,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   showModal = false;
   editingIndex: number | null = null;
   modalLine: POLine = this.emptyLine();
+  private autoOpenFirstLine = false;
 
   supplierOptions: any[] = [];
   paymentTermOptions: any[] = [];
@@ -84,7 +85,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   taxModeOptions = [
     { label: 'Exclusive', value: 'Exclusive' },
     { label: 'Inclusive', value: 'Inclusive' },
-    { label: 'Zero Rated', value: 'ZeroRated' }
+    { label: 'Exempt', value: 'ZeroRated' }
   ];
   budgetOptions: any[] = [];
   availablePROptions: any[] = [];
@@ -370,6 +371,10 @@ export class PurchaseOrderFormComponent implements OnInit {
 
         this.loading = false;
         this.markClean();
+
+        // Arm the Lines step so the first line's popup auto-opens when the user
+        // reaches it (lets them fill in unit price / tax right away).
+        if (this.lines.length) this.autoOpenFirstLine = true;
       },
       error: () => { this.loading = false; }
     });
@@ -580,7 +585,7 @@ export class PurchaseOrderFormComponent implements OnInit {
   }
 
   onTaxModeChange(): void {
-    if (this.modalLine.taxMode === 'ZeroRated') this.modalLine.taxRate = 0;
+    this.modalLine.taxRate = this.modalLine.taxMode === 'ZeroRated' ? 0 : (this.gstPct ?? 0);
     this.recalcLine(this.modalLine);
   }
 
@@ -700,6 +705,12 @@ export class PurchaseOrderFormComponent implements OnInit {
       }
     }
     this.poStep = Math.max(0, Math.min(next, this.poSteps.length - 1));
+
+    // On first arrival at the Lines step (from a PR), open the first line's popup.
+    if (this.poStep === 1 && this.autoOpenFirstLine && this.lines.length) {
+      this.autoOpenFirstLine = false;
+      setTimeout(() => this.editLine(0));
+    }
   }
 
   get subTotal(): number { return this.lines.reduce((s, l) => s + (l.quantity ?? 0) * (l.unitPrice ?? 0), 0); }
@@ -728,6 +739,8 @@ export class PurchaseOrderFormComponent implements OnInit {
   }
 
   getLabel(opts: any[], val: any): string { return opts.find(o => o.value === val)?.label ?? '—'; }
+
+  taxModeLabel(mode: string): string { return this.taxModeOptions.find(o => o.value === mode)?.label ?? mode ?? '—'; }
 
   private resolvePurchaseOrderNo(): string {
     const current = (this.purchaseOrderNo || '').trim();

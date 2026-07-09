@@ -118,7 +118,9 @@ export class DeliveryOrderFormComponent implements OnInit {
       this.driverOptions = this.svc.unwrap(r).map((d: any) => ({
         id: Number(d.id ?? d.Id),
         name: d.driverName ?? d.name ?? d.fullName ?? `Driver ${d.id}`,
-        mobile: d.mobileNo ?? d.mobile ?? d.phone ?? d.contactNo ?? d.phoneNumber ?? ''
+        // Coerce to string — the API returns mobileNumber as a JSON number, but the
+        // backend DriverMobileNo column/DTO is a string (sending a number 400s).
+        mobile: String(d.mobileNumber ?? d.MobileNumber ?? d.mobileNo ?? d.mobile ?? d.phone ?? d.contactNo ?? d.phoneNumber ?? '')
       }));
       if (this.isEdit && this.driverId) this.onDriverChange();
     });
@@ -472,6 +474,12 @@ export class DeliveryOrderFormComponent implements OnInit {
     if (!this.soId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Sales Order.', confirmButtonColor: '#16a34a' }); return; }
     const anyQty = this.lines.some(l => (Number(l.deliverQty) || 0) > 0);
     if (!anyQty) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Enter at least one deliver quantity.', confirmButtonColor: '#16a34a' }); return; }
+    // Delivery mode (1) requires a Driver and a Vehicle — warn up front instead of
+    // letting the backend reject the request with a generic error.
+    if (Number(this.modeOfDeliveryId) === 1) {
+      if (!this.driverId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Driver for Delivery mode.', confirmButtonColor: '#16a34a' }); return; }
+      if (!this.vehicleId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please select a Vehicle for Delivery mode.', confirmButtonColor: '#16a34a' }); return; }
+    }
     this.saving = true;
 
     if (this.isEdit) {

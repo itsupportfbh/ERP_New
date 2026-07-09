@@ -53,8 +53,6 @@ export class DeliveryOrderListComponent implements OnInit {
     { header: 'Item', key: 'itemName' },
     { header: 'UOM', key: 'uomName', align: 'center' },
     { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
-    { header: 'Warehouse', key: 'warehouseName' },
-    { header: 'Bin', key: 'binName', align: 'center' },
     { header: 'Notes', key: 'notes' },
   ];
 
@@ -138,13 +136,17 @@ export class DeliveryOrderListComponent implements OnInit {
   // ── View / Print ──────────────────────────────────────
   private mapLine(l: any): any {
     const itemId = l.itemId ?? l.ItemId;
-    const uomId = l.uomId ?? l.UomId ?? l.uom ?? l.Uom;
+    const uomRaw = l.uomId ?? l.UomId ?? l.uom ?? l.Uom;
     const warehouseId = l.warehouseId ?? l.WarehouseId;
+    // UOM may be stored as a numeric id (map it) or already as the name string (use as-is).
+    const uomName = l.uomName ?? l.UomName
+      ?? (uomRaw != null && !isNaN(Number(uomRaw)) ? this.uomMap.get(Number(uomRaw)) : null)
+      ?? (uomRaw != null && String(uomRaw).trim() ? String(uomRaw) : '');
     return {
       itemId: Number(itemId) || 0,
       itemCode: l.itemCode ?? l.ItemCode ?? this.itemCodeMap.get(Number(itemId)) ?? '',
       itemName: l.itemName ?? l.ItemName ?? '',
-      uomName: l.uomName ?? l.UomName ?? this.uomMap.get(Number(uomId)) ?? '',
+      uomName,
       qty: l.qty ?? l.Qty ?? 0,
       warehouseName: l.warehouseName ?? l.WarehouseName ?? this.warehouseMap.get(Number(warehouseId)) ?? '',
       binName: l.binName ?? l.BinName ?? l.binCode ?? l.BinCode ?? '',

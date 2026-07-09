@@ -285,7 +285,19 @@ export class GrnFormComponent implements OnInit {
       ? JSON.parse(rawLines || '[]')
       : (Array.isArray(rawLines) ? rawLines : []);
 
-    this.lines = parsedLines.map((l: any) => ({
+    // Qty already received across previous GRNs for this PO, keyed by item.
+    const receivedMap = this.buildReceivedMap(po.receivedJson ?? po.ReceivedJson);
+
+    this.lines = parsedLines
+      .map((l: any) => {
+        const ordered = Number(l.qty ?? l.quantity ?? 0) || 0;
+        const already = this.lookupReceived(receivedMap, l.itemCode, l.itemId);
+        const remaining = ordered > 0 ? Math.max(0, +(ordered - already).toFixed(4)) : null;
+        return { l, ordered, already, remaining };
+      })
+      // Drop lines that are already fully received; keep lines with qty still due.
+      .filter(x => x.remaining === null || x.remaining > 0)
+      .map(({ l, ordered, already, remaining }) => ({
       itemId: l.itemId ?? null,
       itemCode: l.itemCode ?? '',
       itemName: l.itemSearch ?? l.itemName ?? '',
@@ -293,9 +305,11 @@ export class GrnFormComponent implements OnInit {
       supplierName: po.supplierName ?? '',
       warehouseId: this.defaultWarehouseId,   // ← auto from locationId
       binId: null,
-      qtyOrdered: l.qty ?? l.quantity ?? null,
-      qtyReceived: null,
-      qtyRemaining: l.remainingQty ?? l.qtyRemaining ?? null,
+      qtyOrdered: ordered || null,
+      // Pre-fill with the remaining qty once part of the order was already received,
+      // so the user sees exactly how much is still due.
+      qtyReceived: already > 0 ? remaining : null,
+      qtyRemaining: remaining,
       unitPrice: l.unitPrice ?? null,
       qualityCheck: 'Pass' as QualityCheck,
       storageType: '',
@@ -323,18 +337,52 @@ export class GrnFormComponent implements OnInit {
     }
   }
 
+  // Build a lookup of already-received qty per item from the PO's ReceivedJson
+  // (aggregated by the backend across all prior GRNs for this PO).
+  private buildReceivedMap(receivedJson: any): Map<string, number> {
+    const map = new Map<string, number>();
+    if (!receivedJson) return map;
+    let arr: any[] = [];
+    try { arr = typeof receivedJson === 'string' ? JSON.parse(receivedJson || '[]') : (Array.isArray(receivedJson) ? receivedJson : []); }
+    catch { arr = []; }
+    arr.forEach((r: any) => {
+      const qty = Number(r.receivedQty ?? r.ReceivedQty ?? 0) || 0;
+      const code = String(r.itemCode ?? r.ItemCode ?? '').trim().toUpperCase();
+      const id = r.itemId ?? r.ItemId;
+      if (code) map.set('C:' + code, (map.get('C:' + code) ?? 0) + qty);
+      if (id != null && id !== '') map.set('I:' + String(id), (map.get('I:' + String(id)) ?? 0) + qty);
+    });
+    return map;
+  }
+
+  private lookupReceived(map: Map<string, number>, itemCode: any, itemId: any): number {
+    const code = String(itemCode ?? '').trim().toUpperCase();
+    if (code && map.has('C:' + code)) return map.get('C:' + code)!;
+    if (itemId != null && itemId !== '' && map.has('I:' + String(itemId))) return map.get('I:' + String(itemId))!;
+    return 0;
+  }
+
   onQtyChange(line: GRNLine, newQty: number | null): void {
     line.qtyReceived = newQty;
     const received = Number(newQty) || 0;
     const ordered  = Number(line.qtyOrdered) || 0;
+    // Remaining still due after previous GRNs (falls back to ordered when unknown).
+    const remaining = line.qtyRemaining != null ? Number(line.qtyRemaining) : ordered;
+    const already   = Math.max(0, +(ordered - remaining).toFixed(4));
 
     if (ordered > 0 && received > 0) {
       const tol = Number(this.overReceiptTolerance) || 0;
-      const maxAllowed = ordered * (1 + tol / 100);
+      // Tolerance is an over-receipt allowance on the ordered qty; apply that slack
+      // on top of what is still remaining for this receipt.
+      const maxAllowed = +(remaining + ordered * (tol / 100)).toFixed(4);
       if (received > maxAllowed) {
-        line.qtyError = tol > 0
-          ? `Cannot exceed ${ordered} + ${tol}% tolerance (max ${maxAllowed.toFixed(2)})`
-          : `Cannot exceed ordered qty (${ordered})`;
+        line.qtyError = already > 0
+          ? (tol > 0
+              ? `Only ${remaining} left to receive (already received ${already} of ${ordered}; max ${maxAllowed.toFixed(2)} with ${tol}% tolerance)`
+              : `Only ${remaining} left to receive (already received ${already} of ${ordered})`)
+          : (tol > 0
+              ? `Cannot exceed ${ordered} + ${tol}% tolerance (max ${maxAllowed.toFixed(2)})`
+              : `Cannot exceed ordered qty (${ordered})`);
       } else {
         line.qtyError = '';
       }
@@ -342,7 +390,7 @@ export class GrnFormComponent implements OnInit {
       line.qtyError = '';
     }
 
-    line.isPartial = received > 0 && received < ordered && !line.qtyError;
+    line.isPartial = received > 0 && received < remaining && !line.qtyError;
   }
 
   addLine(): void {

@@ -478,6 +478,17 @@ export class SalesOrderFormComponent implements OnInit {
     label: `${q.number ?? q.quotationNo ?? q.id}${(q.customerName ?? q.CustomerName) ? ' - ' + (q.customerName ?? q.CustomerName) : ''}`
   });
 
+  // A quotation is expired once its validity date is strictly before today.
+  private isQuotationExpired(q: any): boolean {
+    const v = q.validityDate ?? q.ValidityDate;
+    if (!v) return false;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
+  }
+
   private loadAvailableQuotations(): void {
     forkJoin({
       quotes: this.svc.getQuotations(),
@@ -490,14 +501,23 @@ export class SalesOrderFormComponent implements OnInit {
             .filter((n: number) => n > 0)
         );
         this.quotations = this.svc.unwrap(quotes)
+          // keep the quotation this SO was created from, even if used/expired;
+          // otherwise drop used quotations and any past their validity date.
+          .filter((q: any) => {
+            const id = Number(q.id ?? q.Id);
+            if (id === this.quotationId) return true;
+            return !usedQuotationIds.has(id) && !this.isQuotationExpired(q);
+          })
           .map(this.mapQuotationRow)
-          // keep the quotation this SO was created from, even though it's "used"
-          .filter((q: QuotationRow) => q.id > 0 && (!usedQuotationIds.has(q.id) || q.id === this.quotationId));
+          .filter((q: QuotationRow) => q.id > 0);
       },
       error: () => {
         // Fallback: show all quotations if the sales-order list can't be loaded
         this.svc.getQuotations().subscribe((res: any) => {
-          this.quotations = this.svc.unwrap(res).map(this.mapQuotationRow).filter((q: QuotationRow) => q.id > 0);
+          this.quotations = this.svc.unwrap(res)
+            .filter((q: any) => Number(q.id ?? q.Id) === this.quotationId || !this.isQuotationExpired(q))
+            .map(this.mapQuotationRow)
+            .filter((q: QuotationRow) => q.id > 0);
         });
       }
     });

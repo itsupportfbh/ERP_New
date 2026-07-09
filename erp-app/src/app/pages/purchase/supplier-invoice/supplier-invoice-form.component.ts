@@ -529,6 +529,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
           (itemName && (p.itemName === itemName || p.itemSearch === itemName || p.item === itemName))
         );
         const poQty = poLine ? Number(poLine.qty ?? poLine.quantity ?? 0) : 0;
+        const poTaxMode = this.mapPoTaxMode(poLine?.taxMode ?? poLine?.TaxMode);
         const leafLedger = itemId ? (this.itemLeafLedgerMap.get(Number(itemId)) || null) : null;
         const itemLedger = itemId ? (this.itemLedgerMap.get(Number(itemId)) || null) : null;
         const catId = itemId ? (this.itemCategoryMap.get(Number(itemId)) || null) : null;
@@ -564,7 +565,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
           qty: grnQty,
           unitPrice,
           discountPct: 0,
-          taxMode: this.defaultTaxMode === 'ZeroRated' ? 'Zero' : 'Exclusive',
+          // Tax mode is inherited from the source PO line; fall back to the
+          // document default only when the PO carries no tax mode.
+          taxMode: poTaxMode ?? (this.defaultTaxMode === 'ZeroRated' ? 'Zero' : 'Exclusive'),
           lineTotal: 0,
           taxAmt: 0,
           lineGrandTotal: 0,
@@ -581,6 +584,16 @@ export class SupplierInvoiceFormComponent implements OnInit {
     });
 
     this.lines = merged;
+  }
+
+  // Map a PO line's tax mode (Exclusive / Inclusive / ZeroRated) onto the
+  // supplier-invoice tax mode ('Exclusive' | 'Inclusive' | 'Zero').
+  private mapPoTaxMode(poMode: any): TaxMode | null {
+    const m = String(poMode ?? '').trim().toLowerCase();
+    if (m === 'inclusive') return 'Inclusive';
+    if (m === 'exclusive') return 'Exclusive';
+    if (m === 'zerorated' || m === 'zero' || m === 'exempt') return 'Zero';
+    return null;
   }
 
   private calcMatchStatus(poQty: number, grnQty: number, invQty: number): 'OK' | 'Mismatch' | '' {

@@ -71,7 +71,6 @@
       <table class="si-table" *ngIf="!loading">
         <thead>
           <tr>
-            <th style="width:40px;"></th>
             <th>Inv No (Auto)</th>
             <th>Sup. Inv. No</th>
             <th>GRN</th>
@@ -79,19 +78,13 @@
             <th class="r">Amount</th>
             <th class="r">Base Amount</th>
             <th>Type</th>
-            <th style="min-width:130px;">Status</th>
-            <th style="width:110px;">3-Way Match</th>
-            <th style="width:80px;">Action</th>
+            <th>Status</th>
+            <th style="width:104px;">3-Way Match</th>
+            <th style="width:118px;">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of pagedRows">
-            <!-- Eye icon -->
-            <td>
-              <button class="si-eye-btn" (click)="openLinesModal(row)" title="View Lines">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
-              </button>
-            </td>
             <td><strong class="si-inv-no">{{ row.invoiceNo || '—' }}</strong></td>
             <td>{{ row.supplierInvoiceNo || '—' }}</td>
             <td class="si-grn-cell" [title]="row.grnNos">{{ row.grnNos || '—' }}</td>
@@ -128,17 +121,24 @@
             </td>
             <td>
               <div class="si-actions">
+                <button class="si-act-btn view" (click)="openLinesModal(row)" title="View">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+                </button>
+                <button class="si-act-btn print" *ngIf="perm.canPrint(fnId)" (click)="print(row)" title="Print">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,6 4,2 12,2 12,6"/><path d="M4 12H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1"/><rect x="4" y="10" width="8" height="4"/></svg>
+                </button>
                 <button class="si-act-btn edit" *ngIf="!isPosted(row) && perm.canEdit(fnId)" (click)="edit(row)" title="Edit">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg>
                 </button>
-                <button class="si-act-btn delete" *ngIf="!isPosted(row) && perm.canDelete(fnId)" (click)="delete(row)" title="Delete">
+                <button class="si-act-btn delete" *ngIf="perm.canDelete(fnId)" [disabled]="isPosted(row)"
+                  (click)="delete(row)" [title]="isPosted(row) ? 'Cannot delete a posted invoice' : 'Delete'">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3,4 13,4"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="10" rx="1"/></svg>
                 </button>
               </div>
             </td>
           </tr>
           <tr *ngIf="!rows.length && !loading">
-            <td colspan="11" class="si-empty">No supplier invoices found.</td>
+            <td colspan="10" class="si-empty">No supplier invoices found.</td>
           </tr>
         </tbody>
       </table>

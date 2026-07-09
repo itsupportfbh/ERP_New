@@ -27,6 +27,7 @@ type Customer = {
   id: number;
   name: string;
   countryId: number;
+  paymentTermId?: number | null;
   isCashSales?: boolean;
 };
 
@@ -422,6 +423,7 @@ export class QuotationFormComponent implements OnInit {
           id: Number(c.id ?? c.Id),
           name: String(c.customerName ?? c.CustomerName ?? c.name ?? '').trim(),
           countryId: Number(c.countryId ?? c.CountryId ?? 0),
+          paymentTermId: Number(c.paymentTermId ?? c.PaymentTermId ?? 0) || null,
           isCashSales: false
         }));
         this.customers = [
@@ -900,9 +902,29 @@ export class QuotationFormComponent implements OnInit {
     this.customerDdOpen = false;
     this.onCustomerChange(c.id, c);
   }
+
+  // Set the header Payment Terms from the customer's default terms (paymentTermId).
+  // Clears the field for Cash Sales / customers without configured terms.
+  private applyCustomerPaymentTerms(cust: Customer | null): void {
+    const termId = cust && !cust.isCashSales ? Number(cust.paymentTermId ?? 0) : 0;
+    const term = termId ? this.paymentTermsSrv.find(p => p.id === termId) : null;
+    if (term) {
+      this.header.paymentTermsId = term.id;
+      this.header.paymentTerms = term.name;
+      this.paymentTermsSearch = term.name;
+    } else {
+      this.header.paymentTermsId = 0;
+      this.header.paymentTerms = '';
+      this.paymentTermsSearch = '';
+    }
+    this.paymentTermsDdOpen = false;
+  }
   onCustomerChange(custId: number | null, selectedCustomer?: Customer): void {
     this.header.customerId = custId;
     const cust = selectedCustomer || this.customers.find(x => x.id === custId) || null;
+
+    // Auto-fill Payment Terms from the selected customer's default terms.
+    this.applyCustomerPaymentTerms(cust);
 
     if (cust?.isCashSales) {
       this.header.isCashSales = true;
