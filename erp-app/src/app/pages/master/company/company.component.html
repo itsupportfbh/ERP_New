@@ -320,6 +320,41 @@
               placeholder="-- Select Retained Earnings Account --">
             </erp-dropdown>
           </div>
+          <div class="mf-group">
+            <label class="mf-label">Output Tax Account (GL)</label>
+            <erp-dropdown name="outputTaxAccountId" [(ngModel)]="financeTax.outputTaxAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select Output Tax Account --">
+            </erp-dropdown>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Input Tax Account (GL)</label>
+            <erp-dropdown name="inputTaxAccountId" [(ngModel)]="financeTax.inputTaxAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select Input Tax Account --">
+            </erp-dropdown>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">GST Payable Account (GL)</label>
+            <erp-dropdown name="gstPayableAccountId" [(ngModel)]="financeTax.gstPayableAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select GST Payable Account --">
+            </erp-dropdown>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">GST Receivable Account (GL)</label>
+            <erp-dropdown name="gstReceivableAccountId" [(ngModel)]="financeTax.gstReceivableAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select GST Receivable Account --">
+            </erp-dropdown>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Supplier Deposit Account (GL)</label>
+            <erp-dropdown name="supplierDepositAccountId" [(ngModel)]="financeTax.supplierDepositAccountId"
+              [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
+              placeholder="-- Select Supplier Deposit Account --">
+            </erp-dropdown>
+          </div>
         </div>
       </div>
     </ng-container>

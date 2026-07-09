@@ -31,7 +31,13 @@ export class FinanceCoaComponent implements OnInit {
   systemAccountOptions = [
     { label: 'None', value: '' },
     { label: 'Cash Account', value: 'cash' },
-    { label: 'Advance Payment Account', value: 'advance' }
+    { label: 'Advance Payment Account', value: 'advance' },
+    { label: 'Retained Earnings Account', value: 'retainedearnings' },
+    { label: 'Output Tax Account', value: 'outputtax' },
+    { label: 'Input Tax Account', value: 'inputtax' },
+    { label: 'GST Payable Account', value: 'gstpayable' },
+    { label: 'GST Receivable Account', value: 'gstreceivable' },
+    { label: 'Supplier Deposit Account', value: 'supplierdeposit' }
   ];
   accountTypes = ['Asset', 'Liability', 'Equity', 'Income', 'Expense'];
 
@@ -157,7 +163,7 @@ export class FinanceCoaComponent implements OnInit {
       pHeadName:         parent ? parent.headName : 'COA',
       isGl:              row.isGl ?? false,
       isTransaction:     row.isTransaction ?? false,
-      systemAccountType: ''
+      systemAccountType: row.systemAccountType ?? ''
     };
     this.showForm = true;
     this.message = '';
@@ -230,11 +236,11 @@ export class FinanceCoaComponent implements OnInit {
         this.showForm = false;
         this.load();
 
-        if (systemType) {
-          const newId = res?.data ?? (isEdit ? this.editRow._dbId : null);
-          if (newId) {
-            this.finance.setSystemAccount(newId, systemType).subscribe();
-          }
+        // On create: only map when a type is chosen. On edit: always sync so
+        // changing the type to "None" clears the previous mapping too.
+        const newId = res?.data ?? (isEdit ? this.editRow._dbId : null);
+        if (newId && (systemType || isEdit)) {
+          this.finance.setSystemAccount(newId, systemType || '').subscribe();
         }
 
         Swal.fire({
