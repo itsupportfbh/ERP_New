@@ -16,6 +16,14 @@ export class ExchangeRateComponent implements OnInit {
   userId: number = 0;
   functionId = 'exchangerate';
 
+  // History
+  showHistory = false;
+  historyLoading = false;
+  historyTab: 'timeline' | 'audit' = 'timeline';
+  historyPair: { from: string; to: string } = { from: '', to: '' };
+  timeline: any[] = [];
+  audit: any[] = [];
+
   constructor(private masterSvc: MasterService, private permissionService: PermissionService) {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
@@ -58,6 +66,28 @@ export class ExchangeRateComponent implements OnInit {
     const obs = this.isEditMode ? this.masterSvc.updateExchangeRate(this.selectedId, payload) : this.masterSvc.createExchangeRate(payload);
     obs.subscribe({ next: (res: any) => { this.popupIsSuccess = res?.isSuccess !== false; this.popupMessage = res?.message || (this.isEditMode ? 'Updated successfully.' : 'Created successfully.'); this.showResultPopup = true; if (res?.isSuccess !== false) { this.cancel(); this.load(); } }, error: (err: any) => { this.popupIsSuccess = false; this.popupMessage = err?.error?.message || 'Save failed. Please try again.'; this.showResultPopup = true; } });
   }
+
+  openHistory(item: any): void {
+    const fromId = item.fromCurrencyId || this.currencies.find(c => (c.currencyCode || c.currencyName || c.name) === item.fromCurrency)?.id || null;
+    const toId = item.toCurrencyId || this.currencies.find(c => (c.currencyCode || c.currencyName || c.name) === item.toCurrency)?.id || null;
+    if (!fromId || !toId) { return; }
+    this.showHistory = true;
+    this.historyTab = 'timeline';
+    this.historyPair = { from: this.getCurrencyName(fromId), to: this.getCurrencyName(toId) };
+    this.timeline = [];
+    this.audit = [];
+    this.historyLoading = true;
+    this.masterSvc.getExchangeRateTimeline(fromId, toId).subscribe({
+      next: (res: any) => { this.timeline = res?.data || res || []; this.historyLoading = false; },
+      error: () => { this.historyLoading = false; }
+    });
+    this.masterSvc.getExchangeRateAudit(fromId, toId).subscribe({
+      next: (res: any) => { this.audit = res?.data || res || []; },
+      error: () => {}
+    });
+  }
+  closeHistory(): void { this.showHistory = false; }
+  setHistoryTab(tab: 'timeline' | 'audit'): void { this.historyTab = tab; }
 
   openDelete(item: any): void { this.itemToDelete = item; this.showDeleteModal = true; }
   confirmDelete(): void {

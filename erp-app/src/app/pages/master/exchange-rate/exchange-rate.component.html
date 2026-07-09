@@ -17,6 +17,7 @@
             </div>
           </div>
           <div class="mitem-actions">
+            <button class="micon-btn hist" (click)="openHistory(item)" title="Rate History"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7.5"/><polyline points="10 6 10 10 13 12"/></svg></button>
             <button class="micon-btn edit" (click)="edit(item)" title="Edit" *ngIf="canEdit()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
             <button class="micon-btn del" (click)="openDelete(item)" title="Delete" *ngIf="canDelete()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
           </div>
@@ -55,4 +56,67 @@
     (deleteCancelled)="showDeleteModal=false"
     (resultClosed)="showResultPopup=false">
   </erp-master-popup>
+
+  <div class="hist-overlay" *ngIf="showHistory" (click)="closeHistory()">
+    <div class="hist-modal" (click)="$event.stopPropagation()">
+      <div class="hist-head">
+        <div class="hist-title">
+          <span class="hist-pair">{{ historyPair.from }} → {{ historyPair.to }}</span>
+          <span class="hist-sub">Rate History</span>
+        </div>
+        <button class="hist-close" (click)="closeHistory()" title="Close"><svg viewBox="0 0 20 20"><line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" stroke-width="2"/><line x1="15" y1="5" x2="5" y2="15" stroke="currentColor" stroke-width="2"/></svg></button>
+      </div>
+
+      <div class="hist-tabs">
+        <button class="hist-tab" [class.active]="historyTab==='timeline'" (click)="setHistoryTab('timeline')">Rate Timeline</button>
+        <button class="hist-tab" [class.active]="historyTab==='audit'" (click)="setHistoryTab('audit')">Change Log</button>
+      </div>
+
+      <div class="hist-body">
+        <div class="hist-loading" *ngIf="historyLoading">Loading...</div>
+
+        <!-- Timeline: rate per date with day-over-day change -->
+        <div *ngIf="!historyLoading && historyTab==='timeline'">
+          <div class="hist-empty" *ngIf="timeline.length===0">No rate history for this pair.</div>
+          <table class="hist-table" *ngIf="timeline.length>0">
+            <thead><tr><th>Date</th><th class="num">Rate</th><th class="num">Previous</th><th class="num">Change</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let r of timeline" [class.inactive]="!r.isActive">
+                <td>{{ r.rateDate | date:'dd MMM yyyy' }}</td>
+                <td class="num">{{ r.rate }}</td>
+                <td class="num muted">{{ r.previousRate != null ? r.previousRate : '—' }}</td>
+                <td class="num">
+                  <span *ngIf="r.change == null" class="muted">—</span>
+                  <span *ngIf="r.change != null" [class.up]="r.change > 0" [class.down]="r.change < 0" [class.flat]="r.change == 0">
+                    {{ r.change > 0 ? '▲' : (r.change < 0 ? '▼' : '') }} {{ r.change }}
+                    <small *ngIf="r.changePercent != null">({{ r.changePercent }}%)</small>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Audit: who changed what, old -> new -->
+        <div *ngIf="!historyLoading && historyTab==='audit'">
+          <div class="hist-empty" *ngIf="audit.length===0">No change log yet. Edits made from now on will appear here.</div>
+          <div class="hist-log" *ngIf="audit.length>0">
+            <div class="hist-log-item" *ngFor="let a of audit">
+              <span class="hist-badge" [class.create]="a.action==='Create'" [class.update]="a.action==='Update'" [class.delete]="a.action==='Delete'">{{ a.action }}</span>
+              <div class="hist-log-main">
+                <div class="hist-log-rate">
+                  <span class="muted" *ngIf="a.oldRate != null">{{ a.oldRate }}</span>
+                  <span *ngIf="a.oldRate != null && a.newRate != null"> → </span>
+                  <strong *ngIf="a.newRate != null">{{ a.newRate }}</strong>
+                  <span *ngIf="a.action==='Delete'" class="muted"> (removed)</span>
+                  <small class="hist-log-date">for {{ a.rateDate | date:'dd MMM yyyy' }}</small>
+                </div>
+                <div class="hist-log-meta">{{ a.changedByName || 'User #' + (a.changedBy || '?') }} • {{ a.changedDate | date:'dd MMM yyyy, HH:mm' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

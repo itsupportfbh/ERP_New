@@ -77,6 +77,7 @@ export class QuotationFormComponent implements OnInit {
 
   // ── Route / state ───────────────────────────────────
   isEdit = false;
+  docDate: string | null = null;
   id: number | null = null;
   loading = false;
   saving = false;
@@ -522,6 +523,7 @@ export class QuotationFormComponent implements OnInit {
         if (!dto) { this.loading = false; return; }
 
         this.number = String(dto.number ?? dto.Number ?? '');
+        this.docDate = this.toDateInputValue(dto.createdDate ?? dto.CreatedDate) || null;
 
         this.header = {
           ...this.header,
@@ -1231,11 +1233,13 @@ export class QuotationFormComponent implements OnInit {
   }
 
   // ── FX ───────────────────────────────────────────────
-  fetchFxRate(fromCurrencyId: number): void {
+ fetchFxRate(fromCurrencyId: number): void {
     if (!fromCurrencyId || !this.baseCurrencyId) return;
     this.fxRateLoading = true;
-    const today = new Date().toISOString().substring(0, 10);
-    this.svc.getExchangeRate(fromCurrencyId, this.baseCurrencyId, today).subscribe({
+    // Use the quotation's own document date so an existing quote keeps its
+    // historical rate; a new quote (no docDate) falls back to today.
+    const rateDate = this.docDate || new Date().toISOString().substring(0, 10);
+    this.svc.getExchangeRate(fromCurrencyId, this.baseCurrencyId, rateDate).subscribe({
       next: (res: any) => {
         this.fxRateLoading = false;
         if (res?.isSuccess && res?.data?.rate) this.header.fxRate = Number(res.data.rate);

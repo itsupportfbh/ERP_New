@@ -138,6 +138,8 @@ export class MasterService {
   createExchangeRate(d: any): Observable<any> { return this.http.post(`${this.api}/ExchangeRate/Create`, this.withAudit(d)); }
   updateExchangeRate(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/ExchangeRate/Update/${id}`, this.withAudit({ ...d, id })); }
   deleteExchangeRate(id: number): Observable<any> { return this.http.delete(`${this.api}/ExchangeRate/Delete/${id}`); }
+  getExchangeRateTimeline(fromCurrencyId: number, toCurrencyId: number): Observable<any> { return this.http.get(`${this.api}/ExchangeRate/GetTimeline?fromCurrencyId=${fromCurrencyId}&toCurrencyId=${toCurrencyId}`); }
+  getExchangeRateAudit(fromCurrencyId: number, toCurrencyId: number): Observable<any> { return this.http.get(`${this.api}/ExchangeRate/GetAudit?fromCurrencyId=${fromCurrencyId}&toCurrencyId=${toCurrencyId}`); }
 
   // FLAG ISSUE
   getFlagIssues(): Observable<any> { return this.http.get(`${this.api}/FlagIssues/GetAllFlagissue`); }

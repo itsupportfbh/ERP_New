@@ -164,7 +164,8 @@ export class FinanceService {
     return this.http.put(this.url(endpoint), payload);
   }
 
-  setSystemAccount(coaId: number, accountType: 'cash' | 'advance'): Observable<any> {
+  setSystemAccount(coaId: number, accountType: string): Observable<any> {
+    // accountType '' (or 'none') clears any existing GL-role mapping for this account.
     return this.http.post(this.url('/ChartOfAccount/SetSystemAccount'), { coaId, accountType });
   }
 
