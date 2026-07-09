@@ -173,7 +173,7 @@
               <td class="col-partial center-cell">
                 <label class="partial-chk">
                   <input type="checkbox" [(ngModel)]="line.isPartial"
-                    [disabled]="line.isPosted || !((line.qtyReceived ?? 0) > 0 && (line.qtyReceived ?? 0) < (line.qtyOrdered ?? 0))" />
+                    [disabled]="line.isPosted || !((line.qtyReceived ?? 0) > 0 && (line.qtyReceived ?? 0) < (line.qtyRemaining ?? line.qtyOrdered ?? 0))" />
                 </label>
               </td>
               <!-- Quality Check -->

@@ -1,5 +1,6 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -58,27 +59,71 @@ export class QuotationListComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.svc.getQuotations().subscribe({
-      next: res => {
-        this.rows = this.svc.unwrap(res).map((r: any) => ({
-          ...r,
-          id: r.id ?? r.iD,
-          number: r.number ?? r.quotationNo ?? '',
-          customerName: r.customerName ?? r.customer ?? '',
-          currency: r.currency ?? r.currencyName ?? r.currencyCode ?? '',
-          currencyId: r.currencyId ?? r.currencyID ?? 0,
-          fxRate: Number(r.fxRate ?? r.fxrate ?? 1) || 1,
-          grandTotal: r.grandTotal ?? 0,
-          deliveryDate: r.deliveryDate ?? null,
-          validityDate: r.validityDate ?? null,
-          status: r.status ?? 0,
-          statusLabel: STATUS_MAP[r.status] ?? 'Draft',
-        }));
+    // Cross-check sales orders so quotations already converted to an SO are not
+    // marked "Expired" even if their validity date has passed.
+    forkJoin({
+      quotes: this.svc.getQuotations(),
+      orders: this.svc.getSalesOrders()
+    }).subscribe({
+      next: ({ quotes, orders }: any) => {
+        const usedQuotationIds = new Set<number>(
+          this.svc.unwrap(orders)
+            .map((so: any) => Number(so.quotationNo ?? so.QuotationNo ?? 0))
+            .filter((n: number) => n > 0)
+        );
+        this.rows = this.svc.unwrap(quotes).map((r: any) => this.mapRow(r, usedQuotationIds));
         this.applyFilter();
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => {
+        // Fallback: still list quotations, without the "used" cross-check.
+        this.svc.getQuotations().subscribe({
+          next: res => {
+            this.rows = this.svc.unwrap(res).map((r: any) => this.mapRow(r, new Set<number>()));
+            this.applyFilter();
+            this.loading = false;
+          },
+          error: () => { this.loading = false; }
+        });
+      }
     });
+  }
+
+  private mapRow(r: any, usedQuotationIds: Set<number>): any {
+    const id = r.id ?? r.iD;
+    const status = Number(r.status ?? 0);
+    const validityDate = r.validityDate ?? null;
+    const expired = this.isExpired(validityDate, status, Number(id), usedQuotationIds);
+    return {
+      ...r,
+      id,
+      number: r.number ?? r.quotationNo ?? '',
+      customerName: r.customerName ?? r.customer ?? '',
+      currency: r.currency ?? r.currencyName ?? r.currencyCode ?? '',
+      currencyId: r.currencyId ?? r.currencyID ?? 0,
+      fxRate: Number(r.fxRate ?? r.fxrate ?? 1) || 1,
+      grandTotal: r.grandTotal ?? 0,
+      deliveryDate: r.deliveryDate ?? null,
+      validityDate,
+      status,
+      isExpired: expired,
+      statusLabel: expired ? 'Expired' : (STATUS_MAP[status] ?? 'Draft'),
+    };
+  }
+
+  /**
+   * Expired = validity date is strictly before today AND the quotation was never
+   * used (not converted to a sales order). Rejected/Posted keep their own status.
+   */
+  private isExpired(validityDate: any, status: number, id: number, usedQuotationIds: Set<number>): boolean {
+    if (!validityDate) return false;
+    if (status === 3 || status === 4) return false;
+    if (usedQuotationIds.has(id)) return false;
+    const d = new Date(validityDate);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
   }
 
   applyFilter(): void {

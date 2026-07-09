@@ -159,6 +159,7 @@
               <th>Item</th>
               <th class="r-col">Qty</th>
               <th class="r-col">Unit Price</th>
+              <th class="c-col">Tax Mode</th>
               <th class="r-col">Disc %</th>
               <th class="r-col">Tax Amt</th>
               <th class="r-col">Total</th>
@@ -167,7 +168,7 @@
           </thead>
           <tbody>
             <tr *ngIf="!lines.length">
-              <td colspan="9" class="empty-lines">No lines yet — click "+ Add Line" to add items.</td>
+              <td colspan="10" class="empty-lines">No lines yet — click "+ Add Line" to add items.</td>
             </tr>
             <tr *ngFor="let line of lines; let i = index">
               <td class="c-col"><span class="row-badge">{{ i + 1 }}</span></td>
@@ -178,6 +179,7 @@
               </td>
               <td class="r-col num-cell">{{ line.quantity }}</td>
               <td class="r-col num-cell">{{ line.unitPrice | money:currencyId }}</td>
+              <td class="c-col">{{ taxModeLabel(line.taxMode) }}</td>
               <td class="r-col num-cell">{{ line.discountPct || 0 }}%</td>
               <td class="r-col num-cell">{{ line.taxAmt | money:currencyId }}</td>
               <td class="r-col num-cell"><strong>{{ line.lineTotal | money:currencyId }}</strong></td>
@@ -202,7 +204,7 @@
           </tbody>
           <tfoot *ngIf="lines.length">
             <tr class="tfoot-total">
-              <td colspan="7" class="r-col tfoot-label">Sub Total</td>
+              <td colspan="8" class="r-col tfoot-label">Sub Total</td>
               <td class="r-col num-cell tfoot-val">{{ lineGrandTotal | money:currencyId }}</td>
               <td></td>
             </tr>
@@ -435,18 +437,21 @@
           (ngModelChange)="recalcModal()" placeholder="0"></erp-input>
       </div>
 
-      <!-- Row 4: Tax Amt (readonly), Line Total (readonly) -->
+      <!-- Row 4: Tax Mode, Tax Amt (readonly) -->
       <div class="form-row cols-2 block-gap">
+        <erp-dropdown label="Tax Mode" [options]="taxModeOptions"
+          [(ngModel)]="modalLine.taxMode" (ngModelChange)="onTaxModeChange()"
+          placeholder="Select tax mode"></erp-dropdown>
         <erp-input [label]="('Tax Amount (GST' | taxName) + ' ' + gstPct + '%)'"
           type="number" [ngModel]="modalLine.taxAmt" [disabled]="true"
           placeholder="0.0000"></erp-input>
+      </div>
+
+      <!-- Row 5: Line Total (readonly), Remarks -->
+      <div class="form-row cols-2 block-gap">
         <erp-input label="Line Total" type="number"
           [ngModel]="modalLine.lineTotal" [disabled]="true"
           placeholder="0.0000"></erp-input>
-      </div>
-
-      <!-- Row 5: Remarks -->
-      <div class="form-row cols-1 block-gap">
         <erp-input label="Remarks" [(ngModel)]="modalLine.remarks" placeholder="Optional remarks"></erp-input>
       </div>
     </div>
