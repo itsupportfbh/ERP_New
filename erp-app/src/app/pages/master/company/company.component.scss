@@ -1,5 +1,9 @@
 :host { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
 
+/* On/off toggle switch icon (wider than the standard 14x14 action icons) */
+.cmp-toggle svg { width: 26px !important; height: 18px !important; }
+.cmp-toggle:hover { background: rgba(0,0,0,0.05); }
+
 .cmp-stepper {
   display: flex;
   align-items: center;
@@ -86,3 +90,106 @@
 .alert-msg.is-error { background:#fef2f2; color:#dc2626; }
 .form-row { display:flex; gap:12px; flex-wrap:wrap; }
 .btn-group { display:flex; gap:8px; margin-top:12px; }
+
+/* Clean page header: icon back-button aligned with the title + breadcrumb block. */
+.cmp-setup-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  .cmp-back-btn {
+    width: 40px; height: 40px; padding: 0;
+    border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--text);
+    &:hover { background: var(--primary-pale); border-color: var(--primary-light); color: var(--primary); }
+  }
+  .cmp-setup-title { margin: 0; line-height: 1.2; }
+  .cmp-breadcrumb { margin: 3px 0 0; }
+}
+
+/* Everything for a tab sits inside ONE card. The sub-sections (Logo, Company Details…)
+   are just content blocks inside it — no borders, no separate boxes. */
+.cmp-setup-pg {
+  .cmp-form-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  /* header, stepper (tabs) and actions all live inside the one card */
+  .cmp-form-card > .cmp-setup-head { padding: 20px 28px 14px; }
+  .cmp-form-card > .cmp-stepper {
+    margin: 0;
+    padding: 18px 28px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: #fbfcfc;
+  }
+  .cmp-form-card > .cmp-tab-actions {
+    margin: 0;
+    padding: 16px 28px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .cmp-section {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 18px 28px;
+  }
+  .cmp-section:first-child { padding-top: 24px; }
+  .cmp-section:last-child  { padding-bottom: 26px; }
+
+  /* Make the sub-section titles subtle group labels (not big separate headers),
+     and drop the descriptive subtext so the whole card reads as one form. */
+  .cmp-section > h3 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f3f4;
+  }
+  .cmp-section > h3 + p { display: none; }
+
+  /* Even field grid so inputs line up cleanly across rows */
+  .dt-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px 24px;
+    @media (max-width: 1050px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 640px)  { grid-template-columns: 1fr; }
+  }
+
+  /* Consistent field rhythm inside the grid */
+  .mf-group { margin: 0; min-width: 0; }
+  .mf-label { display:block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .mf-input, .fc-input { width: 100%; }
+
+  /* Compact logo row so it doesn't leave a big empty band */
+  .cmp-logo-row { margin-top: 2px; }
+}
+
+/* Loading / saving overlay for the company setup form */
+.cmp-loader {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(255,255,255,0.6);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  color: var(--primary); font-size: 14px; font-weight: 600;
+}
+.cmp-spinner {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 4px solid var(--primary-pale); border-top-color: var(--primary);
+  animation: cmp-spin 0.8s linear infinite;
+}
+@keyframes cmp-spin { to { transform: rotate(360deg); } }

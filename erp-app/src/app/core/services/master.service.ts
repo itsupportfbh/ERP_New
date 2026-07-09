@@ -99,6 +99,7 @@ export class MasterService {
   }
   createCompanySetup(d: any): Observable<any> { return this.http.post(`${this.api}/organizations/create-from-company-setup`, d); }
   createCompanyUnderOrg(d: any): Observable<any> { return this.http.post(`${this.api}/organizations/create-company-under-org`, d); }
+   setCompanyActive(masterCompanyId: number, isActive: boolean): Observable<any> { return this.http.patch(`${this.api}/Company/${masterCompanyId}/active`, { isActive }); }
   updateCompany(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/Company/${id}`, d); }
   deleteCompany(id: number): Observable<any> { return this.http.delete(`${this.api}/Company/${id}`); }
   getOrganizationsLookup(): Observable<any> { return this.http.get(`${this.api}/organizations/lookup`); }
