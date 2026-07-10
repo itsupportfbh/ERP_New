@@ -290,7 +290,7 @@
           <!-- FX row -->
           <div class="ap-form-row" *ngIf="paymentFxRate !== 1">
             <div class="ap-field"><span class="ap-field-label">FX Rate</span><input class="ap-input" type="number" min="0" step="0.000001" [(ngModel)]="paymentFxRate" (ngModelChange)="onPaymentFxRateChange()"></div>
-            <div class="ap-field"><span class="ap-field-label">Base (SGD)</span><input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | money" readonly></div>
+            <div class="ap-field"><span class="ap-field-label">Base ({{ baseCurrencyName }})</span><input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | money" readonly></div>
             <div class="ap-field" *ngIf="paymentExchangeGainLoss !== 0"><span class="ap-field-label">FX Gain/Loss</span><input class="ap-input" type="text" [value]="paymentExchangeGainLoss | money" readonly [style.color]="paymentExchangeGainLoss > 0 ? '#1e8449' : '#c0392b'"></div>
           </div>
 
@@ -336,10 +336,10 @@
                     <td class="inv-no">{{ inv.invoiceNo }}</td>
                     <td>{{ inv.invoiceDate | date:'dd/MM/yyyy' }}</td>
                     <td>{{ inv.dueDate | date:'dd/MM/yyyy' }}</td>
-                    <td class="num">{{ inv.grandTotal | money }} <span class="curr">{{ inv.currencyName }}</span></td>
-                    <td class="num">{{ inv.paidAmount | money }}</td>
-                    <td class="num">{{ inv.advanceAmount | money }}</td>
-                    <td class="num bold-val">{{ inv.payableAfterAdvance | money }}</td>
+                    <td class="num">{{ inv.grandTotalBase | money }} <span class="curr" *ngIf="(inv.fxRate || 1) !== 1">({{ inv.grandTotal | money:inv.currencyName }})</span></td>
+                    <td class="num">{{ inv.paidBase | money }}</td>
+                    <td class="num">{{ inv.advanceBase | money }}</td>
+                    <td class="num bold-val">{{ inv.payableBase | money }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -408,7 +408,7 @@
                         <span class="pmt-detail-val">{{ p.fxRate | number:'1.4-4' }}</span>
                       </div>
                       <div class="pmt-detail-item" *ngIf="p.amountBase">
-                        <span class="pmt-detail-label">Base (SGD)</span>
+                        <span class="pmt-detail-label">Base ({{ baseCurrencyName }})</span>
                         <span class="pmt-detail-val teal-bold">{{ p.amountBase | money }}</span>
                       </div>
                       <div class="pmt-detail-item" *ngIf="p.notes">
@@ -907,7 +907,7 @@
                    (ngModelChange)="onPaymentFxRateChange()" placeholder="1.000000">
           </div>
           <div class="ap-field">
-            <span class="ap-field-label">Base (SGD)</span>
+            <span class="ap-field-label">Base ({{ baseCurrencyName }})</span>
             <input class="ap-input ap-input-readonly" type="text" [value]="paymentAmountBase | money" readonly>
           </div>
           <div class="ap-field" *ngIf="paymentExchangeGainLoss !== 0">
@@ -968,11 +968,11 @@
                   <td><span class="type-pill">{{ inv.invoiceType || 'Invoice' }}</span></td>
                   <td>{{ inv.invoiceDate | date:'dd/MM/yyyy' }}</td>
                   <td>{{ inv.dueDate | date:'dd/MM/yyyy' }}</td>
-                  <td class="num">{{ inv.grandTotal | money }} <span class="curr">{{ inv.currencyName }}</span></td>
-                  <td class="num">{{ inv.paidAmount | money }}</td>
-                  <td class="num">{{ inv.debitNoteAmount | money }}</td>
-                  <td class="num">{{ inv.advanceAmount | money }}</td>
-                  <td class="num bold-val">{{ inv.payableAfterAdvance | money }}</td>
+                  <td class="num">{{ inv.grandTotalBase | money }} <span class="curr" *ngIf="(inv.fxRate || 1) !== 1">({{ inv.grandTotal | money:inv.currencyName }})</span></td>
+                  <td class="num">{{ inv.paidBase | money }}</td>
+                  <td class="num">{{ inv.debitNoteBase | money }}</td>
+                  <td class="num">{{ inv.advanceBase | money }}</td>
+                  <td class="num bold-val">{{ inv.payableBase | money }}</td>
                   <td>
                     <span class="status-badge"
                           [class.badge-warning]="inv.payableAfterAdvance > 0"

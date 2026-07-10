@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FinanceService } from './finance.service';
+import { CurrencyDisplayService } from '../../core/services/currency-display.service';
 import Swal from 'sweetalert2';
 
 interface FinanceSummary {
@@ -25,7 +26,7 @@ export class FinanceDashboardComponent implements OnInit {
 
   private readonly companyId = Number(localStorage.getItem('companyId')) || 0;
 
-  constructor(private finance: FinanceService) {}
+  constructor(private finance: FinanceService, private cur: CurrencyDisplayService) {}
 
   ngOnInit(): void {
     this.load();
@@ -46,10 +47,8 @@ export class FinanceDashboardComponent implements OnInit {
   }
 
   formatAmount(value: number): string {
-    const amount = Number(value || 0);
-    if (amount >= 10000000) return `$${(amount / 10000000).toFixed(2)}Cr`;
-    if (amount >= 100000)   return `$${(amount / 100000).toFixed(1)}L`;
-    return new Intl.NumberFormat('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    // Base-currency symbol + K/M/B scaling, derived per-company (no hardcoded $/Cr/L).
+    return this.cur.compactMoney(value);
   }
 
   absValue(value: number): number {
