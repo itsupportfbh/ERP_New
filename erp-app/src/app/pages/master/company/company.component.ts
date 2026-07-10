@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 type CompanyTab = 'general' | 'financeTax' | 'defaults' | 'numberSeries' | 'adminUser' | 'audit';
 
 const blankGeneral = () => ({ code: '', name: '', legalName: '', registrationNo: '', taxRegistrationNo: '', status: 'Active', phone: '', email: '', website: '', contactPerson: '', contactMobileNo: '', contactEmail: '', address1: '', address2: '', city: '', state: '', postal: '' });
-const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any, retainedEarningsAccountId: null as any });
+const blankFinance = () => ({ baseCurrency: 'SGD', currencyId: null as any, country: 'Singapore', countryId: null as any, taxMode: 'Exclusive', gstNo: '', filingFrequency: 'Monthly', defaultOutputTaxCode: '', defaultInputTaxCode: '', decimalPlaces: 2, roundingRule: 'Round half up', cashAccountId: null as any, advanceAccountId: null as any, retainedEarningsAccountId: null as any, outputTaxAccountId: null as any, inputTaxAccountId: null as any, gstPayableAccountId: null as any, gstReceivableAccountId: null as any, supplierDepositAccountId: null as any });
 const blankDefaults = () => ({ defaultBranch: 'Head Office', defaultWarehouse: 'Main Warehouse', defaultBin: 'MAIN', defaultLanguage: 'EN', timeZone: 'Asia/Kolkata' });
 const blankAdmin = () => ({ username: '', email: '', password: '', departmentId: 1, locationId: 1 });
 const defaultNumberSeries = () => ([
@@ -209,7 +209,12 @@ export class CompanyComponent implements OnInit {
           decimalPlaces: f.decimalPlaces ?? 2, roundingRule: f.roundingRule || 'Round half up',
           cashAccountId: f.cashAccountId || null,
           advanceAccountId: f.advanceAccountId || null,
-          retainedEarningsAccountId: f.retainedEarningsAccountId || null
+          retainedEarningsAccountId: f.retainedEarningsAccountId || null,
+          outputTaxAccountId: f.outputTaxAccountId || null,
+          inputTaxAccountId: f.inputTaxAccountId || null,
+          gstPayableAccountId: f.gstPayableAccountId || null,
+          gstReceivableAccountId: f.gstReceivableAccountId || null,
+          supplierDepositAccountId: f.supplierDepositAccountId || null
         };
         const d = res.defaults || {};
         this.defaults = { defaultBranch: d.defaultBranch || 'Head Office', defaultWarehouse: d.defaultWarehouse || 'Main Warehouse', defaultBin: d.defaultBin || 'MAIN', defaultLanguage: d.defaultLanguage || 'EN', timeZone: d.timeZone || 'Asia/Kolkata' };
