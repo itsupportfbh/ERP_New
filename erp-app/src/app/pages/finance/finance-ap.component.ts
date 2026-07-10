@@ -311,28 +311,43 @@ export class FinanceApComponent implements OnInit {
       next: res => {
         const rows = this.finance.unwrap(res);
         this.supplierInvoicesAll = rows
-          .map((x: any) => ({
-            ...x,
-            id: x.id ?? x.Id,
-            invoiceNo:   x.invoiceNo   ?? x.InvoiceNo   ?? '',
-            invoiceDate: x.invoiceDate ?? x.InvoiceDate ?? '',
-            dueDate:     x.dueDate     ?? x.DueDate     ?? '',
-            grandTotal:  this.money(x, ['amount','Amount','grandTotal','GrandTotal','totalAmount','TotalAmount']),
-            paidAmount:  this.money(x, ['paid','Paid','paidAmount','PaidAmount']),
-            debitNoteAmount: this.money(x, ['debitNote','DebitNote','debitNoteAmount','DebitNoteAmount']),
-            advanceAmount:   this.money(x, ['advance','Advance','advanceAppliedAmount','AdvanceAppliedAmount']),
-            payableAfterAdvance: this.money(x, ['outstandingAmount','OutstandingAmount','outstanding','Outstanding','balance','Balance','netPayableAmount','NetPayableAmount']),
-            currencyName: x.currencyName ?? x.CurrencyName ?? 'SGD',
-            fxRate: Number(x.fxRate ?? x.FxRate ?? 1) || 1,
-            isSelected: false
-          }))
+          .map((x: any) => {
+            const fxRate = Number(x.fxRate ?? x.FxRate ?? 1) || 1;
+            const grandTotal = this.money(x, ['amount','Amount','grandTotal','GrandTotal','totalAmount','TotalAmount']);
+            const paidAmount = this.money(x, ['paid','Paid','paidAmount','PaidAmount']);
+            const debitNoteAmount = this.money(x, ['debitNote','DebitNote','debitNoteAmount','DebitNoteAmount']);
+            const advanceAmount = this.money(x, ['advance','Advance','advanceAppliedAmount','AdvanceAppliedAmount']);
+            const payableAfterAdvance = this.money(x, ['outstandingAmount','OutstandingAmount','outstanding','Outstanding','balance','Balance','netPayableAmount','NetPayableAmount']);
+            // Base-currency (company) values = document (foreign) amount * frozen invoice Fx rate.
+            return {
+              ...x,
+              id: x.id ?? x.Id,
+              invoiceNo:   x.invoiceNo   ?? x.InvoiceNo   ?? '',
+              invoiceDate: x.invoiceDate ?? x.InvoiceDate ?? '',
+              dueDate:     x.dueDate     ?? x.DueDate     ?? '',
+              grandTotal,
+              paidAmount,
+              debitNoteAmount,
+              advanceAmount,
+              payableAfterAdvance,
+              grandTotalBase: +(grandTotal * fxRate).toFixed(2),
+              paidBase: +(paidAmount * fxRate).toFixed(2),
+              debitNoteBase: +(debitNoteAmount * fxRate).toFixed(2),
+              advanceBase: +(advanceAmount * fxRate).toFixed(2),
+              payableBase: +(payableAfterAdvance * fxRate).toFixed(2),
+              currencyId: Number(x.currencyId ?? x.CurrencyId ?? 0) || 0,
+              currencyName: x.currencyName ?? x.CurrencyName ?? 'SGD',
+              fxRate,
+              isSelected: false
+            };
+          })
           .filter((x: any) => x.payableAfterAdvance > 0);
         this.supplierInvoicesAll.forEach((x: any) => {
-          this.supTotalInvoice  += x.grandTotal;
-          this.supTotalPaid     += x.paidAmount;
-          this.supTotalDebitNote += x.debitNoteAmount;
-          this.supTotalAdvance  += x.advanceAmount;
-          this.supTotalPayable  += x.payableAfterAdvance;
+          this.supTotalInvoice  += x.grandTotalBase;
+          this.supTotalPaid     += x.paidBase;
+          this.supTotalDebitNote += x.debitNoteBase;
+          this.supTotalAdvance  += x.advanceBase;
+          this.supTotalPayable  += x.payableBase;
         });
         if (this.supplierInvoicesAll[0]) {
           this.invoiceCurrencyName = this.supplierInvoicesAll[0].currencyName || '';
@@ -346,7 +361,8 @@ export class FinanceApComponent implements OnInit {
     if (checked) {
       this.paymentForm.supplierInvoiceId = inv.id;
       if (!this.amountEditedManually) {
-        this.paymentForm.amount = inv.payableAfterAdvance;
+        // Default the payable in the base currency (matches the RM figures + Select-All total).
+        this.paymentForm.amount = inv.payableBase;
         this.recalcPaymentBase();
         this.recalcPaymentExchangeGainLoss();
       }
@@ -380,13 +396,38 @@ export class FinanceApComponent implements OnInit {
   onPaymentCurrencyChange(): void {
     const cur = this.paymentCurrencies.find(c => (c.id ?? c.currencyId) === Number(this.paymentCurrencyId));
     this.paymentCurrencyName = cur?.currencyCode ?? cur?.currencyName ?? '';
-    if (this.paymentCurrencyId && this.paymentBaseCurrencyId && this.paymentCurrencyId !== this.paymentBaseCurrencyId) {
+
+    const isForeign = !!(this.paymentCurrencyId && this.paymentBaseCurrencyId && this.paymentCurrencyId !== this.paymentBaseCurrencyId);
+    if (isForeign) {
+      // Rate arrives async; the amount default that needs it is applied in the callback.
       this.fetchPaymentFxRate();
     } else {
       this.paymentFxRate = 1;
-      this.recalcPaymentBase();
+      this.applyPaymentAmountDefault();
       this.recalcPaymentExchangeGainLoss();
     }
+  }
+
+  /**
+   * Default the payment amount into the selected pay currency for the ticked invoices:
+   *  - paying in the invoice's OWN currency → settle its foreign face value (payableAfterAdvance)
+   *  - paying in any other currency (base or a third one) → convert the base-currency payable
+   *    into the pay currency = payableBase / (payCurrency→base rate).
+   * The base field (paymentAmountBase) then always resolves back to the company-currency value.
+   */
+  private applyPaymentAmountDefault(): void {
+    if (this.amountEditedManually) { this.recalcPaymentBase(); return; }
+    const invs = (this.supplierInvoicesAll || []).filter(x => x.isSelected);
+    if (!invs.length) { this.recalcPaymentBase(); return; }
+    const payCur = Number(this.paymentCurrencyId) || 0;
+    const rate = Number(this.paymentFxRate) || 1;
+    const total = invs.reduce((s, inv) => {
+      if (payCur && Number(inv.currencyId) === payCur) return s + (Number(inv.payableAfterAdvance) || 0);
+      const base = Number(inv.payableBase) || 0;
+      return s + (rate > 0 ? base / rate : base);
+    }, 0);
+    this.paymentForm.amount = +total.toFixed(2);
+    this.recalcPaymentBase();
   }
 
   private fetchPaymentFxRate(): void {
@@ -397,10 +438,10 @@ export class FinanceApComponent implements OnInit {
     ).subscribe({
       next: (res: any) => {
         this.paymentFxRate = Number(res?.data?.rate ?? res?.rate ?? 1) || 1;
-        this.recalcPaymentBase();
+        this.applyPaymentAmountDefault();
         this.recalcPaymentExchangeGainLoss();
       },
-      error: () => { this.paymentFxRate = 1; }
+      error: () => { this.paymentFxRate = 1; this.applyPaymentAmountDefault(); }
     });
   }
 
