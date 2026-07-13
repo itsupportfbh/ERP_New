@@ -130,6 +130,8 @@ export class PurchaseRequestListComponent implements OnInit {
             ? (STATUS_MAP[r.status] ?? 'Pending')
             : (r.status ?? STATUS_MAP[r.approvalStatus] ?? 'Pending'),
         }));
+        // Newest first: the API returns insertion order, which put the oldest PR at the top.
+        this.rows.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
         this.applyFilter();
         this.loading = false;
       },

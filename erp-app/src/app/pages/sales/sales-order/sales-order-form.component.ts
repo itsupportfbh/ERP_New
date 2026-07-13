@@ -450,6 +450,8 @@ export class SalesOrderFormComponent implements OnInit {
         name: String(r.currencyName ?? r.CurrencyName ?? r.name ?? '').trim(),
         code: r.currencyCode ?? r.code ?? ''
       })) as CurrencyRow[];
+
+      this.resolveBaseCurrency();
     });
 
     this.svc.getPaymentTerms().subscribe((res: any) => {
@@ -685,6 +687,9 @@ export class SalesOrderFormComponent implements OnInit {
       if (curName) { this.currencySearch = String(curName); this.header.currency = String(curName); }
     }
     if (dto.fxRate ?? dto.FxRate) this.header.fxRate = Number(dto.fxRate ?? dto.FxRate);
+    // Quotations saved before the base-currency fix carry an fxRate of 1; re-fetch so the
+    // order converts against the real rate instead of inheriting the broken one.
+    this.resolveBaseCurrency();
     const payId = Number(dto.paymentTermsId ?? dto.PaymentTermsId ?? 0);
     if (payId > 0) {
       this.header.paymentTermsId = payId;
@@ -1118,6 +1123,7 @@ export class SalesOrderFormComponent implements OnInit {
     this.currencyDdOpen = false;
     this.header.currencyId = cur.id;
     this.header.currency = cur.name;
+    this.ensureBaseCurrencyId();
 
     if (cur.id === this.baseCurrencyId) {
       this.header.fxRate = 1;
@@ -1340,7 +1346,41 @@ export class SalesOrderFormComponent implements OnInit {
   }
 
   // ── FX ───────────────────────────────────────────────
+  /**
+   * The base currency id in localStorage can be missing, 0, or stale (pointing at a currency
+   * that no longer exists). fetchFxRate() needs a valid id and bails out silently without one,
+   * which leaves fxRate stuck at 1 — a base of RM with an SGD order showed "1 SGD = 1.0000 RM"
+   * instead of 3.15. The base currency NAME is always present, so the loaded currency list is
+   * the source of truth: keep the stored id only if the list contains it, else re-derive it.
+   */
+  private ensureBaseCurrencyId(): void {
+    if (!this.currenciesSrv.length) return;
+    if (this.currenciesSrv.some(c => c.id === this.baseCurrencyId)) return;
+
+    const base = this.currenciesSrv.find(
+      c => c.name.trim().toLowerCase() === this.baseCurrencyName.trim().toLowerCase()
+    );
+    if (!base) return;
+    this.baseCurrencyId = base.id;
+    localStorage.setItem('companyCurrencyId', String(base.id));
+  }
+
+  /**
+   * Fetch the rate for an already-selected foreign currency whose fxRate is still the default 1
+   * — either because the id wasn't resolvable when the currency was picked, or because the
+   * source quotation was saved with a stale rate of 1. An fxRate the user (or an earlier
+   * document) set to a real value is left alone.
+   */
+  private resolveBaseCurrency(): void {
+    this.ensureBaseCurrencyId();
+
+    const curId = Number(this.header.currencyId || 0);
+    if (!curId || !this.baseCurrencyId || curId === this.baseCurrencyId) return;
+    if (Number(this.header.fxRate || 1) === 1) this.fetchFxRate(curId);
+  }
+
   fetchFxRate(fromCurrencyId: number): void {
+    this.ensureBaseCurrencyId();
     if (!fromCurrencyId || !this.baseCurrencyId) return;
     this.fxRateLoading = true;
     // Use the document (order) date so re-opened orders keep their historical rate.

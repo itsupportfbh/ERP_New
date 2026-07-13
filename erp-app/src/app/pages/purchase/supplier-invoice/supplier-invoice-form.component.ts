@@ -69,6 +69,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
   currencyId: number | null = null;
   currencyName = '';
   fxRate = 1;
+  // The company's base currency (e.g. RM). The invoice is billed in the supplier's currency
+  // (e.g. SGD); fxRate converts it, so the totals also show the base-currency amount.
+  baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
   taxRate = 0;
   isPartial = false;
   isGlPosted = false;
@@ -628,6 +631,12 @@ export class SupplierInvoiceFormComponent implements OnInit {
   get subTotal(): number { return +this.lines.reduce((s, l) => s + l.lineTotal, 0).toFixed(2); }
   get totalTax(): number { return +this.lines.reduce((s, l) => s + l.taxAmt, 0).toFixed(2); }
   get grandTotal(): number { return +this.lines.reduce((s, l) => s + l.lineGrandTotal, 0).toFixed(2); }
+  /** Invoice currency differs from the company's base currency → show the converted total. */
+  get isForeignCurrency(): boolean {
+    const cur = (this.currencyName || '').trim().toLowerCase();
+    return !!cur && cur !== this.baseCurrencyName.trim().toLowerCase();
+  }
+  get baseAmount(): number { return +(this.grandTotal * (this.fxRate || 1)).toFixed(2); }
   get allMatchOk(): boolean { return this.lines.length > 0 && this.lines.every(l => l.matchStatus === 'OK' || l.matchStatus === ''); }
   get mismatchCount(): number { return this.lines.filter(l => l.matchStatus === 'Mismatch').length; }
 

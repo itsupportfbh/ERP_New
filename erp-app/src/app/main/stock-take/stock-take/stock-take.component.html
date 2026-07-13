@@ -56,13 +56,13 @@
           <col style="width:11%"><!-- Location -->
           <col style="width:7%"> <!-- Supplier -->
           <col style="width:11%"><!-- Item -->
-          <col style="width:13%"><!-- Barcode -->
-          <col style="width:6%"> <!-- Purchase UOM -->
+          <col style="width:11%"><!-- Barcode -->
+          <col style="width:10%"><!-- Purchase UOM (holds e.g. "CTN-6PKT x 1KG") -->
           <col style="width:9%"> <!-- Accepted Qty -->
           <col style="width:5%"> <!-- Base UOM -->
           <col style="width:9%"> <!-- Faulty Qty -->
           <col style="width:11%"><!-- Reason -->
-          <col style="width:18%"><!-- Remarks -->
+          <col style="width:16%"><!-- Remarks -->
         </colgroup>
         <thead>
           <tr>
@@ -87,7 +87,7 @@
               <input class="fc-tbl-input" type="text" [(ngModel)]="r.barcode"
                 (ngModelChange)="onCheckReview()" placeholder="Barcode" />
             </td>
-            <td class="st-uom">{{ r.purchaseUomName || '-' }}</td>
+            <td class="st-uom" [title]="r.purchaseUomName || ''">{{ r.purchaseUomName || '-' }}</td>
             <td>
               <input class="fc-tbl-input" type="number" [(ngModel)]="r.countedQty"
                 (ngModelChange)="onCountChange(r)" min="0" step="0.0001" placeholder="0"
@@ -146,17 +146,17 @@
             <col style="width:7%">  <!-- Location -->
             <col style="width:6%">  <!-- Supplier -->
             <col style="width:8%">  <!-- Item -->
-            <col style="width:5%">  <!-- Barcode -->
-            <col style="width:5%">  <!-- Purchase UOM -->
+            <col style="width:4%">  <!-- Barcode -->
+            <col style="width:9%">  <!-- Purchase UOM (holds e.g. "CTN-6PKT x 1KG") -->
             <col style="width:5%">  <!-- OnHand -->
             <col style="width:4%">  <!-- Base UOM -->
             <col style="width:6%">  <!-- OnHand Fault -->
             <col style="width:6%">  <!-- Accepted Qty -->
-            <col style="width:6%">  <!-- Faulty Qty -->
-            <col style="width:6%">  <!-- Total Qty -->
+            <col style="width:5%">  <!-- Faulty Qty -->
+            <col style="width:5%">  <!-- Total Qty -->
             <col style="width:6%">  <!-- Variance -->
-            <col style="width:10%"> <!-- Reason -->
-            <col style="width:13%"> <!-- Remarks -->
+            <col style="width:9%">  <!-- Reason -->
+            <col style="width:12%"> <!-- Remarks -->
           </colgroup>
           <thead>
             <tr>
@@ -186,7 +186,7 @@
               <td class="st-text">{{ r.supplierName || 'ALL' }}</td>
               <td class="st-text">{{ r.itemName || getItemName(r.itemId) }}</td>
               <td class="st-text">{{ r.barcode || '-' }}</td>
-              <td class="st-uom">{{ r.purchaseUomName || '-' }}</td>
+              <td class="st-uom" [title]="r.purchaseUomName || ''">{{ r.purchaseUomName || '-' }}</td>
               <td style="text-align:right">{{ toNum(r.onHand) }}</td>
               <td class="st-uom">{{ r.baseUomName || '-' }}</td>
               <td style="text-align:right">{{ toNum(r.badOnHand) }}</td>

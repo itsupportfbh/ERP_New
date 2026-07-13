@@ -440,6 +440,8 @@ export class QuotationFormComponent implements OnInit {
         name: String(r.currencyName ?? r.CurrencyName ?? r.name ?? '').trim(),
         code: r.currencyCode ?? r.code ?? ''
       })) as CurrencyRow[];
+
+      this.resolveBaseCurrency();
     });
 
     this.svc.getPaymentTerms().subscribe((res: any) => {
@@ -986,6 +988,7 @@ export class QuotationFormComponent implements OnInit {
     this.currencyDdOpen = false;
     this.header.currencyId = cur.id;
     this.header.currency = cur.name;
+    this.ensureBaseCurrencyId();
 
     if (cur.id === this.baseCurrencyId) {
       this.header.fxRate = 1;
@@ -1028,6 +1031,7 @@ export class QuotationFormComponent implements OnInit {
   onCurrencyChange(id: number): void {
     const cur = this.currenciesSrv.find(c => c.id === id);
     if (!cur) return;
+    this.ensureBaseCurrencyId();
     this.header.currency = cur.name;
     if (cur.id === this.baseCurrencyId) {
       this.header.fxRate = 1;
@@ -1233,7 +1237,43 @@ export class QuotationFormComponent implements OnInit {
   }
 
   // ── FX ───────────────────────────────────────────────
+  /**
+   * The company's base currency id comes from localStorage, where it can be missing, 0, or
+   * stale (pointing at a currency that no longer exists). fetchFxRate() needs a valid id and
+   * bails out silently without one, which left fxRate stuck at 1 — e.g. a base of RM with an
+   * SGD quotation showed "1 SGD = 1.0000 RM" instead of 3.15.
+   *
+   * The base currency NAME is always present, so treat the loaded currency list as the source
+   * of truth: keep the id only if the list actually contains it, otherwise re-derive it from
+   * the name. Then fetch the rate if a foreign currency is already selected.
+   */
+  private ensureBaseCurrencyId(): void {
+    if (!this.currenciesSrv.length) return;
+    if (this.currenciesSrv.some(c => c.id === this.baseCurrencyId)) return;
+
+    const base = this.currenciesSrv.find(
+      c => c.name.trim().toLowerCase() === this.baseCurrencyName.trim().toLowerCase()
+    );
+    if (!base) return;
+    this.baseCurrencyId = base.id;
+    localStorage.setItem('companyCurrencyId', String(base.id));
+  }
+
+  /**
+   * Fetch the rate for an already-selected foreign currency whose fxRate is still the default 1
+   * (the id wasn't resolvable when the currency was picked). A rate the user or a saved
+   * quotation set to a real value is left alone.
+   */
+  private resolveBaseCurrency(): void {
+    this.ensureBaseCurrencyId();
+
+    const curId = Number(this.header.currencyId || 0);
+    if (!curId || !this.baseCurrencyId || curId === this.baseCurrencyId) return;
+    if (Number(this.header.fxRate || 1) === 1) this.fetchFxRate(curId);
+  }
+
  fetchFxRate(fromCurrencyId: number): void {
+    this.ensureBaseCurrencyId();
     if (!fromCurrencyId || !this.baseCurrencyId) return;
     this.fxRateLoading = true;
     // Use the quotation's own document date so an existing quote keeps its
@@ -1380,6 +1420,10 @@ export class QuotationFormComponent implements OnInit {
 
   // ── Save ─────────────────────────────────────────────
   private validateBeforeSave(): boolean {
+    if (!this.header.deliveryDate) {
+      void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Delivery Date is required.', confirmButtonColor: '#16a34a' });
+      return false;
+    }
     // Money lives on package headers + custom lines; package children are qty-only and skipped.
     const payRows = this.lines.filter(l => !this.isPackageChild(l));
     if (!payRows.length) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Please add at least one line.', confirmButtonColor: '#16a34a' }); return false; }

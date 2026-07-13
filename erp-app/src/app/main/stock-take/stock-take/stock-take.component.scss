@@ -28,11 +28,17 @@
 }
 
 /* Higher specificity so UOM values (e.g. "LTR") never break onto two lines,
-   overriding `.st-table td { word-break: break-word }`. */
+   overriding `.st-table td { word-break: break-word }`.
+   The table is `table-layout: fixed`, so a long purchase UOM ("CTN-6PKT x 1KG") would
+   otherwise overflow its cell and run into the next column. Clip it to the column width and
+   expose the full text on hover via the cell's title. */
 .st-table td.st-uom {
   white-space: nowrap;
   word-break: normal;
   overflow-wrap: normal;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .st-text {

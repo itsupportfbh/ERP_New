@@ -71,7 +71,8 @@
       </div>
       <div class="form-row cols-2 block-gap">
         <erp-input label="Tax %" type="number" [(ngModel)]="taxRate" (ngModelChange)="recalcLines()" [disabled]="isGlPosted" placeholder="0"></erp-input>
-        <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="isGlPosted" *ngIf="fxRate !== 1"></erp-input>
+        <!-- Read-only: the rate is owned by Master > Exchange Rate, not typed in here. -->
+        <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="true" *ngIf="fxRate !== 1"></erp-input>
       </div>
     </div>
 
@@ -143,6 +144,14 @@
         <div class="pin-total-row"><span class="t-lbl">Sub Total</span><span class="t-val">{{ subTotal | money:currencyName }}</span></div>
         <div class="pin-total-row"><span class="t-lbl">Tax ({{ taxRate }}%)</span><span class="t-val">{{ totalTax | money:currencyName }}</span></div>
         <div class="pin-total-row grand"><span class="t-lbl">Net Payable</span><span class="t-val">{{ grandTotal | money:currencyName }} <span class="t-cur" *ngIf="currencyName">{{ currencyName }}</span></span></div>
+        <!-- Billed in the supplier's currency; also show it in the company's base currency. -->
+        <div class="pin-total-row base" *ngIf="isForeignCurrency">
+          <span class="t-lbl">
+            Base ({{ baseCurrencyName }})
+            <small class="t-sub">{{ grandTotal | money:currencyName }} {{ currencyName }} &times; {{ fxRate | number:'1.4-4' }}</small>
+          </span>
+          <span class="t-val">{{ baseAmount | money:baseCurrencyName }} <span class="t-cur">{{ baseCurrencyName }}</span></span>
+        </div>
       </div>
     </div>
 

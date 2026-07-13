@@ -80,6 +80,47 @@ export class PurchaseOrderListComponent implements OnInit {
   modalSupplier = '';
   modalStatus = '';
   modalNetTotal: number | null = null;
+  modalCurrency = '';
+  modalFxRate = 1;
+  baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim();
+
+  /** The PO is billed in a currency other than the company's base currency. */
+  get modalIsForeign(): boolean {
+    const cur = (this.modalCurrency || '').trim().toLowerCase();
+    return !!cur && !!this.baseCurrencyName && cur !== this.baseCurrencyName.toLowerCase();
+  }
+  get modalBaseTotal(): number { return +((this.modalNetTotal ?? 0) * (this.modalFxRate || 1)).toFixed(2); }
+
+  // ── PO line maths ────────────────────────────────────
+  // PoLines is stored JSON, so the keys vary by vintage (qty/quantity, taxAmt, lineTotal).
+  // Prefer the stored value and only fall back to recomputing it from qty/price/disc/tax.
+  lineQty(l: any): number { return Number(l?.quantity ?? l?.qty ?? 0) || 0; }
+  lineGross(l: any): number { return +(this.lineQty(l) * (Number(l?.unitPrice ?? 0) || 0)).toFixed(2); }
+  lineDiscAmt(l: any): number {
+    const pct = Number(l?.discountPct ?? 0) || 0;
+    return +(this.lineGross(l) * (pct / 100)).toFixed(2);
+  }
+  lineNet(l: any): number { return +(this.lineGross(l) - this.lineDiscAmt(l)).toFixed(2); }
+  lineTax(l: any): number {
+    const stored = Number(l?.taxAmt ?? l?.taxAmount ?? NaN);
+    if (!isNaN(stored)) return +stored.toFixed(2);
+    return +(this.lineNet(l) * ((Number(l?.taxRate ?? 0) || 0) / 100)).toFixed(2);
+  }
+  lineTotal(l: any): number {
+    const stored = Number(l?.lineTotal ?? NaN);
+    if (!isNaN(stored) && stored > 0) return +stored.toFixed(2);
+    return +(this.lineNet(l) + this.lineTax(l)).toFixed(2);
+  }
+  lineBase(l: any): number { return +(this.lineTotal(l) * (this.modalFxRate || 1)).toFixed(2); }
+
+  private sum(fn: (l: any) => number): number {
+    return +(this.modalLines ?? []).reduce((s, l) => s + fn(l), 0).toFixed(2);
+  }
+  get modalSubTotal(): number { return this.sum(l => this.lineGross(l)); }
+  get modalDiscTotal(): number { return this.sum(l => this.lineDiscAmt(l)); }
+  get modalTaxTotal(): number { return this.sum(l => this.lineTax(l)); }
+  get modalLinesTotal(): number { return this.sum(l => this.lineTotal(l)); }
+  get modalLinesBaseTotal(): number { return +(this.modalLinesTotal * (this.modalFxRate || 1)).toFixed(2); }
 
   columns: TableColumn[] = [
     { key: 'purchaseOrderNo', header: 'PO No', sortable: true },
@@ -275,6 +316,10 @@ export class PurchaseOrderListComponent implements OnInit {
     this.modalSupplier = row.supplierName ?? '';
     this.modalStatus = row.statusLabel ?? '';
     this.modalNetTotal = row.netTotal ?? null;
+    // PO amounts are held in the supplier's currency (e.g. SGD). Without this the modal fell
+    // back to the base symbol and rendered SGD figures as "RM 654.00".
+    this.modalCurrency = row.currency ?? row.currencyName ?? '';
+    this.modalFxRate = Number(row.fxRate ?? 1) || 1;
     if (!lines.length) {
       this.svc.getPurchaseOrderById(row.id).subscribe({
         next: res => {

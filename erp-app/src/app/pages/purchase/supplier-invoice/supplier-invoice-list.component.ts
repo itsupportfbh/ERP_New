@@ -48,8 +48,21 @@ export class SupplierInvoiceListComponent implements OnInit {
   modalTotal: number | null = null;
   modalTotalQty = 0;
   modalTotalAmt = 0;
+  // Invoice amounts are held in the supplier's currency (e.g. SGD). Without this the modal
+  // fell back to the base symbol and rendered SGD figures as "RM 200.00".
+  modalCurrency: number | string = '';
+  modalFxRate = 1;
+  baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim();
+
+  get modalIsForeign(): boolean {
+    const cur = String(this.modalCurrencyName || '').trim().toLowerCase();
+    return !!cur && !!this.baseCurrencyName && cur !== this.baseCurrencyName.toLowerCase();
+  }
+  get modalBaseAmt(): number { return +(this.modalTotalAmt * (this.modalFxRate || 1)).toFixed(2); }
+  private modalCurrencyName = '';
 
   showMatchModal = false;
+  matchCurrency: number | string = '';
   threeWay: any = null;
   matchLoading = false;
   matchError = '';
@@ -483,6 +496,9 @@ table.lines thead th:last-child{border-right:none;}
     this.modalSupplier = row.supplierName ?? '';
     this.modalStatus = row.statusLabel ?? '';
     this.modalTotal = row.amount ?? null;
+    this.modalCurrency = row.currencyId || row.currency || '';
+    this.modalCurrencyName = row.currency ?? '';
+    this.modalFxRate = Number(row.fxRate ?? 1) || 1;
     this.modalLines = [];
     this.modalTotalQty = 0;
     this.modalTotalAmt = 0;
@@ -529,6 +545,8 @@ table.lines thead th:last-child{border-right:none;}
 
   openMatchModal(row: any): void {
     this.currentRow = row;
+    // PO and invoice figures in the 3-way match are in the supplier's currency, not the base.
+    this.matchCurrency = row.currencyId || row.currency || '';
     this.threeWay = null;
     this.matchLoading = true;
     this.matchError = '';

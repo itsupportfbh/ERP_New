@@ -105,7 +105,7 @@ export class AuthService {
     localStorage.setItem('organizations', JSON.stringify(data.organizations));
     localStorage.setItem('companies', JSON.stringify(data.companies));
     localStorage.setItem('organizationId', data.organizationId ?? '');
-    localStorage.setItem('companyCurrencyId', String(data.companyCurrencyId));
+    localStorage.setItem('companyCurrencyId', numStr(data.companyCurrencyId));
     localStorage.setItem('companyCurrencyName', data.companyCurrencyName ?? '');
     // Refresh currency symbols + tax name for the freshly selected company.
     this.currencyDisplay.reload();
