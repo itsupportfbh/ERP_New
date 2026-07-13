@@ -8,6 +8,17 @@ import { PermissionService } from './permission.service';
 import { PeriodLockStateService } from './period-lock-state.service';
 import { CurrencyDisplayService } from './currency-display.service';
 
+/**
+ * Store numeric ids as a safe integer string. `String(null)` yields "null", which every
+ * later `Number(localStorage.getItem(...))` read turns into NaN — and NaN serialises to
+ * JSON `null`, which the API rejects ("could not be converted to System.Int32").
+ * A super admin has no company/location, so those arrive as null → store "0".
+ */
+function numStr(value: any): string {
+  const n = Number(value);
+  return Number.isFinite(n) ? String(Math.trunc(n)) : '0';
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -78,15 +89,15 @@ export class AuthService {
     localStorage.setItem(this.TOKEN_KEY, data.token);
     localStorage.setItem('username', data.username);
     localStorage.setItem('email', data.email);
-    localStorage.setItem('id', String(data.userId));
+    localStorage.setItem('id', numStr(data.userId));
     localStorage.setItem('approvalRoles', JSON.stringify(data.approvalLevelNames));
     localStorage.setItem('approvalLevelIds', JSON.stringify(data.approvalLevelIds));
     localStorage.setItem('teams', JSON.stringify(data.teams));
     localStorage.setItem('allowedMenuIds', JSON.stringify(data.allowedMenuIds));
-    localStorage.setItem('companyId', String(data.companyId));
+    localStorage.setItem('companyId', numStr(data.companyId));
     localStorage.setItem('companyName', data.companyName);
-    localStorage.setItem('locationId', String(data.locationId));
-    localStorage.setItem('departmentId', String(data.departmentId));
+    localStorage.setItem('locationId', numStr(data.locationId));
+    localStorage.setItem('departmentId', numStr(data.departmentId));
     localStorage.setItem('orgGuid', data.orgGuid ?? '');
     localStorage.setItem('databaseName', data.databaseName);
     localStorage.setItem('isMasterOwner', String(data.isMasterOwner));

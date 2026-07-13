@@ -45,7 +45,7 @@ export class RecipeMasterListComponent implements OnInit {
     { header: 'Ingredient', key: 'ingredientName' },
     { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
     { header: 'UOM', key: 'uomName', align: 'center' },
-    { header: `Unit Cost (${this.baseCurrency})`, key: 'unitCost', align: 'right', type: 'number' },
+    { header: `Cost (${this.baseCurrency})`, key: 'unitCost', align: 'right', type: 'number' },
     { header: 'Yield %', key: 'yieldPct', align: 'right', type: 'number' },
   ];
 
