@@ -181,7 +181,8 @@ export class RecipeMasterFormComponent implements OnInit {
   }
 
   get totalCost(): number {
-    // Total = sum of each ingredient's unit cost (matches the recipe list view).
+    // Each line's cost is for its stated Qty (not a per-unit rate), so the total is a
+    // plain sum — never qty x cost. Mirrors the backend's CalcRowCost/CalcTotals.
     return this.lines.reduce((sum, l) => sum + (Number(l.unitCost) || 0), 0);
   }
 

@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { RecipeService } from '../recipe.service';
+import { PeriodCloseService } from '../../../main/financial/period-close-fx/period-close-fx.service';
 import { DropdownOption } from '../../../shared/components/dropdown/dropdown.component';
 import Swal from 'sweetalert2';
 
@@ -39,8 +42,27 @@ export class ProductionPlanningFormComponent implements OnInit {
   constructor(
     private svc: RecipeService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private periodSvc: PeriodCloseService
   ) {}
+
+  /**
+   * The plan is saved by its own call before the PR is attempted, so an error raised later
+   * (e.g. "No accounting period defined for date ...") would leave a plan behind. Validate
+   * the accounting period first. Returns an error message, or '' when the date is usable.
+   */
+  private checkAccountingPeriod(date: string): Observable<string> {
+    const d = date || this.today;
+    return this.periodSvc.getDateStatus(d).pipe(
+      map(status => {
+        // /status returns 200 with isSuccess=false when no period covers the date.
+        if (!status.isSuccess) return status.message || `No accounting period defined for date ${d}.`;
+        if (status.isLocked) return `The accounting period for ${d} is closed.`;
+        return '';
+      }),
+      catchError(err => of(err?.error?.message ?? `Unable to verify the accounting period for ${d}.`))
+    );
+  }
 
   ngOnInit(): void {
     const paramId = this.route.snapshot.paramMap.get('id');
@@ -208,6 +230,23 @@ export class ProductionPlanningFormComponent implements OnInit {
 
   confirmCreatePr(): void {
     this.showPrConfirm = false;
+    this.prBusy = true;
+    this.error = '';
+
+    // Never create the plan when the date has no usable accounting period — the plan is
+    // saved before the PR is attempted, so a later failure would leave a plan behind.
+    this.checkAccountingPeriod(this.planDate).subscribe(periodError => {
+      if (periodError) {
+        this.prBusy = false;
+        this.error = periodError;
+        Swal.fire('Error', periodError, 'error');
+        return;
+      }
+      this.doConfirmCreatePr();
+    });
+  }
+
+  private doConfirmCreatePr(): void {
     // Plan already exists (edit / previously saved) → create PR directly, no rollback of an existing plan.
     if (this.productionPlanId && this.productionPlanId > 0) {
       this.planCreatedInThisFlow = false;
@@ -315,6 +354,20 @@ export class ProductionPlanningFormComponent implements OnInit {
     }
     this.saving = true;
     this.error = '';
+
+    // Never create the plan when the date has no usable accounting period.
+    this.checkAccountingPeriod(this.planDate).subscribe(periodError => {
+      if (periodError) {
+        this.saving = false;
+        this.error = periodError;
+        Swal.fire('Error', periodError, 'error');
+        return;
+      }
+      this.doSavePlan();
+    });
+  }
+
+  private doSavePlan(): void {
     this.svc.savePlan({
       salesOrderId: this.salesOrderId,
       warehouseId: this.warehouseId,

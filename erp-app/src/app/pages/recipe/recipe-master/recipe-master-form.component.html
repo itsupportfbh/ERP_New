@@ -77,7 +77,7 @@
               <th>Ingredient</th>
               <th class="ta-right">Qty</th>
               <th>UOM</th>
-              <th class="ta-right">Unit Cost ({{ baseCurrency }})</th>
+              <th class="ta-right">Cost ({{ baseCurrency }})</th>
               <th class="ta-right">Yield %</th>
               <th class="ta-center">Action</th>
             </tr>
@@ -137,7 +137,7 @@
     <div class="card section-card">
       <div class="section-label">Ingredients ({{ lines.length }})</div>
       <table class="review-lines">
-        <thead><tr><th>#</th><th>Ingredient</th><th>Qty</th><th>UOM</th><th>Unit Cost ({{ baseCurrency }})</th><th>Yield %</th></tr></thead>
+        <thead><tr><th>#</th><th>Ingredient</th><th>Qty</th><th>UOM</th><th>Cost ({{ baseCurrency }})</th><th>Yield %</th></tr></thead>
         <tbody>
           <tr *ngFor="let l of lines; let i = index">
             <td>{{ i + 1 }}</td>
@@ -177,7 +177,7 @@
         </div>
         <div class="form-row cols-3 block-gap">
           <erp-input label="Yield %" type="number" [(ngModel)]="lineModal.yieldPct" placeholder="100"></erp-input>
-          <erp-input label="Unit Cost" type="number" [(ngModel)]="lineModal.unitCost" placeholder="0"></erp-input>
+          <erp-input label="Cost" type="number" [(ngModel)]="lineModal.unitCost" placeholder="0"></erp-input>
         </div>
         <div class="block-gap">
           <label class="rl-label">Remarks</label>

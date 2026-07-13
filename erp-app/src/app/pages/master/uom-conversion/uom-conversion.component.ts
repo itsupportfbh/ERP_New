@@ -20,7 +20,15 @@ export class UomConversionComponent implements OnInit {
   }
   ngOnInit(): void {
     this.loadPermission();
-    this.masterSvc.getUoms().subscribe({ next: (res: any) => { this.uoms = res?.data || res || []; }, error: () => {} });
+    // The API returns UOMs as { id, name, description }, but the dropdowns bind on
+    // `uomName`. Normalize so the label resolves whichever field the API sends.
+    this.masterSvc.getUoms().subscribe({
+      next: (res: any) => {
+        const rows: any[] = res?.data || res || [];
+        this.uoms = rows.map(u => ({ ...u, uomName: u.uomCode ?? u.uomName ?? u.name ?? '' }));
+      },
+      error: () => {}
+    });
   }
   load(): void { this.loading = true; this.masterSvc.getUomConversions().subscribe({ next: (res: any) => { this.items = res?.data || res || []; this.loading = false; }, error: () => { this.loading = false; this.message = 'Failed to load.'; this.isError = true; } }); }
   showForm(): void { this.isFormVisible = true; this.isEditMode = false; this.form = { fromUomId: null, toUomId: null, factor: null, description: '' }; this.message = ''; }
