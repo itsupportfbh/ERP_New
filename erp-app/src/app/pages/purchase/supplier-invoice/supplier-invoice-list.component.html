@@ -192,10 +192,10 @@
               <td style="padding:8px 10px;color:#9ca3af;">{{ i+1 }}</td>
               <td style="padding:8px 10px;font-weight:600;">{{ l.item }}</td>
               <td style="padding:8px 10px;text-align:right;">{{ l.qty }}</td>
-              <td style="padding:8px 10px;text-align:right;">{{ l.unitPrice | money }}</td>
+              <td style="padding:8px 10px;text-align:right;">{{ l.unitPrice | money:modalCurrency }}</td>
               <td style="padding:8px 10px;text-align:right;">{{ l.discountPct || '—' }}</td>
-              <td style="padding:8px 10px;text-align:right;">{{ l.taxAmt | money }}</td>
-              <td style="padding:8px 10px;text-align:right;font-weight:700;">{{ l.lineGrandTotal | money }}</td>
+              <td style="padding:8px 10px;text-align:right;">{{ l.taxAmt | money:modalCurrency }}</td>
+              <td style="padding:8px 10px;text-align:right;font-weight:700;">{{ l.lineGrandTotal | money:modalCurrency }}</td>
               <td style="padding:8px 10px;text-align:center;">
                 <span *ngIf="l.matchStatus==='OK'" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(72,199,142,0.12);color:#1a7a4a;">&#10003; OK</span>
                 <span *ngIf="l.matchStatus==='Mismatch'" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,0.1);color:#b91c1c;">&#9651; Mismatch</span>
@@ -210,7 +210,11 @@
               <td colspan="2" style="padding:7px 10px;">Total</td>
               <td style="padding:7px 10px;text-align:right;">{{ modalTotalQty }}</td>
               <td colspan="3"></td>
-              <td style="padding:7px 10px;text-align:right;color:var(--primary,#0e4a60);">{{ modalTotalAmt | money }}</td>
+              <td style="padding:7px 10px;text-align:right;color:var(--primary,#0e4a60);">
+                {{ modalTotalAmt | money:modalCurrency }}
+                <!-- Also show the company base-currency equivalent for a foreign-currency invoice. -->
+                <div *ngIf="modalIsForeign" style="font-size:11px;font-weight:600;color:#6b7280;">{{ modalBaseAmt | money }}</div>
+              </td>
               <td></td>
             </tr>
           </tfoot>
@@ -412,8 +416,8 @@
           </div>
           <div class="match-row"><span class="mk">PO No</span><span class="mv">{{ threeWay.poNo || threeWay.pO_No || '—' }}</span></div>
           <div class="match-row"><span class="mk">PO Qty</span><span class="mv">{{ threeWay.poQty ?? '—' }}</span></div>
-          <div class="match-row"><span class="mk">Unit Price</span><span class="mv">{{ (threeWay.poPrice || 0) | money }}</span></div>
-          <div class="match-row"><span class="mk">PO Total</span><span class="mv bold">{{ (threeWay.poTotal || 0) | money }}</span></div>
+          <div class="match-row"><span class="mk">Unit Price</span><span class="mv">{{ (threeWay.poPrice || 0) | money:matchCurrency }}</span></div>
+          <div class="match-row"><span class="mk">PO Total</span><span class="mv bold">{{ (threeWay.poTotal || 0) | money:matchCurrency }}</span></div>
         </div>
 
         <!-- Arrow -->
@@ -447,7 +451,7 @@
           </div>
           <div class="match-row"><span class="mk">Invoice Qty</span><span class="mv">{{ threeWay.pinQty ?? '—' }}</span></div>
           <div class="match-row"><span class="mk">Total Invoiced</span><span class="mv">{{ threeWay.totalInvoicedQty ?? '—' }}</span></div>
-          <div class="match-row"><span class="mk">Invoice Total</span><span class="mv bold">{{ (threeWay.pinTotal || 0) | money }}</span></div>
+          <div class="match-row"><span class="mk">Invoice Total</span><span class="mv bold">{{ (threeWay.pinTotal || 0) | money:matchCurrency }}</span></div>
           <div class="match-row">
             <span class="mk">Match</span>
             <span class="mv" [style.color]="threeWay.pinMatch ? '#1a7a4a' : '#b91c1c'" style="font-weight:700;">

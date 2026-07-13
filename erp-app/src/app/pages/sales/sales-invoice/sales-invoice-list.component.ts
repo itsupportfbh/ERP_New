@@ -34,6 +34,21 @@ export class SalesInvoiceListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+
+  /** The company's base currency (e.g. RM). Invoices can be billed in another currency. */
+  private readonly baseCur = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
+
+  /**
+   * Extra totals row converting a foreign-currency invoice into the company's base currency,
+   * so the view/print shows e.g. "Base (RM) @ 3.1500  667.80" under "Grand Total (SGD) 212.00".
+   */
+  private baseTotalRow(total: number, cur: string, fxRate: any): PrintField[] {
+    const fx = Number(fxRate ?? 1) || 1;
+    const isForeign = !!cur && cur.trim().toLowerCase() !== this.baseCur.toLowerCase();
+    if (!isForeign || fx === 1) return [];
+    return [{ label: `Base (${this.baseCur}) @ ${fx.toFixed(4)}`, value: (total * fx).toFixed(2) }];
+  }
+
   printBillTo: { name?: string; lines?: string[] } = {};
   printDeliverTo: { name?: string; lines?: string[] } = {};
 
@@ -152,7 +167,9 @@ export class SalesInvoiceListComponent implements OnInit {
             lineTotal: +(lineNet + lineTax).toFixed(2),
           };
         });
-        const cur = row.currency ?? hdr.currency ?? hdr.currencyName ?? hdr.currencyCode ?? 'SGD';
+        // Fall back to the company's base currency (e.g. RM), not a hardcoded 'SGD'.
+        const baseCur = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
+        const cur = row.currency ?? hdr.currency ?? hdr.currencyName ?? hdr.currencyCode ?? baseCur;
         const invDate = hdr.invoiceDate ?? row.invoiceDate;
         const custName = (hdr.customerName ?? row.customerName) || '—';
         const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
@@ -191,6 +208,7 @@ export class SalesInvoiceListComponent implements OnInit {
               { label: 'Subtotal', value: net.toFixed(2) },
               { label: 'Tax', value: tax.toFixed(2) },
               { label: `Grand Total (${cur})`, value: total.toFixed(2) },
+              ...this.baseTotalRow(total, cur, row.fxRate ?? hdr.fxRate),
             ];
             this.printBillTo = { name: custName, lines: [custAddr, contact ? `Tel: ${contact}` : ''].filter(Boolean) };
             this.printDeliverTo = { name: custName, lines: [deliverTo || custAddr].filter(Boolean) };

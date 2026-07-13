@@ -29,9 +29,9 @@
 
       <!-- Delivery Date -->
       <div class="mf-group">
-        <label class="mf-label">Delivery Date</label>
+        <label class="mf-label">Delivery Date <span style="color:#dc2626">*</span></label>
         <input type="date" class="mf-input" [(ngModel)]="header.deliveryDate" name="deliveryDate"
-          [min]="minDate" autocomplete="off" />
+          [min]="minDate" required autocomplete="off" />
       </div>
 
       <!-- Order Time -->
@@ -86,8 +86,9 @@
           FX Rate
           <span *ngIf="fxRateLoading" class="qf-fetching">Fetching…</span>
         </label>
+        <!-- Read-only: the rate is owned by Master > Exchange Rate, not typed in here. -->
         <input type="number" class="mf-input" [(ngModel)]="header.fxRate" name="fxRate"
-          step="0.000001" (ngModelChange)="onFxRateChange()" />
+          step="0.000001" disabled />
         <small *ngIf="isForeignCurrency()" class="qf-hint">
           1 {{ header.currency }} = {{ header.fxRate | number:'1.4-4' }} {{ baseCurrencyName }}
         </small>
@@ -116,7 +117,8 @@
       <!-- GST % -->
       <div class="mf-group">
         <label class="mf-label">{{ 'GST %' | taxName }}</label>
-        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" readonly />
+        <!-- Read-only: the GST rate comes from the company tax setup. -->
+        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" disabled />
       </div>
     </div>
 

@@ -51,7 +51,8 @@
       <!-- GST % -->
       <div class="mf-group">
         <label class="mf-label">{{ 'GST %' | taxName }}</label>
-        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" readonly />
+        <!-- Read-only: the GST rate comes from the company tax setup. -->
+        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" disabled />
       </div>
 
       <!-- Sales Order Date -->

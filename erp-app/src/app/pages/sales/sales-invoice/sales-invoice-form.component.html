@@ -150,6 +150,11 @@
       </div>
       <div class="si-divider"></div>
       <div class="si-sum-row si-grand"><span>Grand Total <small>({{ currencyName }})</small></span><strong>{{ grandTotal | money:currencyName }}</strong></div>
+      <!-- Billed in the customer's currency; also show it in the company's base currency. -->
+      <div class="si-sum-row si-base" *ngIf="isForeignCurrency">
+        <span>Base <small>({{ baseCurrencyName }})</small><br /><small class="si-base-calc">{{ grandTotal | money:currencyName }} {{ currencyName }} &times; {{ fxRate | number:'1.4-4' }}</small></span>
+        <strong>{{ baseGrandTotal | money:baseCurrencyName }}</strong>
+      </div>
     </div>
   </div>
 

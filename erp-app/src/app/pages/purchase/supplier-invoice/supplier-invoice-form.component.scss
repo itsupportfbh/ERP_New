@@ -105,4 +105,10 @@
   .t-val { font-weight: 600; min-width: 100px; text-align: right; }
   .t-cur { font-size: 10px; color: var(--text-muted); margin-left: 4px; }
   &.grand { .t-lbl, .t-val { font-size: 14px; font-weight: 700; color: var(--primary); } }
+  &.base {
+    align-items: flex-start;
+    .t-lbl { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; }
+    .t-sub { font-size: 10px; font-weight: 400; color: var(--text-muted); }
+    .t-val { font-weight: 700; }
+  }
 }

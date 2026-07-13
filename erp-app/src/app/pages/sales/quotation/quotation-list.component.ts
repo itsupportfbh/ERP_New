@@ -37,6 +37,20 @@ export class QuotationListComponent implements OnInit {
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
 
+  /** The company's base currency (e.g. RM). Documents can be billed in another currency. */
+  private readonly baseCur = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
+
+  /**
+   * Extra totals row converting a foreign-currency document into the company's base currency,
+   * so the view/print shows e.g. "Base (RM) @ 3.1500  667.80" under "Grand Total (SGD) 212.00".
+   */
+  private baseTotalRow(total: number, cur: string, fxRate: any): PrintField[] {
+    const fx = Number(fxRate ?? 1) || 1;
+    const isForeign = !!cur && cur.trim().toLowerCase() !== this.baseCur.toLowerCase();
+    if (!isForeign || fx === 1) return [];
+    return [{ label: `Base (${this.baseCur}) @ ${fx.toFixed(4)}`, value: (total * fx).toFixed(2) }];
+  }
+
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
     { header: 'UOM', key: 'uomName', align: 'center' },
@@ -215,6 +229,7 @@ export class QuotationListComponent implements OnInit {
             { label: 'Subtotal', value: net.toFixed(2) },
             { label: 'Tax', value: tax.toFixed(2) },
             { label: `Grand Total (${cur})`, value: total.toFixed(2) },
+            ...this.baseTotalRow(total, cur, row.fxRate),
           ];
           this.viewTitle = `Quotation Lines — ${row.number}`;
           this.viewSubtitle = `Customer: ${row.customerName || '—'} · Currency: ${cur}`;

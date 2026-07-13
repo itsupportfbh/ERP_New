@@ -49,7 +49,12 @@ export class SalesInvoiceFormComponent implements OnInit {
   discountType: 'percent' | 'amount' = 'percent';
   remarks = '';
   customerName = '';
-  currencyName = 'SGD';
+  // Default to the logged-in company's base currency (e.g. RM), not a hardcoded 'SGD'.
+  // Overwritten by the source document's currency when one is loaded.
+  currencyName = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
+  currencyId: number | null = null;
+  fxRate = 1;
+  readonly baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
   status = 'Draft';
 
   // OCR (scan invoice)
@@ -176,6 +181,9 @@ export class SalesInvoiceFormComponent implements OnInit {
     const opt = this.sourceDocOptions.find(o => String(o.value) === String(this.sourceId));
     const raw = opt?.raw ?? {};
     this.customerName = raw.customerName ?? raw.CustomerName ?? raw.customer ?? raw.Customer ?? '';
+    // The invoice is billed in the source document's currency (e.g. an SGD sales order), not
+    // the company's base currency. Without this the SGD amounts were labelled "RM 212.00".
+    this.applyDocCurrency(raw);
 
     this.svc.getSalesInvoiceSourceLines(this.sourceType, this.sourceId).subscribe({
       next: res => {
@@ -195,6 +203,24 @@ export class SalesInvoiceFormComponent implements OnInit {
       }
     });
   }
+
+  /** Take currency + FX rate from the source SO/DO (or the SO DTO fetched for packages). */
+  private applyDocCurrency(src: any): void {
+    if (!src) return;
+    const name = String(src.currencyName ?? src.CurrencyName ?? src.currency ?? src.Currency ?? '').trim();
+    if (name) this.currencyName = name;
+    const id = Number(src.currencyId ?? src.CurrencyId ?? 0);
+    if (id > 0) this.currencyId = id;
+    const fx = Number(src.fxRate ?? src.FxRate ?? 0);
+    if (fx > 0) this.fxRate = fx;
+  }
+
+  /** Billed in a currency other than the company's base → also show the converted total. */
+  get isForeignCurrency(): boolean {
+    const cur = (this.currencyName || '').trim().toLowerCase();
+    return !!cur && cur !== this.baseCurrencyName.trim().toLowerCase();
+  }
+  get baseGrandTotal(): number { return +(this.grandTotal * (this.fxRate || 1)).toFixed(2); }
 
   private mapSourceLine(r: any): SiLine {
     const line: SiLine = {
@@ -251,7 +277,12 @@ export class SalesInvoiceFormComponent implements OnInit {
 
   private fetchSoAndGroup(soId: number, done?: () => void): void {
     this.svc.getSalesOrderById(soId).subscribe({
-      next: soRes => this.applyPackageGrouping(this.svc.unwrapOne(soRes), done),
+      next: soRes => {
+        const soDto = this.svc.unwrapOne(soRes);
+        // The SO list option doesn't always carry currency/FX — the full DTO does.
+        this.applyDocCurrency(soDto?.header ?? soDto);
+        this.applyPackageGrouping(soDto, done);
+      },
       error: () => { if (done) done(); }
     });
   }
@@ -448,7 +479,7 @@ export class SalesInvoiceFormComponent implements OnInit {
         this.remarks = hdr.remarks ?? '';
         this.customerName = hdr.customerName ?? hdr.CustomerName ?? hdr.customer ?? hdr.Customer ?? '';
         this.sourceRef = hdr.sourceRef ?? hdr.SourceRef ?? '';
-        this.currencyName = hdr.currencyName ?? this.currencyName;
+        this.applyDocCurrency(hdr);
         this.status = hdr.glPosted ? 'Posted' : (hdr.status ?? 'Draft');
         this.lines = (rows ?? []).map((r: any) => ({
           sourceLineId: r.sourceLineId ?? null,
