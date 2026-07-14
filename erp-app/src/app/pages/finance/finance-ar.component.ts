@@ -390,11 +390,22 @@ export class FinanceArComponent implements OnInit {
     return this.receiptInvoices.length > 0 && this.receiptInvoices.every(r => r.selected);
   }
 
+  /** Bank transfer and cheque both move money through a specific bank account, so the bank must be
+   *  named. Without it the balance (derived per GL account) would land in the company's generic
+   *  Cash account instead of the bank. Cash / UPI need no bank. */
+  needsBank(mode: string | null | undefined): boolean {
+    const m = (mode || '').toUpperCase();
+    return m === 'BANK' || m === 'CHEQUE';
+  }
+
   saveReceipt(): void {
     if (this.isPeriodLocked) { Swal.fire('Period Locked', this.periodName ? `Period "${this.periodName}" is locked.` : 'This period is locked.', 'warning'); return; }
     if (!this.receiptForm.customerId) { Swal.fire('Required', 'Please select a customer.', 'warning'); return; }
     if (!this.receiptForm.receiptDate) { Swal.fire('Required', 'Receipt date is required.', 'warning'); return; }
     if (!(Number(this.receiptForm.amountReceived) > 0)) { Swal.fire('Required', 'Amount received must be greater than 0.', 'warning'); return; }
+    if (this.needsBank(this.receiptForm.paymentMode) && !this.receiptForm.bankId) {
+      Swal.fire('Required', 'Please select the bank account for this receipt.', 'warning'); return;
+    }
 
     this.savingReceipt = true;
     this.error = '';
@@ -403,7 +414,7 @@ export class FinanceArComponent implements OnInit {
       customerId: this.receiptForm.customerId,
       receiptDate: this.receiptForm.receiptDate,
       paymentMode: this.receiptForm.paymentMode,
-      bankId: this.receiptForm.paymentMode === 'BANK' ? this.receiptForm.bankId : null,
+      bankId: this.needsBank(this.receiptForm.paymentMode) ? this.receiptForm.bankId : null,
       amountReceived: Number(this.receiptForm.amountReceived) || 0,
       totalAllocated: this.receiptTotalAllocated,
       fxRate: this.receiptFxRate,
@@ -764,7 +775,7 @@ setTab(tab: ArTab): void {
   }
 
   onAdvancePaymentModeChange(): void {
-    if (this.advanceForm.paymentMode !== 'BANK') this.advanceForm.bankAccountId = null;
+    if (!this.needsBank(this.advanceForm.paymentMode)) this.advanceForm.bankAccountId = null;
   }
 
   saveAdvance(): void {
@@ -774,7 +785,7 @@ setTab(tab: ArTab): void {
     if (!this.advanceForm.advanceDate) { Swal.fire('Required', 'Advance date is required.', 'warning'); return; }
     if (!this.isOrderSpecific) { Swal.fire('Required', 'Please tick "Link to Sales Order" and select an order.', 'warning'); return; }
     if (this.isOrderSpecific && !this.advanceForm.salesOrderId) { Swal.fire('Required', 'Please select a Sales Order.', 'warning'); return; }
-    if (this.advanceForm.paymentMode === 'BANK' && !this.advanceForm.bankAccountId) { Swal.fire('Required', 'Please select a bank account.', 'warning'); return; }
+    if (this.needsBank(this.advanceForm.paymentMode) && !this.advanceForm.bankAccountId) { Swal.fire('Required', 'Please select a bank account.', 'warning'); return; }
 
     this.savingAdvance = true;
     this.error = '';

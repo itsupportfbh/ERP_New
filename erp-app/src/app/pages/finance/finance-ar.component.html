@@ -138,8 +138,8 @@
           <span>Payment Mode</span>
           <erp-dropdown [(ngModel)]="receiptForm.paymentMode" [options]="receiptPaymentModeOptions"></erp-dropdown>
         </label>
-        <label class="form-field" *ngIf="receiptForm.paymentMode === 'BANK'">
-          <span>Bank Account</span>
+        <label class="form-field" *ngIf="needsBank(receiptForm.paymentMode)">
+          <span>Bank Account <span class="req">*</span></span>
           <erp-dropdown [(ngModel)]="receiptForm.bankId"
             [items]="bankAccounts" bindLabel="displayName" bindValue="id"
             placeholder="— Select Bank —"></erp-dropdown>
@@ -377,9 +377,9 @@
             (ngModelChange)="onAdvancePaymentModeChange()"></erp-dropdown>
         </label>
 
-        <!-- Bank Account (only when BANK) -->
-        <label class="adv-form-field" *ngIf="advanceForm.paymentMode === 'BANK'">
-          <span>Bank Account</span>
+        <!-- Bank Account (bank transfer / cheque both leave a specific bank) -->
+        <label class="adv-form-field" *ngIf="needsBank(advanceForm.paymentMode)">
+          <span>Bank Account <span class="req">*</span></span>
           <erp-dropdown [(ngModel)]="advanceForm.bankAccountId"
             [items]="bankAccounts" bindLabel="displayName" bindValue="id"
             placeholder="Search bank..."></erp-dropdown>
