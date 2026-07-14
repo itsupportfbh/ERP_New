@@ -479,6 +479,16 @@ export class FinanceApComponent implements OnInit {
     if (!this.paymentForm.supplierId) { Swal.fire('Required', 'Please select a supplier.', 'warning'); return; }
     if (!this.paymentForm.paymentDate) { Swal.fire('Required', 'Payment date is required.', 'warning'); return; }
     if (!(Number(this.paymentForm.amount) > 0)) { Swal.fire('Required', 'Amount must be greater than 0.', 'warning'); return; }
+    // Bank Transfer (2) and Cheque (3) both leave a specific bank account, so the bank must be
+    // named — the balance is tracked per bank GL account, and an unnamed bank would quietly pay
+    // the money out of the company's generic Cash account instead.
+    const apMethod = Number(this.paymentForm.paymentMethodId);
+    if ((apMethod === 2 || apMethod === 3) && !this.paymentForm.bankId) {
+      Swal.fire('Required',
+        apMethod === 3 ? 'Please select the bank the cheque is drawn on.' : 'Please select the bank account for this payment.',
+        'warning');
+      return;
+    }
 
     // The backend posts one payment per invoice, so split the entered total across the
     // selected invoices (in list order, capped at each invoice's outstanding balance).
