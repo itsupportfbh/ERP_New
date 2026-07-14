@@ -260,6 +260,10 @@ $muted:     #6c757d;
 
 .customer-table { min-width: 600px; }
 
+// Mirrors `.supplier-table tbody td` on the AP screen. Without this reset every cell inherits
+// `.customer-row { font-weight: 500 }`, which is why the whole AR table read as bold.
+.customer-table tbody td { font-weight: 400; }
+
 .teal-hdr     { color: #fff !important; }
 .success-hdr  { color: #fff !important; }
 .teal-bold    { color: $teal; font-weight: 700; }
