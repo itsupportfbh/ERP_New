@@ -120,10 +120,10 @@
     </label>
     <label class="coa-field">
       <span>Parent Head</span>
-      <select [(ngModel)]="form.parentHead" (change)="onParentHeadChange()">
-        <option [ngValue]="null">Search / choose Parent Head...</option>
-        <option *ngFor="let p of rows" [ngValue]="p.headCode">{{ p.headCode }} – {{ p.headName }}</option>
-      </select>
+      <!-- erp-dropdown so a long chart of accounts can be searched by code or name. -->
+      <erp-dropdown [(ngModel)]="form.parentHead" [options]="parentHeadOptions"
+                    placeholder="Search / choose Parent Head..."
+                    (ngModelChange)="onParentHeadChange()"></erp-dropdown>
     </label>
     <label class="coa-field">
       <span>P Head Name</span>

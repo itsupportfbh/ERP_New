@@ -53,12 +53,17 @@ $row-hover: #f5f9fb;
   z-index: 1040;
 }
 
-/* ── Modal ── */
+/* ── Modal ──
+   Centred with margin/inset, NOT `transform: translate(-50%, -50%)`. A transformed element
+   becomes the containing block for its `position: fixed` descendants, which re-based the
+   Parent Head dropdown's viewport coordinates against the modal box and threw the menu off
+   to the right. Keep this transform-free so the menu lands under its trigger. */
 .coa-modal {
   position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  margin: auto;
   width: 560px;
+  height: fit-content;
   max-height: 92vh;
   background: #fff;
   border-radius: 12px;
@@ -68,8 +73,8 @@ $row-hover: #f5f9fb;
   animation: modal-in 0.2s ease;
 }
 @keyframes modal-in {
-  from { opacity: 0; transform: translate(-50%, -54%); }
-  to   { opacity: 1; transform: translate(-50%, -50%); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Modal Header - dark teal like Unity_ERP */

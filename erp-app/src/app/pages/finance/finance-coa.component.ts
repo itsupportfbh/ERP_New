@@ -3,18 +3,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
+import { SharedModule } from '../../shared/shared.module';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'erp-finance-coa',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   templateUrl: './finance-coa.component.html',
   styleUrls: ['./finance-coa.component.scss']
 })
 export class FinanceCoaComponent implements OnInit {
   rows: any[] = [];
   displayRows: any[] = [];
+  /** Parent Head choices, searchable by code or name (e.g. "1200 – Trade Debtors"). */
+  parentHeadOptions: { label: string; value: any }[] = [];
   rowMap = new Map<any, any>();
   expanded = new Set<any>();
   search = '';
@@ -68,11 +71,18 @@ export class FinanceCoaComponent implements OnInit {
       next: res => {
         this.rows = this.finance.unwrap(res);
         this.buildMap();
+        this.buildParentHeadOptions();
         this.rebuildDisplayRows();
         this.loading = false;
       },
       error: () => { this.rows = []; this.loading = false; this.error = 'Chart of Accounts unavailable.'; }
     });
+  }
+
+  private buildParentHeadOptions(): void {
+    this.parentHeadOptions = this.rows
+      .map(r => ({ label: `${r.headCode} – ${r.headName}`, value: r.headCode }))
+      .sort((a, b) => String(a.value).localeCompare(String(b.value), undefined, { numeric: true }));
   }
 
   private buildMap(): void {
