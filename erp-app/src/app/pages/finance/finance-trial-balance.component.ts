@@ -65,6 +65,9 @@ export class FinanceTrialBalanceComponent implements OnInit {
     this.permissionService.getFunctionPermission(this.userId, 'tb').subscribe({
       next: perm => { this.permission = perm; }
     });
+    // Run the report straight away with the default year-to-date range, instead of showing
+    // an empty table until the user clicks Run TB.
+    this.load();
   }
 
   load(): void {

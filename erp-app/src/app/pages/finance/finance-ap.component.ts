@@ -40,7 +40,7 @@ export class FinanceApComponent implements OnInit {
   expandedSuppliers: Record<string, boolean> = {};
   /** All 4 top KPI cards are always in the company base currency, regardless of each invoice's own currency. */
   invoiceSummary = { totalInvoice: 0, paid: 0, debitNote: 0, advance: 0, outstanding: 0 };
-  readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
+  readonly baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim();
 
   // Payments list
   payments: any[] = [];
@@ -655,7 +655,7 @@ export class FinanceApComponent implements OnInit {
     this.buildSupplierGroups();
   }
 
-  supplierGroups: { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number; baseAmount: number }[] = [];
+  supplierGroups: { supplier: string; invoices: any[]; total: number; paid: number; debitNote: number; advance: number; outstanding: number; baseAmount: number; currencyName: string; isMixedCurrency: boolean }[] = [];
 
   private buildSupplierGroups(): void {
     const map = new Map<string, any[]>();
@@ -664,16 +664,26 @@ export class FinanceApComponent implements OnInit {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(inv);
     });
-    this.supplierGroups = Array.from(map.entries()).map(([supplier, invs]) => ({
-      supplier,
-      invoices: invs,
-      total: invs.reduce((s, i) => s + (i.amount || 0), 0),
-      paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
-      debitNote: invs.reduce((s, i) => s + (i.debitNote || 0), 0),
-      advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
-      outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0),
-      baseAmount: invs.reduce((s, i) => s + (i.baseAmount || 0), 0)
-    }));
+    this.supplierGroups = Array.from(map.entries()).map(([supplier, invs]) => {
+      // Amount/Paid/Debit Note/Advance/Outstanding are in each invoice's OWN currency (e.g.
+      // SGD); only Base Amount is in the company base currency. The group total therefore only
+      // means something when every invoice shares one currency — flag the mixed case rather
+      // than adding SGD to RM and labelling the result RM.
+      const currencies = new Set(invs.map(i => String(i.currencyName ?? '').trim()).filter(Boolean));
+      const isMixedCurrency = currencies.size > 1;
+      return {
+        supplier,
+        invoices: invs,
+        total: invs.reduce((s, i) => s + (i.amount || 0), 0),
+        paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
+        debitNote: invs.reduce((s, i) => s + (i.debitNote || 0), 0),
+        advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
+        outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0),
+        baseAmount: invs.reduce((s, i) => s + (i.baseAmount || 0), 0),
+        currencyName: isMixedCurrency ? '' : (currencies.values().next().value ?? this.baseCurrencyName),
+        isMixedCurrency
+      };
+    });
   }
 
   trackBySupplier(_: number, grp: any): string { return grp.supplier; }
@@ -799,7 +809,7 @@ export class FinanceApComponent implements OnInit {
     if (this.apAdvExceedsGrn) {
       const amt  = (Number(this.advanceForm.amount) || 0).toFixed(2);
       const grn  = this.apAdvGrnTotal.toFixed(2);
-      const cur  = this.apAdvCurrencyName || 'SGD';
+      const cur  = this.apAdvCurrencyName || this.baseCurrencyName;
       Swal.fire({
         icon: 'warning',
         title: 'Advance exceeds GRN total',

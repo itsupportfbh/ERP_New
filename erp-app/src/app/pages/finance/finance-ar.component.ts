@@ -42,7 +42,7 @@ export class FinanceArComponent implements OnInit {
   expandedCustomers: Set<string> = new Set();
   /** All 4 top KPI cards are always in the company base currency, regardless of each invoice's own currency. */
   invoiceSummary = { total: 0, paid: 0, creditNote: 0, outstanding: 0 };
-  readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
+  readonly baseCurrencyName = (localStorage.getItem('companyCurrencyName') || '').trim();
 
   // Receipts list
   receipts: any[] = [];
@@ -611,23 +611,33 @@ setTab(tab: ArTab): void {
       : [...this.invoices];
   }
 
-  get customerGroups(): { customer: string; invoices: any[]; total: number; paid: number; creditNote: number; advance: number; outstanding: number; baseAmount: number }[] {
+  get customerGroups(): { customer: string; invoices: any[]; total: number; paid: number; creditNote: number; advance: number; outstanding: number; baseAmount: number; currencyName: string; isMixedCurrency: boolean }[] {
     const map = new Map<string, any[]>();
     this.filteredInvoices.forEach(inv => {
       const key = inv.customerName || 'Unknown Customer';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(inv);
     });
-    return Array.from(map.entries()).map(([customer, invs]) => ({
-      customer,
-      invoices: invs,
-      total: invs.reduce((s, i) => s + (i.amount || 0), 0),
-      paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
-      creditNote: invs.reduce((s, i) => s + (i.creditNote || 0), 0),
-      advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
-      outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0),
-      baseAmount: invs.reduce((s, i) => s + (i.baseAmount || 0), 0)
-    }));
+    return Array.from(map.entries()).map(([customer, invs]) => {
+      // Amount/Paid/Credit Note/Advance/Outstanding are in each invoice's OWN currency (e.g.
+      // SGD); only Base Amount is in the company base currency. The group total therefore only
+      // means something when every invoice shares one currency — flag the mixed case rather
+      // than adding SGD to RM and labelling the result RM.
+      const currencies = new Set(invs.map(i => String(i.currencyName ?? '').trim()).filter(Boolean));
+      const isMixedCurrency = currencies.size > 1;
+      return {
+        customer,
+        invoices: invs,
+        total: invs.reduce((s, i) => s + (i.amount || 0), 0),
+        paid: invs.reduce((s, i) => s + (i.paid || 0), 0),
+        creditNote: invs.reduce((s, i) => s + (i.creditNote || 0), 0),
+        advance: invs.reduce((s, i) => s + (i.advance || 0), 0),
+        outstanding: invs.reduce((s, i) => s + (i.balance || 0), 0),
+        baseAmount: invs.reduce((s, i) => s + (i.baseAmount || 0), 0),
+        currencyName: isMixedCurrency ? '' : (currencies.values().next().value ?? this.baseCurrencyName),
+        isMixedCurrency
+      };
+    });
   }
 
   toggleCustomer(c: string): void {
