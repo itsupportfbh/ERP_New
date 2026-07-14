@@ -46,7 +46,7 @@
       <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
     </div>
     <div class="form-row cols-3 block-gap">
-      <erp-input label="Point of Contact Person" [required]="true" [(ngModel)]="customer.contactPerson"></erp-input>
+      <erp-input label="Point of Contact Person" [(ngModel)]="customer.contactPerson"></erp-input>
       <erp-input label="Email" type="email" [(ngModel)]="customer.email"></erp-input>
       <erp-input label="Contact Number" [(ngModel)]="customer.phone"></erp-input>
     </div>
@@ -83,7 +83,7 @@
     <div class="kyc-wrap">
       <div class="kyc-grid" [class.kyc-grid-locked]="kycLocked">
         <label class="file-card">
-          <span>Driving Licence</span>
+          <span>Passport</span>
           <div class="file-card-body">
             <img *ngIf="kycPreview.drivingLicence" [src]="kycPreview.drivingLicence" alt="">
             <div *ngIf="!kycPreview.drivingLicence" class="file-placeholder">
@@ -94,7 +94,7 @@
           <input type="file" accept="image/*" [disabled]="kycLocked" (change)="onKycFile($event, 'drivingLicence')">
         </label>
         <label class="file-card">
-          <span>Utility Bill</span>
+          <span>IC</span>
           <div class="file-card-body">
             <img *ngIf="kycPreview.utilityBill" [src]="kycPreview.utilityBill" alt="">
             <div *ngIf="!kycPreview.utilityBill" class="file-placeholder">

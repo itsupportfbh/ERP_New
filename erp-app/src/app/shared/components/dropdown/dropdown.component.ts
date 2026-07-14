@@ -53,12 +53,25 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
     }
   };
 
+  /** Scroll events from inner containers don't bubble to window, so listen in the
+   *  capture phase to keep the fixed-position menu glued to its trigger. */
+  private readonly repositionOnScroll = (e: Event) => {
+    if (!this.open) return;
+    // Scrolling the menu's own option list must not move the menu.
+    const target = e.target as Node;
+    const menu: HTMLElement | null = this.el.nativeElement.querySelector('.dd-menu');
+    if (menu && (menu === target || menu.contains(target))) return;
+    this.ngZone.run(() => this.positionMenu());
+  };
+
   ngOnInit(): void {
     document.addEventListener('mousedown', this.closeOnDocMousedown, true);
+    document.addEventListener('scroll', this.repositionOnScroll, true);
   }
 
   ngOnDestroy(): void {
     document.removeEventListener('mousedown', this.closeOnDocMousedown, true);
+    document.removeEventListener('scroll', this.repositionOnScroll, true);
   }
 
   get resolvedOptions(): DropdownOption[] {
@@ -93,14 +106,43 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
     }
   }
 
+  /** Viewport region the trigger is actually visible in — the viewport intersected
+   *  with every scrollable/clipping ancestor. Keeps the menu from drifting over a
+   *  sticky header or outside its scroll container. */
+  private visibleClipRect(el: HTMLElement): { top: number; bottom: number } {
+    let top = 0;
+    let bottom = window.innerHeight;
+    let node = el.parentElement;
+    while (node && node !== document.body) {
+      const overflowY = getComputedStyle(node).overflowY;
+      if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'hidden') {
+        const b = node.getBoundingClientRect();
+        top = Math.max(top, b.top);
+        bottom = Math.min(bottom, b.bottom);
+      }
+      node = node.parentElement;
+    }
+    return { top, bottom };
+  }
+
   /** Calculate fixed position so the menu escapes overflow:hidden parents */
   positionMenu(): void {
     const trigger: HTMLElement = this.el.nativeElement.querySelector('.dd-trigger');
     if (!trigger) return;
     const r = trigger.getBoundingClientRect();
+
+    // Trigger scrolled out of its container (e.g. behind the sticky header) —
+    // don't leave the menu floating on its own over the navbar.
+    const clip = this.visibleClipRect(trigger);
+    if (r.bottom <= clip.top || r.top >= clip.bottom) {
+      this.open = false;
+      return;
+    }
+
     const menuH = 188;
-    const spaceBelow = window.innerHeight - r.bottom;
-    const openUp = spaceBelow < menuH + 8 && r.top > menuH;
+    const spaceBelow = clip.bottom - r.bottom;
+    const spaceAbove = r.top - clip.top;
+    const openUp = spaceBelow < menuH + 8 && spaceAbove > menuH;
 
     // Widen the panel when requested, but keep it inside the viewport.
     const desiredWidth = this.menuMinWidth > 0 ? Math.max(r.width, this.menuMinWidth) : r.width;
@@ -139,7 +181,6 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
     this.open = false;
   }
 
-  @HostListener('window:scroll')
   @HostListener('window:resize')
   onViewChange(): void { if (this.open) this.positionMenu(); }
 
