@@ -95,6 +95,8 @@ export class PurchaseOrderFormComponent implements OnInit {
   companyCountryId = Number(localStorage.getItem('companyCountryId') || 0) || null;
   supplierCountryId: number | null = null;
   defaultLineTaxMode: CalculatedTaxMode = 'Exclusive';
+  // Company-wide tax mode (Company → Finance & Tax): Exclusive / Inclusive / ZeroRated.
+  companyTaxMode: CalculatedTaxMode | null = null;
   private suggestedPoNo = '';
   private _locationNameFromEdit = '';
   private _locationNameFromPR = '';
@@ -169,6 +171,10 @@ export class PurchaseOrderFormComponent implements OnInit {
         const countryId = Number(res?.financeTax?.countryId ?? res?.general?.countryId ?? 0) || null;
         this.companyCountryId = countryId;
         if (countryId) localStorage.setItem('companyCountryId', String(countryId));
+        const tm = res?.financeTax?.taxMode;
+        this.companyTaxMode = (tm === 'Inclusive' || tm === 'ZeroRated' || tm === 'Exclusive') ? tm : null;
+        if (this.companyTaxMode) localStorage.setItem('companyTaxMode', this.companyTaxMode);
+        this.applyTaxDecision(this.gstPct);
         applySuggestion();
       },
       error: () => applySuggestion()
@@ -467,7 +473,8 @@ export class PurchaseOrderFormComponent implements OnInit {
       partnerCountryId: this.supplierCountryId,
       companyCurrencyId: baseCurrencyId,
       documentCurrencyId: this.currencyId,
-      defaultTaxRate: this.gstPct
+      defaultTaxRate: this.gstPct,
+      preferredTaxMode: this.companyTaxMode
     });
     this.isOverseas = decision.isOverseas;
     if (!this.currencyId || !baseCurrencyId || this.currencyId === baseCurrencyId) {
@@ -501,12 +508,14 @@ export class PurchaseOrderFormComponent implements OnInit {
       l.taxRate = this.gstPct ?? 0;
       if (this.defaultLineTaxMode === 'ZeroRated' && l.taxMode !== 'Inclusive') l.taxMode = 'ZeroRated';
       if (this.defaultLineTaxMode === 'Exclusive' && l.taxMode === 'ZeroRated') l.taxMode = 'Exclusive';
+      if (this.defaultLineTaxMode === 'Inclusive' && l.taxMode !== 'ZeroRated') l.taxMode = 'Inclusive';
       this.recalcLine(l);
     });
     if (this.showModal) {
       this.modalLine.taxRate = this.gstPct ?? 0;
       if (this.defaultLineTaxMode === 'ZeroRated' && this.modalLine.taxMode !== 'Inclusive') this.modalLine.taxMode = 'ZeroRated';
       if (this.defaultLineTaxMode === 'Exclusive' && this.modalLine.taxMode === 'ZeroRated') this.modalLine.taxMode = 'Exclusive';
+      if (this.defaultLineTaxMode === 'Inclusive' && this.modalLine.taxMode !== 'ZeroRated') this.modalLine.taxMode = 'Inclusive';
       this.recalcLine(this.modalLine);
     }
   }
@@ -518,14 +527,16 @@ export class PurchaseOrderFormComponent implements OnInit {
       partnerCountryId: this.supplierCountryId,
       companyCurrencyId: baseCurrencyId,
       documentCurrencyId: this.currencyId,
-      defaultTaxRate
+      defaultTaxRate,
+      preferredTaxMode: this.companyTaxMode
     });
     this.isOverseas = decision.isOverseas;
     // GST % always reflects the supplier country's tax rate, even for overseas
     // orders — the decision's zero-rating is not applied to the displayed rate.
     const rate = Math.max(0, Number(defaultTaxRate || 0));
     this.gstPct = rate;
-    this.defaultLineTaxMode = rate > 0 ? 'Exclusive' : 'ZeroRated';
+    // Honour the company tax mode (Exclusive/Inclusive/ZeroRated) instead of forcing Exclusive.
+    this.defaultLineTaxMode = decision.taxMode;
     this.onGstPctChange();
   }
 
