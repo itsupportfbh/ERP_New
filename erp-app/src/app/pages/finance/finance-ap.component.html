@@ -76,12 +76,15 @@
                   <span>{{ grp.supplier }}</span>
                 </td>
                 <td class="right muted">{{ grp.invoices.length }}</td>
-                <td class="right">{{ grp.total | money }}</td>
+                <td class="right" [title]="grp.isMixedCurrency ? 'Multiple currencies — expand to see the invoices' : ''">
+                  <ng-container *ngIf="!grp.isMixedCurrency; else mixedCur">{{ grp.total | money:grp.currencyName }}</ng-container>
+                  <ng-template #mixedCur><span class="muted">Mixed</span></ng-template>
+                </td>
                 <td class="right">{{ grp.baseAmount | money }}</td>
-                <td class="right">{{ grp.paid | money }}</td>
-                <td class="right">{{ grp.debitNote | money }}</td>
-                <td class="right">{{ grp.advance | money }}</td>
-                <td class="right">{{ grp.outstanding | money }}</td>
+                <td class="right">{{ grp.isMixedCurrency ? '—' : (grp.paid | money:grp.currencyName) }}</td>
+                <td class="right">{{ grp.isMixedCurrency ? '—' : (grp.debitNote | money:grp.currencyName) }}</td>
+                <td class="right">{{ grp.isMixedCurrency ? '—' : (grp.advance | money:grp.currencyName) }}</td>
+                <td class="right">{{ grp.isMixedCurrency ? '—' : (grp.outstanding | money:grp.currencyName) }}</td>
               </tr>
               <tr class="invoice-detail-row" *ngIf="isExpanded(grp.supplier)">
                 <td colspan="8">
@@ -107,12 +110,13 @@
                         <td><span class="type-pill">{{ inv.invoiceType || 'Local' }}</span></td>
                         <td>{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                         <td>{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
-                        <td class="right">{{ inv.amount | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right">{{ inv.baseAmount | money }} <span class="currency">{{ baseCurrencyName }}</span></td>
-                        <td class="right">{{ inv.paid | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right">{{ inv.debitNote | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right">{{ inv.advance | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                        <td class="right strong">{{ inv.balance | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
+                        <!-- The money pipe already prints the symbol (S$ / RM) — no currency suffix. -->
+                        <td class="right">{{ inv.amount | money:inv.currencyName }}</td>
+                        <td class="right">{{ inv.baseAmount | money }}</td>
+                        <td class="right">{{ inv.paid | money:inv.currencyName }}</td>
+                        <td class="right">{{ inv.debitNote | money:inv.currencyName }}</td>
+                        <td class="right">{{ inv.advance | money:inv.currencyName }}</td>
+                        <td class="right strong">{{ inv.balance | money:inv.currencyName }}</td>
                         <td class="center"><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span></td>
                       </tr>
                     </tbody>
@@ -199,10 +203,10 @@
                   <td></td>
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}</td>
                   <td class="right muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</td>
-                  <td class="right">{{ inv.amount | money }}</td>
-                  <td class="right success-text">{{ (inv.paid || 0) | money }}</td>
-                  <td class="right danger-text">{{ (inv.debitNote || 0) | money }}</td>
-                  <td class="right">{{ (inv.advance || 0) | money }}</td>
+                  <td class="right">{{ inv.amount | money:inv.currencyName }}</td>
+                  <td class="right success-text">{{ (inv.paid || 0) | money:inv.currencyName }}</td>
+                  <td class="right danger-text">{{ (inv.debitNote || 0) | money:inv.currencyName }}</td>
+                  <td class="right">{{ (inv.advance || 0) | money:inv.currencyName }}</td>
                   <td class="right">
                     <span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status || 'Open' }}</span>
                     <button class="pay-btn" type="button" (click)="payInvoice(inv); $event.stopPropagation()">Pay</button>
@@ -251,11 +255,11 @@
                 (ngModelChange)="onPaymentSupplierChange()"></erp-dropdown>
             </div>
             <div class="sup-pills sup-pills-inline">
-              <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | money }}</span></div>
-              <div class="sup-pill green"><span class="sup-pill-label">PAID</span><span class="sup-pill-val">{{ supTotalPaid | money }}</span></div>
-              <div class="sup-pill red"><span class="sup-pill-label">DN</span><span class="sup-pill-val">{{ supTotalDebitNote | money }}</span></div>
-              <div class="sup-pill amber"><span class="sup-pill-label">ADV</span><span class="sup-pill-val">{{ supTotalAdvance | money }}</span></div>
-              <div class="sup-pill teal"><span class="sup-pill-label">PAYABLE</span><span class="sup-pill-val">{{ supTotalPayable | money }}</span></div>
+              <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | money:invoiceCurrencyName }}</span></div>
+              <div class="sup-pill green"><span class="sup-pill-label">PAID</span><span class="sup-pill-val">{{ supTotalPaid | money:invoiceCurrencyName }}</span></div>
+              <div class="sup-pill red"><span class="sup-pill-label">DN</span><span class="sup-pill-val">{{ supTotalDebitNote | money:invoiceCurrencyName }}</span></div>
+              <div class="sup-pill amber"><span class="sup-pill-label">ADV</span><span class="sup-pill-val">{{ supTotalAdvance | money:invoiceCurrencyName }}</span></div>
+              <div class="sup-pill teal"><span class="sup-pill-label">PAYABLE</span><span class="sup-pill-val">{{ supTotalPayable | money:invoiceCurrencyName }}</span></div>
             </div>
           </div>
 
@@ -282,7 +286,7 @@
                 (ngModelChange)="onPaymentCurrencyChange()"></erp-dropdown>
             </div>
             <div class="ap-field">
-              <span class="ap-field-label">Amount <span class="req">*</span> <span class="ap-curr-tag">({{ paymentCurrencyName || 'SGD' }})</span></span>
+              <span class="ap-field-label">Amount <span class="req">*</span> <span class="ap-curr-tag">({{ paymentCurrencyName || baseCurrencyName }})</span></span>
               <input class="ap-input" type="number" min="0" step="0.01" [(ngModel)]="paymentForm.amount" (ngModelChange)="onPaymentAmountChange()" placeholder="0">
             </div>
           </div>
@@ -393,7 +397,7 @@
                     {{ (p.amountBase || (p.amount * (p.fxRate || 1))) | money }}
                     <span *ngIf="(p.fxRate || 1) !== 1" class="muted">({{ (p.amount || 0) | money:p.currencyName }})</span>
                   </td>
-                  <td class="muted">{{ p.currencyName || 'SGD' }}</td>
+                  <td class="muted">{{ p.currencyName || baseCurrencyName }}</td>
                   <td><span class="status-badge badge-success">Posted</span></td>
                 </tr>
                 <tr class="pmt-detail-row" *ngIf="p._expanded">
@@ -401,7 +405,7 @@
                     <div class="pmt-detail-grid">
                       <div class="pmt-detail-item">
                         <span class="pmt-detail-label">Currency</span>
-                        <span class="pmt-detail-val">{{ p.currencyName || 'SGD' }}</span>
+                        <span class="pmt-detail-val">{{ p.currencyName || baseCurrencyName }}</span>
                       </div>
                       <div class="pmt-detail-item" *ngIf="p.fxRate && p.fxRate !== 1">
                         <span class="pmt-detail-label">FX Rate</span>
@@ -611,7 +615,7 @@
                 (ngModelChange)="onAdvGrnChange()"></erp-dropdown>
               <div *ngIf="apAdvGrnNo && apAdvGrnTotal > 0"
                    style="margin-top:6px;font-size:12px;color:#334155;">
-                GRN Total: <strong>{{ apAdvGrnTotal | money }} {{ apAdvCurrencyName || 'SGD' }}</strong>
+                GRN Total: <strong>{{ apAdvGrnTotal | money:apAdvCurrencyName }}</strong>
               </div>
               <div *ngIf="apAdvExceedsGrn"
                    style="margin-top:6px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">
@@ -657,11 +661,11 @@
             <div class="adv-sum-row"><span>Method</span><strong>{{ paymentMethodLabel(apAdvMethodId) }}</strong></div>
             <div class="adv-sum-row"><span>Bank Account</span><span>{{ apAdvBankName || '-' }}</span></div>
             <div class="adv-sum-row"><span>GRN No</span><span>{{ apAdvGrnNo || '-' }}</span></div>
-            <div class="adv-sum-row" *ngIf="apAdvGrnTotal > 0"><span>GRN Total</span><strong>{{ apAdvGrnTotal | money }} {{ apAdvCurrencyName || 'SGD' }}</strong></div>
+            <div class="adv-sum-row" *ngIf="apAdvGrnTotal > 0"><span>GRN Total</span><strong>{{ apAdvGrnTotal | money:apAdvCurrencyName }}</strong></div>
             <hr class="adv-sum-divider">
             <div class="adv-sum-total">
               <span>Advance Amount</span>
-              <strong class="adv-sum-amount">{{ (advanceForm.amount || 0) | money }} {{ apAdvCurrencyName || 'SGD' }}</strong>
+              <strong class="adv-sum-amount">{{ (advanceForm.amount || 0) | money:apAdvCurrencyName }}</strong>
             </div>
           </div>
         </div>
@@ -811,23 +815,23 @@
           <div class="sup-pills sup-pills-inline">
             <div class="sup-pill">
               <span class="sup-pill-label">INV</span>
-              <span class="sup-pill-val">{{ supTotalInvoice | money }}</span>
+              <span class="sup-pill-val">{{ supTotalInvoice | money:invoiceCurrencyName }}</span>
             </div>
             <div class="sup-pill green">
               <span class="sup-pill-label">PAID</span>
-              <span class="sup-pill-val">{{ supTotalPaid | money }}</span>
+              <span class="sup-pill-val">{{ supTotalPaid | money:invoiceCurrencyName }}</span>
             </div>
             <div class="sup-pill red">
               <span class="sup-pill-label">DN</span>
-              <span class="sup-pill-val">{{ supTotalDebitNote | money }}</span>
+              <span class="sup-pill-val">{{ supTotalDebitNote | money:invoiceCurrencyName }}</span>
             </div>
             <div class="sup-pill amber">
               <span class="sup-pill-label">ADV</span>
-              <span class="sup-pill-val">{{ supTotalAdvance | money }}</span>
+              <span class="sup-pill-val">{{ supTotalAdvance | money:invoiceCurrencyName }}</span>
             </div>
             <div class="sup-pill teal">
               <span class="sup-pill-label">PAYABLE</span>
-              <span class="sup-pill-val">{{ supTotalPayable | money }}</span>
+              <span class="sup-pill-val">{{ supTotalPayable | money:invoiceCurrencyName }}</span>
             </div>
           </div>
 
@@ -892,7 +896,7 @@
 
           <!-- Amount -->
           <div class="ap-field">
-            <span class="ap-field-label">Amount <span class="req">*</span> <span class="ap-curr-tag">({{ paymentCurrencyName || 'SGD' }})</span></span>
+            <span class="ap-field-label">Amount <span class="req">*</span> <span class="ap-curr-tag">({{ paymentCurrencyName || baseCurrencyName }})</span></span>
             <input class="ap-input" type="number" min="0" step="0.01" [(ngModel)]="paymentForm.amount"
                    (ngModelChange)="onPaymentAmountChange()" placeholder="0">
           </div>
@@ -1095,7 +1099,7 @@
                    (ngModelChange)="onApAdvAmountChange()" placeholder="1.000000">
           </div>
           <div class="ap-field">
-            <span class="ap-field-label">Base Amount (SGD)</span>
+            <span class="ap-field-label">Base Amount ({{ baseCurrencyName }})</span>
             <input class="ap-input ap-input-readonly" type="text"
                    [value]="apAdvAmountBase | money" readonly>
           </div>

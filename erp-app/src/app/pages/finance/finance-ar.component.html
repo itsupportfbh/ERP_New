@@ -77,24 +77,28 @@
                 </td>
                 <td class="customer-name">{{ grp.customer }}</td>
                 <td class="right muted small">{{ grp.invoices.length }} invoice(s)</td>
-                <td class="right">{{ grp.total | money }}</td>
+                <td class="right" [title]="grp.isMixedCurrency ? 'Multiple currencies — expand to see the invoices' : ''">
+                  <ng-container *ngIf="!grp.isMixedCurrency; else mixedCur">{{ grp.total | money:grp.currencyName }}</ng-container>
+                  <ng-template #mixedCur><span class="muted">Mixed</span></ng-template>
+                </td>
                 <td class="right">{{ grp.baseAmount | money }}</td>
-                <td class="right success-text">{{ grp.paid | money }}</td>
-                <td class="right info-text">{{ grp.creditNote | money }}</td>
-                <td class="right muted">{{ grp.advance | money }}</td>
-                <td class="right teal-bold">{{ grp.outstanding | money }}</td>
+                <td class="right success-text">{{ grp.isMixedCurrency ? '—' : (grp.paid | money:grp.currencyName) }}</td>
+                <td class="right info-text">{{ grp.isMixedCurrency ? '—' : (grp.creditNote | money:grp.currencyName) }}</td>
+                <td class="right muted">{{ grp.isMixedCurrency ? '—' : (grp.advance | money:grp.currencyName) }}</td>
+                <td class="right teal-bold">{{ grp.isMixedCurrency ? '—' : (grp.outstanding | money:grp.currencyName) }}</td>
               </tr>
               <ng-container *ngIf="isExpanded(grp.customer)">
                 <tr class="invoice-row" *ngFor="let inv of grp.invoices">
                   <td></td>
                   <td class="invoice-no">{{ inv.invoiceNo || '—' }}<br><span class="muted small">{{ inv.invoiceDate | date:'dd-MMM-yyyy' }}</span></td>
                   <td class="right muted small">{{ inv.dueDate | date:'dd-MMM-yyyy' }}</td>
-                  <td class="right">{{ (inv.amount || 0) | money }} <span class="currency">{{ inv.currencyName || 'SGD' }}</span></td>
-                  <td class="right">{{ (inv.baseAmount || 0) | money }} <span class="currency">{{ baseCurrencyName }}</span></td>
-                  <td class="right success-text">{{ (inv.paid || 0) | money }}</td>
-                  <td class="right info-text">{{ (inv.creditNote || 0) | money }}</td>
-                  <td class="right muted">{{ (inv.advance || 0) | money }}</td>
-                  <td class="right teal-bold">{{ (inv.balance || 0) | money }}</td>
+                  <!-- The money pipe already prints the symbol (S$ / RM) — no currency suffix. -->
+                  <td class="right">{{ (inv.amount || 0) | money:inv.currencyName }}</td>
+                  <td class="right">{{ (inv.baseAmount || 0) | money }}</td>
+                  <td class="right success-text">{{ (inv.paid || 0) | money:inv.currencyName }}</td>
+                  <td class="right info-text">{{ (inv.creditNote || 0) | money:inv.currencyName }}</td>
+                  <td class="right muted">{{ (inv.advance || 0) | money:inv.currencyName }}</td>
+                  <td class="right teal-bold">{{ (inv.balance || 0) | money:inv.currencyName }}</td>
                 </tr>
               </ng-container>
             </ng-container>
@@ -158,21 +162,23 @@
 
       <!-- Totals Bar -->
       <div class="rcp-totals-bar">
+        <!-- Amount Received / Total Allocated / Unallocated are in the RECEIPT currency;
+             Base Amount and FX Gain/Loss are in the company base currency. -->
         <div class="rcp-total-item">
           <span class="rcp-total-label">Amount Received</span>
-          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | money:receiptCurrencyName }} {{ receiptCurrencyName }}</strong>
+          <strong class="rcp-total-val">{{ (receiptForm.amountReceived || 0) | money:receiptCurrencyName }}</strong>
         </div>
         <div class="rcp-total-item">
-          <span class="rcp-total-label">Base Amount</span>
+          <span class="rcp-total-label">Base Amount ({{ baseCurrencyName }})</span>
           <strong class="rcp-total-val">{{ receiptAmountBase | money }}</strong>
         </div>
         <div class="rcp-total-item">
           <span class="rcp-total-label">Total Allocated</span>
-          <strong class="rcp-total-val teal">{{ receiptTotalAllocated | money }}</strong>
+          <strong class="rcp-total-val teal">{{ receiptTotalAllocated | money:receiptCurrencyName }}</strong>
         </div>
         <div class="rcp-total-item">
           <span class="rcp-total-label">Unallocated</span>
-          <strong class="rcp-total-val" [class.danger-text]="receiptUnallocated > 0">{{ receiptUnallocated | money }}</strong>
+          <strong class="rcp-total-val" [class.danger-text]="receiptUnallocated > 0">{{ receiptUnallocated | money:receiptCurrencyName }}</strong>
         </div>
         <div class="rcp-total-item" *ngIf="receiptExchangeGainLoss !== 0">
           <span class="rcp-total-label">FX Gain/Loss</span>
@@ -202,7 +208,7 @@
                 <th class="right">Advance</th>
                 <th class="right">Paid</th>
                 <th class="right teal-hdr">Balance</th>
-                <th class="right">Allocate</th>
+                <th class="right">Allocate <small *ngIf="receiptCurrencyName">({{ receiptCurrencyName }})</small></th>
               </tr>
             </thead>
             <tbody>
@@ -212,11 +218,14 @@
                 </td>
                 <td class="mono">{{ row.invoiceNo || '—' }}</td>
                 <td>{{ row.invoiceDate | date:'dd-MMM-yyyy' }}</td>
-                <td class="right">{{ row.invoiceAmount | money }}</td>
+                <!-- Invoice Amt / Advance / Paid / Balance all stay in the INVOICE's own currency
+                     so the row reads in one currency. Only Allocate is in the receipt currency,
+                     since that's the amount actually being received. -->
+                <td class="right">{{ row.invoiceAmount | money:row.currencyName }}</td>
                 <td class="center">{{ row.currencyName }}</td>
-                <td class="right muted">{{ row.advance | money }}</td>
-                <td class="right success-text">{{ row.paid | money }}</td>
-                <td class="right teal-bold">{{ receiptRowBalance(row) | money }}</td>
+                <td class="right muted">{{ row.advance | money:row.currencyName }}</td>
+                <td class="right success-text">{{ row.paid | money:row.currencyName }}</td>
+                <td class="right teal-bold">{{ row.balance | money:row.currencyName }}</td>
                 <td class="right">
                   <input *ngIf="row.selected" class="alloc-input" type="number" min="0" step="0.01"
                     [(ngModel)]="row.allocatedAmount" (ngModelChange)="onReceiptAllocateChange(row)" placeholder="0.00">
@@ -271,11 +280,13 @@
               <td>{{ r.paymentMode || '—' }}</td>
               <td class="right">
                 {{ (r.amountReceived || 0) | money:r.currencyName }}
-                <span *ngIf="r.currencyName && r.currencyName !== 'SGD'" class="ccy-tag">{{ r.currencyName }}</span>
+                <span *ngIf="r.currencyName && r.currencyName !== baseCurrencyName" class="ccy-tag">{{ r.currencyName }}</span>
               </td>
+              <!-- Base column: a foreign receipt carries its converted amount; a base-currency
+                   receipt is already in base. 'SGD' used to be hardcoded here as the base. -->
               <td class="right teal-bold">
-                <ng-container *ngIf="r.currencyName && r.currencyName !== 'SGD'">{{ (r.amountBase || 0) | money }} SGD</ng-container>
-                <ng-container *ngIf="!r.currencyName || r.currencyName === 'SGD'">{{ (r.amountReceived || 0) | money }} SGD</ng-container>
+                <ng-container *ngIf="r.currencyName && r.currencyName !== baseCurrencyName">{{ (r.amountBase || 0) | money }} {{ baseCurrencyName }}</ng-container>
+                <ng-container *ngIf="!r.currencyName || r.currencyName === baseCurrencyName">{{ (r.amountReceived || 0) | money }} {{ baseCurrencyName }}</ng-container>
               </td>
               <td><span class="status-badge" [ngClass]="statusClass(r.status)">{{ r.status || 'Posted' }}</span></td>
             </tr>
