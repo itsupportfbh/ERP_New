@@ -668,14 +668,6 @@ export class PartnerFormComponent implements OnInit {
       this.error = 'Country is required.';
       return false;
     }
-    if (!this.customer.contactPerson?.trim() || !this.customer.email?.trim() || !this.customer.phone?.trim()) {
-      this.error = 'Contact person, email and phone are required.';
-      return false;
-    }
-    if (!/^\d{10}$/.test(String(this.customer.phone || '').trim())) {
-      this.error = 'Contact number must be 10 digits.';
-      return false;
-    }
     return true;
   }
 
