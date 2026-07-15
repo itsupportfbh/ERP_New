@@ -33,6 +33,10 @@ export class CreditNoteListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  /** Delivery To address captured on the credit note — shown under "Order To" when printing. */
+  viewDeliveryTo = '';
+  /** Customer's billing address from the Customer master — shown in the print "Bill To" box. */
+  viewBillAddress = '';
 
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
@@ -49,6 +53,8 @@ export class CreditNoteListComponent implements OnInit {
 
   private reasonMap = new Map<number, string>();
   private dispositionMap: Record<number, string> = { 1: 'RESTOCK', 2: 'SCRAP' };
+  /** customerId → billing address from the Customer master, for the print "Bill To" box */
+  private custAddrMap = new Map<number, string>();
 
   readonly fnId = 'cn-list';
   constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
@@ -57,6 +63,8 @@ export class CreditNoteListComponent implements OnInit {
     this.load();
     this.svc.getReturnReasons().subscribe(r => this.svc.unwrap(r).forEach((x: any) =>
       this.reasonMap.set(Number(x.id ?? x.Id), x.name ?? x.reason ?? x.stockIssueName ?? x.issueName ?? '')));
+    this.svc.getCustomers().subscribe(r => this.svc.unwrap(r).forEach((c: any) =>
+      this.custAddrMap.set(Number(c.id ?? c.Id), String(c.address ?? c.Address ?? '').trim())));
   }
 
   load(): void {
@@ -130,6 +138,8 @@ export class CreditNoteListComponent implements OnInit {
     this.svc.getCreditNoteById(row.id).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
+        this.viewDeliveryTo = String(d.deliveryTo ?? d.DeliveryTo ?? '').trim();
+        this.viewBillAddress = this.custAddrMap.get(Number(row.customerId ?? d.customerId ?? d.CustomerId)) || '';
         const rawLines = d.lines ?? d.Lines ?? [];
         this.viewLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => {
           const qty = Number(l.returnedQty ?? l.ReturnedQty ?? 0);
@@ -191,6 +201,11 @@ export class CreditNoteListComponent implements OnInit {
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
+        orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
+        billTo: {
+          name: this.activeRow?.customerName || '—',
+          lines: this.viewBillAddress ? [this.viewBillAddress] : [],
+        },
       });
     });
   }

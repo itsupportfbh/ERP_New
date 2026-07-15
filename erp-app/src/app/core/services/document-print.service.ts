@@ -24,6 +24,9 @@ export interface DocumentPrintConfig {
   /** Optional Bill To / Deliver To address blocks. When provided they replace the single "Order To" box. */
   billTo?: PrintParty;
   deliverTo?: PrintParty;
+  /** Extra address lines shown under the customer name inside the "Order To" box
+   *  (e.g. the Delivery To address captured on the quotation). */
+  orderToLines?: string[];
 }
 
 export interface ClassicParty { name?: string; lines?: string[]; tel?: string; fax?: string; attn?: string; acceptance?: string[]; }
@@ -93,10 +96,32 @@ export class DocumentPrintService {
       .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
+  /** Company header sourced from the Company master (cached in localStorage by
+   *  MasterService.cacheCompanyLogo), falling back to the built-in defaults. */
+  private companyFromStore(): { name: string; addr1: string; addr2: string; phone: string; email: string; logo: string } {
+    const ls = (k: string) => (typeof localStorage !== 'undefined' ? (localStorage.getItem(k) || '').trim() : '');
+    const name = ls('companyPrintName') || ls('companyName');
+    const addr1 = ls('companyPrintAddress1');
+    const addr2 = [ls('companyPrintAddress2'), ls('companyPrintCity'), ls('companyPrintState'), ls('companyPrintPostal')]
+      .filter(Boolean).join(', ');
+    const phone = ls('companyPrintPhone');
+    const email = ls('companyPrintEmail');
+    const logo  = ls('companyLogoBase64');
+    return {
+      name:  name  || this.defaultCompany.name,
+      addr1: addr1 || this.defaultCompany.addr1,
+      addr2: addr2 || this.defaultCompany.addr2,
+      phone: phone || this.defaultCompany.phone,
+      email: email || this.defaultCompany.email,
+      logo:  logo  || this.defaultCompany.logo,
+    };
+  }
+
   // ── html ──────────────────────────────────────────────
   private buildHtml(cfg: DocumentPrintConfig): string {
-    const storedLogo = typeof localStorage !== 'undefined' ? (localStorage.getItem('companyLogoBase64') || '') : '';
-    const co = { ...this.defaultCompany, ...(cfg.company || {}), logo: cfg.company?.logo || storedLogo || this.defaultCompany.logo };
+    const stored = this.companyFromStore();
+    // Explicit cfg.company wins over the store, which wins over the built-in defaults.
+    const co = { ...stored, ...(cfg.company || {}), logo: cfg.company?.logo || stored.logo };
 
     // Customer goes in left "Order To" box; all other fields go in the right meta table
     const allFields    = cfg.fields || [];
@@ -125,6 +150,9 @@ export class DocumentPrintService {
         : `<tr><td class="tot-lbl">${this.escape(t.label)}</td><td class="tot-val">${this.escape(t.value)}</td></tr>`;
     }).join('');
 
+    const hasBillTo = !!(cfg.billTo && ((cfg.billTo.name && String(cfg.billTo.name).trim()) ||
+      (cfg.billTo.lines || []).some(l => l != null && String(l).trim() !== '')));
+
     const metaRowsHtml = metaFields.map(f =>
       `<tr>
         <td class="m-lbl">${this.escape(f.label)}</td>
@@ -151,6 +179,7 @@ export class DocumentPrintService {
       font-size: 14px; font-weight: 900; color: #1a5c6e; text-align: center; line-height: 1.2;
       overflow: hidden; padding: 4px;
     }
+    .logo-box.logo-img { border: none; border-radius: 0; padding: 0; width: auto; min-width: 72px; }
     .logo-box img { width: 100%; height: 100%; object-fit: contain; }
     .co-brand { font-size: 13px; font-weight: 900; color: #1a5c6e; text-transform: uppercase; }
     .co-brand-sub { font-size: 9.5px; color: #555; margin-top: 2px; line-height: 1.5; }
@@ -169,6 +198,7 @@ export class DocumentPrintService {
     .bill-box { padding: 8px 10px; border-right: 1px solid #aaa; }
     .bl { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #555; margin-bottom: 4px; }
     .bn { font-size: 12px; font-weight: 900; color: #111; }
+    .baddr { font-size: 10.5px; color: #333; line-height: 1.6; margin-top: 2px; white-space: pre-line; }
     table.m-tbl { width: 100%; border-collapse: collapse; }
     .m-lbl { padding: 5px 10px; font-weight: 700; color: #444; font-size: 10.5px; border-bottom: 1px solid #eee; width: 110px; }
     .m-val { padding: 5px 10px; font-weight: 700; color: #111; font-size: 10.5px; border-bottom: 1px solid #eee; }
@@ -212,18 +242,11 @@ export class DocumentPrintService {
   <!-- HEADER -->
   <div class="doc-hdr">
     <div class="logo-wrap">
-      <div class="logo-box">${co.logo && co.logo.startsWith('data:image') ? `<img src="${co.logo}" alt="logo"/>` : this.escape(co.logo)}</div>
+      <div class="logo-box${co.logo && co.logo.startsWith('data:image') ? ' logo-img' : ''}">${co.logo && co.logo.startsWith('data:image') ? `<img src="${co.logo}" alt="logo"/>` : this.escape(co.logo)}</div>
       <div>
         <div class="co-brand">${this.escape(co.name)}</div>
-        <div class="co-brand-sub">${this.escape(co.addr1)}<br/>${this.escape(co.addr2)}</div>
+        <div class="co-brand-sub">${this.escape(co.addr1)}<br/>${this.escape(co.addr2)}<br/>Tel : ${this.escape(co.phone)}<br/>Email : ${this.escape(co.email)}</div>
       </div>
-    </div>
-    <div class="co-info-right">
-      <div class="cn">${this.escape(co.name)}</div>
-      <div>${this.escape(co.addr1)}</div>
-      <div>${this.escape(co.addr2)}</div>
-      <div>Tel : ${this.escape(co.phone)}</div>
-      <div>Email : ${this.escape(co.email)}</div>
     </div>
   </div>
 
@@ -231,10 +254,18 @@ export class DocumentPrintService {
   <div class="doc-title">${this.escape(cfg.docTitle)}</div>
 
   <!-- INFO ROW -->
-  <div class="info-row">
+  <div class="info-row"${hasBillTo ? ' style="grid-template-columns:1fr 1fr 230px;"' : ''}>
+    ${hasBillTo ? `<div class="bill-box">
+      <div class="bl">Bill To :</div>
+      <div class="bn">${this.escape(cfg.billTo?.name ?? '—')}</div>
+      ${(cfg.billTo?.lines || []).filter(l => l != null && String(l).trim() !== '')
+        .map(l => `<div class="baddr">${this.escape(l)}</div>`).join('')}
+    </div>` : ''}
     <div class="bill-box">
-      <div class="bl">Order To :</div>
+      <div class="bl">Deliver To :</div>
       <div class="bn">${this.escape(customerField?.value ?? '—')}</div>
+      ${(cfg.orderToLines || []).filter(l => l != null && String(l).trim() !== '')
+        .map(l => `<div class="baddr">${this.escape(l)}</div>`).join('')}
     </div>
     <div>
       <table class="m-tbl">${metaRowsHtml}</table>
