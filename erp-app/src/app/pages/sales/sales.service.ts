@@ -113,6 +113,12 @@ export class SalesService {
   deleteQuotation(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/Quotation/Delete/${id}`);
   }
+  /** Email the quotation PDF (rendered client-side) to the customer resolved on the server. */
+  emailQuotationCustomer(id: number | string, pdf: Blob): Observable<any> {
+    const fd = new FormData();
+    fd.append('Pdf', pdf, `${id}.pdf`);
+    return this.http.post(`${this.api}/Quotation/${id}/email-customer`, fd);
+  }
 
   // ── Sales Order ──────────────────────────────────────
   getSalesOrders(): Observable<any> {
@@ -132,6 +138,12 @@ export class SalesService {
   }
   deleteSalesOrder(id: number | string, updatedBy = 1): Observable<any> {
     return this.http.delete(`${this.api}/SalesOrder/Delete/${id}?updatedBy=${updatedBy}`);
+  }
+  /** Email the sales order PDF (rendered client-side) to the customer resolved on the server. */
+  emailSalesOrderCustomer(id: number | string, pdf: Blob): Observable<any> {
+    const fd = new FormData();
+    fd.append('Pdf', pdf, `${id}.pdf`);
+    return this.http.post(`${this.api}/SalesOrder/${id}/email-customer`, fd);
   }
   approveSalesOrder(id: number | string, approvedBy = 1): Observable<any> {
     return this.http.post(`${this.api}/SalesOrder/approve/${id}?approvedBy=${approvedBy}`, {});
@@ -248,6 +260,12 @@ export class SalesService {
   }
   deleteSalesInvoice(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/salesinvoice/Delete/${id}`);
+  }
+  /** Email the sales invoice PDF (rendered client-side) to the customer resolved on the server. */
+  emailSalesInvoiceCustomer(id: number | string, pdf: Blob): Observable<any> {
+    const fd = new FormData();
+    fd.append('Pdf', pdf, `${id}.pdf`);
+    return this.http.post(`${this.api}/salesinvoice/${id}/email-customer`, fd);
   }
   updateSalesInvoiceHeader(id: number | string, data: any): Observable<any> {
     return this.http.put(`${this.api}/salesinvoice/UpdateHeader/${id}`, data);
