@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
-import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { DocumentPrintService, DocumentPrintConfig, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
+
 
 const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Completed', 4: 'Rejected' };
 
@@ -59,6 +61,8 @@ export class SalesOrderListComponent implements OnInit {
     return [{ label: `Base (${this.baseCur}) @ ${fx.toFixed(4)}`, value: (total * fx).toFixed(2) }];
   }
 
+  // On-screen view columns — include the internal procurement fields (Allocated /
+  // Shortage / Proc. Status) that staff need while working an order.
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
     { header: 'UOM', key: 'uomName', align: 'center' },
@@ -68,6 +72,18 @@ export class SalesOrderListComponent implements OnInit {
     { header: 'Shortage', key: 'shortage', align: 'center', type: 'qty' },
     { header: 'Total', key: 'lineTotal', align: 'center', type: 'number' },
     { header: 'Proc. Status', key: 'procStatus', align: 'center' },
+  ];
+
+  // Clean, customer-facing columns for the printed / emailed Sales Order document
+  // (drops the internal procurement fields above).
+  readonly docColumns: PrintColumn[] = [
+    { header: 'Item', key: 'itemName' },
+    { header: 'UOM', key: 'uomName', align: 'center' },
+    { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
+    { header: 'Unit Price', key: 'unitPrice', align: 'right', type: 'number' },
+    { header: 'Disc %', key: 'discountPct', align: 'right', type: 'number' },
+    { header: 'Net', key: 'lineNet', align: 'right', type: 'number' },
+    { header: 'Total', key: 'lineTotal', align: 'right', type: 'number' },
   ];
 
   /** Procurement status code → label (matches the legacy Sales Order list) */
@@ -258,22 +274,28 @@ export class SalesOrderListComponent implements OnInit {
 
   view(row: any): void { this.showView = true; this.buildDetail(row, () => {}); }
 
+  /** Single source of truth for the document layout, shared by Print and Email
+   *  so the emailed PDF always matches exactly what Print produces. */
+  private buildDocConfig(): DocumentPrintConfig {
+    return {
+      docTitle: 'SALES ORDER',
+      docNo: this.activeRow?.salesOrderNo ?? '',
+      fields: this.viewInfo.filter(f => f.label !== 'Remarks'),
+      remarks: (this.viewInfo.find(f => f.label === 'Remarks')?.value as string) || '',
+      columns: this.docColumns,
+      lines: this.viewLines,
+      totals: this.viewTotals,
+      orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
+      billTo: {
+        name: this.activeRow?.customerName || '—',
+        lines: this.viewBillAddress ? [this.viewBillAddress] : [],
+      },
+    };
+  }
+
   print(row: any): void {
     this.buildDetail(row, () => {
-      this.printSvc.print({
-        docTitle: 'SALES ORDER',
-        docNo: this.activeRow?.salesOrderNo ?? '',
-        fields: this.viewInfo.filter(f => f.label !== 'Remarks'),
-        remarks: this.activeRow ? (this.viewInfo.find(f => f.label === 'Remarks')?.value as string) : '',
-        columns: this.lineColumns,
-        lines: this.viewLines,
-        totals: this.viewTotals,
-        orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
-        billTo: {
-          name: this.activeRow?.customerName || '—',
-          lines: this.viewBillAddress ? [this.viewBillAddress] : [],
-        },
-      });
+      this.printSvc.print(this.buildDocConfig());
     });
   }
 
@@ -294,6 +316,46 @@ export class SalesOrderListComponent implements OnInit {
     this.svc.deleteSalesOrder(this.itemToDelete.id).subscribe({
       next: () => { this.showDeleteModal = false; this.itemToDelete = null; this.load(); },
       error: () => { this.showDeleteModal = false; }
+    });
+  }
+  
+
+
+
+  // ── Email to customer ─────────────────────────────────
+  async emailCustomer(row: any): Promise<void> {
+    if (!this.perm.canPrint(this.fnId)) return;
+    const result = await Swal.fire({
+      title: 'Email Customer?',
+      text: `Send sales order ${row.salesOrderNo} to the customer via email?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
+      confirmButtonText: 'Yes, send it!'
+    });
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Sending Email…',
+      html: 'Generating PDF and sending to customer.<br/>Please wait.',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    // Build the same layout print() produces, render it to a PDF, then upload.
+    this.buildDetail(row, async () => {
+      try {
+        const pdf = await this.printSvc.generatePdfBlob(this.buildDocConfig());
+        this.svc.emailSalesOrderCustomer(row.id, pdf).subscribe({
+          next: () => Swal.fire({ icon: 'success', title: 'Sent!', text: `Sales order ${row.salesOrderNo} emailed to customer.`, confirmButtonColor: '#16a34a' }),
+          error: err => Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' })
+        });
+      } catch {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to generate the PDF.', confirmButtonColor: '#16a34a' });
+      }
     });
   }
 }

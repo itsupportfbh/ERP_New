@@ -303,4 +303,95 @@ export class DocumentPrintService {
 </body>
 </html>`;
   }
+
+    /**
+   * Render the same layout used by print() to a PDF Blob, so a document can be
+   * emailed with an attachment identical to what the user sees in Print preview.
+   * Renders the markup off-screen, rasterises it with html2canvas and paginates
+   * the image across A4 pages with jsPDF.
+   */
+  async generatePdfBlob(cfg: DocumentPrintConfig): Promise<Blob> {
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
+
+    // Reuse the exact print document as the single source of truth, but strip its
+    // auto-print <script> so rendering it off-screen doesn't pop a print dialog.
+    const html = this.buildHtml(cfg).replace(/<script[\s\S]*?<\/script>/gi, '');
+
+    // Render inside an isolated, off-screen iframe (A4 portrait ≈ 794px @96dpi) so
+    // the document's global styles can't leak onto the live app during capture.
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;background:#ffffff;';
+    document.body.appendChild(iframe);
+
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow!.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      // Let the iframe lay out and any images (company logo) finish loading.
+      await new Promise<void>(resolve => {
+        const pending = Array.from(doc.images || []).filter(i => !i.complete);
+        if (!pending.length) { setTimeout(resolve, 50); return; }
+        let left = pending.length;
+        const done = () => { if (--left <= 0) resolve(); };
+        pending.forEach(img => { img.onload = done; img.onerror = done; });
+        setTimeout(resolve, 1500); // safety net so a stuck image can't hang the send
+      });
+
+      // Capture only the real content height so trailing whitespace can't spill
+      // onto an extra blank page.
+      const contentH = Math.ceil(doc.body.scrollHeight);
+      iframe.style.height = contentH + 'px';
+
+      const canvas = await html2canvas(doc.body, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794,
+        height: contentH,
+        windowHeight: contentH,
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = pdf.internal.pageSize.getWidth();   // 210mm
+      const pageH = pdf.internal.pageSize.getHeight();  // 297mm
+
+      // Mirror the print's @page margin (12mm) so the emailed PDF is framed like
+      // Print instead of running edge-to-edge (which reads oversized).
+      const margin = 12;
+      const imgW = pageW - margin * 2;
+      const usableH = pageH - margin * 2;
+      const pxPerMm = canvas.width / imgW;
+      const pageSlicePx = Math.max(1, Math.floor(usableH * pxPerMm));
+
+      // Slice the tall capture into page-height chunks — one addImage per page,
+      // stopping exactly at the content bottom (no blank trailing page).
+      let rendered = 0;
+      let first = true;
+      while (rendered < canvas.height) {
+        const slicePx = Math.min(pageSlicePx, canvas.height - rendered);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = slicePx;
+        const ctx = pageCanvas.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, rendered, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+
+        if (!first) pdf.addPage();
+        pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', margin, margin, imgW, slicePx / pxPerMm);
+        rendered += slicePx;
+        first = false;
+      }
+      return pdf.output('blob');
+    } finally {
+      document.body.removeChild(iframe);
+    }
+  }
 }
