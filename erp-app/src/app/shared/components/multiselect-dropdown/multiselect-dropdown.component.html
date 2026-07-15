@@ -2,11 +2,17 @@
   <label class="field-label" *ngIf="label">
     {{ label }}<span class="req" *ngIf="required">*</span>
   </label>
+  <!-- tabindex + keyboard so Tab reaches this control instead of skipping past it (a div is not
+       focusable on its own), matching the single-select dropdown. -->
   <div class="dd-trigger"
        [class.open]="open"
        [class.disabled]="disabled"
        [class.has-error]="errorMsg && touched"
-       (click)="toggle()">
+       [attr.tabindex]="disabled ? null : 0"
+       role="combobox"
+       [attr.aria-expanded]="open"
+       (click)="toggle()"
+       (keydown)="onTriggerKeydown($event)">
     <span class="dd-value" [class.placeholder]="!displayText">{{ displayText || placeholder }}</span>
     <span class="dd-actions">
       <span class="dd-count" *ngIf="selected.length">{{ selected.length }}</span>

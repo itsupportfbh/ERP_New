@@ -96,6 +96,26 @@
           <label class="fc-label">Specifications</label>
           <input class="fc-input" type="text" [(ngModel)]="item.specs" name="specs" placeholder="Add specs or notes..." />
         </div>
+        <div>
+          <label class="fc-label">Item Image</label>
+          <div class="img-field">
+            <div class="img-thumb" *ngIf="item.pictureUrl; else noImg">
+              <img [src]="imageSrc(item.pictureUrl)" [alt]="item.itemName || 'Item'" />
+              <button type="button" class="img-remove" (click)="removeImage()" title="Remove image">&#x2715;</button>
+            </div>
+            <ng-template #noImg>
+              <div class="img-thumb img-thumb--empty"><i class="fas fa-image"></i></div>
+            </ng-template>
+            <div class="img-actions">
+              <input #imgInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden
+                     (change)="onImageSelected($event)" />
+              <button type="button" class="img-btn" (click)="imgInput.click()" [disabled]="uploadingImage">
+                {{ uploadingImage ? 'Uploading...' : (item.pictureUrl ? 'Change' : 'Upload') }}
+              </button>
+              <small class="img-hint">JPG, PNG, WEBP or GIF &middot; max 5 MB</small>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="im-sec-head" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">

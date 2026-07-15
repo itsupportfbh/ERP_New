@@ -106,6 +106,28 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
     }
   }
 
+  /**
+   * Keyboard behaviour for the focused trigger, so the control works from Tab like a native select:
+   *   Enter / Space / ArrowDown / ArrowUp  → open (and focus the search box)
+   *   Escape                               → close
+   *   Tab                                  → left alone, so focus moves to the next field
+   */
+  onTriggerKeydown(e: KeyboardEvent): void {
+    if (this.disabled) return;
+
+    if (e.key === 'Escape') {
+      if (this.open) { this.open = false; e.stopPropagation(); }
+      return;
+    }
+
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // Enter would otherwise submit the surrounding form; Space would scroll the page.
+      e.preventDefault();
+      if (!this.open) this.toggle();
+      else setTimeout(() => this.searchInputRef?.nativeElement?.focus(), 0);
+    }
+  }
+
   /** Viewport region the trigger is actually visible in — the viewport intersected
    *  with every scrollable/clipping ancestor. Keeps the menu from drifting over a
    *  sticky header or outside its scroll container. */

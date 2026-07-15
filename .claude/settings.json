@@ -275,7 +275,20 @@
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -y 0 -Q \"SET NOCOUNT ON; SELECT OBJECT_DEFINITION\\(OBJECT_ID\\('dbo.sp_PostSupplierPaymentToGl'\\)\\);\" -o spay_raw.sql)",
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -i fix_rcpt_proc.sql)",
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -i fix_spay_proc.sql)",
-      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -i regression.sql)"
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -i regression.sql)",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET NOCOUNT ON; SELECT so_using_q1=COUNT\\(*\\) FROM dbo.SalesOrder WHERE QuotationNo=1;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -i crossreport.sql)",
+      "Bash(grep -nE 'CREATE.{0,6}\\(PROCEDURE|VIEW|FUNCTION\\)' /c/Users/CCSPLNB03/source/repos/FinanceApi/FinanceApi/SqlScripts/FinanceGL_DbChanges.sql)",
+      "Bash(awk '{print $5\" bytes\"}')",
+      "Bash(awk '{print $1\" lines\"}')",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_TEST_GLCHECK'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_TEST_GLCHECK SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_TEST_GLCHECK; END; CREATE DATABASE ERP_TEST_GLCHECK COLLATE SQL_Latin1_General_CP1_CI_AS;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_TEST_GLCHECK -C -f 65001 -i ERP_Script.sql -o run_new_db.log)",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -i tb_tree_test.sql)",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT gst_proc=CASE WHEN OBJECT_ID\\('dbo.sp_GstDetails'\\) IS NOT NULL THEN 'exists' ELSE 'MISSING' END;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT name FROM sys.tables WHERE name LIKE '%Period%' OR name LIKE '%FinancialYear%' OR name LIKE '%AccountingPeriod%';\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT yec=CASE WHEN OBJECT_ID\\('dbo.sp_YearEndClose'\\) IS NOT NULL THEN 'exists' ELSE 'MISSING' END, yec_prev=CASE WHEN OBJECT_ID\\('dbo.sp_YearEndClose_Preview'\\) IS NOT NULL THEN 'exists' ELSE 'MISSING' END;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT prm=ISNULL\\(pr.name,'\\(none\\)'\\),t=TYPE_NAME\\(pr.user_type_id\\) FROM sys.procedures p LEFT JOIN sys.parameters pr ON pr.object_id=p.object_id WHERE p.name='sp_YearEndClose_Preview' ORDER BY pr.parameter_id;\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

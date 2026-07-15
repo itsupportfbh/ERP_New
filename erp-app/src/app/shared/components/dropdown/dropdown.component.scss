@@ -1,3 +1,12 @@
+/* A custom element is inline by default, so the host shrank to its content and the trigger never
+ * filled its column — inside a fixed-width table cell the value then had far less room than the
+ * column offered and was clipped with an ellipsis. Block + full width makes the control fill
+ * whatever container it sits in, which is what every form and table cell expects of it. */
+:host {
+  display: block;
+  width: 100%;
+}
+
 .field-wrap {
   display: flex;
   flex-direction: column;
@@ -31,6 +40,8 @@
   &.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
   &.disabled { background: #f8fafc; cursor: not-allowed; opacity: 0.7; }
   &.has-error { border-color: var(--danger); }
+  /* Now that the trigger is tabbable, show where keyboard focus is. */
+  &:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
 }
 
 .dd-value {

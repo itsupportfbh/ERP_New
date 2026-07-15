@@ -100,6 +100,10 @@ export class QuotationFormComponent implements OnInit {
     validityDate: null as string | null,
     deliveryTo: '',
 
+    // Who to contact about THIS job. Moved off the customer master, where a single name could not
+    // be right for every event the same customer books.
+    contactPerson: '',
+
     // Cash-sales contact details
     personName: '',
     contactNumber: '',
@@ -108,7 +112,7 @@ export class QuotationFormComponent implements OnInit {
     taxPct: 0,
     countryId: null as number | null,
 
-    lineSourceId: 1 as LineSourceId,
+    lineSourceId: 2 as LineSourceId,   // default to Bundle Packages
     costCentre: '',
     customerPoNo: '',
     remarks: '',
@@ -336,9 +340,10 @@ export class QuotationFormComponent implements OnInit {
   }
 
   get taxModesForCurrentGst(): LineTaxMode[] {
-    const gst = +this.header.taxPct || 0;
-    if (gst === 9) return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
-    return ['Zero-Rated'];
+    // All three modes are always offered so a line can be taxed independently of the header's GST%.
+    // It previously collapsed to Zero-Rated alone whenever the header GST was not 9%, which left the
+    // dropdown with a single option and no way to mark a line Standard-Rated or Exempt.
+    return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
   }
 
   get taxModeItems(): { value: LineTaxMode; label: string }[] {
@@ -538,9 +543,12 @@ export class QuotationFormComponent implements OnInit {
           validityDate: this.toDateInputValue(dto.validityDate ?? dto.ValidityDate),
           orderTime: dto.orderTime ?? dto.OrderTime ?? null,
           deliveryTo: String(dto.deliveryTo ?? dto.DeliveryTo ?? ''),
-          personName: String(dto.personName ?? dto.PersonName ?? ''),
-          contactNumber: String(dto.contactNumber ?? dto.ContactNumber ?? ''),
-          email: String(dto.email ?? dto.Email ?? ''),
+          // Contact Person from ContactPerson; number/email from the CashContactNo/CashEmail columns
+          // they are stored in (falling back to the old cashPersonName for the name).
+          contactPerson: String(dto.contactPerson ?? dto.ContactPerson ?? dto.cashPersonName ?? dto.CashPersonName ?? ''),
+          personName: String(dto.cashPersonName ?? dto.CashPersonName ?? ''),
+          contactNumber: String(dto.cashContactNo ?? dto.CashContactNo ?? ''),
+          email: String(dto.cashEmail ?? dto.CashEmail ?? ''),
           remarks: String(dto.remarks ?? dto.Remarks ?? ''),
           rounding: Number(dto.rounding ?? dto.Rounding ?? 0),
           taxPct: Number(dto.taxPct ?? dto.gstPct ?? dto.GstPct ?? 0) || 0,
@@ -1447,9 +1455,15 @@ export class QuotationFormComponent implements OnInit {
       orderTime: this.header.orderTime,
       validityDate: this.header.validityDate ?? this.header.deliveryDate,
       deliveryTo: (this.header.deliveryTo || '').trim(),
-      personName: (this.header.personName || '').trim(),
-      contactNumber: (this.header.contactNumber || '').trim(),
-      email: (this.header.email || '').trim(),
+      contactPerson: (this.header.contactPerson || '').trim(),
+      // The contact number and email map onto the existing CashContactNo / CashEmail columns. The
+      // payload used to send them as personName/contactNumber/email, which matched no field on the
+      // server DTO (it expects CashPersonName/CashEmail/CashContactNo), so every quotation's contact
+      // number and email were silently dropped on save. cashPersonName mirrors the contact person so
+      // an old cash-sales report that reads it still shows the name.
+      cashPersonName: (this.header.contactPerson || '').trim(),
+      cashContactNo: (this.header.contactNumber || '').trim(),
+      cashEmail: (this.header.email || '').trim(),
       costCentre: (this.header.costCentre || '').trim(),
       customerPoNo: (this.header.customerPoNo || '').trim(),
       lineSourceId: this.header.lineSourceId,
