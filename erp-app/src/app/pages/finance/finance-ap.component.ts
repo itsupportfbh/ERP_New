@@ -205,7 +205,7 @@ export class FinanceApComponent implements OnInit {
           currencyCode: c.currencyCode ?? c.currencyName ?? ''
         }));
         if (this.paymentCurrencies.length && !this.paymentCurrencyId) {
-          const base = this.paymentCurrencies.find(c => c.isBase) ?? this.paymentCurrencies[0];
+          const base = this.resolveBaseCurrency();
           this.paymentCurrencyId = base.id ?? base.currencyId;
           this.paymentCurrencyName = base.currencyCode ?? base.currencyName ?? '';
           this.paymentBaseCurrencyId = this.paymentCurrencyId;
@@ -213,6 +213,20 @@ export class FinanceApComponent implements OnInit {
       },
       error: () => { this.paymentCurrencies = []; }
     });
+  }
+
+  // The company base currency. The Currency API does not return an `isBase` flag, so
+  // `find(c => c.isBase)` was always undefined and the code fell back to paymentCurrencies[0] — the
+  // first currency in the list (here SGD), NOT the company's base (MYR). That made the base currency
+  // wrong, so paying in MYR (the real base) was treated as a foreign currency: an FX rate was fetched
+  // (MYR→SGD = 0.303) and the payable was divided by it, inflating a RM 10,494 payment to RM 34,630.
+  // Match the base by NAME against companyCurrencyName (the same source the RM labels use) instead.
+  private resolveBaseCurrency(): any {
+    const target = (this.baseCurrencyName || '').trim().toUpperCase();
+    return (target && this.paymentCurrencies.find((c: any) =>
+              ((c.currencyName ?? c.currencyCode ?? '') as string).trim().toUpperCase() === target))
+        ?? this.paymentCurrencies.find((c: any) => c.isBase)
+        ?? this.paymentCurrencies[0];
   }
 
   // ── Payment Form ───────────────────────────────────────────────────────────
@@ -240,7 +254,7 @@ export class FinanceApComponent implements OnInit {
     this.paymentAmountBase = 0;
     this.paymentExchangeGainLoss = 0;
     this.pmtSupplierSearch = ''; this.pmtBankSearch = ''; this.pmtCurrSearch = '';
-    const base = this.paymentCurrencies.find((c: any) => c.isBase) ?? this.paymentCurrencies[0];
+    const base = this.resolveBaseCurrency();
     if (base) {
       this.paymentCurrencyId = base.id ?? base.currencyId;
       this.paymentCurrencyName = base.currencyCode ?? base.currencyName ?? '';
@@ -784,7 +798,7 @@ export class FinanceApComponent implements OnInit {
     this.advSupplierSearch = '';
     this.advBankSearch = '';
     // default to base currency
-    const base = this.paymentCurrencies.find((c: any) => c.isBase) ?? this.paymentCurrencies[0];
+    const base = this.resolveBaseCurrency();
     if (base) { this.apAdvCurrencyId = base.id ?? base.currencyId; this.apAdvCurrencyName = base.currencyCode ?? base.currencyName ?? 'SGD'; }
     this.advanceForm = {
       supplierId: null, supplierName: '',

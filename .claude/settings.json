@@ -288,7 +288,18 @@
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT gst_proc=CASE WHEN OBJECT_ID\\('dbo.sp_GstDetails'\\) IS NOT NULL THEN 'exists' ELSE 'MISSING' END;\")",
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT name FROM sys.tables WHERE name LIKE '%Period%' OR name LIKE '%FinancialYear%' OR name LIKE '%AccountingPeriod%';\")",
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT yec=CASE WHEN OBJECT_ID\\('dbo.sp_YearEndClose'\\) IS NOT NULL THEN 'exists' ELSE 'MISSING' END, yec_prev=CASE WHEN OBJECT_ID\\('dbo.sp_YearEndClose_Preview'\\) IS NOT NULL THEN 'exists' ELSE 'MISSING' END;\")",
-      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT prm=ISNULL\\(pr.name,'\\(none\\)'\\),t=TYPE_NAME\\(pr.user_type_id\\) FROM sys.procedures p LEFT JOIN sys.parameters pr ON pr.object_id=p.object_id WHERE p.name='sp_YearEndClose_Preview' ORDER BY pr.parameter_id;\")"
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -W -Q \"SET NOCOUNT ON; SELECT prm=ISNULL\\(pr.name,'\\(none\\)'\\),t=TYPE_NAME\\(pr.user_type_id\\) FROM sys.procedures p LEFT JOIN sys.parameters pr ON pr.object_id=p.object_id WHERE p.name='sp_YearEndClose_Preview' ORDER BY pr.parameter_id;\")",
+      "Bash(perl -0pi -e 's/this\\\\.paymentCurrencies\\\\.find\\\\\\(\\\\\\(?c\\(?:: any\\)?\\\\\\)? => c\\\\.isBase\\\\\\) \\\\?\\\\? this\\\\.paymentCurrencies\\\\[0\\\\]/this.resolveBaseCurrency\\(\\)/g' finance-ap.component.ts)",
+      "Bash(perl -0pi -e 's/money:invoiceCurrencyName/money:baseCurrencyName/g' finance-ap.component.html)",
+      "Bash(grep -nE \"= [0-9]{3,}|'SGD'|'MYR'|HeadCode = '|HeadCode='|AccountId = [0-9]|CompanyId = [0-9]|WHERE.*[0-9]{4,}|[0-9]{4,}\\\\.[0-9]\" Repositories/GeneralLedgerRepository.cs)",
+      "Bash(grep -nE \"= [0-9]{3,}|'SGD'|'MYR'|HeadCode = '|AccountId = [0-9]|RootCode IN|HeadLevel = 1|'1900|'9999|IN \\\\\\('1'\" \"Repositories/FinanceReportRepository .cs\")",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -C -f 65001 -h -1 -W -Q ' *)",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -d ERP_HC_TEST -C -f 65001 -h -1 -W -Q ' *)",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_HC_TEST'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_HC_TEST SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_HC_TEST; END;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_NEWDB_CHECK'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_NEWDB_CHECK SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_NEWDB_CHECK; END; CREATE DATABASE ERP_NEWDB_CHECK COLLATE SQL_Latin1_General_CP1_CI_AS;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_NEWDB_CHECK -C -f 65001 -i ERP_Script.sql -o newdb_run.log)",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -d ERP_NEWDB_CHECK -C -f 65001 -h -1 -W -Q ' *)",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_NEWDB_CHECK'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_NEWDB_CHECK SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_NEWDB_CHECK; END;\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

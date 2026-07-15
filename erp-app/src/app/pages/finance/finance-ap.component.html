@@ -255,11 +255,11 @@
                 (ngModelChange)="onPaymentSupplierChange()"></erp-dropdown>
             </div>
             <div class="sup-pills sup-pills-inline">
-              <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | money:invoiceCurrencyName }}</span></div>
-              <div class="sup-pill green"><span class="sup-pill-label">PAID</span><span class="sup-pill-val">{{ supTotalPaid | money:invoiceCurrencyName }}</span></div>
-              <div class="sup-pill red"><span class="sup-pill-label">DN</span><span class="sup-pill-val">{{ supTotalDebitNote | money:invoiceCurrencyName }}</span></div>
-              <div class="sup-pill amber"><span class="sup-pill-label">ADV</span><span class="sup-pill-val">{{ supTotalAdvance | money:invoiceCurrencyName }}</span></div>
-              <div class="sup-pill teal"><span class="sup-pill-label">PAYABLE</span><span class="sup-pill-val">{{ supTotalPayable | money:invoiceCurrencyName }}</span></div>
+              <div class="sup-pill"><span class="sup-pill-label">INV</span><span class="sup-pill-val">{{ supTotalInvoice | money:baseCurrencyName }}</span></div>
+              <div class="sup-pill green"><span class="sup-pill-label">PAID</span><span class="sup-pill-val">{{ supTotalPaid | money:baseCurrencyName }}</span></div>
+              <div class="sup-pill red"><span class="sup-pill-label">DN</span><span class="sup-pill-val">{{ supTotalDebitNote | money:baseCurrencyName }}</span></div>
+              <div class="sup-pill amber"><span class="sup-pill-label">ADV</span><span class="sup-pill-val">{{ supTotalAdvance | money:baseCurrencyName }}</span></div>
+              <div class="sup-pill teal"><span class="sup-pill-label">PAYABLE</span><span class="sup-pill-val">{{ supTotalPayable | money:baseCurrencyName }}</span></div>
             </div>
           </div>
 
@@ -815,23 +815,23 @@
           <div class="sup-pills sup-pills-inline">
             <div class="sup-pill">
               <span class="sup-pill-label">INV</span>
-              <span class="sup-pill-val">{{ supTotalInvoice | money:invoiceCurrencyName }}</span>
+              <span class="sup-pill-val">{{ supTotalInvoice | money:baseCurrencyName }}</span>
             </div>
             <div class="sup-pill green">
               <span class="sup-pill-label">PAID</span>
-              <span class="sup-pill-val">{{ supTotalPaid | money:invoiceCurrencyName }}</span>
+              <span class="sup-pill-val">{{ supTotalPaid | money:baseCurrencyName }}</span>
             </div>
             <div class="sup-pill red">
               <span class="sup-pill-label">DN</span>
-              <span class="sup-pill-val">{{ supTotalDebitNote | money:invoiceCurrencyName }}</span>
+              <span class="sup-pill-val">{{ supTotalDebitNote | money:baseCurrencyName }}</span>
             </div>
             <div class="sup-pill amber">
               <span class="sup-pill-label">ADV</span>
-              <span class="sup-pill-val">{{ supTotalAdvance | money:invoiceCurrencyName }}</span>
+              <span class="sup-pill-val">{{ supTotalAdvance | money:baseCurrencyName }}</span>
             </div>
             <div class="sup-pill teal">
               <span class="sup-pill-label">PAYABLE</span>
-              <span class="sup-pill-val">{{ supTotalPayable | money:invoiceCurrencyName }}</span>
+              <span class="sup-pill-val">{{ supTotalPayable | money:baseCurrencyName }}</span>
             </div>
           </div>
 
