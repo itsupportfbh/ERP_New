@@ -347,9 +347,8 @@ export class SalesOrderFormComponent implements OnInit {
   }
 
   get taxModesForCurrentGst(): LineTaxMode[] {
-    const gst = +this.header.taxPct || 0;
-    if (gst === 9) return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
-    return ['Zero-Rated'];
+    // All three modes are always offered so a line can be taxed independently of the header's GST%.
+    return ['Standard-Rated', 'Zero-Rated', 'Exempt'];
   }
 
   get taxModeItems(): { value: LineTaxMode; label: string }[] {
