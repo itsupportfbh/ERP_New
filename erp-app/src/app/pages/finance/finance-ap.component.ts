@@ -527,6 +527,7 @@ export class FinanceApComponent implements OnInit {
         amountBase: parseFloat((a.amount * (this.paymentFxRate || 1)).toFixed(2)),
         fxRate: this.paymentFxRate,
         currencyId: this.paymentCurrencyId,
+        companyCurrencyId: this.paymentBaseCurrencyId,
         exchangeGainLoss: allocations.length === 1 ? this.paymentExchangeGainLoss : 0,
         referenceNo: this.paymentForm.referenceNo || '',
         notes: this.paymentForm.notes || ''
