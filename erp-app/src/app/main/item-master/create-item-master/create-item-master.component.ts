@@ -11,6 +11,7 @@ import { forkJoin, Observable } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { ItemMasterService } from '../item-master.service';
+import { UploadService } from 'app/shared/upload.service';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
@@ -329,9 +330,51 @@ export class CreateItemMasterComponent implements OnInit {
     private route: ActivatedRoute,
     private StockissueService: StockIssueService,
     private CategoryService: CatagoryService,
-    private recurringService: RecurringService
+    private recurringService: RecurringService,
+    private uploadService: UploadService
   ) {
     this.userId = localStorage.getItem('id');
+  }
+
+  // ── Item image ───────────────────────────────────────────────────────────────
+  // The item record already carried a pictureUrl end to end — DTO, repository and column — but no
+  // screen ever set one, so all 618 items had none. The file is uploaded as soon as it is picked
+  // and only the returned URL travels in the item payload, which stays JSON.
+  uploadingImage = false;
+
+  imageSrc(url: string | null | undefined): string {
+    return this.uploadService.toSrc(url);
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const problem = this.uploadService.validate(file);
+    if (problem) {
+      Swal.fire('Image not accepted', problem, 'warning');
+      input.value = '';
+      return;
+    }
+
+    this.uploadingImage = true;
+    this.uploadService.upload(file, 'items').subscribe({
+      next: url => {
+        this.item.pictureUrl = url;
+        this.uploadingImage = false;
+        input.value = '';   // so re-picking the same file fires 'change' again
+      },
+      error: () => {
+        this.uploadingImage = false;
+        input.value = '';
+        Swal.fire('Upload failed', 'The image could not be uploaded. Please try again.', 'error');
+      }
+    });
+  }
+
+  removeImage(): void {
+    this.item.pictureUrl = '';
   }
 
   ngOnInit(): void {

@@ -66,6 +66,22 @@ export class MultiselectDropdownComponent implements ControlValueAccessor, OnIni
     if (this.open) this.positionMenu();
   }
 
+  /** Open/close from the keyboard so the control is usable once Tab lands on it; Tab itself is left
+   *  alone so focus continues to the next field. */
+  onTriggerKeydown(e: KeyboardEvent): void {
+    if (this.disabled) return;
+
+    if (e.key === 'Escape') {
+      if (this.open) { this.open = false; e.stopPropagation(); }
+      return;
+    }
+
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.toggle();
+    }
+  }
+
   positionMenu(): void {
     const trigger: HTMLElement = this.el.nativeElement.querySelector('.dd-trigger');
     if (!trigger) return;

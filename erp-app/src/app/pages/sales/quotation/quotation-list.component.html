@@ -50,7 +50,7 @@
             </td>
             <td>{{ item.deliveryDate ? (item.deliveryDate | date:'dd-MM-yyyy') : '—' }}</td>
             <td>{{ item.validityDate ? (item.validityDate | date:'dd-MM-yyyy') : '—' }}</td>
-            <td><span class="qt-badge" [ngClass]="item.isExpired ? 'st-expired' : ('st-' + item.status)">{{ item.statusLabel }}</span></td>
+            <td><span class="qt-badge" [ngClass]="item.isCompleted ? 'st-completed' : (item.isExpired ? 'st-expired' : ('st-' + item.status))">{{ item.statusLabel }}</span></td>
             <td><div class="dt-actions-cell">
               <button *ngIf="perm.canView(fnId)" class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
               <button *ngIf="perm.canPrint(fnId)" class="dt-icon-btn print" (click)="print(item)" title="Print"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/></svg></button>

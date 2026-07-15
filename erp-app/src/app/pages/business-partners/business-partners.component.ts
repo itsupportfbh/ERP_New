@@ -43,7 +43,7 @@ export class BusinessPartnersComponent implements OnInit {
     { key: 'customerName', header: 'Customer', type: 'text', sortable: true },
     { key: 'customerCode', header: 'Code', type: 'text' },
     { key: 'customerGroupName', header: 'Group', type: 'text', sortable: true },
-    { key: 'contactPerson', header: 'Contact', type: 'text' },
+    // No contact-person column: it lives on the quotation now, since it changes from job to job.
     { key: 'email', header: 'Email', type: 'text' },
     { key: 'phone', header: 'Phone', type: 'text' },
     { key: 'statusName', header: 'Status', type: 'badge', badgeMap: { Active: 'success', Inactive: 'danger' } }

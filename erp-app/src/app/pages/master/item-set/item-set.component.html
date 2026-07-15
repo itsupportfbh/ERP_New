@@ -10,7 +10,12 @@
         <div class="mlist-empty" *ngIf="!loading && items.length===0">No records found.</div>
         <div class="mlist-item" *ngFor="let item of items">
           <div class="mitem-left">
-            <div class="mitem-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/><rect x="7" y="4" width="6" height="6" rx="1"/></svg></div>
+            <div class="mitem-avatar mitem-avatar--img" *ngIf="item.imageUrl; else setIcon">
+              <img [src]="imageSrc(item.imageUrl)" [alt]="item.setName || 'Package'" />
+            </div>
+            <ng-template #setIcon>
+              <div class="mitem-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/><rect x="7" y="4" width="6" height="6" rx="1"/></svg></div>
+            </ng-template>
             <div class="mitem-info"><div class="mitem-name">{{ item.setName || item.name }}</div></div>
           </div>
           <div class="mitem-actions">
@@ -24,6 +29,28 @@
       <h3 class="mform-title">{{ isEditMode ? 'Edit' : 'Create' }} Package List</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">
         <div class="mf-group"><label class="mf-label">Set Name <span style="color:red">*</span></label><input class="mf-input" type="text" [(ngModel)]="form.setName" name="setName" placeholder="Set Name"/></div>
+        <div class="mf-group">
+          <label class="mf-label">Package Image</label>
+          <div class="img-field">
+            <div class="img-thumb" *ngIf="form.imageUrl; else noSetImg">
+              <img [src]="imageSrc(form.imageUrl)" [alt]="form.setName || 'Package'" />
+              <button type="button" class="img-remove" (click)="removeImage()" title="Remove image">&#x2715;</button>
+            </div>
+            <ng-template #noSetImg>
+              <div class="img-thumb img-thumb--empty">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M3 14l4-4 3 3 3-3 4 4"/></svg>
+              </div>
+            </ng-template>
+            <div class="img-actions">
+              <input #setImgInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden
+                     (change)="onImageSelected($event)" />
+              <button type="button" class="img-btn" (click)="setImgInput.click()" [disabled]="uploadingImage">
+                {{ uploadingImage ? 'Uploading...' : (form.imageUrl ? 'Change' : 'Upload') }}
+              </button>
+              <small class="img-hint">JPG, PNG, WEBP or GIF &middot; max 5 MB</small>
+            </div>
+          </div>
+        </div>
         <div class="mf-group">
           <label class="mf-label">Sales Budget Line</label>
           <erp-dropdown name="salesBudgetLineId" [(ngModel)]="form.salesBudgetLineId"

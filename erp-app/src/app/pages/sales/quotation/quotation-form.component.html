@@ -47,34 +47,34 @@
       </div>
     </div>
 
-    <!-- Cash Sales contact row (shows when Cash Sales is chosen) -->
-    <div class="qf-grid4" *ngIf="header.isCashSales">
-      <!-- Person Name -->
+    <!-- Contact — always captured for a quotation, not only for a Cash Sale. Every job has a person
+         to reach, so these three used to be hidden behind the Cash Sales toggle for no good reason.
+         Contact Person saves to Quotation.ContactPerson; Contact Number and Email reuse the existing
+         CashContactNo / CashEmail columns. -->
+    <div class="qf-grid4">
       <div class="mf-group">
-        <label class="mf-label">Person Name</label>
-        <input type="text" class="mf-input" [(ngModel)]="header.personName" name="personName"
-          placeholder="Enter person name..." autocomplete="off" />
+        <label class="mf-label">Contact Person</label>
+        <input type="text" class="mf-input" [(ngModel)]="header.contactPerson" name="contactPerson"
+          placeholder="Who to contact for this job..." autocomplete="off" />
       </div>
 
-      <!-- Contact Number -->
       <div class="mf-group">
         <label class="mf-label">Contact Number</label>
         <input type="text" class="mf-input" [(ngModel)]="header.contactNumber" name="contactNumber"
           placeholder="Enter contact number..." autocomplete="off" />
       </div>
 
-      <!-- Email -->
       <div class="mf-group">
         <label class="mf-label">Email</label>
         <input type="email" class="mf-input" [(ngModel)]="header.email" name="email"
           placeholder="Enter email..." autocomplete="off" />
       </div>
 
-      <!-- Delivery To -->
-      <div class="mf-group">
-        <label class="mf-label">Delivery To</label>
-        <textarea class="mf-textarea qf-ta" rows="2" [(ngModel)]="header.deliveryTo" name="deliveryToCash"
-          placeholder="Enter delivery location..."></textarea>
+      <!-- Customer PO No — only for a Cash Sale. -->
+      <div class="mf-group" *ngIf="header.isCashSales">
+        <label class="mf-label">Customer PO No</label>
+        <input type="text" class="mf-input" [(ngModel)]="header.customerPoNo" name="customerPoNo"
+          placeholder="Enter customer PO number..." />
       </div>
     </div>
 
@@ -122,8 +122,9 @@
       </div>
     </div>
 
-    <!-- Row 3 -->
-    <div class="qf-grid4">
+    <!-- Row 3 — Line Source and Cost Centre. Contact Person and Customer PO No moved up into the
+         contact row above; they no longer live here. -->
+    <div class="qf-grid2">
       <!-- Line Source -->
       <div class="mf-group">
         <label class="mf-label">Line Source</label>
@@ -138,25 +139,18 @@
         <input type="text" class="mf-input" [(ngModel)]="header.costCentre" name="costCentre"
           placeholder="Enter cost centre..." />
       </div>
+    </div>
 
-      <!-- Customer PO No -->
+    <!-- Row 4 — the two multi-line fields share a row so neither sits alone. Both are always shown
+         now; Delivery To applies to every quotation, not only a Cash Sale. -->
+    <div class="qf-grid2">
       <div class="mf-group">
-        <label class="mf-label">Customer PO No</label>
-        <input type="text" class="mf-input" [(ngModel)]="header.customerPoNo" name="customerPoNo"
-          placeholder="Enter customer PO number..." />
-      </div>
-
-      <!-- Delivery To (non-cash; for Cash Sales it appears in the contact row above) -->
-      <div class="mf-group" *ngIf="!header.isCashSales">
         <label class="mf-label">Delivery To</label>
         <textarea class="mf-textarea qf-ta" rows="2" [(ngModel)]="header.deliveryTo" name="deliveryTo"
           placeholder="Enter delivery location..."></textarea>
       </div>
-    </div>
 
-    <!-- Row 4 -->
-    <div class="qf-grid4">
-      <div class="mf-group qf-span2">
+      <div class="mf-group">
         <label class="mf-label">Remarks</label>
         <textarea class="mf-textarea qf-ta" rows="2" [(ngModel)]="header.remarks" name="remarks"
           placeholder="Enter remarks..."></textarea>
@@ -206,19 +200,20 @@
             <th class="qf-c">Qty</th>
             <th class="qf-c">Unit Price <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
             <th class="qf-c">Discount %</th>
-            <th style="min-width:148px">Tax Mode</th>
-            <th style="min-width:130px">Fulfillment</th>
+            <!-- table-layout is fixed, so the column takes its WIDTH from here, not min-width.
+                 180px fits the longest label ("Standard-Rated") without the ellipsis. -->
+            <th style="width:180px">Tax Mode</th>
             <th class="qf-c">Line Total <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
             <th class="qf-c">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="lines.length === 0">
-            <td class="dt-empty" [attr.colspan]="10">No lines yet. Click <b>Add line</b> or select a package to start.</td>
+            <td class="dt-empty" [attr.colspan]="9">No lines yet. Click <b>Add line</b> or select a package to start.</td>
           </tr>
 
           <ng-container *ngFor="let l of lines; let i = index">
-            <!-- Package header row (aligned like a normal line; only Fulfillment disabled) -->
+            <!-- Package header row (aligned like a normal line) -->
             <tr *ngIf="l.isSetHeader" class="qf-setRow">
               <td>
                 <div class="qf-setName">
@@ -246,17 +241,14 @@
               <td>
                 <erp-dropdown [(ngModel)]="l.taxMode"
                   [items]="taxModeItems" bindLabel="label" bindValue="value"
+                  [menuMinWidth]="170"
                   (ngModelChange)="onSetLineChanged(l)"></erp-dropdown>
-              </td>
-              <td>
-                <erp-dropdown [(ngModel)]="l.fulfillmentMode"
-                  [items]="fulfillmentOptions" bindLabel="label" bindValue="value"
-                  [disabled]="true"></erp-dropdown>
-                <small class="qf-autoTag">Auto</small>
               </td>
               <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
               <td class="qf-c">
-                <button class="btn btn-danger btn-sm" type="button" (click)="removeItemSet(l.itemSetId!)" title="Remove Package">Remove</button>
+                <button class="dt-icon-btn del" type="button" (click)="removeItemSet(l.itemSetId!)" title="Remove Package">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                </button>
               </td>
             </tr>
 
@@ -291,17 +283,9 @@
               <td>
                 <erp-dropdown [(ngModel)]="l.taxMode"
                   [items]="taxModeItems" bindLabel="label" bindValue="value"
+                  [menuMinWidth]="170"
                   [disabled]="l.isFromSet"
                   (ngModelChange)="onLineChanged(i)"></erp-dropdown>
-              </td>
-              <td>
-                <erp-dropdown [(ngModel)]="l.fulfillmentMode"
-                  [items]="fulfillmentOptions" bindLabel="label" bindValue="value"
-                  [disabled]="true"
-                  (ngModelChange)="onFulfillmentChanged(l, i)"></erp-dropdown>
-                <small *ngIf="l.allowManualFulfillment && l.fulfillmentMode == null" class="qf-pendTag">Pending · Procurement</small>
-                <small *ngIf="l.allowManualFulfillment && l.fulfillmentMode != null" class="qf-autoTag">Resolved</small>
-                <small *ngIf="!l.allowManualFulfillment" class="qf-autoTag">Auto</small>
               </td>
               <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
               <td class="qf-c">
@@ -412,12 +396,11 @@
             min="0" max="100" step="0.01" (ngModelChange)="previewLineTotals()" />
         </div>
 
-        <!-- Fulfillment -->
-        <div class="mf-group qf-mCol3">
-          <label class="mf-label">Fulfillment Mode
-            <span *ngIf="modal.itemId && modal.allowManualFulfillment" class="qf-pendTag">(Pending · Procurement)</span>
-            <span *ngIf="modal.itemId && !modal.allowManualFulfillment" class="qf-autoTag">(Auto)</span>
-          </label>
+        <!-- Fulfillment — hidden from the UI, but kept on the model. modal.fulfillmentMode is still
+             auto-resolved from the item's flags in code and saved with the line, so the backend is
+             unchanged; only the (always-disabled, "Auto") control is taken off the screen. -->
+        <div class="mf-group qf-mCol3" *ngIf="false">
+          <label class="mf-label">Fulfillment Mode</label>
           <erp-dropdown [(ngModel)]="modal.fulfillmentMode" name="modalFulfillment"
             [items]="fulfillmentOptions" bindLabel="label" bindValue="value"
             [disabled]="true"></erp-dropdown>

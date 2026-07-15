@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
+import { UploadService } from 'app/shared/upload.service';
 
-const blank = () => ({ setName: '', salesBudgetLineId: null as number | null, selectedItemIds: [] as number[] });
+const blank = () => ({ setName: '', salesBudgetLineId: null as number | null, imageUrl: '', selectedItemIds: [] as number[] });
 
 @Component({ selector: 'erp-item-set', standalone: false, templateUrl: './item-set.component.html', styleUrls: ['./item-set.component.scss'] })
 export class ItemSetComponent implements OnInit {
@@ -18,9 +19,54 @@ export class ItemSetComponent implements OnInit {
   userId: number = 0;
   functionId = 'itemSet';
 
-  constructor(private masterSvc: MasterService, private permissionService: PermissionService) {
+  uploadingImage = false;
+
+  constructor(
+    private masterSvc: MasterService,
+    private permissionService: PermissionService,
+    private uploadService: UploadService
+  ) {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
+  }
+
+  // ── Package image ────────────────────────────────────────────────────────────
+  // Uploaded the moment it is picked; only the returned URL goes into the JSON payload below.
+  imageSrc(url: string | null | undefined): string {
+    return this.uploadService.toSrc(url);
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const problem = this.uploadService.validate(file);
+    if (problem) {
+      this.message = problem;
+      this.isError = true;
+      input.value = '';
+      return;
+    }
+
+    this.uploadingImage = true;
+    this.uploadService.upload(file, 'itemsets').subscribe({
+      next: url => {
+        this.form.imageUrl = url;
+        this.uploadingImage = false;
+        input.value = '';   // so re-picking the same file fires 'change' again
+      },
+      error: () => {
+        this.uploadingImage = false;
+        input.value = '';
+        this.message = 'The image could not be uploaded. Please try again.';
+        this.isError = true;
+      }
+    });
+  }
+
+  removeImage(): void {
+    this.form.imageUrl = '';
   }
 
   ngOnInit(): void {
@@ -54,7 +100,7 @@ export class ItemSetComponent implements OnInit {
   edit(item: any): void {
     this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id;
     const ids = (item.items || item.itemSetItems || []).map((x: any) => Number(x.itemId || x.id));
-    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesParentHeadCode ?? item.salesBudgetLineId ?? null, selectedItemIds: ids };
+    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesParentHeadCode ?? item.salesBudgetLineId ?? null, imageUrl: item.imageUrl || '', selectedItemIds: ids };
     this.message = '';
   }
 
@@ -67,6 +113,7 @@ export class ItemSetComponent implements OnInit {
     const payload = {
       setName: this.form.setName,
       salesParentHeadCode: this.form.salesBudgetLineId,
+      imageUrl: this.form.imageUrl || null,
       createdBy: userId,
       updatedBy: userId,
       isActive: true,

@@ -2,11 +2,18 @@
   <label class="field-label" *ngIf="label">
     {{ label }}<span class="req" *ngIf="required">*</span>
   </label>
+  <!-- A div is not in the tab order, so pressing Tab used to skip every dropdown on the form and
+       land on the next native input, making the whole page un-tabbable. tabindex + keyboard handling
+       put it back in sequence and let it open/close from the keyboard like a real <select>. -->
   <div class="dd-trigger"
        [class.open]="open"
        [class.disabled]="disabled"
        [class.has-error]="errorMsg && touched"
-       (click)="toggle()">
+       [attr.tabindex]="disabled ? null : 0"
+       role="combobox"
+       [attr.aria-expanded]="open"
+       (click)="toggle()"
+       (keydown)="onTriggerKeydown($event)">
     <span class="dd-value" [class.placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
     <span class="dd-actions">
       <span class="dd-clear" *ngIf="value !== null && value !== undefined" (click)="clear($event)">&#x2715;</span>

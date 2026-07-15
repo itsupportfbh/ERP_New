@@ -45,8 +45,9 @@
         [allowAdd]="true" addTypeLabel="Country" (addNew)="openQuickCountry($event)"></erp-dropdown>
       <erp-dropdown label="Ledger Name" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="customer.budgetLineId"></erp-dropdown>
     </div>
-    <div class="form-row cols-3 block-gap">
-      <erp-input label="Point of Contact Person" [(ngModel)]="customer.contactPerson"></erp-input>
+    <!-- The point of contact is a per-JOB fact, not a per-customer one: the same caterer deals with a
+         different person for each event. It is captured on the quotation now. -->
+    <div class="form-row cols-2 block-gap">
       <erp-input label="Email" type="email" [(ngModel)]="customer.email"></erp-input>
       <erp-input label="Contact Number" [(ngModel)]="customer.phone"></erp-input>
     </div>
