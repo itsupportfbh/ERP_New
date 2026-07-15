@@ -31,6 +31,8 @@ export class PickingListComponent implements OnInit {
   private binMap = new Map<number, string>();
   private itemUomIdMap = new Map<number, number>();
   private itemUomNameMap = new Map<number, string>();
+  /** customerId → billing address from the Customer master, for the print "Bill To" box */
+  private custAddrMap = new Map<number, string>();
 
   // view-details modal
   showView = false;
@@ -41,6 +43,10 @@ export class PickingListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  /** Delivery To address captured on the picking document — shown under "Order To" when printing. */
+  viewDeliveryTo = '';
+  /** Customer's billing address from the Customer master — shown in the print "Bill To" box. */
+  viewBillAddress = '';
 
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item', key: 'itemName' },
@@ -65,6 +71,8 @@ export class PickingListComponent implements OnInit {
       if (un) this.itemUomNameMap.set(id, un);
     }));
     this.svc.getWarehouses().subscribe(r => this.svc.unwrap(r).forEach((w: any) => this.warehouseMap.set(Number(w.id), w.warehouseName ?? w.name ?? '')));
+    this.svc.getCustomers().subscribe(r => this.svc.unwrap(r).forEach((c: any) =>
+      this.custAddrMap.set(Number(c.id ?? c.Id), String(c.address ?? c.Address ?? '').trim())));
   }
 
   load(): void {
@@ -144,6 +152,8 @@ export class PickingListComponent implements OnInit {
     this.svc.getPackingById(row.id).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
+        this.viewDeliveryTo = String(d.deliveryTo ?? d.DeliveryTo ?? '').trim();
+        this.viewBillAddress = this.custAddrMap.get(Number(row.customerId ?? d.customerId ?? d.CustomerId)) || '';
         const rawLines = this.parseLines(d.pickLines ?? d.lineItems ?? d.lines ?? d.salesOrderLines);
         const baseLines = rawLines.map((l: any) => {
           const itemId = Number(l.itemId ?? l.ItemId ?? 0);
@@ -211,6 +221,11 @@ export class PickingListComponent implements OnInit {
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
+        orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
+        billTo: {
+          name: this.activeRow?.customerName || '—',
+          lines: this.viewBillAddress ? [this.viewBillAddress] : [],
+        },
       });
     });
   }

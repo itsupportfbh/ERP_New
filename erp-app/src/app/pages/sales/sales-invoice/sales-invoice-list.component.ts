@@ -25,6 +25,9 @@ export class SalesInvoiceListComponent implements OnInit {
   showDeleteModal = false;
   itemToDelete: any = null;
 
+  /** customerId → billing address from the Customer master, for the print "Bill To" box */
+  private custAddrMap = new Map<number, string>();
+
   // view-details modal
   showView = false;
   viewLoading = false;
@@ -34,6 +37,10 @@ export class SalesInvoiceListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  /** Delivery To address captured on the invoice — shown under "Deliver To" when printing. */
+  viewDeliveryTo = '';
+  /** Customer's billing address from the Customer master — shown in the print "Bill To" box. */
+  viewBillAddress = '';
 
   /** The company's base currency (e.g. RM). Invoices can be billed in another currency. */
   private readonly baseCur = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
@@ -68,6 +75,8 @@ export class SalesInvoiceListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.svc.getCustomers().subscribe(r => this.svc.unwrap(r).forEach((c: any) =>
+      this.custAddrMap.set(Number(c.id ?? c.Id), String(c.address ?? c.Address ?? '').trim())));
   }
 
   load(): void {
@@ -148,6 +157,8 @@ export class SalesInvoiceListComponent implements OnInit {
       next: res => {
         const d = this.svc.unwrapOne(res);
         const hdr = d.header ?? d;
+        this.viewDeliveryTo = String(hdr.deliveryTo ?? hdr.DeliveryTo ?? d.deliveryTo ?? d.DeliveryTo ?? '').trim();
+        this.viewBillAddress = this.custAddrMap.get(Number(row.customerId ?? hdr.customerId ?? hdr.CustomerId ?? d.customerId ?? d.CustomerId)) || '';
         const rawLines = d.lines ?? hdr.lines ?? [];
         const baseLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => {
           const qty = Number(l.qty ?? 0);
@@ -231,13 +242,16 @@ export class SalesInvoiceListComponent implements OnInit {
       this.printSvc.print({
         docTitle: 'SALES INVOICE',
         docNo: this.activeRow?.invoiceNo ?? '',
-        fields: this.viewInfo.filter(f => f.label !== 'Remarks' && f.label !== 'Customer'),
+        fields: this.viewInfo.filter(f => f.label !== 'Remarks'),
         remarks: this.activeRow ? (this.viewInfo.find(f => f.label === 'Remarks')?.value as string) : '',
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
-        billTo: this.printBillTo,
-        deliverTo: this.printDeliverTo,
+        orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
+        billTo: {
+          name: this.activeRow?.customerName || '—',
+          lines: this.viewBillAddress ? [this.viewBillAddress] : [],
+        },
       });
     });
   }

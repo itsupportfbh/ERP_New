@@ -35,6 +35,8 @@ export class DeliveryOrderListComponent implements OnInit {
   private itemCodeMap = new Map<number, string>();
   private warehouseMap = new Map<number, string>();
   private driverMap = new Map<number, string>();
+  /** customerId → billing address from the Customer master, for the print "Bill To" box */
+  private custAddrMap = new Map<number, string>();
 
   // view-details modal
   showView = false;
@@ -47,6 +49,8 @@ export class DeliveryOrderListComponent implements OnInit {
   viewTotals: PrintField[] = [];
   printBillTo: { name?: string; lines?: string[] } = {};
   printDeliverTo: { name?: string; lines?: string[] } = {};
+  /** Customer's billing address from the Customer master — shown in the print "Bill To" box. */
+  viewBillAddress = '';
 
   readonly lineColumns: PrintColumn[] = [
     { header: 'Item Code', key: 'itemCode', align: 'center' },
@@ -65,6 +69,8 @@ export class DeliveryOrderListComponent implements OnInit {
     this.svc.getItems().subscribe(r => this.svc.unwrap(r).forEach((i: any) => { if (i.itemCode) this.itemCodeMap.set(Number(i.id), i.itemCode); }));
     this.svc.getWarehouses().subscribe(r => this.svc.unwrap(r).forEach((w: any) => this.warehouseMap.set(Number(w.id), w.warehouseName ?? w.name ?? '')));
     this.svc.getDrivers().subscribe(r => this.svc.unwrap(r).forEach((d: any) => this.driverMap.set(Number(d.id ?? d.Id), String(d.name ?? d.Name ?? d.driverName ?? '').trim())));
+    this.svc.getCustomers().subscribe(r => this.svc.unwrap(r).forEach((c: any) =>
+      this.custAddrMap.set(Number(c.id ?? c.Id), String(c.address ?? c.Address ?? '').trim())));
   }
 
   getDriverName(id: any): string {
@@ -191,7 +197,9 @@ export class DeliveryOrderListComponent implements OnInit {
               this.viewTotals = [];
               const custName = hdr.customerName ?? hdr.CustomerName ?? '—';
               const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
-              this.printBillTo = { name: custName, lines: [custAddr].filter(Boolean) };
+              this.viewBillAddress = this.custAddrMap.get(Number(hdr.customerId ?? hdr.CustomerId ?? row.customerId)) || '';
+              const billAddr = this.viewBillAddress || custAddr;
+              this.printBillTo = { name: custName, lines: [billAddr].filter(Boolean) };
               this.printDeliverTo = { name: custName, lines: [custAddr, row.routeName ? `Route: ${row.routeName}` : ''].filter(Boolean) };
               this.viewTitle = `Delivery Order Lines — ${row.doNumber}`;
               this.viewSubtitle = `SO: ${row.salesOrderNo || '—'} · Route: ${row.routeName || '—'}`;

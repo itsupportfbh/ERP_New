@@ -28,6 +28,8 @@ export class SalesOrderListComponent implements OnInit {
   private uomMap = new Map<number, string>();
   private itemNameMap = new Map<number, string>();
   private itemCodeMap = new Map<number, string>();
+  /** customerId → billing address from the Customer master, for the print "Bill To" box */
+  private custAddrMap = new Map<number, string>();
 
   // view-details modal
   showView = false;
@@ -38,6 +40,10 @@ export class SalesOrderListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  /** Delivery To address captured on the sales order — shown under "Order To" when printing. */
+  viewDeliveryTo = '';
+  /** Customer's billing address from the Customer master — shown in the print "Bill To" box. */
+  viewBillAddress = '';
 
   /** The company's base currency (e.g. RM). Documents can be billed in another currency. */
   private readonly baseCur = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
@@ -85,6 +91,8 @@ export class SalesOrderListComponent implements OnInit {
       this.itemNameMap.set(Number(i.id), i.itemName ?? i.name ?? '');
       if (i.itemCode) this.itemCodeMap.set(Number(i.id), i.itemCode);
     }));
+    this.svc.getCustomers().subscribe(r => this.svc.unwrap(r).forEach((c: any) =>
+      this.custAddrMap.set(Number(c.id ?? c.Id), String(c.address ?? c.Address ?? '').trim())));
   }
 
   load(): void {
@@ -165,6 +173,8 @@ export class SalesOrderListComponent implements OnInit {
     this.svc.getSalesOrderById(row.id).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
+        this.viewDeliveryTo = String(d.deliveryTo ?? d.DeliveryTo ?? '').trim();
+        this.viewBillAddress = this.custAddrMap.get(Number(row.customerId ?? d.customerId ?? d.CustomerId)) || '';
         const rawLines = d.salesOrderLines ?? d.SalesOrderLines ?? d.lineItems ?? d.lines ?? [];
         const parsed: any[] = typeof rawLines === 'string'
           ? JSON.parse(rawLines || '[]')
@@ -258,6 +268,11 @@ export class SalesOrderListComponent implements OnInit {
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
+        orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
+        billTo: {
+          name: this.activeRow?.customerName || '—',
+          lines: this.viewBillAddress ? [this.viewBillAddress] : [],
+        },
       });
     });
   }

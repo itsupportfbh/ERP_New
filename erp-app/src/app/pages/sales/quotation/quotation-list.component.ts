@@ -26,6 +26,8 @@ export class QuotationListComponent implements OnInit {
   // lookups for resolving line names
   private uomMap = new Map<number, string>();
   private itemCodeMap = new Map<number, string>();
+  /** customerId → billing address from the Customer master, for the print "Bill To" box */
+  private custAddrMap = new Map<number, string>();
 
   // view-details modal
   showView = false;
@@ -36,6 +38,10 @@ export class QuotationListComponent implements OnInit {
   viewInfo: PrintField[] = [];
   viewLines: any[] = [];
   viewTotals: PrintField[] = [];
+  /** Delivery To address captured on the quotation — shown under "Order To" when printing. */
+  viewDeliveryTo = '';
+  /** Customer's billing address from the Customer master — shown in the print "Bill To" box. */
+  viewBillAddress = '';
 
   /** The company's base currency (e.g. RM). Documents can be billed in another currency. */
   private readonly baseCur = (localStorage.getItem('companyCurrencyName') || '').trim() || 'SGD';
@@ -69,6 +75,8 @@ export class QuotationListComponent implements OnInit {
     this.load();
     this.svc.getUOMs().subscribe(r => this.svc.unwrap(r).forEach((u: any) => this.uomMap.set(Number(u.id), u.uomName ?? u.name ?? '')));
     this.svc.getItems().subscribe(r => this.svc.unwrap(r).forEach((i: any) => { if (i.itemCode) this.itemCodeMap.set(Number(i.id), i.itemCode); }));
+    this.svc.getCustomers().subscribe(r => this.svc.unwrap(r).forEach((c: any) =>
+      this.custAddrMap.set(Number(c.id ?? c.Id), String(c.address ?? c.Address ?? '').trim())));
   }
 
   load(): void {
@@ -185,6 +193,8 @@ export class QuotationListComponent implements OnInit {
     this.svc.getQuotationById(row.id).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
+        this.viewDeliveryTo = String(d.deliveryTo ?? d.DeliveryTo ?? '').trim();
+        this.viewBillAddress = this.custAddrMap.get(Number(row.customerId ?? d.customerId ?? d.CustomerId)) || '';
         const rawLines = d.lines ?? d.Lines ?? [];
         const baseLines = (Array.isArray(rawLines) ? rawLines : []).map((l: any) => ({
           itemId: Number(l.itemId ?? l.ItemId ?? 0) || 0,
@@ -253,6 +263,11 @@ export class QuotationListComponent implements OnInit {
         columns: this.lineColumns,
         lines: this.viewLines,
         totals: this.viewTotals,
+        orderToLines: this.viewDeliveryTo ? [this.viewDeliveryTo] : [],
+        billTo: {
+          name: this.activeRow?.customerName || '—',
+          lines: this.viewBillAddress ? [this.viewBillAddress] : [],
+        },
       });
     });
   }
