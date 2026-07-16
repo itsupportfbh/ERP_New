@@ -5,6 +5,7 @@ import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import Swal from 'sweetalert2';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { AuditPrintService } from '../../core/services/audit-print.service';
 
 interface LedgerFlat {
   id: number;
@@ -63,7 +64,6 @@ export class FinanceLedgerComponent implements OnInit {
   loading = false;
   fromDate = '';
   toDate = '';
-  showFilter = false;
   search = '';
   pageSize = 10;
   currentPage = 1;
@@ -74,7 +74,11 @@ export class FinanceLedgerComponent implements OnInit {
   private readonly userId = Number(localStorage.getItem('id'));
   private endpoint = { list: '/GeneralLedger/GetGeneralLedger' };
 
-  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
+  constructor(
+    private finance: FinanceService,
+    private permissionService: PermissionService,
+    private auditPrint: AuditPrintService
+  ) {}
 
   ngOnInit(): void {
     const now = new Date();
@@ -92,7 +96,6 @@ export class FinanceLedgerComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.showFilter = false;
     this.roots = [];
     this.displayRows = [];
 
@@ -321,6 +324,85 @@ export class FinanceLedgerComponent implements OnInit {
   get totalDebit():   number { return this.roots.reduce((s, r) => s + (r.totalDebitBase  || 0), 0); }
   get totalCredit():  number { return this.roots.reduce((s, r) => s + (r.totalCreditBase || 0), 0); }
   get totalBalance(): number { return Math.abs(this.totalDebit - this.totalCredit); }
+
+  // ─── Export (Excel / PDF) ──────────────────────────────────────
+  /**
+   * Every account carrying a value, using its OWN figures (not the rolled-up totals) —
+   * a parent plus its children would otherwise double-count. Summing these own values
+   * reproduces the footer totals exactly.
+   */
+  private exportRows(): Array<{ code: string; name: string; opening: number; debit: number; credit: number; balance: number }> {
+    const out: Array<{ code: string; name: string; opening: number; debit: number; credit: number; balance: number }> = [];
+    const walk = (n: LedgerNode) => {
+      const opening = n.ownOpening ?? 0;
+      const debit   = n.ownDebitBase ?? 0;
+      const credit  = n.ownCreditBase ?? 0;
+      if (opening || debit || credit) {
+        out.push({
+          code: String(n.headCode),
+          name: n.headName,
+          opening,
+          debit,
+          credit,
+          balance: Math.abs(debit - credit)
+        });
+      }
+      n.children?.forEach(walk);
+    };
+    this.roots.forEach(walk);
+    return out.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+  }
+
+  private fmtDisplayDate(d: string): string {
+    if (!d) return 'All';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
+  }
+
+  exportExcel(): void {
+    const data = this.exportRows();
+    const rows: any[][] = [
+      ['General Ledger'],
+      [`From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`],
+      [],
+      ['Code', 'Account Name', 'Opening Bal', `Debit (${this.baseCurrency})`, `Credit (${this.baseCurrency})`, `Balance (${this.baseCurrency})`],
+      ...data.map(r => [r.code, r.name, r.opening.toFixed(2), r.debit.toFixed(2), r.credit.toFixed(2), r.balance.toFixed(2)]),
+      [],
+      ['', 'Total', '', this.totalDebit.toFixed(2), this.totalCredit.toFixed(2), this.totalBalance.toFixed(2)]
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'GeneralLedger.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  exportPdf(): void {
+    const period = `From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`;
+    this.auditPrint.print({
+      reportTitle: 'General Ledger',
+      periodLine: period,
+      metaLines: [`Date : ${period}`, 'Sort By : Code;Description', 'Project : All'],
+      labelColumnKey: 'name',
+      columns: [
+        { header: 'Acc Code',    key: 'code' },
+        { header: 'Description', key: 'name' },
+        { header: 'Opening Bal', key: 'opening', align: 'right', type: 'number' },
+        { header: `Debit (${this.baseCurrency})`,   key: 'debit',   align: 'right', type: 'number' },
+        { header: `Credit (${this.baseCurrency})`,  key: 'credit',  align: 'right', type: 'number' },
+        { header: `Balance (${this.baseCurrency})`, key: 'balance', align: 'right', type: 'number' }
+      ],
+      rows: this.exportRows(),
+      totalRows: [
+        {
+          label: `Grand Total (${this.baseCurrency})`,
+          values: { debit: this.totalDebit, credit: this.totalCredit, balance: this.totalBalance },
+          grand: true
+        }
+      ]
+    });
+  }
 
   levelClass(row: LedgerNode): string {
     if (row.level === 0) return 'lvl-0';

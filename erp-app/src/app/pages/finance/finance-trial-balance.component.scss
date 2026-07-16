@@ -15,6 +15,15 @@ $muted:  #7a8798;
 /* ── Header ── */
 .rpt-head { display: flex; align-items: center; justify-content: space-between; }
 .rpt-head-left { display: flex; align-items: center; gap: 10px; }
+
+/* Export buttons (match Balance Sheet) */
+.rpt-actions { display: flex; gap: 8px; }
+.btn-export {
+  display: flex; align-items: center; gap: 6px; padding: .38rem 1rem;
+  font-size: .82rem; font-weight: 500; border-radius: .5rem; border: none; cursor: pointer;
+}
+.btn-excel { background: #16a34a; color: #fff; }
+.btn-pdf   { background: #ea580c; color: #fff; }
 .rpt-icon {
   width: 36px; height: 36px; border-radius: 8px;
   display: grid; place-items: center;
@@ -95,6 +104,27 @@ p  { margin: 3px 0 0; color: $muted; font-size: 12px; }
 
 /* Value alignment */
 .right        { text-align: right; }
+.center       { text-align: center; }
+
+/* Inline opening-balance edit */
+.tb-edit-input {
+  width: 100px; padding: 3px 6px; font-size: 12px; text-align: right;
+  border: 1px solid $border; border-radius: 5px; color: #1a2e38;
+}
+.tb-edit-input:focus { outline: none; border-color: $teal; }
+
+.tb-act-btn {
+  border: 1px solid $border; background: #fff; color: $teal;
+  width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; line-height: 1; margin: 0 2px; padding: 0;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.tb-act-btn:hover:not(:disabled) { background: $teal; color: #fff; border-color: $teal; }
+.tb-act-btn:disabled { opacity: .5; cursor: default; }
+.tb-act-save   { color: #16a34a; }
+.tb-act-save:hover:not(:disabled)   { background: #16a34a; border-color: #16a34a; color: #fff; }
+.tb-act-cancel { color: #dc2626; }
+.tb-act-cancel:hover:not(:disabled) { background: #dc2626; border-color: #dc2626; color: #fff; }
 .debit-val    { color: #1d5cff; }
 .credit-val,
 .muted        { color: $muted; }

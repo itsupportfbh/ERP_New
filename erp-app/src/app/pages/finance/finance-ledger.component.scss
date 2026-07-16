@@ -58,6 +58,16 @@ $row-hover: #f5f9fb;
   border: 1px solid $border; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer;
   &:hover { background: $teal-pale; }
 }
+.gl-btn-primary:disabled { opacity: .6; cursor: default; }
+
+/* Export buttons (match Trial Balance / Balance Sheet) */
+.btn-export {
+  display: inline-flex; align-items: center; gap: 6px; padding: .38rem 1rem;
+  font-size: .82rem; font-weight: 500; border-radius: .5rem; border: none; cursor: pointer;
+  &:disabled { opacity: .5; cursor: default; }
+}
+.btn-excel { background: #16a34a; color: #fff; }
+.btn-pdf   { background: #ea580c; color: #fff; }
 
 /* ── Alerts ── */
 .gl-alert { padding: 10px 14px; border-radius: 7px; font-size: 12.5px; }
