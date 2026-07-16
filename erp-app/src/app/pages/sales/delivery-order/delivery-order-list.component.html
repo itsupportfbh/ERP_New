@@ -51,6 +51,7 @@
             <td><div class="dt-actions-cell">
               <button *ngIf="perm.canView(fnId)" class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
               <button *ngIf="perm.canPrint(fnId)" class="dt-icon-btn print" (click)="print(item)" title="Print"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/></svg></button>
+              <button *ngIf="perm.canPrint(fnId)" class="dt-icon-btn email" (click)="emailCustomer(item)" title="Email to customer"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="16" height="12" rx="1.5"/><path d="M2.5 5l7.5 6 7.5-6"/></svg></button>
               <button *ngIf="perm.canEdit(fnId)" class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
               <button *ngIf="perm.canDelete(fnId)" class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>

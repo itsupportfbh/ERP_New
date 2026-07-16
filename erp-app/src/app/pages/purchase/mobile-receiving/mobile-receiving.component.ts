@@ -94,7 +94,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
     if (!poNo) { this.error = 'Enter a PO number.'; return; }
     this.error = '';
     sessionStorage.setItem('mrPo', poNo);
-    this.svc.getMobileReceivingPo(poNo).subscribe({
+    this.svc.getMobileReceivingPo(poNo, this.mrToken).subscribe({
       next: (res: any) => {
         this.poLines = res?.lines ?? res?.Lines ?? [];
         this.hydrateQueuedLineNames();
@@ -130,7 +130,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.svc.validateMobileScan(poNo, barcode, qty, this.loginUserId).subscribe({
+    this.svc.validateMobileScan(poNo, barcode, qty, this.loginUserId, this.mrToken).subscribe({
       next: () => { this.pushRow(barcode, qty); this.saveOffline(); },
       error: (err: any) => { this.error = err?.error?.message ?? 'Scan validation failed.'; }
     });
@@ -175,7 +175,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
         createdBy: this.loginUserId
       }))
     };
-    this.svc.syncMobileReceiving(payload).subscribe({
+    this.svc.syncMobileReceiving(payload, this.mrToken).subscribe({
       next: () => {
         this.isSyncing = false;
         this.mrScanMessage = 'Sync successful! Desktop GRN updated.';

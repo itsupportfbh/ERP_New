@@ -145,6 +145,13 @@ export class SalesService {
     fd.append('Pdf', pdf, `${id}.pdf`);
     return this.http.post(`${this.api}/SalesOrder/${id}/email-customer`, fd);
   }
+
+  /** Email the delivery order PDF (rendered client-side) to the customer resolved on the server. */
+  emailDeliveryOrderCustomer(id: number | string, pdf: Blob): Observable<any> {
+    const fd = new FormData();
+    fd.append('Pdf', pdf, `${id}.pdf`);
+    return this.http.post(`${this.api}/DeliveryOrder/${id}/email-customer`, fd);
+  }
   approveSalesOrder(id: number | string, approvedBy = 1): Observable<any> {
     return this.http.post(`${this.api}/SalesOrder/approve/${id}?approvedBy=${approvedBy}`, {});
   }
