@@ -3,7 +3,7 @@ import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { UploadService } from 'app/shared/upload.service';
 
-const blank = () => ({ setName: '', salesBudgetLineId: null as number | null, imageUrl: '', selectedItemIds: [] as number[] });
+const blank = () => ({ setName: '', salesBudgetLineId: null as number | null, price: null as number | null, imageUrl: '', selectedItemIds: [] as number[] });
 
 @Component({ selector: 'erp-item-set', standalone: false, templateUrl: './item-set.component.html', styleUrls: ['./item-set.component.scss'] })
 export class ItemSetComponent implements OnInit {
@@ -100,7 +100,7 @@ export class ItemSetComponent implements OnInit {
   edit(item: any): void {
     this.isFormVisible = true; this.isEditMode = true; this.selectedId = item.id;
     const ids = (item.items || item.itemSetItems || []).map((x: any) => Number(x.itemId || x.id));
-    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesParentHeadCode ?? item.salesBudgetLineId ?? null, imageUrl: item.imageUrl || '', selectedItemIds: ids };
+    this.form = { setName: item.setName || item.name || '', salesBudgetLineId: item.salesParentHeadCode ?? item.salesBudgetLineId ?? null, price: item.price ?? null, imageUrl: item.imageUrl || '', selectedItemIds: ids };
     this.message = '';
   }
 
@@ -113,6 +113,7 @@ export class ItemSetComponent implements OnInit {
     const payload = {
       setName: this.form.setName,
       salesParentHeadCode: this.form.salesBudgetLineId,
+      price: this.form.price,
       imageUrl: this.form.imageUrl || null,
       createdBy: userId,
       updatedBy: userId,

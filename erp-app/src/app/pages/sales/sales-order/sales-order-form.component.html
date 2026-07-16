@@ -36,13 +36,8 @@
           (ngModelChange)="onCustomerChange($event)"></erp-dropdown>
       </div>
 
-      <!-- Source Line -->
-      <div class="mf-group">
-        <label class="mf-label">Source Line</label>
-        <erp-dropdown [(ngModel)]="header.lineSourceId" name="lineSourceId"
-          [items]="lineSourceOptions" bindLabel="label" bindValue="value"
-          (ngModelChange)="onLineSourceChange()"></erp-dropdown>
-      </div>
+      <!-- Source Line dropdown removed; header.lineSourceId stays at its default so the package
+           selector and custom Add Line both remain available. -->
 
     </div>
 
@@ -130,6 +125,7 @@
             <th>Description</th>
             <th>UOM</th>
             <th class="qf-c">Qty</th>
+            <th class="qf-c">Base Qty</th>
             <th class="qf-c">Unit Price <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
             <th class="qf-c">Discount %</th>
             <!-- table-layout is fixed, so the column takes its WIDTH from here, not min-width. -->
@@ -140,7 +136,7 @@
         </thead>
         <tbody>
           <tr *ngIf="lines.length === 0">
-            <td class="dt-empty" [attr.colspan]="9">No lines yet. Click <b>Add line</b> or select a package to start.</td>
+            <td class="dt-empty" [attr.colspan]="10">No lines yet. Click <b>Add line</b> or select a package to start.</td>
           </tr>
 
           <ng-container *ngFor="let l of lines; let i = index">
@@ -161,6 +157,7 @@
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.qty"
                   (ngModelChange)="onSetQtyChange(l)" min="0" step="0.0001" placeholder="0" />
               </td>
+              <td class="qf-c qf-uom">-</td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"
                   (ngModelChange)="onSetPriceChange(l)" min="0" step="0.01" placeholder="0.00" />
@@ -190,12 +187,22 @@
                   [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
                   [title]="l.isFromSet ? 'Set at package level' : ''" />
               </td>
-              <td class="qf-uom">{{ getUomName(l.uomId) || (l.uomName || '-') }}</td>
+              <td class="qf-uom">
+                <erp-dropdown *ngIf="!l.isFromSet && lineUomOptions(l).length > 1" [(ngModel)]="l.uomId"
+                  [items]="lineUomOptions(l)" bindLabel="name" bindValue="id"
+                  [menuMinWidth]="120"
+                  (ngModelChange)="onLineUomChange(i)"></erp-dropdown>
+                <span *ngIf="l.isFromSet || lineUomOptions(l).length <= 1">{{ getUomName(l.uomId) || (l.uomName || '-') }}</span>
+              </td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.qty"
                   (ngModelChange)="onLineChanged(i)" min="0" step="0.0001"
                   [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
                   [title]="l.isFromSet ? 'Set at package level' : ''" />
+              </td>
+              <td class="qf-c qf-uom" [title]="(l.baseQty || 0) + ' ' + (getUomName(l.baseUomId) || '')">
+                {{ (l.baseQty || 0) | number:'1.0-4' }}
+                <small class="qf-muted" *ngIf="l.baseUomId">{{ getUomName(l.baseUomId) }}</small>
               </td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"
@@ -308,7 +315,11 @@
         <!-- UOM -->
         <div class="mf-group qf-mCol3">
           <label class="mf-label">UOM</label>
-          <input class="mf-input" [value]="getUomName(modal.uomId)" placeholder="UOM" readonly />
+          <erp-dropdown *ngIf="modalUomOptions().length > 1" [(ngModel)]="modal.uomId" name="modalUom"
+            [items]="modalUomOptions()" bindLabel="name" bindValue="id"
+            (ngModelChange)="onModalUomChange()"></erp-dropdown>
+          <input *ngIf="modalUomOptions().length <= 1" class="mf-input" [value]="getUomName(modal.uomId)" placeholder="UOM" readonly />
+          <small class="qf-muted" *ngIf="modal.itemId">Base Qty: {{ modalBaseQty | number:'1.0-4' }} {{ getUomName(modal.baseUomId) }}</small>
         </div>
 
         <!-- Unit Price -->
