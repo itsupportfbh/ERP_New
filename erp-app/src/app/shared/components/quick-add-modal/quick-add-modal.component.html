@@ -1,0 +1,43 @@
+<div class="dt-modal-overlay" *ngIf="visible" (click)="close()">
+  <div class="dt-modal" style="width:420px" (click)="$event.stopPropagation()">
+    <div class="dt-modal-title">{{ title }}</div>
+
+    <div class="form-row">
+      <erp-input [label]="nameLabel" [required]="true" [(ngModel)]="name"></erp-input>
+    </div>
+
+    <div class="form-row block-gap" *ngIf="needsLocation">
+      <erp-dropdown label="Location" [required]="true" [options]="locationOptions"
+        [(ngModel)]="locationId"></erp-dropdown>
+    </div>
+
+    <div class="form-row block-gap" *ngIf="needsCategoryType">
+      <erp-dropdown label="Category Type" [required]="true" [options]="categoryTypeOptions"
+        [(ngModel)]="categoryType"></erp-dropdown>
+    </div>
+
+    <ng-container *ngIf="needsGeo">
+      <div class="form-row block-gap">
+        <erp-dropdown label="Country" [required]="true" [options]="countryOptions"
+          [(ngModel)]="geoCountryId" (ngModelChange)="onGeoCountry()"></erp-dropdown>
+      </div>
+      <div class="form-row block-gap">
+        <erp-dropdown label="State" [required]="true" [options]="stateOptions"
+          [(ngModel)]="geoStateId" (ngModelChange)="onGeoState()"></erp-dropdown>
+      </div>
+      <div class="form-row block-gap">
+        <erp-dropdown label="City" [required]="true" [options]="cityOptions"
+          [(ngModel)]="geoCityId"></erp-dropdown>
+      </div>
+    </ng-container>
+
+    <div class="qa-error" *ngIf="error">{{ error }}</div>
+
+    <div class="mf-actions">
+      <button class="btn btn-outline btn-sm" type="button" (click)="close()">Cancel</button>
+      <button class="btn btn-primary btn-sm" type="button" [disabled]="saving" (click)="save()">
+        {{ saving ? 'Saving…' : 'Add & Select' }}
+      </button>
+    </div>
+  </div>
+</div>

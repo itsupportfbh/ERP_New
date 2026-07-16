@@ -193,6 +193,8 @@ export class MasterService {
 
   // STATES
   getStates(): Observable<any> { return this.http.get(`${this.api}/State/getAllState`); }
+  getStatesByCountry(countryId: number): Observable<any> { return this.http.get(`${this.api}/City/GetStateWithCountryId/${countryId}`); }
+  getCitiesByState(stateId: number): Observable<any> { return this.http.get(`${this.api}/City/GetCityWithStateId/${stateId}`); }
   createState(d: any): Observable<any> { return this.http.post(`${this.api}/State/CreateState`, this.withAudit(d)); }
   updateState(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/State/updateState/${id}`, this.withAudit({ ...d, id })); }
   deleteState(id: number): Observable<any> { return this.http.delete(`${this.api}/State/deleteState/${id}`); }

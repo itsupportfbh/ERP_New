@@ -8,6 +8,7 @@ import { ReorderPlanningService } from '../stock-reorder-planning.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { ItemsService } from 'app/main/master/items/items.service';
 import { LocationService } from 'app/main/master/location/location.service';
+import { QuickAddType, QuickAddResult } from 'app/shared/components/quick-add-modal/quick-add-modal.component';
 
 const METHOD = { MinMax: 1, ROP: 2, MRP: 3 } as const;
 type MethodId = typeof METHOD[keyof typeof METHOD];
@@ -118,6 +119,13 @@ export class StockReorderPlanningCreateComponent implements OnInit {
 
   userId: number | null = null;
   userName: string | null = null;
+
+  // Inline quick-add ("+ Add new")
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+  private qaRow: any = null;
 
   constructor(
     private reorderPlanningService: ReorderPlanningService,
@@ -358,6 +366,26 @@ export class StockReorderPlanningCreateComponent implements OnInit {
 
     this.allRows = [...this.allRows, newRow];
     this.rows = [...this.allRows];
+  }
+
+  // Inline quick-add ("+ Add new") handlers
+  openQa(type: QuickAddType, target: string, text: string, row: any = null): void {
+    this.qaType = type; this.qaTarget = target; this.qaRow = row;
+    this.qaName = (text || '').trim(); this.qaVisible = true;
+  }
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'warehouse':
+        this.warehouses = [...this.warehouses, { id: e.id, name: e.label }];
+        this.warehouseTypeId = e.id;
+        break;
+      case 'location':
+        this.locationList = [...this.locationList, { name: e.label }];
+        if (this.qaRow) this.qaRow.location = e.label;
+        break;
+    }
+    this.qaVisible = false;
   }
 
   onLocationChange(_r: ReorderRow) {}

@@ -12,6 +12,7 @@ import { ItemMasterService } from '../../item-master/item-master.service';
 import { BinService } from '../../../master/bin/bin.service';
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
+import { QuickAddType, QuickAddResult } from 'app/shared/components/quick-add-modal/quick-add-modal.component';
 
 interface StockTakeLine {
   id: number;
@@ -73,6 +74,12 @@ export class StockTakeComponent implements OnInit {
   reviewRows: StockTakeLine[] = [];
 
   showStockReview = false;
+
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+
   selectAllReview = false;
   strategyCheck = false;
   stockTakeId: number = 0;
@@ -149,6 +156,24 @@ export class StockTakeComponent implements OnInit {
         this.updateSelectAllFromRows();
       });
     });
+  }
+
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = text || '';
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'warehouse':
+        this.warehouseTypes = [...this.warehouseTypes, { name: e.label, id: e.id }];
+        this.warehouseTypeId = e.id;
+        break;
+    }
+    this.qaVisible = false;
   }
 
   onSupplierChanged(v: number | null): void {

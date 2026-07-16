@@ -83,14 +83,16 @@
           [required]="true"
           [options]="departmentOptions"
           (ngModelChange)="onDepartmentChanged($event)"
-          [(ngModel)]="account.departmentId">
+          [(ngModel)]="account.departmentId"
+          [allowAdd]="true" addTypeLabel="Department" (addNew)="openQa('department','department',$event)">
         </erp-dropdown>
         <erp-dropdown
           label="Location"
           placeholder="Select location"
           [required]="true"
           [options]="locationOptions"
-          [(ngModel)]="account.locationId">
+          [(ngModel)]="account.locationId"
+          [allowAdd]="true" addTypeLabel="Location" (addNew)="openQa('location','location',$event)">
         </erp-dropdown>
         <erp-multiselect
           label="Approval Levels (Roles)"
@@ -303,4 +305,7 @@
     </div>
   </ng-container>
 
+  <!-- Inline quick-add for Department / Location -->
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 </div>

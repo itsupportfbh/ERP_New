@@ -149,6 +149,8 @@
               <td class="uom-col">
                 <erp-dropdown [options]="uomOptions" [(ngModel)]="item.uomId"
                   placeholder="UOM"
+                  [allowAdd]="true" addTypeLabel="UOM"
+                  (addNew)="openQa('uom','uom',$event,item)"
                   (ngModelChange)="onUomSelect(item)"></erp-dropdown>
               </td>
               <td class="remarks-col">
@@ -171,4 +173,8 @@
     </div>
 
   </ng-container>
+
+  <!-- Inline quick-add ("+ Add new") -->
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 </div>

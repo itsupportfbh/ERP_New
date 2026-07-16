@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { BusinessPartnersService, UserPayload } from '../business-partners/business-partners.service';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.component';
+import { QuickAddType, QuickAddResult } from '../../shared/components/quick-add-modal/quick-add-modal.component';
 
 export type PermFlag = 'V' | 'C' | 'E' | 'D' | 'S' | 'A' | 'R' | 'N' | 'X' | 'P' | 'M';
 
@@ -220,6 +221,12 @@ export class UserAccessComponent implements OnInit {
 
   departmentOptions:    DropdownOption[] = [];
   locationOptions:      DropdownOption[] = [];
+
+  // ── Inline quick-add for the Department / Location dropdowns ──
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
   approvalLevelOptions: DropdownOption[] = [];
 
   // ── Step 2 ──────────────────────────────────────
@@ -330,6 +337,29 @@ export class UserAccessComponent implements OnInit {
     this.modules = [];
     this.activeModuleId = '';
     this.permRows = [];
+  }
+
+  /** Opens the generic quick-add popup for the Department / Location dropdowns. */
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    const opt = { label: e.label, value: e.id };
+    switch (this.qaTarget) {
+      case 'department':
+        this.departmentOptions = [...this.departmentOptions, opt];
+        this.account.departmentId = e.id;
+        this.onDepartmentChanged(e.id); break;
+      case 'location':
+        this.locationOptions = [...this.locationOptions, opt];
+        this.account.locationId = e.id; break;
+    }
+    this.qaVisible = false;
   }
 
   private validateStep1(): boolean {

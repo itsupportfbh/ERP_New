@@ -4,6 +4,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { DropdownOption } from '../../../shared/components/dropdown/dropdown.component';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import {
   BusinessPartnersService,
   CustomerPayload,
@@ -104,6 +105,14 @@ export class PartnerFormComponent implements OnInit {
   showQuickCountry = false;
   quickCountrySaving = false;
   quickCountry = { name: '', taxName: '', gstPct: null as number | null, currencySymbol: '' };
+  // Which form the quick-add country should select into once created.
+  private quickCountryTarget: 'customer' | 'supplier' = 'customer';
+
+  // ── Generic inline quick-add for the other master dropdowns ──
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -209,8 +218,10 @@ export class PartnerFormComponent implements OnInit {
     });
   }
 
-  /** Opens the inline quick-add popup, pre-filling the name the user typed. */
-  openQuickCountry(typedText: string): void {
+  /** Opens the inline quick-add popup, pre-filling the name the user typed.
+   *  `target` selects which form (customer / supplier) receives the new country. */
+  openQuickCountry(typedText: string, target: 'customer' | 'supplier' = 'customer'): void {
+    this.quickCountryTarget = target;
     this.quickCountry = { name: (typedText || '').trim(), taxName: '', gstPct: null, currencySymbol: '' };
     this.showQuickCountry = true;
   }
@@ -248,7 +259,8 @@ export class PartnerFormComponent implements OnInit {
         // Add to the dropdown and select it — no page navigation needed.
         if (newId) {
           this.countryOptions = [...this.countryOptions, { label: name, value: newId }];
-          this.customer.countryId = newId;
+          if (this.quickCountryTarget === 'supplier') this.supplier.countryId = newId;
+          else this.customer.countryId = newId;
         } else {
           // Fallback: reload the list so the new country appears.
           this.partners.getCountries().pipe(catchError(() => of([]))).subscribe(list => {
@@ -262,6 +274,45 @@ export class PartnerFormComponent implements OnInit {
         await this.showError('Add Failed', 'Unable to add country.');
       }
     });
+  }
+
+  /** Opens the generic quick-add popup for a master dropdown. `target` says which
+   *  options list + model field to update once the master is created. */
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    const opt = { label: e.label, value: e.id };
+    switch (this.qaTarget) {
+      case 'customerGroup':
+        this.customerGroupOptions = [...this.customerGroupOptions, opt];
+        this.customer.customerGroupId = e.id; break;
+      case 'customerPaymentTerm':
+        this.paymentTermOptions = [...this.paymentTermOptions, opt];
+        this.customer.paymentTermId = e.id; break;
+      case 'supplierPaymentTerm':
+        this.paymentTermOptions = [...this.paymentTermOptions, opt];
+        this.supplier.termsId = e.id; break;
+      case 'supplierIncoterm':
+        this.incotermOptions = [...this.incotermOptions, opt];
+        this.supplier.incotermsId = e.id; break;
+      case 'supplierCurrency':
+        this.currencyOptions = [...this.currencyOptions, opt];
+        this.supplier.currencyId = e.id;
+        this.onSupplierCurrencyChange(e.id); break;
+      case 'department':
+        this.departmentOptions = [...this.departmentOptions, opt];
+        this.user.departmentId = e.id; break;
+      case 'location':
+        this.locationOptions = [...this.locationOptions, opt];
+        this.user.locationId = e.id; break;
+    }
+    this.qaVisible = false;
   }
 
   async nextCustomerStep(): Promise<void> {

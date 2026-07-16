@@ -69,7 +69,8 @@
         <erp-dropdown label="Supplier *" [required]="true" [options]="supplierOptions"
           [(ngModel)]="supplierId" (ngModelChange)="onSupplierChange()" placeholder="Select supplier"></erp-dropdown>
         <erp-dropdown label="Payment Terms" [options]="paymentTermOptions"
-          [(ngModel)]="paymentTermId" placeholder="Select payment terms"></erp-dropdown>
+          [(ngModel)]="paymentTermId" placeholder="Select payment terms"
+          [allowAdd]="true" addTypeLabel="Payment Term" (addNew)="openQa('paymentTerms','paymentTerms',$event)"></erp-dropdown>
         <erp-dropdown label="Currency" [options]="currencyOptions"
           [(ngModel)]="currencyId" (ngModelChange)="onCurrencyChange()" placeholder="Select currency"></erp-dropdown>
       </div>
@@ -79,7 +80,8 @@
           [options]="incotermOptions"
           [(ngModel)]="incotermsId"
           placeholder="Select incoterms"
-          [disabled]="!isOverseas">
+          [disabled]="!isOverseas"
+          [allowAdd]="true" addTypeLabel="Incoterm" (addNew)="openQa('incoterms','incoterms',$event)">
         </erp-dropdown>
         <erp-input label="PO Date" type="date" [(ngModel)]="poDate"></erp-input>
         <erp-input label="Delivery Date *" type="date" [required]="true" [(ngModel)]="deliveryDate"></erp-input>
@@ -98,7 +100,8 @@
             [(ngModel)]="locationId"
             (ngModelChange)="onLocationChange()"
             placeholder="Select outlet"
-            [disabled]="lockHeaderByPR">
+            [disabled]="lockHeaderByPR"
+            [allowAdd]="true" addTypeLabel="Location/Outlet" (addNew)="openQa('location','location',$event)">
           </erp-dropdown>
           <span class="lock-badge" *ngIf="lockHeaderByPR" title="Locked — outlet was set from PR lines">&#128274; From PR</span>
         </div>
@@ -380,6 +383,8 @@
 
     </div>
   </ng-container>
+
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName" (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 
 </div>
 

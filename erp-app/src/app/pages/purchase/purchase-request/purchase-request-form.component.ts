@@ -1,6 +1,7 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import Swal from 'sweetalert2';
 
 interface PRLine {
@@ -60,6 +61,13 @@ export class PurchaseRequestFormComponent implements OnInit {
   locationOptions: any[] = [];
 
   loginUserId = Number(localStorage.getItem('id')) || 0;
+
+  // ── Inline quick-add ("+ Add new") state ──────────────────
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+  private qaRow: any = null;
 
   // ── Source tracking (auto-PR from SO / Recipe) ────────────
   sourceId: number | null = null;
@@ -331,6 +339,31 @@ export class PurchaseRequestFormComponent implements OnInit {
   }
 
   removeLine(i: number): void { this.prLines.splice(i, 1); }
+
+  // ── Inline quick-add ("+ Add new") ────────────────────────
+  openQa(type: QuickAddType, target: string, text: string, row: any = null): void {
+    this.qaType = type; this.qaTarget = target; this.qaRow = row;
+    this.qaName = (text || '').trim(); this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'uom':
+        this.uomOptions = [...this.uomOptions, { label: e.label, value: e.id }];
+        this.modalLine.uomId = e.id;
+        this.modalLine.uom = e.label;
+        this.modalLine.uomSearch = e.label;
+        break;
+      case 'location':
+        this.locationOptions = [...this.locationOptions, { label: e.label, value: e.id }];
+        this.modalLine.locationId = e.id;
+        this.modalLine.location = e.label;
+        this.modalLine.locationSearch = e.label;
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   onDeptChange(): void {
     const opt = this.departmentOptions.find(o => o.value === this.departmentId);

@@ -110,6 +110,8 @@
         <erp-dropdown [(ngModel)]="header.paymentTermsId" name="paymentTermsId"
           [items]="paymentTermsSrv" bindLabel="name" bindValue="id"
           placeholder="Search payment terms..."
+          [allowAdd]="true" addTypeLabel="Payment Term"
+          (addNew)="openQa('paymentTerms','paymentTerms',$event)"
           (ngModelChange)="onPaymentTermsChange($event)">
         </erp-dropdown>
       </div>
@@ -353,6 +355,10 @@
     </div>
   </div>
 </div>
+
+<!-- ===== Inline quick-add modal (create missing masters without leaving the form) ===== -->
+<erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+  (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 
 <!-- ===== Add Line Modal ===== -->
 <div *ngIf="showModal" class="dt-modal-overlay" (click)="closeModal()">

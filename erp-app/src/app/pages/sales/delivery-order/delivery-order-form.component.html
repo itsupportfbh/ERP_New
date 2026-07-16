@@ -69,6 +69,7 @@
         <erp-dropdown [(ngModel)]="driverId" name="driverId"
           [items]="driverOptions" bindLabel="name" bindValue="id"
           placeholder="Select Driver"
+          [allowAdd]="true" addTypeLabel="Driver" (addNew)="openQa('driver','driver',$event)"
           (ngModelChange)="onDriverChange()"></erp-dropdown>
       </div>
       <div class="mf-group" *ngIf="!isSelfMode">
@@ -82,7 +83,8 @@
         <label class="mf-label">Vehicle</label>
         <erp-dropdown [(ngModel)]="vehicleId" name="vehicleId"
           [items]="vehicleOptions" bindLabel="label" bindValue="id"
-          placeholder="Select Vehicle"></erp-dropdown>
+          placeholder="Select Vehicle"
+          [allowAdd]="true" addTypeLabel="Vehicle" (addNew)="openQa('vehicle','vehicle',$event)"></erp-dropdown>
       </div>
       <div class="mf-group" *ngIf="!isSelfMode">
         <label class="mf-label">Delivery Date</label>
@@ -236,3 +238,7 @@
     </div>
   </div>
 </div>
+
+<!-- Reusable inline quick-add modal -->
+<erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+  (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>

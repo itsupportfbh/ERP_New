@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import { environment } from '../../../../environments/environment';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import Swal from 'sweetalert2';
 
 interface DoLine {
@@ -87,6 +88,33 @@ export class DeliveryOrderFormComponent implements OnInit {
   private ctx: CanvasRenderingContext2D | null = null;
   private drawing = false;
   private hasInk = false;
+
+  // Inline quick-add ("+ Add new") state
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type; this.qaTarget = target;
+    this.qaName = (text || '').trim(); this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'driver':
+        this.driverOptions = [...this.driverOptions, { id: e.id, name: e.label, mobile: '' }];
+        this.driverId = e.id;
+        this.onDriverChange();
+        break;
+      case 'vehicle':
+        this.vehicleOptions = [...this.vehicleOptions, { id: e.id, label: e.label }];
+        this.vehicleId = e.id;
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   loginUserId = Number(localStorage.getItem('id')) || null;
 

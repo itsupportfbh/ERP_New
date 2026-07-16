@@ -150,12 +150,16 @@
               <td class="col-wh">
                 <erp-dropdown [options]="warehouseOptions" [(ngModel)]="line.warehouseId"
                   (ngModelChange)="onWarehouseChange(line)"
-                  placeholder="Select" [disabled]="line.isPosted"></erp-dropdown>
+                  placeholder="Select" [disabled]="line.isPosted"
+                  [allowAdd]="true" addTypeLabel="Warehouse"
+                  (addNew)="openQa('warehouse','warehouse',$event, line)"></erp-dropdown>
               </td>
               <!-- Bin -->
               <td class="col-bin">
                 <erp-dropdown [options]="getBinOptions(line.warehouseId)" [(ngModel)]="line.binId"
-                  placeholder="Select bin" [disabled]="line.isPosted"></erp-dropdown>
+                  placeholder="Select bin" [disabled]="line.isPosted"
+                  [allowAdd]="true" addTypeLabel="Bin"
+                  (addNew)="openQa('bin','bin',$event, line)"></erp-dropdown>
               </td>
               <!-- Batch / Serial -->
               <td class="col-batch">
@@ -261,7 +265,9 @@
               <td class="col-total num-cell">{{ lineTotal(line) | money }}</td>
               <!-- Flag Issue -->
               <td class="col-flag">
-                <erp-dropdown [options]="flagIssueOptions" [(ngModel)]="line.flagIssueId" placeholder="None"></erp-dropdown>
+                <erp-dropdown [options]="flagIssueOptions" [(ngModel)]="line.flagIssueId" placeholder="None"
+                  [allowAdd]="true" addTypeLabel="Flag Issue"
+                  (addNew)="openQa('flagIssue','flagIssue',$event, line)"></erp-dropdown>
               </td>
               <!-- Remarks -->
               <td class="col-remarks">
@@ -309,4 +315,8 @@
     <!-- ═══ END EDIT FORM ═══════════════════════════════════ -->
 
   </ng-container>
+
+  <!-- Inline quick-add ("+ Add new") modal — shared across all rows -->
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 </div>

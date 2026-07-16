@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import Swal from 'sweetalert2';
 
 type QualityCheck = 'Pass' | 'Fail' | 'NotVerify' | '';
@@ -78,6 +79,45 @@ export class GrnFormComponent implements OnInit {
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+
+  // ── Inline quick-add ("+ Add new") state ──
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+  private qaRow: any = null;
+
+  openQa(type: QuickAddType, target: string, text: string, row: any = null): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaRow = row;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'warehouse':
+        this.warehouseOptions = [...this.warehouseOptions, { label: e.label, value: e.id }];
+        if (this.qaRow) this.qaRow.warehouseId = e.id;
+        break;
+      case 'bin': {
+        const wid = this.qaRow?.warehouseId;
+        if (wid != null) {
+          const cur = this.binOptions[wid] ?? [];
+          this.binOptions[wid] = [...cur, { label: e.label, value: e.id }];
+        }
+        if (this.qaRow) this.qaRow.binId = e.id;
+        break;
+      }
+      case 'flagIssue':
+        this.flagIssueOptions = [...this.flagIssueOptions, { label: e.label, value: e.id }];
+        if (this.qaRow) this.qaRow.flagIssueId = e.id;
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   // ── Summary view table ──
   summaryColumns: TableColumn[] = [

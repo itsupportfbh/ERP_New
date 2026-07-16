@@ -202,13 +202,15 @@
         <div class="form-row cols-2" style="gap:8px;margin:0;">
           <erp-input label="Qty *" type="number" [(ngModel)]="modalLine.qty" placeholder="0"></erp-input>
           <erp-dropdown label="UOM" [options]="uomOptions" [(ngModel)]="modalLine.uomId"
-            placeholder="UOM" (ngModelChange)="onModalUomChange()"></erp-dropdown>
+            placeholder="UOM" (ngModelChange)="onModalUomChange()"
+            [allowAdd]="true" addTypeLabel="UOM" (addNew)="openQa('uom','uom',$event)"></erp-dropdown>
         </div>
       </div>
 
       <div class="form-row cols-1 block-gap">
         <erp-dropdown label="Outlet *" [options]="locationOptions" [(ngModel)]="modalLine.locationId"
-          placeholder="Select outlet…" (ngModelChange)="onModalLocationChange()"></erp-dropdown>
+          placeholder="Select outlet…" (ngModelChange)="onModalLocationChange()"
+          [allowAdd]="true" addTypeLabel="Location/Outlet" (addNew)="openQa('location','location',$event)"></erp-dropdown>
       </div>
 
       <div class="form-row cols-1 block-gap">
@@ -225,3 +227,7 @@
     </div>
   </div>
 </div>
+
+<!-- ── Inline quick-add modal (shared) ─────────────────── -->
+<erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+  (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
