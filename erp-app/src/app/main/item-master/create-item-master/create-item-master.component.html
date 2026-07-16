@@ -93,6 +93,11 @@
           <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">e.g. CTN-12 Tins x 1L → L = 12</small>
         </div>
         <div>
+          <label class="fc-label">Price</label>
+          <input class="fc-input" type="number" [(ngModel)]="item.price" name="price" min="0" step="0.01" placeholder="0.00" />
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Default selling price — pre-fills quotation &amp; sales order lines</small>
+        </div>
+        <div>
           <label class="fc-label">Specifications</label>
           <input class="fc-input" type="text" [(ngModel)]="item.specs" name="specs" placeholder="Add specs or notes..." />
         </div>

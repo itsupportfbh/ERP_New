@@ -19,6 +19,10 @@ type SimpleItem = {
   itemName: string;
   itemCode?: string;
   uomId?: number | null;
+  price?: number | null;
+  baseUomId?: number | null;
+  uomFactor?: number | null;
+  baseUomName?: string | null;
 };
 
 type Country = { id: number; countryName: string; gstPercentage: number };
@@ -40,6 +44,12 @@ type UiLine = {
   itemName?: string;
   uomId: number | null;
   uomName?: string | null;
+  // UOM conversion (from item master): selling UOM, base UOM and factor (base units per 1 selling UOM)
+  sellUomId?: number | null;
+  baseUomId?: number | null;
+  uomFactor?: number | null;
+  uomIdPrev?: number | null;   // last selected UOM, used to convert on change
+  baseQty?: number | null;     // qty expressed in base UOM (for stock / DO)
   qty: number | null;
   unitPrice: number | null;
   discountPct: number | null;
@@ -180,6 +190,11 @@ export class QuotationFormComponent implements OnInit {
     itemSearch: '',
     qty: null as number | null,
     uomId: null as number | null,
+    sellUomId: null as number | null,
+    baseUomId: null as number | null,
+    uomFactor: 1 as number | null,
+    uomIdPrev: null as number | null,
+    baseQty: null as number | null,
     unitPrice: null as number | null,
     discountPct: 0 as number | null,
     taxMode: 'Standard-Rated' as LineTaxMode,
@@ -403,7 +418,11 @@ export class QuotationFormComponent implements OnInit {
         id: Number(item.id ?? item.itemId ?? 0),
         itemName: item.itemName ?? item.name ?? '',
         itemCode: item.itemCode ?? '',
-        uomId: Number(item.uomId ?? item.UomId ?? item.baseUomId ?? 0) || null
+        uomId: Number(item.uomId ?? item.UomId ?? item.baseUomId ?? 0) || null,
+        price: Number(item.price ?? item.Price ?? 0) || 0,
+        baseUomId: Number(item.baseUomId ?? item.BaseUomId ?? 0) || null,
+        uomFactor: Number(item.uomFactor ?? item.UomFactor ?? 1) || 1,
+        baseUomName: item.baseUomName ?? item.BaseUomName ?? null
       })) as SimpleItem[];
     });
 
@@ -650,6 +669,7 @@ export class QuotationFormComponent implements OnInit {
             isConsumable: false,
             allowManualFulfillment: false
           };
+          this.attachUomConversion(ui);
           this.computeLine(ui);
           rawLines.push(ui);
         }
@@ -886,11 +906,14 @@ export class QuotationFormComponent implements OnInit {
     }
   }
 
+  // The Line Source dropdown was removed, so both input modes are always available:
+  // custom "Add Line" and the package selector. (lineSourceId is still sent in the payload,
+  // defaulting to 2/Bundle, purely for backend compatibility.)
   get canAddManual(): boolean {
-    return this.header.lineSourceId === 1 || this.header.lineSourceId === 2 || this.header.lineSourceId === 3;
+    return true;
   }
   get showPackages(): boolean {
-    return this.header.lineSourceId === 2 || this.header.lineSourceId === 3;
+    return true;
   }
 
   // ── Customer dd ──────────────────────────────────────
@@ -1116,7 +1139,11 @@ export class QuotationFormComponent implements OnInit {
         if (!rows.length) { this.loadedItemSetIds.delete(itemSetId); return; }
 
         this.lines = this.lines.filter(x => x.itemSetId !== itemSetId);
-        this.lines.push(this.makeSetHeader(itemSetId, dto?.setName ?? setName));
+        const setHeader = this.makeSetHeader(itemSetId, dto?.setName ?? setName);
+        // Auto-fill the package's default price onto the header (user can still edit it).
+        const setPrice = Number(dto?.price ?? dto?.Price ?? 0) || 0;
+        if (setPrice > 0) setHeader.unitPrice = setPrice;
+        this.lines.push(setHeader);
 
         const defaultTax: LineTaxMode = (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated';
 
@@ -1146,6 +1173,7 @@ export class QuotationFormComponent implements OnInit {
             isConsumable: false,
             allowManualFulfillment: false
           };
+          this.attachUomConversion(line);
           this.computeLine(line);
           this.lines.push(line);
         }
@@ -1180,7 +1208,106 @@ export class QuotationFormComponent implements OnInit {
 
   private isPackageChild(l: UiLine): boolean { return !!l.isFromSet && !l.isSetHeader; }
 
+  // ── UOM conversion (Selling UOM ↔ Base UOM) ──────────
+  private round4(n: number): number { return Math.round((Number(n) || 0) * 10000) / 10000; }
+
+  // Attach the item's UOM/BaseUOM/factor to a line so it can convert & show base qty.
+  private attachUomConversion(l: UiLine): void {
+    const it = this.itemsList.find(x => x.id === Number(l.itemId));
+    const sell = (it?.uomId ?? l.uomId ?? null) as number | null;
+    const base = (it?.baseUomId ?? sell) as number | null;
+    const factor = Number(it?.uomFactor ?? 1) || 1;
+    l.sellUomId = sell;
+    l.baseUomId = base;
+    l.uomFactor = factor;
+    if (l.uomId == null) l.uomId = sell;
+    l.uomIdPrev = l.uomId;
+    this.recomputeBaseQty(l);
+  }
+
+  // Base-unit quantity (for stock / DO): qty × factor when the line is in the selling UOM,
+  // or qty as-is when the line is already in the base UOM.
+  private recomputeBaseQty(l: UiLine): void {
+    const qty = l.qty == null ? 0 : +l.qty;
+    const factor = Number(l.uomFactor ?? 1) || 1;
+    const inBase = l.baseUomId != null && Number(l.uomId) === Number(l.baseUomId);
+    l.baseQty = this.round4(inBase ? qty : qty * factor);
+  }
+
+  // The two UOMs a line can be transacted in: the item's selling UOM and its base UOM.
+  lineUomOptions(l: UiLine): { id: number; name: string }[] {
+    const opts: { id: number; name: string }[] = [];
+    const add = (id: number | null | undefined) => {
+      if (id == null) return;
+      if (opts.some(o => o.id === Number(id))) return;
+      opts.push({ id: Number(id), name: this.getUomName(id) || String(id) });
+    };
+    add(l.sellUomId ?? l.uomId);
+    add(l.baseUomId);
+    add(l.uomId);
+    return opts;
+  }
+
+  // User switched a line's UOM → convert qty & unit price so the line total stays the same.
+  onLineUomChange(i: number): void {
+    const l = this.lines[i];
+    // Qty stays as entered; convert only the Unit Price so it is per the chosen UOM
+    // (e.g. 12 / CTN → 1 / KG when 1 CTN = 12 KG). Base Qty + totals recompute below.
+    if (!l.isFromSet) {
+      const factor = Number(l.uomFactor ?? 1) || 1;
+      const prev = l.uomIdPrev ?? null;
+      const next = l.uomId ?? null;
+      if (prev !== next && factor > 0 && l.baseUomId != null && l.sellUomId != null && Number(l.baseUomId) !== Number(l.sellUomId) && l.unitPrice != null) {
+        const toBase = Number(next) === Number(l.baseUomId) && Number(prev) === Number(l.sellUomId);
+        const toSell = Number(next) === Number(l.sellUomId) && Number(prev) === Number(l.baseUomId);
+        if (toBase) l.unitPrice = this.round4(+l.unitPrice / factor);
+        else if (toSell) l.unitPrice = this.round4(+l.unitPrice * factor);
+      }
+    }
+    l.uomIdPrev = l.uomId;
+    this.onLineChanged(i);
+  }
+
+  // Modal UOM options + convert on change (same rules as the grid line).
+  modalUomOptions(): { id: number; name: string }[] {
+    const opts: { id: number; name: string }[] = [];
+    const add = (id: number | null | undefined) => {
+      if (id == null) return;
+      if (opts.some(o => o.id === Number(id))) return;
+      opts.push({ id: Number(id), name: this.getUomName(id) || String(id) });
+    };
+    add(this.modal.sellUomId ?? this.modal.uomId);
+    add(this.modal.baseUomId);
+    add(this.modal.uomId);
+    return opts;
+  }
+
+  onModalUomChange(): void {
+    // Qty stays as entered; convert only the Unit Price so it is per the chosen UOM.
+    const factor = Number(this.modal.uomFactor ?? 1) || 1;
+    const prev = this.modal.uomIdPrev ?? null;
+    const next = this.modal.uomId ?? null;
+    if (prev !== next && factor > 0 && this.modal.baseUomId != null && this.modal.sellUomId != null && Number(this.modal.baseUomId) !== Number(this.modal.sellUomId) && this.modal.unitPrice != null) {
+      const toBase = Number(next) === Number(this.modal.baseUomId) && Number(prev) === Number(this.modal.sellUomId);
+      const toSell = Number(next) === Number(this.modal.sellUomId) && Number(prev) === Number(this.modal.baseUomId);
+      if (toBase) this.modal.unitPrice = this.round4(+this.modal.unitPrice / factor);
+      else if (toSell) this.modal.unitPrice = this.round4(+this.modal.unitPrice * factor);
+    }
+    this.modal.uomIdPrev = next;
+    this.previewLineTotals();
+  }
+
+  // Base qty for the modal preview.
+  get modalBaseQty(): number {
+    const qty = this.modal.qty == null ? 0 : +this.modal.qty;
+    const factor = Number(this.modal.uomFactor ?? 1) || 1;
+    const inBase = this.modal.baseUomId != null && Number(this.modal.uomId) === Number(this.modal.baseUomId);
+    return this.round4(inBase ? qty : qty * factor);
+  }
+
   private computeLine(l: UiLine): { base: number; discount: number } {
+    // keep base qty in sync whenever a line is recomputed
+    this.recomputeBaseQty(l);
     // Package child lines carry ONLY the qty; every money field is zero
     // (the package header holds price / discount / tax / totals).
     if (this.isPackageChild(l)) {
@@ -1317,7 +1444,9 @@ export class QuotationFormComponent implements OnInit {
     if (!this.canAddManual) return;
     this.modalPreview = null;
     this.modal = {
-      itemId: null, itemSearch: '', qty: null, uomId: null, unitPrice: null,
+      itemId: null, itemSearch: '', qty: null, uomId: null,
+      sellUomId: null, baseUomId: null, uomFactor: 1, uomIdPrev: null, baseQty: null,
+      unitPrice: null,
       discountPct: 0,
       taxMode: (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated',
       fulfillmentMode: null, allowManualFulfillment: false, description: '', dropdownOpen: false, filteredItems: []
@@ -1346,7 +1475,9 @@ export class QuotationFormComponent implements OnInit {
   selectModalItem(row: SimpleItem): void {
     this.modal.itemId = row.id;
     this.modal.itemSearch = row.itemName;
-    this.modal.uomId = (row.uomId ?? null) as any;
+    this.applyModalItemUom(row);
+    // Auto-fill the item's default price (user can still edit it).
+    this.modal.unitPrice = (row.price != null ? +row.price : null) as any;
     this.modal.dropdownOpen = false;
     this.loadModalItemFulfillment(row.id);
     this.previewLineTotals();
@@ -1354,9 +1485,22 @@ export class QuotationFormComponent implements OnInit {
 
   onModalItemSelect(id: number | null): void {
     const row = id ? this.itemsList.find(x => x.id === id) : null;
-    this.modal.uomId = row ? ((row.uomId ?? null) as any) : null;
+    this.applyModalItemUom(row ?? null);
+    // Auto-fill the item's default price (user can still edit it).
+    this.modal.unitPrice = (row && row.price != null ? +row.price : null) as any;
     this.loadModalItemFulfillment(id);
     this.previewLineTotals();
+  }
+
+  // Load the selected item's selling/base UOM + factor into the modal (defaults to selling UOM).
+  private applyModalItemUom(row: SimpleItem | null): void {
+    const sell = (row?.uomId ?? null) as number | null;
+    const base = (row?.baseUomId ?? sell) as number | null;
+    this.modal.sellUomId = sell;
+    this.modal.baseUomId = base;
+    this.modal.uomFactor = Number(row?.uomFactor ?? 1) || 1;
+    this.modal.uomId = sell;
+    this.modal.uomIdPrev = sell;
   }
 
   // Auto-set the modal's fulfillment from the selected item's flags (same as grid lines).
@@ -1411,6 +1555,7 @@ export class QuotationFormComponent implements OnInit {
       fulfillmentMode: this.modal.fulfillmentMode == null ? null : Number(this.modal.fulfillmentMode),
       isSellable: false, isConsumable: false, allowManualFulfillment: this.modal.allowManualFulfillment
     };
+    this.attachUomConversion(payload);
     this.computeLine(payload);
     this.lines.push(payload);
     this.computeTotals();
@@ -1506,6 +1651,8 @@ export class QuotationFormComponent implements OnInit {
           itemId: l.itemId,
           itemName: l.itemName ?? null,
           uomId: l.uomId ?? null,
+          baseUomId: l.baseUomId ?? null,
+          baseQty: l.baseQty ?? null,
           qty: +(l.qty ?? 0) || 0,
           unitPrice: +(l.unitPrice ?? 0) || 0,
           discountPct: +(l.discountPct ?? 0) || 0,

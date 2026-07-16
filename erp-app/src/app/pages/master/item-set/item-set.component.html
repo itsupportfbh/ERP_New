@@ -52,6 +52,11 @@
           </div>
         </div>
         <div class="mf-group">
+          <label class="mf-label">Price</label>
+          <input class="mf-input" type="number" [(ngModel)]="form.price" name="price" min="0" step="0.01" placeholder="0.00"/>
+          <div style="font-size:12px;color:#888;margin-top:4px">Default package price — pre-fills the package unit price on quotation &amp; sales order</div>
+        </div>
+        <div class="mf-group">
           <label class="mf-label">Sales Budget Line</label>
           <erp-dropdown name="salesBudgetLineId" [(ngModel)]="form.salesBudgetLineId"
             [items]="budgetLines" bindLabel="label" bindValue="id"
