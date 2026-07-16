@@ -63,8 +63,10 @@
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 2">
     <div class="section-label">Personal Info</div>
     <div class="form-row cols-3">
-      <erp-dropdown label="Customer Groups" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"></erp-dropdown>
-      <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="customer.paymentTermId"></erp-dropdown>
+      <erp-dropdown label="Customer Groups" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"
+        [allowAdd]="true" addTypeLabel="Customer Group" (addNew)="openQa('customerGroup','customerGroup',$event)"></erp-dropdown>
+      <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="customer.paymentTermId"
+        [allowAdd]="true" addTypeLabel="Payment Term" (addNew)="openQa('paymentTerms','customerPaymentTerm',$event)"></erp-dropdown>
       <erp-input label="Credit Amount" type="number" [(ngModel)]="customer.creditAmount"></erp-input>
     </div>
     <div class="wizard-inline-actions">
@@ -151,13 +153,17 @@
     <div class="section-label">Supplier Details</div>
     <div class="supplier-grid">
       <erp-input label="Supplier Name" [required]="true" [(ngModel)]="supplier.name"></erp-input>
-      <erp-dropdown label="Country" [options]="countryOptions" [(ngModel)]="supplier.countryId"></erp-dropdown>
+      <erp-dropdown label="Country" [options]="countryOptions" [(ngModel)]="supplier.countryId"
+        [allowAdd]="true" addTypeLabel="Country" (addNew)="openQuickCountry($event, 'supplier')"></erp-dropdown>
       <erp-dropdown label="Status" [options]="statusOptions" [(ngModel)]="supplier.statusId"></erp-dropdown>
       <erp-input label="Lead Time (days)" type="number" [(ngModel)]="supplier.leadTime"></erp-input>
 
-      <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="supplier.termsId"></erp-dropdown>
-      <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="supplier.currencyId" (ngModelChange)="onSupplierCurrencyChange($event)"></erp-dropdown>
-      <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="supplier.incotermsId"></erp-dropdown>
+      <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="supplier.termsId"
+        [allowAdd]="true" addTypeLabel="Payment Term" (addNew)="openQa('paymentTerms','supplierPaymentTerm',$event)"></erp-dropdown>
+      <erp-dropdown label="Currency" [options]="currencyOptions" [(ngModel)]="supplier.currencyId" (ngModelChange)="onSupplierCurrencyChange($event)"
+        [allowAdd]="true" addTypeLabel="Currency" (addNew)="openQa('currency','supplierCurrency',$event)"></erp-dropdown>
+      <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="supplier.incotermsId"
+        [allowAdd]="true" addTypeLabel="Incoterm" (addNew)="openQa('incoterms','supplierIncoterm',$event)"></erp-dropdown>
 
       <erp-dropdown label="Ledger Name / Account" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
       <erp-input label="Contact Name" [(ngModel)]="supplier.contact"></erp-input>
@@ -234,14 +240,16 @@
         placeholder="Select department"
         [required]="true"
         [options]="departmentOptions"
-        [(ngModel)]="user.departmentId">
+        [(ngModel)]="user.departmentId"
+        [allowAdd]="true" addTypeLabel="Department" (addNew)="openQa('department','department',$event)">
       </erp-dropdown>
       <erp-dropdown
         label="Location"
         placeholder="Select location"
         [required]="true"
         [options]="locationOptions"
-        [(ngModel)]="user.locationId">
+        [(ngModel)]="user.locationId"
+        [allowAdd]="true" addTypeLabel="Location" (addNew)="openQa('location','location',$event)">
       </erp-dropdown>
     </div>
   </div>
@@ -288,4 +296,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Generic inline quick-add for the other master dropdowns -->
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 </div>

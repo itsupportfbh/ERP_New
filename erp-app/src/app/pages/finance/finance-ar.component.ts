@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
+import { QuickAddType, QuickAddResult } from '../../shared/components/quick-add-modal/quick-add-modal.component';
 
 type ArTab = 'invoices' | 'receipts' | 'advances' | 'aging' | 'create-invoice';
 
@@ -107,6 +108,13 @@ export class FinanceArComponent implements OnInit {
   invoiceLines: Array<{ itemName: string; uom: string; qty: number; unitPrice: number; discountPct: number; taxCodeId: number | null; gstPct: number; lineAmount: number; taxAmount: number; description: string }> = [];
   taxCodes: Array<{ id: number; taxCode: string; taxName: string; label: string; taxRate: number }> = [];
   savingInvoice = false;
+
+  // Inline quick-add ("+ Add new")
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+  private qaRow: any = null;
 
   isPeriodLocked = false;
   periodName     = '';
@@ -460,6 +468,27 @@ export class FinanceArComponent implements OnInit {
       },
       error: () => { this.taxCodes = []; }
     });
+  }
+
+  // ── Inline Quick-Add ─────────────────────────────────────────────────────────
+
+  openQa(type: QuickAddType, target: string, text: string, row: any = null): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = text || '';
+    this.qaRow = row;
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'taxCode':
+        this.taxCodes = [...this.taxCodes, { id: e.id, taxCode: '', taxName: e.label, label: e.label, taxRate: 0 }];
+        if (this.qaRow) this.qaRow.taxCodeId = e.id;
+        break;
+    }
+    this.qaVisible = false;
   }
 
   resetInvoiceForm(): void {

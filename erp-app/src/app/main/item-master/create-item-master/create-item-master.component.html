@@ -54,14 +54,16 @@
           <label class="fc-label">Item Type *</label>
           <erp-dropdown name="itemType" [(ngModel)]="item.itemType"
             [items]="ItemTypeList" bindLabel="itemTypeName" bindValue="id"
-            placeholder="Select Item Type">
+            placeholder="Select Item Type"
+            [allowAdd]="true" addTypeLabel="Item Type" (addNew)="openQa('itemType','itemType',$event)">
           </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Category *</label>
           <erp-dropdown name="categoryId" [(ngModel)]="item.categoryId"
             [items]="CategoryList" bindLabel="catagoryName" bindValue="id"
-            placeholder="Select Category" (ngModelChange)="onCategoryChange(true)">
+            placeholder="Select Category" (ngModelChange)="onCategoryChange(true)"
+            [allowAdd]="true" addTypeLabel="Category" (addNew)="openQa('category','category',$event)">
           </erp-dropdown>
         </div>
         <div>
@@ -77,14 +79,16 @@
           <label class="fc-label">UOM *</label>
           <erp-dropdown name="uomId" [(ngModel)]="item.uomId"
             [items]="uomList" bindLabel="name" bindValue="id"
-            placeholder="Select UOM" (ngModelChange)="onBaseOrPurchaseUomChange()" required>
+            placeholder="Select UOM" (ngModelChange)="onBaseOrPurchaseUomChange()" required
+            [allowAdd]="true" addTypeLabel="UOM" (addNew)="openQa('uom','uomPurchase',$event)">
           </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Base UOM *</label>
           <erp-dropdown name="baseUomId" [(ngModel)]="item.baseUomId"
             [items]="uomList" bindLabel="name" bindValue="id"
-            placeholder="Select Base UOM" (ngModelChange)="onBaseOrPurchaseUomChange()" required>
+            placeholder="Select Base UOM" (ngModelChange)="onBaseOrPurchaseUomChange()" required
+            [allowAdd]="true" addTypeLabel="UOM" (addNew)="openQa('uom','uomBase',$event)">
           </erp-dropdown>
         </div>
         <div>
@@ -135,14 +139,16 @@
           <label class="fc-label">Costing Method</label>
           <erp-dropdown name="costingMethodId" [(ngModel)]="item.costingMethodId"
             [items]="costingMethodList" bindLabel="name" bindValue="id"
-            placeholder="Select costing" (ngModelChange)="onCostingSelectedId($event)">
+            placeholder="Select costing" (ngModelChange)="onCostingSelectedId($event)"
+            [allowAdd]="true" addTypeLabel="Costing Method" (addNew)="openQa('costingMethod','costingMethod',$event)">
           </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Recurring</label>
           <erp-dropdown name="taxCodeId" [(ngModel)]="item.taxCodeId"
             [items]="taxCodeList" bindLabel="recurringName" bindValue="id"
-            placeholder="Select Recurring" (ngModelChange)="onTaxSelectedId($event)">
+            placeholder="Select Recurring" (ngModelChange)="onTaxSelectedId($event)"
+            [allowAdd]="true" addTypeLabel="Tax Code" (addNew)="openQa('taxCode','taxCode',$event)">
           </erp-dropdown>
         </div>
       </div>
@@ -531,14 +537,16 @@
           <label class="fc-label">Warehouse</label>
           <erp-dropdown name="warehouseId" [(ngModel)]="whDraft.warehouseId"
             [items]="warehouseList" bindLabel="name" bindValue="id"
-            placeholder="Select warehouse" (ngModelChange)="getBinsForWarehouse($event)">
+            placeholder="Select warehouse" (ngModelChange)="getBinsForWarehouse($event)"
+            [allowAdd]="true" addTypeLabel="Warehouse" (addNew)="openQa('warehouse','warehouse',$event)">
           </erp-dropdown>
         </div>
         <div>
           <label class="fc-label">Bin / Location</label>
           <erp-dropdown name="binId" [(ngModel)]="whDraft.binId"
             [items]="binList" bindLabel="binName" bindValue="binID"
-            placeholder="Select bin" [disabled]="!whDraft.warehouseId">
+            placeholder="Select bin" [disabled]="!whDraft.warehouseId"
+            [allowAdd]="true" addTypeLabel="Bin" (addNew)="openQa('bin','bin',$event)">
           </erp-dropdown>
         </div>
       </div>
@@ -547,7 +555,8 @@
           <label class="fc-label">Frequency</label>
           <erp-dropdown name="strategyId" [(ngModel)]="whDraft.strategyId"
             [items]="strategyList" bindLabel="strategyName" bindValue="id"
-            placeholder="Select Frequency">
+            placeholder="Select Frequency"
+            [allowAdd]="true" addTypeLabel="Strategy" (addNew)="openQa('strategy','strategy',$event)">
           </erp-dropdown>
         </div>
       </div>
@@ -602,3 +611,12 @@
     </form>
   </div>
 </div>
+
+<!-- ===== Inline Quick-Add Modal (create a missing master without leaving the form) ===== -->
+<erp-quick-add-modal
+  [type]="qaType"
+  [visible]="qaVisible"
+  [prefillName]="qaName"
+  (created)="qaCreated($event)"
+  (closed)="qaVisible=false">
+</erp-quick-add-modal>

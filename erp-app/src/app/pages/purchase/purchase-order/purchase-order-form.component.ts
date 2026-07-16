@@ -5,6 +5,7 @@ import { DocumentNumberService } from '../../../core/services/document-number.se
 import { MasterService } from '../../../core/services/master.service';
 import { CalculatedTaxMode, TaxDecisionService } from '../../../core/services/tax-decision.service';
 import { PurchaseService } from '../purchase.service';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 
 interface POLine {
   prId: number | null;
@@ -70,6 +71,11 @@ export class PurchaseOrderFormComponent implements OnInit {
   gstPct = 0;
 
   lines: POLine[] = [];
+
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
 
   showModal = false;
   editingIndex: number | null = null;
@@ -543,6 +549,30 @@ export class PurchaseOrderFormComponent implements OnInit {
   onLocationChange(): void {
     const found = this.locationOptions.find(o => o.value === this.locationId);
     if (found?.raw?.contactNumber) this.contactNumber = found.raw.contactNumber;
+  }
+
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type; this.qaTarget = target;
+    this.qaName = (text || '').trim(); this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'paymentTerms':
+        this.paymentTermOptions = [...this.paymentTermOptions, { label: e.label, value: e.id }];
+        this.paymentTermId = e.id;
+        break;
+      case 'incoterms':
+        this.incotermOptions = [...this.incotermOptions, { label: e.label, value: e.id }];
+        this.incotermsId = e.id;
+        break;
+      case 'location':
+        this.locationOptions = [...this.locationOptions, { label: e.label, value: e.id }];
+        this.locationId = e.id;
+        break;
+    }
+    this.qaVisible = false;
   }
 
   private autoSetLocationByName(name: string): void {

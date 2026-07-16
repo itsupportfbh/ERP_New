@@ -570,6 +570,8 @@
                   <erp-dropdown [(ngModel)]="line.taxCodeId"
                     [items]="taxCodes" bindLabel="label" bindValue="id"
                     placeholder="— None —"
+                    [allowAdd]="true" addTypeLabel="Tax Code"
+                    (addNew)="openQa('taxCode','taxCode',$event, line)"
                     (ngModelChange)="onTaxCodeChange(line)"></erp-dropdown>
                 </td>
                 <td class="right inv-gst-pct">{{ line.gstPct | number:'1.1-2' }}%</td>
@@ -676,5 +678,9 @@
       </div>
     </div>
   </ng-container>
+
+  <!-- Inline quick-add modal (shared) -->
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 
 </div>

@@ -5,6 +5,7 @@ import { catchError, map } from 'rxjs/operators';
 import { RecipeService } from '../recipe.service';
 import { PeriodCloseService } from '../../../main/financial/period-close-fx/period-close-fx.service';
 import { DropdownOption } from '../../../shared/components/dropdown/dropdown.component';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -38,6 +39,12 @@ export class ProductionPlanningFormComponent implements OnInit {
   warehouseOptions: DropdownOption[] = [];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+
+  // Inline quick-add ("+ Add new")
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
 
   constructor(
     private svc: RecipeService,
@@ -404,6 +411,25 @@ export class ProductionPlanningFormComponent implements OnInit {
         Swal.fire('Error', this.error, 'error');
       }
     });
+  }
+
+  // ── Inline quick-add ("+ Add new") ───────────────────
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    switch (e.type) {
+      case 'warehouse':
+        this.warehouseOptions = [...this.warehouseOptions, { label: e.label, value: e.id }];
+        this.warehouseId = e.id;
+        this.onSelectionChange();
+        break;
+    }
+    this.qaVisible = false;
   }
 
   getLabel(options: DropdownOption[], value: any): string {

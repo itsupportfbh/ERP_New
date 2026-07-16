@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import { ItemMasterService } from '../../item-master/item-master.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { MaterialRequisitionService } from '../material-requisition.service';
+import { QuickAddType, QuickAddResult } from 'app/shared/components/quick-add-modal/quick-add-modal.component';
 
 type UomOption = {
   uomId: number;
@@ -81,6 +82,30 @@ export class MaterialRequisitionCreateComponent implements OnInit {
   isEdit = false;
   editId: number | null = null;
   userId: any;
+
+  // Inline quick-add ("+ Add new")
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'bin':
+        this.binList = [...this.binList, { id: e.id, binName: e.label }];
+        this.header.BinId = e.id;
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   constructor(
     private itemMasterService: ItemMasterService,

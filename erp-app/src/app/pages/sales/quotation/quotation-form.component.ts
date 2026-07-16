@@ -10,6 +10,7 @@ import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import Swal from 'sweetalert2';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 
 type LineTaxMode = 'Standard-Rated' | 'Zero-Rated' | 'Exempt';
 type LineSourceId = 1 | 2 | 3;
@@ -172,6 +173,12 @@ export class QuotationFormComponent implements OnInit {
   filteredItemSets: ItemSetHeaderRow[] = [];
   selectedItemSets: ItemSetHeaderRow[] = [];
   selectedPackageIds: number[] = [];
+
+  // ── Inline quick-add (create missing masters without leaving the form) ──
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
 
   // ── Lines ────────────────────────────────────────────
   lines: UiLine[] = [];
@@ -1087,6 +1094,31 @@ export class QuotationFormComponent implements OnInit {
     }
     this.header.remarks = `${this.header.remarks}\n${desc}`;
     this.lastAutoRemarks = desc;
+  }
+
+  // ── Inline quick-add ─────────────────────────────────
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'paymentTerms':
+        this.paymentTermsSrv = [
+          ...this.paymentTermsSrv,
+          { id: e.id, name: e.label, description: '' }
+        ];
+        this.header.paymentTermsId = e.id;
+        this.header.paymentTerms = e.label;
+        this.paymentTermsSearch = e.label;
+        this.onPaymentTermsChange(e.id);
+        break;
+    }
+    this.qaVisible = false;
   }
 
   // ── Item set multi ───────────────────────────────────

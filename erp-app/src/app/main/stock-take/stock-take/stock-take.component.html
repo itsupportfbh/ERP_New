@@ -20,7 +20,9 @@
           <label class="fc-label">Warehouse <span style="color:red">*</span></label>
           <erp-dropdown [(ngModel)]="warehouseTypeId" name="warehouseTypeId"
             [items]="warehouseTypes" bindLabel="name" bindValue="id"
-            placeholder="Select warehouse">
+            placeholder="Select warehouse"
+            [allowAdd]="true" addTypeLabel="Warehouse"
+            (addNew)="openQa('warehouse','warehouse',$event)">
           </erp-dropdown>
         </div>
         <div>
@@ -219,5 +221,8 @@
       </div>
     </ng-container>
   </div>
+
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 
 </div>

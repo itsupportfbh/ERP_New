@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 
 import { ItemMasterService } from '../item-master.service';
 import { UploadService } from 'app/shared/upload.service';
+import { QuickAddType, QuickAddResult } from 'app/shared/components/quick-add-modal/quick-add-modal.component';
 import { ChartofaccountService } from 'app/main/financial/chartofaccount/chartofaccount.service';
 import { UomService } from 'app/main/master/uom/uom.service';
 import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
@@ -312,6 +313,13 @@ export class CreateItemMasterComponent implements OnInit {
   { id: 2, name: 'Internal Use Item' },
   { id: 3, name: 'Sales & Internal Use' }
 ];
+
+  /* Inline quick-add (create a missing master without leaving the form) */
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+  private qaRow: any = null;
 
   @ViewChild('supplierSearchBox', { static: false }) supplierSearchBox!: ElementRef<HTMLElement>;
   @ViewChild('topOfWizard') topOfWizard!: ElementRef<HTMLDivElement>;
@@ -705,6 +713,58 @@ export class CreateItemMasterComponent implements OnInit {
 
   onTaxSelectedId(id: number | null) { this.item.taxCodeId = id; }
   onCostingSelectedId(id: number | null) { this.item.costingMethodId = id; }
+
+  /* -------------------- Inline quick-add -------------------- */
+  openQa(type: QuickAddType, target: string, text: string, row: any = null): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaRow = row;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'itemType':
+        this.ItemTypeList = [...(this.ItemTypeList || []), { itemTypeName: e.label, id: e.id }];
+        this.item.itemType = e.id;
+        break;
+      case 'category':
+        this.CategoryList = [...(this.CategoryList || []), { catagoryName: e.label, id: e.id }] as any;
+        this.item.categoryId = e.id;
+        break;
+      case 'uomPurchase':
+        this.uomList = [...(this.uomList || []), { name: e.label, id: e.id }];
+        this.item.uomId = e.id;
+        break;
+      case 'uomBase':
+        this.uomList = [...(this.uomList || []), { name: e.label, id: e.id }];
+        this.item.baseUomId = e.id;
+        break;
+      case 'costingMethod':
+        this.costingMethodList = [...(this.costingMethodList || []), { name: e.label, id: e.id }];
+        this.item.costingMethodId = e.id;
+        break;
+      case 'taxCode':
+        this.taxCodeList = [...(this.taxCodeList || []), { recurringName: e.label, id: e.id }] as any;
+        this.item.taxCodeId = e.id;
+        break;
+      case 'warehouse':
+        this.warehouseList = [...(this.warehouseList || []), { name: e.label, id: e.id }];
+        this.whDraft.warehouseId = e.id;
+        break;
+      case 'bin':
+        this.binList = [...(this.binList || []), { binName: e.label, binID: e.id }];
+        this.whDraft.binId = e.id;
+        break;
+      case 'strategy':
+        this.strategyList = [...(this.strategyList || []), { strategyName: e.label, id: e.id }];
+        this.whDraft.strategyId = e.id;
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   /* -------------------- Warehouse modal -------------------- */
   openWhModal(): void {

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PurchaseService } from '../purchase.service';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import Swal from 'sweetalert2';
 
 interface RfqSupplier {
@@ -56,6 +57,32 @@ export class RfqFormComponent implements OnInit {
     { label: 'WhatsApp',  value: 'WhatsApp' },
     { label: 'Both',      value: 'Both' }
   ];
+
+  // ── Inline quick-add ("+ Add new") state ──
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+  private qaRow: any = null;
+
+  openQa(type: QuickAddType, target: string, text: string, row: any = null): void {
+    this.qaType = type;
+    this.qaTarget = target;
+    this.qaRow = row;
+    this.qaName = (text || '').trim();
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'uom':
+        this.uomOptions = [...this.uomOptions, { label: e.label, value: e.id }];
+        if (this.qaRow) { this.qaRow.uomId = e.id; this.qaRow.uomName = e.label; }
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   constructor(
     private svc: PurchaseService,

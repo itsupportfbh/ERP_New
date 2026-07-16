@@ -35,6 +35,7 @@
     <div class="pp-field">
       <erp-dropdown label="Production Warehouse" [required]="true" [options]="warehouseOptions"
         [disabled]="isEdit" [(ngModel)]="warehouseId" (ngModelChange)="onSelectionChange()"
+        [allowAdd]="true" addTypeLabel="Warehouse" (addNew)="openQa('warehouse','warehouse',$event)"
         placeholder="Select warehouse"></erp-dropdown>
     </div>
     <div class="pp-kpi">
@@ -159,4 +160,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Inline quick-add ("+ Add new") -->
+  <erp-quick-add-modal [type]="qaType" [visible]="qaVisible" [prefillName]="qaName"
+    (created)="qaCreated($event)" (closed)="qaVisible=false"></erp-quick-add-modal>
 </div>

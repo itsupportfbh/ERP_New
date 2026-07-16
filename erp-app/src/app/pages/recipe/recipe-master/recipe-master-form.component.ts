@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RecipeService } from '../recipe.service';
+import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 import Swal from 'sweetalert2';
 
 interface RecipeLine {
@@ -68,6 +69,31 @@ export class RecipeMasterFormComponent implements OnInit {
   ];
 
   loginUserId = Number(localStorage.getItem('id')) || null;
+
+  // Inline quick-add (+ Add new) state
+  qaType: QuickAddType | null = null;
+  qaVisible = false;
+  qaName = '';
+  private qaTarget = '';
+
+  openQa(type: QuickAddType, target: string, text: string): void {
+    this.qaTarget = target;
+    this.qaType = type;
+    this.qaName = text || '';
+    this.qaVisible = true;
+  }
+
+  qaCreated(e: QuickAddResult): void {
+    if (!e?.id) { this.qaVisible = false; return; }
+    switch (this.qaTarget) {
+      case 'uom':
+        this.uomOptions = [...this.uomOptions, { label: e.label, value: e.id }];
+        this.lineModal.uomId = e.id;
+        this.lineModal.uom = e.label;
+        break;
+    }
+    this.qaVisible = false;
+  }
 
   constructor(
     private svc: RecipeService,
