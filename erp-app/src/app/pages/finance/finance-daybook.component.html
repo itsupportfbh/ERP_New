@@ -120,7 +120,7 @@
     </div>
 
     <div class="table-footer" *ngIf="!loading && filtered.length">
-      Showing {{ filtered.length }} voucher{{ filtered.length !== 1 ? 's' : '' }} &nbsp;·&nbsp; Debit and credit totals must match for the day.
+      Showing {{ runningRows.length }} voucher{{ runningRows.length !== 1 ? 's' : '' }} &nbsp;·&nbsp; One line per document.
     </div>
   </div>
 
