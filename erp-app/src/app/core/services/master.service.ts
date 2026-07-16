@@ -134,6 +134,18 @@ export class MasterService {
   updateDriver(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/Driver/updateDriverById/${id}`, this.withAudit({ ...d, id })); }
   deleteDriver(id: number): Observable<any> { return this.http.delete(`${this.api}/Driver/deleteDriverById/${id}`); }
 
+  // FIXED ASSET
+  getFixedAssets(): Observable<any> { return this.http.get(`${this.api}/FixedAsset/getAll`); }
+  getFixedAsset(id: number): Observable<any> { return this.http.get(`${this.api}/FixedAsset/get/${id}`); }
+  createFixedAsset(d: any): Observable<any> { return this.http.post(`${this.api}/FixedAsset/insert`, this.withAudit(d)); }
+  updateFixedAsset(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/FixedAsset/update`, this.withAudit({ ...d, id })); }
+  deleteFixedAsset(id: number): Observable<any> { return this.http.delete(`${this.api}/FixedAsset/delete/${id}`); }
+  postFixedAssetAcquisition(id: number, fundingAccountId: any): Observable<any> { return this.http.post(`${this.api}/FixedAsset/${id}/post-acquisition`, { fundingAccountId }); }
+  runFixedAssetDepreciation(asOfDate: any): Observable<any> { return this.http.post(`${this.api}/FixedAsset/run-depreciation`, { asOfDate }); }
+
+  // CHART OF ACCOUNTS (dropdown helper)
+  // getChartOfAccounts() is defined in the Chart Of Account section above.
+
   // EXCHANGE RATE
   getExchangeRates(): Observable<any> { return this.http.get(`${this.api}/ExchangeRate/GetAll`); }
   createExchangeRate(d: any): Observable<any> { return this.http.post(`${this.api}/ExchangeRate/Create`, this.withAudit(d)); }
