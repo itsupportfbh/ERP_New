@@ -114,6 +114,9 @@ const routes: Routes = [
   { path: 'login',            component: LoginComponent },
   { path: 'forgot-password',  component: ForgotPasswordComponent },
   { path: 'reset-password',   component: ResetPasswordComponent },
+  // Public token-gated page for the PO QR code: office staff scan it on a phone
+  // that is NOT logged in, so it must sit OUTSIDE the AuthGuard/PurchaseGuard tree.
+  { path: 'mobile-receive',   component: MobileReceivingComponent },
   { path: 'financial', redirectTo: '/app/financial/dashboard', pathMatch: 'full' },
   { path: 'financial/:page', redirectTo: '/app/financial/:page' },
   { path: 'financial/:page/:id', redirectTo: '/app/financial/:page/:id' },

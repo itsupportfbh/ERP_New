@@ -22,7 +22,7 @@
         </div>
       </div>
       <div class="list-card-actions">
-        <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="syncMobile()" [disabled]="isSyncing || !mrRows.length">
+        <button class="panel-toggle-btn" *ngIf="uiCanCreate" (click)="syncMobile()" [disabled]="isSyncing || !mrRows.length">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
             <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -31,7 +31,7 @@
           {{ isSyncing ? 'Syncing…' : 'Sync' }}
           <span class="badge-pill warn" *ngIf="mrRows.length">{{ mrRows.length }}</span>
         </button>
-        <button class="panel-toggle-btn danger-toggle" *ngIf="perm.canCreate(fnId)" (click)="clearQueue()" [disabled]="!mrRows.length">
+        <button class="panel-toggle-btn danger-toggle" *ngIf="uiCanCreate" (click)="clearQueue()" [disabled]="!mrRows.length">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
             <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -65,7 +65,7 @@
           <label class="mr-field-label">PO Number</label>
           <div class="mr-po-row">
             <input class="mr-input" [(ngModel)]="mrPo" (keydown.enter)="loadPo()" placeholder="PO-000123" />
-            <button class="panel-toggle-btn" *ngIf="perm.canView(fnId)" (click)="loadPo()">Load PO</button>
+            <button class="panel-toggle-btn" *ngIf="uiCanView" (click)="loadPo()">Load PO</button>
           </div>
         </div>
 
@@ -93,11 +93,11 @@
         </div>
 
         <div class="mr-action-btns">
-          <button class="list-add-btn" *ngIf="perm.canCreate(fnId)" (click)="addScan()">
+          <button class="list-add-btn" *ngIf="uiCanCreate" (click)="addScan()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
             Add
           </button>
-          <label class="toggle-chk" *ngIf="perm.canCreate(fnId)">
+          <label class="toggle-chk" *ngIf="uiCanCreate">
             <span class="toggle-box" [class.on]="mrOffline" (click)="toggleOffline()">
               <svg *ngIf="mrOffline" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="1.5,5 3.8,7.5 8.5,2"/>
@@ -136,7 +136,7 @@
               </td>
               <td class="num-cell">{{ r.qty | number:'1.0-4' }}</td>
               <td class="del-col">
-                <button class="btn-del" *ngIf="perm.canCreate(fnId)" (click)="removeScan(i)" title="Remove">
+                <button class="btn-del" *ngIf="uiCanCreate" (click)="removeScan(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                     <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
                   </svg>
@@ -180,7 +180,7 @@
                     [(ngModel)]="lineInputQty[l.item ?? l.itemCode]"
                     [placeholder]="lineRemainingAfterQueue(l)"
                     min="0.0001" step="0.0001" />
-                  <button class="panel-toggle-btn" *ngIf="perm.canCreate(fnId)" (click)="addLineDirectly(l)">Add</button>
+                  <button class="panel-toggle-btn" *ngIf="uiCanCreate" (click)="addLineDirectly(l)">Add</button>
                 </div>
                 <span class="done-badge" *ngIf="lineRemainingAfterQueue(l) <= 0">Done</span>
               </td>

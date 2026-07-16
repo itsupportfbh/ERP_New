@@ -378,15 +378,49 @@ export class PurchaseOrderListComponent implements OnInit {
   }
 
   shareQrWhatsApp(): void {
-    if (!this.qrPayloadUrl) return;
-    const text = encodeURIComponent(`Purchase Order ${this.qrPoNo} - Mobile Receiving:\n${this.qrPayloadUrl}`);
-    const a = document.createElement('a');
-    a.href = `https://web.whatsapp.com/send?text=${text}`;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // Office staff scan the QR on the same network, so send the QR IMAGE itself, not a text link.
+    // The Web Share API attaches the actual PNG to whichever app the user picks (WhatsApp included),
+    // which is the only browser-side way to hand a real image to WhatsApp. The data URL is turned
+    // into a File synchronously so the call stays inside the button's user-gesture (an intervening
+    // await would make the browser reject share()).
+    if (this.qrSrc) {
+      try {
+        const file = this.dataUrlToFile(this.qrSrc, `${this.qrPoNo}-QR.png`);
+        const shareData: any = {
+          files: [file],
+          title: `Purchase Order ${this.qrPoNo}`,
+          text: `Purchase Order ${this.qrPoNo} - Mobile Receiving`
+        };
+        const nav: any = navigator;
+        if (nav.canShare && nav.canShare(shareData)) {
+          nav.share(shareData).catch(() => {});
+          return;
+        }
+      } catch { /* fall through to the link */ }
+    }
+
+    // Fallback: plain HTTP (a LAN IP, not https) blocks the file-share API, and no browser can
+    // attach an image to WhatsApp automatically there. The user still wants the QR — not a link —
+    // so download the QR image and open WhatsApp, then tell them to attach the file that was just
+    // saved. It is one action short of automatic, but what leaves is the QR, never a text link.
+    if (this.qrSrc) this.downloadQr();
+    window.open('https://wa.me/', 'erpWhatsAppShare');
+    Swal.fire({
+      icon: 'info',
+      title: 'QR ready to attach',
+      html: `The QR image <b>${this.qrPoNo}-QR.png</b> was downloaded.<br>In the WhatsApp chat, tap 📎 (attach) and pick that file to send the QR.`,
+      confirmButtonColor: '#2e5f73'
+    });
+  }
+
+  /** Turn a base64 data URL into a File without fetch(), so it stays inside the click gesture. */
+  private dataUrlToFile(dataUrl: string, filename: string): File {
+    const [meta, b64] = dataUrl.split(',');
+    const mime = /:(.*?);/.exec(meta)?.[1] || 'image/png';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new File([bytes], filename, { type: mime });
   }
 
   printPo(row: any): void {
