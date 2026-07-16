@@ -77,6 +77,7 @@ import { FinanceBsComponent } from './pages/finance/finance-bs.component';
 import { FinanceOpeningBalanceComponent } from './pages/finance/finance-opening-balance.component';
 import { FinanceYearEndCloseComponent } from './pages/finance/finance-year-end-close.component';
 import { FinanceBankReconComponent } from './pages/finance/finance-bank-recon.component';
+import { FixedAssetsComponent } from './pages/finance/fixed-assets/fixed-assets.component';
 import { FinanceDaybookComponent } from './pages/finance/finance-daybook.component';
 import { FinanceCollectionForecastComponent } from './pages/finance/finance-collection-forecast.component';
 import { FinanceArapAgingComponent } from './pages/finance/finance-arap-aging.component';
@@ -221,6 +222,7 @@ const routes: Routes = [
       { path: 'finance/opening-balance',         component: FinanceOpeningBalanceComponent },
       { path: 'finance/year-end-close',          component: FinanceYearEndCloseComponent },
       { path: 'finance/bank-reconciliation',     component: FinanceBankReconComponent },
+      { path: 'finance/fixed-assets',            component: FixedAssetsComponent },
       { path: 'finance/daybook',                 component: FinanceDaybookComponent },
       { path: 'finance/collection-forecast',     component: FinanceCollectionForecastComponent },
       { path: 'finance/invoice-email',           component: FinanceInvoiceEmailComponent },

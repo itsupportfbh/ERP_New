@@ -1,0 +1,60 @@
+:host { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+
+.mcard-head-actions { display:flex; align-items:center; gap:8px; }
+
+.mbtn-ghost {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 12px; border-radius:8px; font-size:12.5px; font-weight:600;
+  background:var(--primary-pale); color:var(--primary);
+  border:1px solid var(--primary); cursor:pointer;
+  svg { width:15px; height:15px; }
+  &:hover { background:var(--primary); color:#fff; }
+}
+
+.mcard-search {
+  padding:8px 16px; border-bottom:1px solid var(--border);
+  .mf-input { width:100%; }
+}
+
+.fa-code { color:var(--text-muted); font-weight:400; font-size:12px; }
+
+.fa-status {
+  font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px;
+  background:var(--primary-pale); color:var(--primary); text-transform:capitalize;
+  &[data-status="Active"], &[data-status="Posted"] { background:#dcfce7; color:#16a34a; }
+  &[data-status="Draft"], &[data-status="Unposted"] { background:#fef9c3; color:#a16207; }
+  &[data-status="Disposed"], &[data-status="Retired"] { background:#fee2e2; color:#dc2626; }
+}
+
+.micon-btn.post { color:var(--primary); }
+
+.alert-msg { padding:8px 14px; border-radius:6px; font-size:12.5px; margin-bottom:8px; background:var(--primary-pale); color:var(--primary); }
+.alert-msg.is-error { background:#fef2f2; color:#dc2626; }
+
+/* modals */
+.fa-modal-overlay {
+  position:fixed; inset:0; background:rgba(15,23,42,.45);
+  display:flex; align-items:center; justify-content:center; z-index:1000;
+}
+.fa-modal {
+  width:420px; max-width:calc(100vw - 32px);
+  background:var(--card, #fff); border-radius:12px; overflow:hidden;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+.fa-modal-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  font-size:14px; font-weight:700; color:var(--text);
+}
+.fa-modal-close {
+  border:none; background:none; font-size:20px; line-height:1;
+  color:var(--text-muted); cursor:pointer;
+  &:hover { color:var(--text); }
+}
+.fa-modal-body { padding:16px 18px; }
+.fa-modal-hint { font-size:12.5px; color:var(--text-muted); margin:0 0 12px; }
+.fa-modal-foot {
+  display:flex; justify-content:flex-end; gap:8px;
+  padding:12px 18px; border-top:1px solid var(--border);
+}
+.fa-modal .mf-btn[disabled] { opacity:.5; cursor:not-allowed; }
