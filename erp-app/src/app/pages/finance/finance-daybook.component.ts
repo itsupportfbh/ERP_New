@@ -95,9 +95,11 @@ export class FinanceDaybookComponent implements OnInit {
   }
 
   private buildSummary(): void {
-    this.summary.transactions = this.rows.length;
-    this.summary.totalDebit   = this.rows.reduce((s, r) => s + (Number(r.debit)  || 0), 0);
-    this.summary.totalCredit  = this.rows.reduce((s, r) => s + (Number(r.credit) || 0), 0);
+    // Summarise per document (one row per voucher), matching the Detailed register.
+    const docs = this.toDocumentRows(this.rows);
+    this.summary.transactions = docs.length;
+    this.summary.totalDebit   = docs.reduce((s, r) => s + (Number(r.debit)  || 0), 0);
+    this.summary.totalCredit  = docs.reduce((s, r) => s + (Number(r.credit) || 0), 0);
     this.summary.net = this.summary.totalDebit - this.summary.totalCredit;
   }
 
@@ -125,9 +127,31 @@ export class FinanceDaybookComponent implements OnInit {
     return 'badge-other';
   }
 
+  /** Collapse a voucher's GL legs into ONE document row — the control/party leg
+   *  (Accounts Receivable for a sale, Accounts Payable for a purchase) that carries
+   *  the document total on its natural side. Keeps the daybook to one line per invoice
+   *  instead of one line per journal leg. */
+  private toDocumentRows(legs: any[]): any[] {
+    const groups = new Map<string, any[]>();
+    const order: string[] = [];
+    for (const r of legs) {
+      const key = `${r.voucherType || ''}|${r.voucherNo || ''}`;
+      if (!groups.has(key)) { groups.set(key, []); order.push(key); }
+      groups.get(key)!.push(r);
+    }
+    return order.map(key => {
+      const g = groups.get(key)!;
+      // The control leg is the single largest one — it balances the revenue/expense + tax
+      // legs, so its amount is the document total and its account is the customer/supplier.
+      const party = g.reduce((a, b) =>
+        (Number(b.debit || 0) + Number(b.credit || 0)) > (Number(a.debit || 0) + Number(a.credit || 0)) ? b : a);
+      return { ...party, debit: Number(party.debit || 0), credit: Number(party.credit || 0) };
+    });
+  }
+
   get runningRows(): any[] {
     let balance = 0;
-    return this.filtered.map(r => {
+    return this.toDocumentRows(this.filtered).map(r => {
       const d = Number(r.debit  || 0);
       const c = Number(r.credit || 0);
       balance += d - c;
@@ -226,10 +250,13 @@ export class FinanceDaybookComponent implements OnInit {
 
   private normalize(r: any): any {
     const c = { ...r };
-    c.postingDate  = c.postingDate  ?? c.PostingDate  ?? c.date ?? c.Date;
+    // Backend returns the date as TransDate; without it in the chain the Date column was blank.
+    c.postingDate  = c.postingDate  ?? c.PostingDate  ?? c.date ?? c.Date ?? c.transDate ?? c.TransDate;
     c.voucherNo    = c.voucherNo    ?? c.VoucherNo    ?? c.journalNo ?? c.JournalNo ?? '-';
-    c.accountCode  = c.accountCode  ?? c.AccountCode  ?? '-';
-    c.accountName  = c.accountName  ?? c.AccountName  ?? '-';
+    c.accountCode  = c.accountCode  ?? c.AccountCode  ?? c.accountHeadCode ?? c.AccountHeadCode ?? '-';
+    // Backend returns the account name as AccountHeadName (from ChartOfAccount.HeadName);
+    // without it in the fallback chain every row showed "-" for the Account column.
+    c.accountName  = c.accountName  ?? c.AccountName  ?? c.accountHeadName ?? c.AccountHeadName ?? '-';
     c.description  = c.description  ?? c.Description  ?? c.narration ?? '-';
     c.debit        = Number(c.debit   ?? c.Debit   ?? c.debitAmount  ?? 0);
     c.credit       = Number(c.credit  ?? c.Credit  ?? c.creditAmount ?? 0);
