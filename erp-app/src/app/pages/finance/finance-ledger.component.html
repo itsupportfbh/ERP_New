@@ -15,27 +15,30 @@
         </div>
       </div>
       <div class="list-card-actions">
-        <button class="gl-btn-outline" type="button" (click)="showFilter = !showFilter" style="display:inline-flex;align-items:center;gap:6px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:13px;height:13px">
-            <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
-          </svg>
-          Filter
+        <button class="btn-export btn-excel" type="button" (click)="exportExcel()" [disabled]="!displayRows.length">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export Excel
+        </button>
+        <button class="btn-export btn-pdf" type="button" (click)="exportPdf()" [disabled]="!displayRows.length">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export PDF
         </button>
       </div>
     </div>
 
     <!-- Date Filter Row -->
-    <div class="gl-filter-bar" *ngIf="showFilter">
+    <div class="gl-filter-bar">
       <label class="gl-filter-field">
-        <span>From Date</span>
+        <span>FROM DATE</span>
         <input type="date" [(ngModel)]="fromDate">
       </label>
       <label class="gl-filter-field">
-        <span>To Date</span>
+        <span>TO DATE</span>
         <input type="date" [(ngModel)]="toDate">
       </label>
-      <button class="gl-btn-primary" type="button" (click)="load()">Apply</button>
-      <button class="gl-btn-outline" type="button" (click)="showFilter = false">Cancel</button>
+      <button class="gl-btn-primary" type="button" (click)="load()" [disabled]="loading">
+        {{ loading ? 'Loading…' : 'Load' }}
+      </button>
     </div>
 
     <!-- Show entries + Search -->

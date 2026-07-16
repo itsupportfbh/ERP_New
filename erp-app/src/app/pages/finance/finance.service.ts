@@ -169,6 +169,11 @@ export class FinanceService {
     return this.http.post(this.url('/ChartOfAccount/SetSystemAccount'), { coaId, accountType });
   }
 
+  /** Save an account's opening debit/credit from the Trial Balance inline editor. */
+  saveOpeningBalance(body: { headId: number; openingDebit: number; openingCredit: number; asOfDate?: string | null; userName?: string }): Observable<any> {
+    return this.http.post(this.url('/financereport/trial-balance/opening-balance'), body);
+  }
+
   private url(endpoint: string, id?: number | string): string {
     const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     if (id !== undefined && id !== null && (clean.includes(':id') || clean.includes('{id}'))) {

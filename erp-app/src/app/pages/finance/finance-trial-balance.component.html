@@ -9,6 +9,16 @@
         <p>Account debit, credit and closing balance</p>
       </div>
     </div>
+    <div class="rpt-actions" *ngIf="displayRows.length">
+      <button class="btn-export btn-excel" type="button" (click)="exportExcel()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export Excel
+      </button>
+      <button class="btn-export btn-pdf" type="button" (click)="exportPdf()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export PDF
+      </button>
+    </div>
   </div>
 
   <!-- Summary Cards -->
@@ -79,6 +89,7 @@
             <th class="right">OPENING CREDIT</th>
             <th class="right teal-hdr">CLOSING DEBIT</th>
             <th class="right teal-hdr">CLOSING CREDIT</th>
+            <th class="center" style="width:96px;">ACTION</th>
           </tr>
         </thead>
         <tbody>
@@ -106,15 +117,48 @@
                 </span>
               </td>
 
-              <td class="right debit-val">{{ openingDebit(row) | money }}</td>
-              <td class="right credit-val">{{ openingCredit(row) | money }}</td>
+              <!-- Opening Debit (editable on leaf rows) -->
+              <td class="right debit-val">
+                <ng-container *ngIf="row.isLeaf && row.isEditingOpening; else openingDebitRead">
+                  <input type="number" step="0.01" class="tb-edit-input" [(ngModel)]="row.openingDebitEdit"
+                         (click)="$event.stopPropagation()">
+                </ng-container>
+                <ng-template #openingDebitRead>{{ openingDebit(row) | money }}</ng-template>
+              </td>
+
+              <!-- Opening Credit (editable on leaf rows) -->
+              <td class="right credit-val">
+                <ng-container *ngIf="row.isLeaf && row.isEditingOpening; else openingCreditRead">
+                  <input type="number" step="0.01" class="tb-edit-input" [(ngModel)]="row.openingCreditEdit"
+                         (click)="$event.stopPropagation()">
+                </ng-container>
+                <ng-template #openingCreditRead>{{ openingCredit(row) | money }}</ng-template>
+              </td>
+
               <td class="right teal-bold">{{ closingDebit(row) | money }}</td>
               <td class="right muted">{{ closingCredit(row) | money }}</td>
+
+              <!-- Action: edit opening (leaf only), then save / cancel -->
+              <td class="center">
+                <ng-container *ngIf="row.isLeaf">
+                  <button *ngIf="!row.isEditingOpening && canEdit()" type="button"
+                          class="tb-act-btn" title="Edit opening"
+                          (click)="startEditOpening(row, $event)">✎</button>
+                  <ng-container *ngIf="row.isEditingOpening">
+                    <button type="button" class="tb-act-btn tb-act-save" title="Save"
+                            [disabled]="row.savingOpening"
+                            (click)="saveOpening(row, $event)">✓</button>
+                    <button type="button" class="tb-act-btn tb-act-cancel" title="Cancel"
+                            [disabled]="row.savingOpening"
+                            (click)="cancelEditOpening(row, $event)">✕</button>
+                  </ng-container>
+                </ng-container>
+              </td>
             </tr>
 
             <!-- Detail transactions (inline, leaf click) -->
             <tr *ngIf="row.isLeaf && row.detailOpen">
-              <td colspan="5" class="detail-cell">
+              <td colspan="6" class="detail-cell">
                 <div class="detail-head">
                   Transactions: {{ row.headCode }} — {{ row.headName }}
                   <button class="rpt-btn rpt-btn-outline" style="float:right;margin-top:-2px" type="button" (click)="row.detailOpen=false">✕ Close</button>
@@ -151,7 +195,7 @@
           </ng-container>
 
           <tr *ngIf="displayRows.length === 0 && !loading">
-            <td colspan="5" class="rpt-empty">No accounts with movement in this period. Adjust the date range and click Run TB.</td>
+            <td colspan="6" class="rpt-empty">No accounts with movement in this period. Adjust the date range and click Run TB.</td>
           </tr>
         </tbody>
         <tfoot *ngIf="displayRows.length > 0">
@@ -161,6 +205,7 @@
             <td class="right credit-val fw-bold">{{ totalOpeningCredit | money }}</td>
             <td class="right teal-bold fw-bold">{{ totalClosingDebit | money }}</td>
             <td class="right muted fw-bold">{{ totalClosingCredit | money }}</td>
+            <td></td>
           </tr>
         </tfoot>
       </table>

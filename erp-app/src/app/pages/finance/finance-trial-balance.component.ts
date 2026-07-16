@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { AuditPrintService } from '../../core/services/audit-print.service';
 
 interface TbNode {
   headCode:      string;
@@ -22,6 +23,11 @@ interface TbNode {
   detailOpen?:   boolean;
   detailRows?:   any[];
   detailLoading?: boolean;
+  // inline opening-balance edit (leaf accounts only)
+  isEditingOpening?:  boolean;
+  openingDebitEdit?:  number;
+  openingCreditEdit?: number;
+  savingOpening?:     boolean;
 }
 
 @Component({
@@ -56,7 +62,11 @@ export class FinanceTrialBalanceComponent implements OnInit {
 
   private endpoint = { list: '/financereport/trial-balance', listMethod: 'POST' as const };
 
-  constructor(private finance: FinanceService, private permissionService: PermissionService) {}
+  constructor(
+    private finance: FinanceService,
+    private permissionService: PermissionService,
+    private auditPrint: AuditPrintService
+  ) {}
 
   ngOnInit(): void {
     const today = new Date();
@@ -241,6 +251,134 @@ export class FinanceTrialBalanceComponent implements OnInit {
     this.finance.list({ list: '/financereport/trial-balance-detail', listMethod: 'POST' as const }, body).subscribe({
       next: res => { node.detailRows = this.finance.unwrap(res); node.detailLoading = false; },
       error: ()  => { node.detailRows = [];  node.detailLoading = false; }
+    });
+  }
+
+  // ─── Inline opening-balance edit (leaf accounts) ───────────────
+  canEdit(): boolean { return this.permissionService.hasEdit(this.permission); }
+
+  startEditOpening(node: TbNode, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!this.canEdit() || !node.isLeaf) return;
+    node.isEditingOpening  = true;
+    node.openingDebitEdit  = node.openingDebit  || 0;
+    node.openingCreditEdit = node.openingCredit || 0;
+  }
+
+  cancelEditOpening(node: TbNode, event?: Event): void {
+    if (event) event.stopPropagation();
+    node.isEditingOpening  = false;
+    node.openingDebitEdit  = node.openingDebit  || 0;
+    node.openingCreditEdit = node.openingCredit || 0;
+  }
+
+  saveOpening(node: TbNode, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!this.canEdit() || !node.isLeaf) return;
+    node.savingOpening = true;
+    const body = {
+      headId:        Number(node.headId),
+      openingDebit:  Number(node.openingDebitEdit)  || 0,
+      openingCredit: Number(node.openingCreditEdit) || 0,
+      asOfDate:      this.fromDate || null,
+      userName:      localStorage.getItem('username') || ''
+    };
+    this.finance.saveOpeningBalance(body).subscribe({
+      next: () => {
+        node.isEditingOpening = false;
+        node.savingOpening    = false;
+        // Opening balance feeds into closing balance, so reload the whole report
+        // to keep every debit/credit/closing figure consistent with the server.
+        this.load();
+      },
+      error: (err: any) => {
+        node.savingOpening = false;
+        // Surface the real backend reason (e.g. "Permission denied. Required tb:Edit."
+        // for a 403, or the server exception for a 500) instead of a generic message.
+        const backendMsg = err?.error?.message || err?.error?.title;
+        this.error = backendMsg
+          ? `Unable to save opening balance: ${backendMsg}`
+          : `Unable to save opening balance (HTTP ${err?.status ?? '?'}).`;
+      }
+    });
+  }
+
+  // ─── Export (Excel / PDF) ──────────────────────────────────────
+  // Leaf accounts carrying any value — the actual trial-balance lines.
+  private exportLeaves(): TbNode[] {
+    const out: TbNode[] = [];
+    const walk = (n: TbNode) => {
+      if (!n.children.length) {
+        if ((n.openingDebit || 0) || (n.openingCredit || 0) || (n.closingDebit || 0) || (n.closingCredit || 0)) out.push(n);
+      } else {
+        n.children.forEach(walk);
+      }
+    };
+    this.roots.forEach(walk);
+    return out;
+  }
+
+  private fmtDisplayDate(d: string): string {
+    if (!d) return 'All';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
+  }
+
+  exportExcel(): void {
+    const leaves = this.exportLeaves();
+    const rows: any[][] = [
+      ['Trial Balance'],
+      [`From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`],
+      [],
+      ['Account Code', 'Account', 'Opening Debit', 'Opening Credit', 'Closing Debit', 'Closing Credit'],
+      ...leaves.map(n => [
+        n.headCode, n.headName,
+        (n.openingDebit || 0).toFixed(2), (n.openingCredit || 0).toFixed(2),
+        (n.closingDebit || 0).toFixed(2), (n.closingCredit || 0).toFixed(2)
+      ]),
+      [],
+      ['', 'Total',
+        this.totalOpeningDebit.toFixed(2), this.totalOpeningCredit.toFixed(2),
+        this.totalClosingDebit.toFixed(2), this.totalClosingCredit.toFixed(2)]
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'TrialBalance.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  exportPdf(): void {
+    const period = `From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`;
+    this.auditPrint.print({
+      reportTitle: 'Trial Balance',
+      periodLine: period,
+      metaLines: [`Date : ${period}`, 'Sort By : Code;Description', 'Project : All'],
+      labelColumnKey: 'name',
+      columns: [
+        { header: 'Acc Code',       key: 'code' },
+        { header: 'Description',    key: 'name' },
+        { header: 'Opening Debit',  key: 'openingDebit',  align: 'right', type: 'number' },
+        { header: 'Opening Credit', key: 'openingCredit', align: 'right', type: 'number' },
+        { header: 'Closing Debit',  key: 'closingDebit',  align: 'right', type: 'number' },
+        { header: 'Closing Credit', key: 'closingCredit', align: 'right', type: 'number' }
+      ],
+      rows: this.exportLeaves().map(n => ({
+        code: n.headCode, name: n.headName,
+        openingDebit: n.openingDebit || 0, openingCredit: n.openingCredit || 0,
+        closingDebit: n.closingDebit || 0, closingCredit: n.closingCredit || 0
+      })),
+      totalRows: [
+        {
+          label: 'Total',
+          values: {
+            openingDebit: this.totalOpeningDebit, openingCredit: this.totalOpeningCredit,
+            closingDebit: this.totalClosingDebit, closingCredit: this.totalClosingCredit
+          },
+          grand: true
+        }
+      ]
     });
   }
 
