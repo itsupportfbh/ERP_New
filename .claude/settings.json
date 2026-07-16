@@ -299,7 +299,12 @@
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_NEWDB_CHECK'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_NEWDB_CHECK SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_NEWDB_CHECK; END; CREATE DATABASE ERP_NEWDB_CHECK COLLATE SQL_Latin1_General_CP1_CI_AS;\")",
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_NEWDB_CHECK -C -f 65001 -i ERP_Script.sql -o newdb_run.log)",
       "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -d ERP_NEWDB_CHECK -C -f 65001 -h -1 -W -Q ' *)",
-      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_NEWDB_CHECK'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_NEWDB_CHECK SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_NEWDB_CHECK; END;\")"
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -C -Q \"IF DB_ID\\('ERP_NEWDB_CHECK'\\) IS NOT NULL BEGIN ALTER DATABASE ERP_NEWDB_CHECK SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ERP_NEWDB_CHECK; END;\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -y 4000 -Q \"SET NOCOUNT ON; SELECT OBJECT_DEFINITION\\(OBJECT_ID\\('dbo.sp_GstFinancialYears'\\)\\);\")",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -d ERP_CSSB -C -f 65001 -h -1 -y 3000 -Q \"SET NOCOUNT ON; SELECT OBJECT_DEFINITION\\(OBJECT_ID\\('dbo.sp_GstPeriodsByFinancialYear'\\)\\);\")",
+      "Bash(python -c \"import json;json.load\\(open\\('appsettings.json'\\)\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('appsettings.json','utf8'\\)\\); console.log\\('valid'\\)\")",
+      "Bash(grep -nE \"applicationUrl|Urls|0.0.0.0|localhost|:[0-9]{4,5}\" Properties/launchSettings.json)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

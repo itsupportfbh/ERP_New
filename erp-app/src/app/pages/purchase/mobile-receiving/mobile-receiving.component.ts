@@ -1,4 +1,5 @@
 import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ReceivingIntegrationService } from '../../../core/services/receiving-integration.service';
 import { PermissionService } from '../../../core/services/permission.service';
@@ -46,14 +47,39 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   loginUserId = Number(localStorage.getItem('id')) || 0;
   lineInputQty: { [item: string]: number } = {};
 
+  // Public (QR) mode: opened from a scanned PO QR on a phone that is NOT logged in.
+  // In this mode there is no user session, so permission checks are skipped and the
+  // page is driven entirely by the poNo/token in the URL.
+  isPublic = false;
+  mrToken = '';
+
+  // Template gates: in public (QR) mode there is no session, so allow the actions;
+  // otherwise fall back to the normal permission checks.
+  get uiCanView(): boolean { return this.isPublic || this.perm.canView(this.fnId); }
+  get uiCanCreate(): boolean { return this.isPublic || this.perm.canCreate(this.fnId); }
+
   constructor(
     private svc: PurchaseService,
     public perm: PermissionService,
     private receivingSvc: ReceivingIntegrationService,
-    private zone: NgZone
+    private zone: NgZone,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const qpPo = (qp.get('poNo') || '').trim();
+    this.mrToken = (qp.get('t') || '').trim();
+
+    // A poNo in the URL means we were reached via the scanned QR → public mode.
+    if (qpPo) {
+      this.isPublic = true;
+      this.mrPo = qpPo;
+      this.loadOffline();
+      this.loadPo();
+      return;
+    }
+
     if (!this.perm.canView(this.fnId)) {
       this.error = 'You do not have permission to view Mobile Receiving.';
       return;
@@ -63,7 +89,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   }
 
   loadPo(): void {
-    if (!this.perm.canView(this.fnId)) return;
+    if (!this.isPublic && !this.perm.canView(this.fnId)) return;
     const poNo = this.mrPo.trim();
     if (!poNo) { this.error = 'Enter a PO number.'; return; }
     this.error = '';
@@ -79,7 +105,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   }
 
   addScan(): void {
-    if (!this.perm.canCreate(this.fnId)) {
+    if (!this.isPublic && !this.perm.canCreate(this.fnId)) {
       this.error = 'You do not have permission to add mobile receiving scans.';
       return;
     }
@@ -133,7 +159,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   }
 
   syncMobile(): void {
-    if (!this.perm.canCreate(this.fnId)) {
+    if (!this.isPublic && !this.perm.canCreate(this.fnId)) {
       this.error = 'You do not have permission to sync mobile receiving.';
       return;
     }
@@ -168,7 +194,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   }
 
   removeScan(i: number): void {
-    if (!this.perm.canCreate(this.fnId)) {
+    if (!this.isPublic && !this.perm.canCreate(this.fnId)) {
       this.error = 'You do not have permission to modify the queue.';
       return;
     }
@@ -177,7 +203,7 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   }
 
   async clearQueue(): Promise<void> {
-    if (!this.perm.canCreate(this.fnId)) {
+    if (!this.isPublic && !this.perm.canCreate(this.fnId)) {
       this.error = 'You do not have permission to clear the queue.';
       return;
     }
@@ -198,12 +224,12 @@ export class MobileReceivingComponent implements OnInit, OnDestroy {
   }
 
   toggleOffline(): void {
-    if (!this.perm.canCreate(this.fnId)) return;
+    if (!this.isPublic && !this.perm.canCreate(this.fnId)) return;
     this.mrOffline = !this.mrOffline;
   }
 
   addLineDirectly(line: any): void {
-    if (!this.perm.canCreate(this.fnId)) {
+    if (!this.isPublic && !this.perm.canCreate(this.fnId)) {
       this.error = 'You do not have permission to add mobile receiving scans.';
       return;
     }
