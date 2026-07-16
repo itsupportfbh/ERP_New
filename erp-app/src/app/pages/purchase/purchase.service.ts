@@ -15,9 +15,25 @@ export interface ApprovalActionRequest {
 
 @Injectable({ providedIn: 'root' })
 export class PurchaseService {
-  private readonly api = environment.apiUrl;
+  private readonly api = PurchaseService.resolveApiUrl();
 
   constructor(private http: HttpClient) {}
+
+  // The Mobile Receiving QR opens this app on a phone via the PC's LAN IP
+  // (e.g. http://192.168.6.188:4200). In that case the configured
+  // "localhost" API host would point at the phone itself, so PO lines fail
+  // to load. Rewrite the API host to match whichever host the browser
+  // loaded the app from. On desktop (localhost) this is a no-op.
+  private static resolveApiUrl(): string {
+    const configured = environment.apiUrl;
+    try {
+      const host = window.location.hostname;
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return configured.replace('localhost', host).replace('127.0.0.1', host);
+      }
+    } catch { /* SSR / no window — fall back to configured */ }
+    return configured;
+  }
 
   // ── Helpers ──────────────────────────────────────────
   unwrap(res: any): any[] {
@@ -279,14 +295,20 @@ export class PurchaseService {
   }
 
   // ── Mobile Receiving ─────────────────────────────────
-  getMobileReceivingPo(poNo: string): Observable<any> {
-    return this.http.get(`${this.api}/mobile-receiving/po`, { params: { poNo } });
+  // The `token` is the signed link token from the scanned QR (URL `t` param). On the
+  // anonymous phone flow it is sent as X-Mr-Token so the API can resolve the tenant DB.
+  // Logged-in desktop callers pass no token and rely on their JWT — both work.
+  private mrHeaders(token?: string) {
+    return token ? { headers: { 'X-Mr-Token': token } } : {};
   }
-  validateMobileScan(poNo: string, barcode: string, qty: number, createdBy: number): Observable<any> {
-    return this.http.post(`${this.api}/mobile-receiving/scan`, { purchaseOrderNo: poNo, itemKey: barcode, qty, createdBy });
+  getMobileReceivingPo(poNo: string, token?: string): Observable<any> {
+    return this.http.get(`${this.api}/mobile-receiving/po`, { params: { poNo }, ...this.mrHeaders(token) });
   }
-  syncMobileReceiving(body: { purchaseOrderNo: string; lines: any[] }): Observable<any> {
-    return this.http.post(`${this.api}/mobile-receiving/sync`, body);
+  validateMobileScan(poNo: string, barcode: string, qty: number, createdBy: number, token?: string): Observable<any> {
+    return this.http.post(`${this.api}/mobile-receiving/scan`, { purchaseOrderNo: poNo, itemKey: barcode, qty, createdBy }, this.mrHeaders(token));
+  }
+  syncMobileReceiving(body: { purchaseOrderNo: string; lines: any[] }, token?: string): Observable<any> {
+    return this.http.post(`${this.api}/mobile-receiving/sync`, body, this.mrHeaders(token));
   }
 
   // ── Supplier Scorecard ───────────────────────────────

@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
-import { DocumentPrintService, PrintColumn, PrintField } from '../../../core/services/document-print.service';
+import { DocumentPrintService, DocumentPrintConfig, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = {
   0: 'Draft',
@@ -224,22 +225,64 @@ export class DeliveryOrderListComponent implements OnInit {
 
   view(row: any): void { this.showView = true; this.buildDetail(row, () => {}); }
 
+  /** Single source of truth for the DO document layout, shared by Print and Email
+   *  so the emailed PDF always matches exactly what Print produces. */
+  private buildDocConfig(): DocumentPrintConfig {
+    return {
+      docTitle: 'DELIVERY ORDER',
+      docNo: this.activeRow?.doNumber ?? '',
+      fields: this.viewInfo.filter(f => f.label !== 'Customer'),
+      columns: this.lineColumns,
+      lines: this.viewLines,
+      totals: this.viewTotals,
+      billTo: this.printBillTo,
+      deliverTo: this.printDeliverTo,
+    };
+  }
+
   print(row: any): void {
     this.buildDetail(row, () => {
-      this.printSvc.print({
-        docTitle: 'DELIVERY ORDER',
-        docNo: this.activeRow?.doNumber ?? '',
-        fields: this.viewInfo.filter(f => f.label !== 'Customer'),
-        columns: this.lineColumns,
-        lines: this.viewLines,
-        totals: this.viewTotals,
-        billTo: this.printBillTo,
-        deliverTo: this.printDeliverTo,
-      });
+      this.printSvc.print(this.buildDocConfig());
     });
   }
 
   printActive(): void { if (this.activeRow) this.print(this.activeRow); }
+
+  // ── Email to customer ─────────────────────────────────
+  async emailCustomer(row: any): Promise<void> {
+    if (!this.perm.canPrint(this.fnId)) return;
+    const result = await Swal.fire({
+      title: 'Email Customer?',
+      text: `Send delivery order ${row.doNumber} to the customer via email?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#dc2626',
+      confirmButtonText: 'Yes, send it!'
+    });
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Sending Email…',
+      html: 'Generating PDF and sending to customer.<br/>Please wait.',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    // Build the same layout print() produces, render it to a PDF, then upload.
+    this.buildDetail(row, async () => {
+      try {
+        const pdf = await this.printSvc.generatePdfBlob(this.buildDocConfig());
+        this.svc.emailDeliveryOrderCustomer(row.id, pdf).subscribe({
+          next: () => Swal.fire({ icon: 'success', title: 'Sent!', text: `Delivery order ${row.doNumber} emailed to customer.`, confirmButtonColor: '#16a34a' }),
+          error: err => Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' })
+        });
+      } catch {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to generate the PDF.', confirmButtonColor: '#16a34a' });
+      }
+    });
+  }
 
   private fmtDate(d: any): string {
     if (!d) return '—';
