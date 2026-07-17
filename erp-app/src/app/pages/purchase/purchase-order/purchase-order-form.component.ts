@@ -228,10 +228,13 @@ export class PurchaseOrderFormComponent implements OnInit {
       this.incotermOptions = this.svc.unwrap(r).map((i: any) => ({
         label: i.incotermsName ?? i.name, value: i.id
       })));
-    this.svc.getItems().subscribe(r =>
+    this.svc.getItems().subscribe(r => {
       this.itemOptions = this.svc.unwrap(r).map((i: any) => ({
         label: `${i.itemCode ?? ''} - ${i.itemName ?? i.name}`, value: i.id, raw: i
-      })));
+      }));
+      // PR/RFQ lines can be built before the items arrive — price them now that we have them.
+      this.backfillPurchasePrices();
+    });
     this.svc.getLocations().subscribe(r => {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id, raw: l
@@ -360,19 +363,26 @@ export class PurchaseOrderFormComponent implements OnInit {
           ? JSON.parse(rawLines || '[]')
           : (Array.isArray(rawLines) ? rawLines : []);
 
-        this.lines = parsed.map((l: any) => ({
-          ...this.emptyLine(),
-          prId,
-          prNumber: d.purchaseRequestNo ?? '',
-          itemId: l.itemId ?? null,
-          itemCode: l.itemCode ?? '',
-          itemName: l.itemSearch ?? l.itemName ?? '',
-          description: l.remarks ?? '',
-          quantity: l.qty ?? l.quantity ?? null,
-          uomId: l.uomId ?? null,
-          budget: l.budget ?? '',
-          remarks: l.remarks ?? ''
-        }));
+        this.lines = parsed.map((l: any) => {
+          const itemId = l.itemId ?? null;
+          const line: POLine = {
+            ...this.emptyLine(),
+            prId,
+            prNumber: d.purchaseRequestNo ?? '',
+            itemId,
+            itemCode: l.itemCode ?? '',
+            itemName: l.itemSearch ?? l.itemName ?? '',
+            description: l.remarks ?? '',
+            quantity: l.qty ?? l.quantity ?? null,
+            uomId: l.uomId ?? null,
+            budget: l.budget ?? '',
+            remarks: l.remarks ?? '',
+            // A PR carries no price, so default to the item's PURCHASE price.
+            unitPrice: Number(l.unitPrice ?? l.price ?? 0) || this.itemPurchasePrice(itemId) || null
+          };
+          this.recalcLine(line);
+          return line;
+        });
 
         const firstLine = parsed[0];
         const locName = firstLine?.locationSearch ?? firstLine?.location ?? '';
@@ -613,6 +623,15 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (!this.modalLine.description) this.modalLine.description = found.raw.description ?? '';
     if (found.raw.uomId) this.modalLine.uomId = found.raw.uomId;
     if (!this.modalLine.taxMode) this.modalLine.taxMode = this.defaultLineTaxMode;
+
+    // Purchase side prices from the item's PURCHASE price (the sales price never applies here).
+    // A supplier-specific price, if one exists, overrides it below.
+    const itemPurchasePrice = Number(found.raw.purchasePrice ?? 0) || 0;
+    if (itemPurchasePrice > 0) {
+      this.modalLine.unitPrice = itemPurchasePrice;
+      this.recalcLine(this.modalLine);
+    }
+
     if (this.supplierId) {
       this.svc.getItemSupplierPrices(this.modalLine.itemId!).subscribe(res => {
         const prices = this.svc.unwrap(res);
@@ -652,9 +671,35 @@ export class PurchaseOrderFormComponent implements OnInit {
         this.modalLine.description = first.remarks ?? first.description ?? '';
         this.modalLine.quantity = first.qty ?? first.quantity ?? null;
         this.modalLine.uomId = first.uomId ?? null;
+        // A PR carries no price, so default to the item's PURCHASE price.
+        if (!this.modalLine.unitPrice || this.modalLine.unitPrice <= 0) {
+          const price = Number(first.unitPrice ?? first.price ?? 0) || this.itemPurchasePrice(itemId);
+          if (price > 0) this.modalLine.unitPrice = price;
+        }
         this.recalcModal();
       }
     });
+  }
+
+  // The item's PURCHASE price (0 when unknown, or when the item list hasn't loaded yet).
+  private itemPurchasePrice(itemId: number | null | undefined): number {
+    if (itemId == null) return 0;
+    const opt = this.itemOptions.find(o => Number(o.value) === Number(itemId));
+    return Number(opt?.raw?.purchasePrice ?? 0) || 0;
+  }
+
+  // PR / RFQ lines are built from their own payload, which carries no price, and they can also
+  // land before getItems() has returned. Fill any still-empty unit price from the item's
+  // purchase price so a PO never sits at 0.00.
+  private backfillPurchasePrices(): void {
+    for (const line of this.lines) {
+      if (line.unitPrice && line.unitPrice > 0) continue;
+      const price = this.itemPurchasePrice(line.itemId);
+      if (price > 0) {
+        line.unitPrice = price;
+        this.recalcLine(line);
+      }
+    }
   }
 
   onModalBudgetChange(): void {

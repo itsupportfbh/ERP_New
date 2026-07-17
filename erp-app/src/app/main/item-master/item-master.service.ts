@@ -72,6 +72,11 @@ getWarehouseStock(itemId: number): Observable<any[]> {
   getSupplierPrices(itemId: number): Observable<any[]> {
     return this.http.get<any[]>(this.url +ItemMasterAPIUrls.getItemSupplier+itemId);
   }
+
+  /** Real price history from the purchase documents (PO / GRN / Supplier Invoice). */
+  getSupplierPriceHistory(itemId: number): Observable<any> {
+    return this.http.get<any>(this.url + ItemMasterAPIUrls.getSupplierPriceHistory + itemId);
+  }
   getAudit(itemId: number) {
   return this.http.get<any[]>(this.url + ItemMasterAPIUrls.getItemAudit + itemId);
 }

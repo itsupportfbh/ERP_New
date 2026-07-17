@@ -426,7 +426,8 @@ export class QuotationFormComponent implements OnInit {
         itemName: item.itemName ?? item.name ?? '',
         itemCode: item.itemCode ?? '',
         uomId: Number(item.uomId ?? item.UomId ?? item.baseUomId ?? 0) || null,
-        price: Number(item.price ?? item.Price ?? 0) || 0,
+        // Sales module always prices from the item's SALES price (legacy `price` kept as fallback).
+        price: Number(item.salesPrice ?? item.SalesPrice ?? item.price ?? 0) || 0,
         baseUomId: Number(item.baseUomId ?? item.BaseUomId ?? 0) || null,
         uomFactor: Number(item.uomFactor ?? item.UomFactor ?? 1) || 1,
         baseUomName: item.baseUomName ?? item.BaseUomName ?? null
@@ -1604,6 +1605,38 @@ export class QuotationFormComponent implements OnInit {
   }
 
   // ── Save ─────────────────────────────────────────────
+  // The item's fixed Sales Price expressed in the UOM this line is actually priced in.
+  // A line switched to the base UOM is priced per base unit, so the fixed price must be
+  // divided by the factor before comparing — otherwise every base-UOM line looks "discounted".
+  private fixedPriceForLine(l: UiLine): number {
+    const item = this.itemsList.find(x => x.id === Number(l.itemId));
+    const salesPrice = Number(item?.price ?? 0) || 0;
+    if (salesPrice <= 0) return 0;
+    const factor = Number(l.uomFactor ?? 1) || 1;
+    const inBase = l.baseUomId != null && l.sellUomId != null &&
+                   Number(l.baseUomId) !== Number(l.sellUomId) &&
+                   Number(l.uomId) === Number(l.baseUomId);
+    return inBase && factor > 0 ? this.round4(salesPrice / factor) : salesPrice;
+  }
+
+  // Lines sold under the item's fixed Sales Price — these need a written justification.
+  private linesBelowFixedPrice(): { name: string; fixed: number; entered: number }[] {
+    const out: { name: string; fixed: number; entered: number }[] = [];
+    for (const l of this.lines) {
+      if (l.isSetHeader || this.isPackageChild(l)) continue;   // packages price at header level
+      const fixed = this.fixedPriceForLine(l);
+      const entered = l.unitPrice == null ? 0 : +l.unitPrice;
+      if (fixed > 0 && entered > 0 && entered < fixed) {
+        out.push({
+          name: l.itemName || this.getItemName(l.itemId) || 'Line',
+          fixed,
+          entered
+        });
+      }
+    }
+    return out;
+  }
+
   private validateBeforeSave(): boolean {
     if (!this.header.deliveryDate) {
       void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Delivery Date is required.', confirmButtonColor: '#16a34a' });
@@ -1619,6 +1652,34 @@ export class QuotationFormComponent implements OnInit {
       const name = l.isSetHeader ? (l.setName || `Package ${idx + 1}`) : (l.itemName || this.getItemName(l.itemId) || `Line ${idx + 1}`);
       if (q <= 0 || p <= 0) { void Swal.fire('Validation', `Please enter Qty & ${l.isSetHeader ? 'Package Price' : 'Unit Price'} for ${name}.`, 'warning'); return false; }
     }
+
+    // Selling below the item's fixed Sales Price must be justified in Remarks, so a discount
+    // is never saved without a reason on record.
+    const under = this.linesBelowFixedPrice();
+    if (under.length && !(this.header.remarks || '').trim()) {
+      const cur = this.header.currency || '';
+      const rows = under
+        .map(u => `<tr>
+            <td style="padding:2px 10px 2px 0;text-align:left">${u.name}</td>
+            <td style="padding:2px 10px;text-align:right">${cur} ${u.fixed.toFixed(2)}</td>
+            <td style="padding:2px 0 2px 10px;text-align:right;color:#dc2626"><b>${cur} ${u.entered.toFixed(2)}</b></td>
+          </tr>`)
+        .join('');
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Remarks Required',
+        html:
+          `These lines are priced <b>below the fixed Sales Price</b>:<br/><br/>` +
+          `<table style="margin:0 auto;font-size:13px">
+             <tr style="color:#6b7280"><th style="text-align:left">Item</th><th style="text-align:right;padding:0 10px">Fixed</th><th style="text-align:right">Entered</th></tr>
+             ${rows}
+           </table><br/>` +
+          `Please enter <b>Remarks</b> explaining the lower price before saving.`,
+        confirmButtonColor: '#16a34a'
+      });
+      return false;
+    }
+
     return true;
   }
 

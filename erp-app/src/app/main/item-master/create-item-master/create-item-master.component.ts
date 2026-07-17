@@ -9,6 +9,9 @@
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, Observable } from 'rxjs';
 import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import { ItemMasterService } from '../item-master.service';
 import { UploadService } from 'app/shared/upload.service';
@@ -25,6 +28,32 @@ import { CatagoryService } from 'app/main/master/catagory/catagory.service';
 import { RecurringService } from 'app/main/master/recurring/recurring.service';
 
 /* ----------------- Lightweight view models ----------------- */
+type PriceBar = {
+  key: string;
+  name: string;
+  price: number;
+  currency: string;
+  date: any;
+  docType: string;
+  docNo: string;
+  qty: number;
+  diff: number | null;      // vs this supplier's previous purchase
+  diffPct: number | null;
+  purchases: number;        // how many purchases we have from this supplier
+  y: number;
+  w: number;
+  isCheapest: boolean;
+};
+
+type PriceChart = {
+  w: number; h: number;
+  plot: { x: number; y: number; w: number; h: number };
+  bars: PriceBar[];
+  xTicks: { x: number; label: string }[];
+  barH: number;
+  currency: string;
+};
+
 type PriceRow = {
   price: number | null;
   qty: number | null;
@@ -282,6 +311,21 @@ export class CreateItemMasterComponent implements OnInit {
   warehouseList: Warehouse[] = [];
   binList: Bin[] = [];
 
+  /* Supplier price history — real price points from PO / GRN / Supplier Invoice.
+     (dbo.ItemPrice is rewritten on every save, so it holds no history.) */
+  priceHistory: any[] = [];
+  priceHistoryLoading = false;
+
+  /* "What does each supplier charge for this item" is a magnitude comparison, not a trend —
+     most suppliers have a single purchase, so a time axis plots lone dots. One measure across
+     nominal categories = ONE colour for every bar (a hue per supplier would be a value-ramp on
+     nominal categories). Slot 1 clears 3:1 on the white card. Movement over time is carried by
+     the ▲▼ delta and the table. */
+  private readonly BAR_COLOR = '#2a78d6';
+
+  priceChart: PriceChart | null = null;
+  chartHover: { b: PriceBar; x: number; y: number } | null = null;
+
   /* Suppliers / prices */
   prices: PriceRow[] = [];
   supplierList: SupplierLite[] = [];
@@ -490,7 +534,8 @@ export class CreateItemMasterComponent implements OnInit {
             specs: h.specs ?? '',
             pictureUrl: h.pictureUrl ?? '',
             lastCost: h.lastCost ?? null,
-            price: h.price ?? null,
+            salesPrice: h.salesPrice ?? null,
+            purchasePrice: h.purchasePrice ?? null,
             isActive: h.isActive ?? true,
             createdBy: this.userId,
             updatedBy: this.userId,
@@ -548,9 +593,180 @@ export class CreateItemMasterComponent implements OnInit {
           }));
           this.buildReviewView();
           this.loadBomSnapshotOrFallback();
+          this.loadPriceHistory(id);
         },
         error: () => Swal.fire({ icon: 'error', title: 'Failed', text: 'Could not load item for editing.' })
       });
+  }
+
+  // Price history comes from the purchase documents, not ItemPrice (which keeps only the
+  // current price because it is delete-and-reinserted on every item-master save).
+  private loadPriceHistory(itemId: number): void {
+    if (!itemId) { this.priceHistory = []; return; }
+    this.priceHistoryLoading = true;
+    this.itemsSvc.getSupplierPriceHistory(itemId).subscribe({
+      next: (res: any) => {
+        const rows = res?.data ?? res ?? [];
+        this.priceHistory = Array.isArray(rows) ? rows : [];
+        this.groupPriceHistory();
+        this.priceHistoryLoading = false;
+      },
+      error: () => { this.priceHistory = []; this.priceChart = null; this.priceHistoryLoading = false; }
+    });
+  }
+
+  // Stamp each row with how its price moved against that supplier's previous purchase,
+  // then build the trend chart.
+  private groupPriceHistory(): void {
+    const bySupplier = new Map<string, any[]>();
+    for (const row of this.priceHistory) {
+      const key = String(row.supplierId ?? row.supplierName ?? '-');
+      if (!bySupplier.has(key)) bySupplier.set(key, []);
+      bySupplier.get(key)!.push(row);
+    }
+
+    bySupplier.forEach(rows => {
+      const asc = [...rows].sort((a, b) => new Date(a.txnDate).getTime() - new Date(b.txnDate).getTime());
+      asc.forEach((r, i) => {
+        const prev = i > 0 ? Number(asc[i - 1].unitPrice ?? 0) : null;
+        const cur = Number(r.unitPrice ?? 0);
+        r.diff = prev == null || prev === 0 ? null : this.round2(cur - prev);
+        r.diffPct = prev == null || prev === 0 ? null : this.round2(((cur - prev) / prev) * 100);
+      });
+    });
+
+    this.buildPriceChart(bySupplier);
+  }
+
+  // One bar per supplier = the price they last charged. Cheapest at the top, so the
+  // buy-from answer is the first thing read.
+  private buildPriceChart(bySupplier: Map<string, any[]>): void {
+    this.chartHover = null;
+    if (!this.priceHistory.length) { this.priceChart = null; return; }
+
+    const latest = [...bySupplier.values()].map(rows => {
+      const desc = [...rows].sort((a, b) => new Date(b.txnDate).getTime() - new Date(a.txnDate).getTime());
+      const l = desc[0];
+      return {
+        key: String(l.supplierId ?? l.supplierName ?? '-'),
+        name: l.supplierName || '-',
+        price: Number(l.unitPrice ?? 0),
+        currency: l.currencyName || '',
+        date: l.txnDate,
+        docType: l.docType || '',
+        docNo: l.docNo || '',
+        qty: Number(l.qty ?? 0),
+        diff: l.diff ?? null,
+        diffPct: l.diffPct ?? null,
+        purchases: rows.length
+      };
+    }).sort((a, b) => a.price - b.price);
+
+    const barH = 26, gap = 12;                       // 2px+ surface gap between adjacent bars
+    const labelW = 190;                              // supplier names live outside the plot
+    const w = 720;
+    // Right gutter holds the end-of-bar value label. The currency is NOT repeated per bar —
+    // it is stated once in the caption — otherwise a long CurrencyName ("Malaysian Ringgit")
+    // pushes the label past the card edge.
+    const plot = { x: labelW, y: 12, w: w - labelW - 110, h: latest.length * (barH + gap) };
+    const h = plot.y + plot.h + 30;                  // container includes the x-axis band
+
+    // Bars encode magnitude, so the scale starts at zero — always.
+    const { hi, ticks } = this.niceMax(Math.max(...latest.map(b => b.price)));
+    const xOf = (p: number) => plot.x + (p / (hi || 1)) * plot.w;
+    const cheapest = Math.min(...latest.map(b => b.price));
+
+    const bars: PriceBar[] = latest.map((b, i) => ({
+      ...b,
+      y: plot.y + i * (barH + gap),
+      w: Math.max(xOf(b.price) - plot.x, 2),
+      isCheapest: b.price === cheapest
+    }));
+
+    this.priceChart = {
+      w, h, plot, bars, barH,
+      xTicks: ticks.map(v => ({ x: xOf(v), label: this.fmtTick(v) })),
+      currency: latest[0]?.currency || ''
+    };
+  }
+
+  // Round, human steps from ZERO to just above the largest bar. A bar's length IS its value,
+  // so the scale can never start anywhere but zero (and must never emit a negative tick).
+  private niceMax(max: number): { hi: number; ticks: number[] } {
+    if (!isFinite(max) || max <= 0) return { hi: 1, ticks: [0, 1] };
+    const raw = max / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) ?? mag * 10;
+    const hi = Math.ceil(max / step) * step;
+    const ticks: number[] = [];
+    for (let v = 0; v <= hi + step / 2; v += step) ticks.push(this.round2(v));
+    return { hi, ticks };
+  }
+
+  private fmtTick(v: number): string {
+    return Math.abs(v) >= 1000 ? (v / 1000).toFixed(v % 1000 ? 1 : 0) + 'k' : String(this.round2(v));
+  }
+  private fmtDate(d: Date): string {
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+  }
+
+  onBarEnter(b: PriceBar): void {
+    this.chartHover = { b, x: (this.priceChart!.plot.x + b.w), y: b.y };
+  }
+  onChartLeave(): void { this.chartHover = null; }
+
+  // ── Price history report ────────────────────────────────────────────
+  private priceHistoryRows(): (string | number)[][] {
+    return this.priceHistory.map(h => [
+      this.fmtDate(new Date(h.txnDate)),
+      h.supplierName || '-',
+      h.docType || '',
+      h.docNo || '',
+      Number(h.qty ?? 0),
+      Number(h.unitPrice ?? 0),
+      h.currencyName || '',
+      h.diff == null ? '' : (h.diff > 0 ? '+' : '') + this.round2(h.diff)
+    ]);
+  }
+  private reportName(): string {
+    const code = this.item?.itemCode || this.item?.sku || 'item';
+    return `supplier-price-history-${code}`;
+  }
+  private get reportTitle(): string {
+    const code = this.item?.itemCode || this.item?.sku || '';
+    const name = this.item?.itemName || this.item?.name || '';
+    return `Supplier Price History — ${name}${code ? ' (' + code + ')' : ''}`;
+  }
+  private static readonly REPORT_COLS =
+    ['Date', 'Supplier', 'Doc Type', 'Doc No', 'Qty', 'Unit Price', 'Currency', 'Change'];
+
+  downloadPriceHistoryExcel(): void {
+    if (!this.priceHistory.length) return;
+    const aoa = [CreateItemMasterComponent.REPORT_COLS, ...this.priceHistoryRows()];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Price History');
+    XLSX.writeFile(wb, `${this.reportName()}.xlsx`);
+  }
+
+  downloadPriceHistoryPdf(): void {
+    if (!this.priceHistory.length) return;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    doc.setFontSize(13);
+    doc.text(this.reportTitle, 40, 40);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('Source: Purchase Orders, GRNs and Supplier Invoices.', 40, 56);
+    autoTable(doc, {
+      head: [CreateItemMasterComponent.REPORT_COLS],
+      body: this.priceHistoryRows().map(r => r.map(c => String(c))),
+      startY: 70,
+      styles: { fontSize: 9, cellPadding: 5 },
+      headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 7: { halign: 'right' } }
+    });
+    doc.save(`${this.reportName()}.pdf`);
   }
 
   getReason(id: number | string | null) {
@@ -1356,7 +1572,8 @@ syncBomFromPrices(opts: { preserveUnitCost?: boolean } = { preserveUnitCost: tru
       specs: '',
       pictureUrl: '',
       lastCost: null,
-      price: null as number | null,
+      salesPrice: null as number | null,
+      purchasePrice: null as number | null,
       isActive: true,
       createdBy: this.userId,
       updatedBy: this.userId,
@@ -1932,6 +2149,23 @@ getUomName(id: any): string {
   const u = this.uomList.find(x => String(x.id) === String(id));
   return u?.name ?? '-';
 }
+// Which prices apply is driven by the selected Category's type:
+// 1 = Sales Item → Sales Price only, 2 = Purchase Item → Purchase Price only, 3 = Both → both.
+get selectedCategoryType(): number {
+  const category = this.CategoryList.find(
+    x => Number(x.id) === Number(this.item.categoryId)
+  );
+  return Number(category?.itemCategoryType ?? 0);
+}
+// A category with no type set (0/null, or not loaded yet) must NOT hide both prices —
+// that would leave the item with no editable price at all. Unknown → show both.
+get showSalesPrice(): boolean {
+  return this.selectedCategoryType !== 2;   // hidden only for Purchase-only categories
+}
+get showPurchasePrice(): boolean {
+  return this.selectedCategoryType !== 1;   // hidden only for Sales-only categories
+}
+
 onCategoryChange(resetUsage: boolean = true) {
   const category = this.CategoryList.find(
     x => Number(x.id) === Number(this.item.categoryId)
@@ -1940,6 +2174,11 @@ onCategoryChange(resetUsage: boolean = true) {
   if (!category) return;
 
   const categoryType = Number(category.itemCategoryType);
+
+  // A price the category no longer allows must not linger on the record (it would be
+  // saved even though its field is hidden).
+  if (categoryType === 1) this.item.purchasePrice = null;
+  else if (categoryType === 2) this.item.salesPrice = null;
 
   // Don't overwrite a fulfillment the user picked manually.
   const keep = this.userOverrodeFulfillment;

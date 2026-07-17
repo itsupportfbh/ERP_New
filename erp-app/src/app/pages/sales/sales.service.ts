@@ -221,6 +221,10 @@ export class SalesService {
   updateDeliveryOrderHeader(id: number | string, data: any): Observable<any> {
     return this.http.put(`${this.api}/DeliveryOrder/Update/${id}/Header`, data);
   }
+  /** Proof of delivery captured after the goods arrive: signature drawn on screen, or the signed form. */
+  confirmDelivery(id: number | string, data: any): Observable<any> {
+    return this.http.post(`${this.api}/DeliveryOrder/ConfirmDelivery/${id}`, data);
+  }
   deleteDeliveryOrder(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/DeliveryOrder/Delete/${id}`);
   }

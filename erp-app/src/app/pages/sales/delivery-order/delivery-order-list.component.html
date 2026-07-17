@@ -38,6 +38,7 @@
           <th (click)="sortBy('routeName')">LOCATION <span class="sort-arr">⇅</span></th>
           <th (click)="sortBy('deliveryDate')">DELIVERY DATE <span class="sort-arr">⇅</span></th>
           <th (click)="sortBy('postedLabel')">POSTED <span class="sort-arr">⇅</span></th>
+          <th (click)="sortBy('deliveryStatus')">DELIVERY <span class="sort-arr">⇅</span></th>
           <th>ACTION</th>
         </tr></thead>
         <tbody>
@@ -48,16 +49,24 @@
             <td>{{ item.routeName || '—' }}</td>
             <td>{{ item.deliveryDate ? (item.deliveryDate | date:'dd-MM-yyyy') : '—' }}</td>
             <td><span class="qt-badge" [ngClass]="item.posted ? 'st-2' : 'st-0'">{{ item.posted ? 'Posted' : 'Draft' }}</span></td>
+            <!-- Delivery confirmation is its own state: Posted means the stock left, Completed
+                 means the customer signed for it. -->
+            <td>
+              <span class="qt-badge" [ngClass]="item.deliveryStatus === 1 ? 'st-2' : 'st-1'">
+                {{ item.deliveryStatus === 1 ? 'Completed' : 'Pending' }}
+              </span>
+            </td>
             <td><div class="dt-actions-cell">
               <button *ngIf="perm.canView(fnId)" class="dt-icon-btn view" (click)="view(item)" title="View"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
+              <button *ngIf="perm.canEdit(fnId) && item.deliveryStatus !== 1" class="dt-icon-btn sign" (click)="openConfirm(item)" title="Confirm Delivery (signature / signed form)"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 15c3 0 3-8 6-8s3 6 6 6 2-4 4-4"/><path d="M2 18h16"/></svg></button>
               <button *ngIf="perm.canPrint(fnId)" class="dt-icon-btn print" (click)="print(item)" title="Print"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8V3h10v5"/><rect x="3" y="8" width="14" height="6" rx="1"/><path d="M6 14h8v4H6z"/></svg></button>
               <button *ngIf="perm.canPrint(fnId)" class="dt-icon-btn email" (click)="emailCustomer(item)" title="Email to customer"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="16" height="12" rx="1.5"/><path d="M2.5 5l7.5 6 7.5-6"/></svg></button>
               <button *ngIf="perm.canEdit(fnId)" class="dt-icon-btn edit" (click)="edit(item)" title="Edit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 3l4 4-10 10H3v-4L13 3z"/></svg></button>
               <button *ngIf="perm.canDelete(fnId)" class="dt-icon-btn del" (click)="openDelete(item)" title="Delete"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="5 7 5 18 15 18 15 7"/><line x1="3" y1="7" x2="17" y2="7"/><path d="M8 7V4h4v3"/></svg></button>
             </div></td>
           </tr>
-          <tr *ngIf="!loading && filtered.length===0"><td colspan="7" class="dt-empty">No delivery orders found.</td></tr>
-          <tr *ngIf="loading"><td colspan="7" class="dt-empty">Loading...</td></tr>
+          <tr *ngIf="!loading && filtered.length===0"><td colspan="8" class="dt-empty">No delivery orders found.</td></tr>
+          <tr *ngIf="loading"><td colspan="8" class="dt-empty">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -71,6 +80,71 @@
     [info]="viewInfo" [columns]="lineColumns" [lines]="viewLines" [totals]="viewTotals"
     (print)="printActive()" (close)="showView=false">
   </erp-doc-view-modal>
+
+  <!-- ===== Confirm Delivery =====
+       Proof of delivery is captured here, after the goods have been received — never at create.
+       Two channels: sign on screen, or upload a photo/scan of the signed printed form. A person
+       eyeballs the evidence and confirms, so nothing has to guess whether an image "looks signed". -->
+  <div class="do-modal-overlay" *ngIf="showConfirm" (click)="closeConfirm()">
+    <div class="do-modal do-modal--wide" (click)="$event.stopPropagation()">
+      <div class="do-modal-head">
+        <span>Confirm Delivery — {{ confirmRow?.doNumber }}</span>
+        <button class="do-modal-close" type="button" (click)="closeConfirm()">&times;</button>
+      </div>
+
+      <div class="do-modal-body">
+        <div class="do-cf-grid">
+          <div class="mf-group">
+            <label class="mf-label">Received By <span class="do-req">*</span></label>
+            <input type="text" class="mf-input" [(ngModel)]="cfName" name="cfName" placeholder="Receiver name" />
+            <small class="do-hint" *ngIf="confirmRow?.quotationContactPerson">From quotation — change if someone else received it</small>
+          </div>
+          <div class="mf-group">
+            <label class="mf-label">Mobile No</label>
+            <input type="text" class="mf-input" [(ngModel)]="cfMobile" name="cfMobile" placeholder="Mobile number" />
+          </div>
+        </div>
+
+        <div class="do-cf-tabs">
+          <button type="button" class="do-cf-tab" [class.is-on]="cfMode==='upload'" (click)="cfMode='upload'">Upload signed form</button>
+          <button type="button" class="do-cf-tab" [class.is-on]="cfMode==='draw'" (click)="setDrawMode()">Sign on screen</button>
+        </div>
+
+        <!-- Upload the signed hardcopy -->
+        <div *ngIf="cfMode==='upload'" class="do-cf-pane">
+          <div class="do-upbox" *ngIf="!cfPodUrl">
+            <input #podInput type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" hidden (change)="onPodSelected($event)" />
+            <button type="button" class="btn btn-outline btn-sm" (click)="podInput.click()" [disabled]="cfUploading">
+              {{ cfUploading ? 'Uploading…' : 'Choose signed form' }}
+            </button>
+            <div class="do-hint">Photo or scan of the printed DO the customer signed · JPG, PNG, WEBP, GIF or PDF · max 5 MB</div>
+          </div>
+          <div class="do-podpreview" *ngIf="cfPodUrl">
+            <img *ngIf="!cfPodIsPdf" [src]="podSrc(cfPodUrl)" alt="signed form" />
+            <a *ngIf="cfPodIsPdf" class="do-link" [href]="podSrc(cfPodUrl)" target="_blank" rel="noopener">Open uploaded PDF</a>
+            <div class="do-sigactions"><a class="do-link" (click)="removePod()">Remove</a></div>
+          </div>
+        </div>
+
+        <!-- Or sign on screen -->
+        <div *ngIf="cfMode==='draw'" class="do-cf-pane">
+          <canvas #sigCanvas class="do-canvas" width="520" height="200"
+            (mousedown)="startDraw($event)" (mousemove)="moveDraw($event)" (mouseup)="endDraw()" (mouseleave)="endDraw()"
+            (touchstart)="startDraw($event)" (touchmove)="moveDraw($event)" (touchend)="endDraw()"></canvas>
+          <div class="do-sigactions"><a class="do-link" (click)="clearSignature()">Clear</a></div>
+        </div>
+
+        <div class="do-cf-err" *ngIf="cfError">{{ cfError }}</div>
+      </div>
+
+      <div class="do-modal-foot">
+        <button class="btn btn-outline btn-sm" type="button" (click)="closeConfirm()">Cancel</button>
+        <button class="btn btn-primary btn-sm" type="button" [disabled]="cfSaving || cfUploading" (click)="confirmDelivery()">
+          {{ cfSaving ? 'Saving…' : 'Confirm & Complete' }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Delete confirm -->
   <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">

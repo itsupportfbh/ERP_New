@@ -689,3 +689,159 @@
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* Supplier Price History — document type tag */
+.im-doc-tag {
+  display: inline-block;
+  min-width: 46px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .3px;
+  background: #e5e7eb;
+  color: #374151;
+
+  &--po  { background: #e0e7ff; color: #3730a3; }
+  &--grn { background: #d1fae5; color: #065f46; }
+  &--inv { background: #fee2e2; color: #991b1b; }
+}
+
+/* ===== Supplier Price History ===================================================
+   Chart surface is the white card. Categorical hues are validated for CVD on that
+   surface; magenta/yellow/aqua sit under 3:1, so the direct labels + table view
+   below are the required relief — they are not optional decoration.
+   ============================================================================== */
+.im-ph-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 10px;
+  flex-wrap: wrap;
+}
+.im-ph-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.im-ph-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; max-width: 640px; }
+
+.im-ph-actions { display: flex; gap: 8px; }
+.im-ph-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover { background: rgba(11, 11, 11, 0.04); }
+  i { font-size: 12px; }
+}
+
+.im-ph-loading, .im-ph-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 10px 0;
+}
+.im-ph-folded { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.im-ph-muted  { color: var(--text-muted); }
+
+.im-chart {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px 6px;
+  background: #fff;
+
+  &__cap {
+    font-size: 11px;
+    font-weight: 600;
+    color: #52514e;
+    margin-bottom: 6px;
+  }
+
+  &__svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+  /* recessive chrome: solid hairlines, never dashed */
+  &__grid line { stroke: #e1e0d9; stroke-width: 1; }
+  &__axis      { stroke: #c3c2b7; stroke-width: 1; }
+
+  &__tick text, &__tick {
+    font-size: 10px;
+    fill: #898781;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* text wears ink tokens, never the series colour */
+  &__cat {
+    font-size: 11px;
+    font-weight: 600;
+    fill: #0b0b0b;
+  }
+  &__val {
+    font-size: 11px;
+    font-weight: 700;
+    fill: #52514e;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__bar { fill: #2a78d6; }
+  &__best { fill: #006300; font-weight: 800; font-size: 9px; letter-spacing: .3px; }
+
+  &__hit { fill: transparent; cursor: pointer; outline: none; }
+  &__hit:focus-visible { stroke: #0b0b0b; stroke-width: 2; }
+
+  &__tip {
+    position: absolute;
+    transform: translate(8px, -4px);
+    pointer-events: none;
+    background: #fcfcfb;
+    border: 1px solid rgba(11, 11, 11, 0.10);
+    border-radius: 6px;
+    padding: 6px 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .10);
+    white-space: nowrap;
+    z-index: 5;
+  }
+  &__tip-name  { font-size: 11px; font-weight: 700; color: #0b0b0b; }
+  &__tip-price { font-size: 13px; font-weight: 700; color: #0b0b0b; margin-top: 1px; }
+  &__tip-meta  { font-size: 10px; color: #52514e; }
+}
+
+.im-ph-tablewrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 12px;
+}
+.im-ph-table { width: 100%; min-width: 700px; font-variant-numeric: tabular-nums; }
+
+/* document-type tag */
+.im-doc-tag {
+  display: inline-block;
+  min-width: 46px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .3px;
+  background: #e5e7eb;
+  color: #374151;
+
+  &--po  { background: #e0e7ff; color: #3730a3; }
+  &--grn { background: #d1fae5; color: #065f46; }
+  &--inv { background: #fee2e2; color: #991b1b; }
+}
+
+/* price movement — paired with an arrow glyph, so it never rests on colour alone */
+.im-ph-diff {
+  font-size: 11px;
+  font-weight: 700;
+  &--up   { color: #d03b3b; }   /* paying more */
+  &--down { color: #006300; }   /* paying less */
+}
