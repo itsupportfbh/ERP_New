@@ -164,6 +164,8 @@
         [allowAdd]="true" addTypeLabel="Currency" (addNew)="openQa('currency','supplierCurrency',$event)"></erp-dropdown>
       <erp-dropdown label="Incoterms" [options]="incotermOptions" [(ngModel)]="supplier.incotermsId"
         [allowAdd]="true" addTypeLabel="Incoterm" (addNew)="openQa('incoterms','supplierIncoterm',$event)"></erp-dropdown>
+      <erp-input label="{{ 'GST %' | taxName }}" type="number" [(ngModel)]="supplier.taxPercentage"
+        placeholder="Leave blank to use country rate"></erp-input>
 
       <erp-dropdown label="Ledger Name / Account" [options]="ledgerOptions" [menuMinWidth]="560" [(ngModel)]="supplier.budgetLineId"></erp-dropdown>
       <erp-input label="Contact Name" [(ngModel)]="supplier.contact"></erp-input>

@@ -468,6 +468,15 @@ export class PurchaseOrderFormComponent implements OnInit {
     if (s.incotermsId) this.incotermsId = s.incotermsId;
     const countryId = Number(s.countryId ?? s.CountryId ?? 0);
     this.supplierCountryId = countryId || null;
+    
+// Tax rate precedence: the supplier's own rate wins, then the supplier
+    // country's rate, then 0. An unset supplier rate is null (not 0), so a
+    // deliberately zero-rated supplier is not mistaken for "no rate set".
+    const supplierTax = this.toTaxPct(s.taxPercentage ?? s.TaxPercentage);
+    if (supplierTax !== null) {
+      this.applyTaxDecision(supplierTax);
+      return;
+    }
     if (countryId) {
       this.svc.getCountryById(countryId).subscribe({
         next: (res: any) => {
@@ -480,6 +489,12 @@ export class PurchaseOrderFormComponent implements OnInit {
       return;
     }
     this.applyTaxDecision(this.gstPct);
+  }
+    /** Reads a tax rate off an API row; null when unset/blank so callers can fall back. */
+  private toTaxPct(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   onCurrencyChange(): void {

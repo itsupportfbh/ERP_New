@@ -81,7 +81,7 @@
       <div class="form-row cols-3">
         <erp-dropdown label="Purchase Order *" [options]="poOptions"
           [(ngModel)]="poId" (ngModelChange)="onPoChange()" placeholder="Select approved PO"></erp-dropdown>
-        <erp-input label="Invoice No *" [(ngModel)]="invoiceNo" placeholder="Enter invoice number" [disabled]="isClosed"></erp-input>
+        <erp-input label="Invoice No / DO Number *" [(ngModel)]="invoiceNo" placeholder="Enter invoice number" [disabled]="isClosed"></erp-input>
         <erp-input label="Receipt Date" type="date" [(ngModel)]="receiptDate"></erp-input>
       </div>
       <div class="form-row cols-2 block-gap">

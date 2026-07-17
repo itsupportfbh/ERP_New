@@ -14,6 +14,9 @@ export interface SupplierPayload {
   phone?: string;
   address?: string;
   taxReg?: string;
+  // Supplier's own tax rate. null = not set, so documents fall back to the
+  // supplier country's Country.GSTPercentage; 0 means genuinely zero-rated.
+  taxPercentage?: number | null;
   leadTime?: number | null;
   statusId?: number | null;
   countryId?: number | null;
