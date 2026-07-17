@@ -4,6 +4,24 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 
 .pl-page { display: flex; flex-direction: column; gap: 12px; padding: 0 0 32px; }
 
+/* ── Filter bar ── (mirrors finance-trial-balance.component.scss; component styles are
+   scoped, so the shared look has to be restated rather than inherited) */
+.rpt-filter-bar {
+  display: flex; align-items: flex-end; gap: 10px;
+  padding: 10px 12px; border: 1px solid $border; border-radius: 8px; background: #fff;
+}
+.filter-lbl { display: flex; flex-direction: column; gap: 4px; color: $muted; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.filter-lbl input { height: 30px; border: 1px solid $border; border-radius: 6px; padding: 0 9px; font-size: 12px; }
+.filter-note { color: $muted; font-size: 11px; font-weight: 600; align-self: center; }
+.spacer { flex: 1; }
+.rpt-btn { height: 30px; border-radius: 6px; border: 1px solid $teal; padding: 0 12px; font-size: 12px; cursor: pointer; }
+.rpt-btn-primary { color: #fff; background: $teal; &:disabled { opacity: .6; cursor: default; } }
+.rpt-btn-outline { color: $teal; background: transparent; &:hover { background: #e8f4f8; } &:disabled { opacity: .6; cursor: default; } }
+
+@media (max-width: 720px) {
+  .rpt-filter-bar { flex-direction: column; align-items: stretch; }
+}
+
 .rpt-head {
   display: flex; justify-content: space-between; align-items: center;
   background: #fff; border-radius: 1rem; padding: .7rem 1.2rem;

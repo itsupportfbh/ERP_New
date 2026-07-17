@@ -36,6 +36,27 @@
     </div>
   </div>
 
+  <!-- Filters -->
+  <div class="rpt-filter-bar">
+    <label class="filter-lbl">
+      <span>FROM DATE</span>
+      <input type="date" [(ngModel)]="fromDate" [max]="toDate || null">
+    </label>
+    <label class="filter-lbl">
+      <span>TO DATE</span>
+      <input type="date" [(ngModel)]="toDate" [min]="fromDate || null">
+    </label>
+    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()" [disabled]="loading || !!dateError">
+      {{ loading ? 'Running…' : 'Run Report' }}
+    </button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="resetDates()" [disabled]="loading">
+      This Year
+    </button>
+    <div class="spacer"></div>
+    <span class="filter-note">{{ rangeLabel }}</span>
+  </div>
+
+  <div class="rpt-error" *ngIf="dateError">{{ dateError }}</div>
   <div class="rpt-error" *ngIf="error">{{ error }}</div>
   <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
 

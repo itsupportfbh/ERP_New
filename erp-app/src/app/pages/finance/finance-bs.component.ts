@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
@@ -19,8 +20,14 @@ export class FinanceBsComponent implements OnInit {
   expanded = new Set<string>();
   loading = false;
   error = '';
-  fromDate = '';
-  toDate = '';
+  /** A balance sheet is a position at a single instant, not a movement over a range, so it
+      filters on one asOnDate. To compare two periods you take a second snapshot rather than
+      widening the range — a from/to would drop the earlier ledger history the closing
+      balances are built from, and the sheet would stop balancing. */
+  asOnDate = '';
+
+  /** Optional second snapshot. Blank = single-column report. */
+  compareDate = '';
 
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
@@ -31,24 +38,90 @@ export class FinanceBsComponent implements OnInit {
   constructor(private finance: FinanceService, private permissionService: PermissionService, private auditPrint: AuditPrintService) {}
 
   ngOnInit(): void {
+    this.resetDate();
     this.load();
     this.permissionService.getFunctionPermission(this.userId, 'reports').subscribe({
       next: perm => { this.permission = perm; }
     });
   }
 
+  resetDate(): void {
+    this.asOnDate = this.dateOnly(new Date());
+  }
+
+  /** Prior year end — the comparison a balance sheet is normally read against. */
+  comparePriorYearEnd(): void {
+    const year = Number((this.asOnDate || this.dateOnly(new Date())).substring(0, 4));
+    this.compareDate = `${year - 1}-12-31`;
+  }
+
+  clearCompare(): void { this.compareDate = ''; }
+
+  get compareOn(): boolean { return !!this.compareDate; }
+
+  private dateOnly(d: Date): string {
+    const m = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  get rangeLabel(): string {
+    const base = this.asOnDate ? `As at ${this.asOnDate}` : 'Latest position';
+    return this.compareOn ? `${base} vs ${this.compareDate}` : base;
+  }
+
   load(): void {
     this.loading = true;
     this.error = '';
-    this.finance.list(this.endpoint, { fromDate: this.fromDate, toDate: this.toDate }).subscribe({
-      next: res => {
-        const raw = this.finance.unwrap(res);
-        this.rows = raw.map((r: any) => this.normalize(r));
+    // The param must be named asOnDate: it previously sent fromDate/toDate, which the
+    // controller does not bind, so every run silently reported the all-time position.
+    const primary$ = this.finance.list(this.endpoint, { asOnDate: this.asOnDate });
+    const compare$ = this.compareOn
+      ? this.finance.list(this.endpoint, { asOnDate: this.compareDate })
+      : of(null);
+
+    forkJoin([primary$, compare$]).subscribe({
+      next: ([primaryRes, compareRes]) => {
+        const primary = this.finance.unwrap(primaryRes).map((r: any) => this.normalize(r));
+        const compare = compareRes ? this.finance.unwrap(compareRes).map((r: any) => this.normalize(r)) : [];
+        this.rows = this.mergeSnapshots(primary, compare);
         this.buildLevels();
         this.loading = false;
       },
       error: () => { this.rows = []; this.loading = false; this.error = 'Balance Sheet data unavailable.'; }
     });
+  }
+
+  private rowKey(r: any): string {
+    return String(r.accountId ?? r.accountCode ?? r.accountName);
+  }
+
+  /**
+   * Joins the two snapshots into one row per account. The union matters in both directions:
+   * an account can hold a balance at one date and not the other (opened since, or cleared
+   * out), and dropping either side would misreport the change as zero.
+   */
+  private mergeSnapshots(primary: any[], compare: any[]): any[] {
+    if (!this.compareOn) {
+      return primary.map(r => ({ ...r, compareAmount: 0, change: 0 }));
+    }
+
+    const cmp = new Map<string, any>(compare.map(r => [this.rowKey(r), r]));
+    const merged = primary.map(r => {
+      const key = this.rowKey(r);
+      const compareAmount = Number(cmp.get(key)?.amount ?? 0);
+      cmp.delete(key);
+      return { ...r, compareAmount, change: (r.amount || 0) - compareAmount };
+    });
+
+    cmp.forEach(c => merged.push({
+      ...c,
+      amount: 0,
+      compareAmount: Number(c.amount ?? 0),
+      change: -Number(c.amount ?? 0)
+    }));
+
+    return merged;
   }
 
   private normalize(r: any): any {
@@ -86,10 +159,16 @@ export class FinanceBsComponent implements OnInit {
     });
   }
 
+  /** An account is worth a row if it moved at either date — a balance that fell to zero
+      since the compare date is exactly what the reader is looking for. */
+  private hasBalance(r: any): boolean {
+    return (r.amount || 0) !== 0 || (r.compareAmount || 0) !== 0;
+  }
+
   get assetRows(): any[] {
     const filtered = this.rows.filter(r => {
       const s = String(r.section ?? '').toLowerCase();
-      return s.includes('asset') && r.amount !== 0;
+      return s.includes('asset') && this.hasBalance(r);
     });
     return this.sortByCode(filtered);
   }
@@ -97,7 +176,7 @@ export class FinanceBsComponent implements OnInit {
   get liabilityRows(): any[] {
     const filtered = this.rows.filter(r => {
       const s = String(r.section ?? '').toLowerCase();
-      return s.includes('liabil') && r.amount !== 0;
+      return s.includes('liabil') && this.hasBalance(r);
     });
     return this.sortByCode(filtered);
   }
@@ -105,7 +184,7 @@ export class FinanceBsComponent implements OnInit {
   get equityRows(): any[] {
     const filtered = this.rows.filter(r => {
       const s = String(r.section ?? '').toLowerCase();
-      return (s.includes('equity') || s.includes('capital')) && r.amount !== 0;
+      return (s.includes('equity') || s.includes('capital')) && this.hasBalance(r);
     });
     return this.sortByCode(filtered);
   }
@@ -119,6 +198,11 @@ export class FinanceBsComponent implements OnInit {
   get totalLiabilities(): number { return this.liabilityRows.reduce((s, r) => s + (r.amount || 0), 0); }
   get totalEquity():      number { return this.equityRows.reduce((s, r)    => s + (r.amount || 0), 0); }
   get totalLiabilitiesAndEquity(): number { return this.totalLiabilities + this.totalEquity; }
+
+  get cmpTotalAssets():      number { return this.assetRows.reduce((s, r)     => s + (r.compareAmount || 0), 0); }
+  get cmpTotalLiabilities(): number { return this.liabilityRows.reduce((s, r) => s + (r.compareAmount || 0), 0); }
+  get cmpTotalEquity():      number { return this.equityRows.reduce((s, r)    => s + (r.compareAmount || 0), 0); }
+  get cmpTotalLiabilitiesAndEquity(): number { return this.cmpTotalLiabilities + this.cmpTotalEquity; }
 
   toggle(row: any): void {
     const key = String(row._id);
@@ -150,16 +234,28 @@ export class FinanceBsComponent implements OnInit {
   }
 
   exportExcel(): void {
+    const cmp = this.compareOn;
+    const head = cmp
+      ? ['Account', `As at ${this.asOnDate}`, `As at ${this.compareDate}`, 'Change']
+      : ['Account', 'Amount'];
+    const line = (r: any) => cmp
+      ? [r.accountName, (r.amount || 0).toFixed(2), (r.compareAmount || 0).toFixed(2), (r.change || 0).toFixed(2)]
+      : [r.accountName, (r.amount || 0).toFixed(2)];
+    const total = (label: string, now: number, then: number) => cmp
+      ? [label, now.toFixed(2), then.toFixed(2), (now - then).toFixed(2)]
+      : [label, now.toFixed(2)];
+
     const rows: any[][] = [
-      ['Balance Sheet'], [],
-      ['Total Liabilities & Equity', this.totalLiabilitiesAndEquity.toFixed(2)],
-      ['Total Assets', this.totalAssets.toFixed(2)], [],
-      ['Liabilities'], ['Account', 'Amount'],
-      ...this.liabilityRows.map(r => [r.accountName, (r.amount || 0).toFixed(2)]),
-      [], ['Equity'], ['Account', 'Amount'],
-      ...this.equityRows.map(r => [r.accountName, (r.amount || 0).toFixed(2)]),
-      [], ['Assets'], ['Account', 'Amount'],
-      ...this.assetRows.map(r => [r.accountName, (r.amount || 0).toFixed(2)])
+      ['Balance Sheet'],
+      [cmp ? `As at ${this.asOnDate} compared with ${this.compareDate}` : `As at ${this.asOnDate}`], [],
+      total('Total Liabilities & Equity', this.totalLiabilitiesAndEquity, this.cmpTotalLiabilitiesAndEquity),
+      total('Total Assets', this.totalAssets, this.cmpTotalAssets), [],
+      ['Liabilities'], head,
+      ...this.liabilityRows.map(line),
+      [], ['Equity'], head,
+      ...this.equityRows.map(line),
+      [], ['Assets'], head,
+      ...this.assetRows.map(line)
     ];
     const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -199,7 +295,7 @@ export class FinanceBsComponent implements OnInit {
   }
 
   exportPdf(): void {
-    const asAt = this.fmtDate(this.toDate);
+    const asAt = this.fmtDate(this.asOnDate);
     const bal  = this.balancingRow;
 
     this.auditPrint.print({

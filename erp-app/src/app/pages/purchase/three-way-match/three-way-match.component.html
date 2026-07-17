@@ -18,12 +18,22 @@
   <div class="match-summary" *ngIf="rows.length">
     <div class="match-stat ok">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="2,8 6,12 14,4"/></svg>
-      <span>{{ okCount }} Matched</span>
+      <span>{{ okCount }} Passing</span>
     </div>
     <div class="match-stat mismatch">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
-      <span>{{ mismatchCount }} Mismatch</span>
+      <span>{{ mismatchCount }} Blocking</span>
     </div>
+  </div>
+
+  <!-- Posting gate: rate is matched against the PO, qty against the GRN. A partial invoice
+       bills less at the same rate, so it passes. -->
+  <div class="match-banner" *ngIf="match" [class.ok]="match.canPostToAp" [class.mm]="!match.canPostToAp">
+    <span *ngIf="!match.canPostToAp">&#9651; Cannot post to A/P — {{ match.blockReason }}</span>
+    <span *ngIf="match.canPostToAp && match.warnReason">&#10003; Can post to A/P (review) — {{ match.warnReason }}</span>
+    <span *ngIf="match.canPostToAp && !match.warnReason">
+      &#10003; Can post to A/P — {{ match.mismatchLabel || 'invoice rates match the PO and quantities match the GRN' }}
+    </span>
   </div>
 
   <div class="card table-card">
