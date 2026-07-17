@@ -642,6 +642,7 @@ export class PartnerFormComponent implements OnInit {
       phone: this.pick(data, 'phone', 'Phone') ?? '',
       address: this.pick(data, 'address', 'Address') ?? '',
       taxReg: this.pick(data, 'taxReg', 'TaxReg') ?? '',
+      taxPercentage: this.pick(data, 'taxPercentage', 'TaxPercentage') ?? null,
       leadTime: this.pick(data, 'leadTime', 'LeadTime') ?? null,
       statusId: this.pick(data, 'statusId', 'StatusId') ?? null,
       countryId: this.pick(data, 'countryId', 'CountryId') ?? null,
@@ -696,6 +697,7 @@ export class PartnerFormComponent implements OnInit {
     return {
       ...this.supplier,
       id: this.toNumber(this.supplier.id) ?? 0,
+      taxPercentage: this.toNumber(this.supplier.taxPercentage),
       leadTime: this.toNumber(this.supplier.leadTime),
       statusId: this.toNumber(this.supplier.statusId),
       countryId: this.toNumber(this.supplier.countryId),
@@ -885,6 +887,7 @@ export class PartnerFormComponent implements OnInit {
       phone: '',
       address: '',
       taxReg: '',
+      taxPercentage: null,
       leadTime: null,
       statusId: 1,
       bankName: '',
