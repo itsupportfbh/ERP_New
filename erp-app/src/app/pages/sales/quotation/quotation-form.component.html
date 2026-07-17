@@ -70,6 +70,13 @@
           placeholder="Enter email..." autocomplete="off" />
       </div>
 
+      <!-- Cost Centre -->
+      <div class="mf-group">
+        <label class="mf-label">Cost Centre</label>
+        <input type="text" class="mf-input" [(ngModel)]="header.costCentre" name="costCentre"
+          placeholder="Enter cost centre..." />
+      </div>
+
       <!-- Customer PO No — only for a Cash Sale. -->
       <div class="mf-group" *ngIf="header.isCashSales">
         <label class="mf-label">Customer PO No</label>
@@ -124,18 +131,7 @@
       </div>
     </div>
 
-    <!-- Row 3 — Cost Centre. (Line Source dropdown removed; header.lineSourceId stays at its
-         default of 2/Bundle Packages so the package selector and custom Add Line both remain.) -->
-    <div class="qf-grid2">
-      <!-- Cost Centre -->
-      <div class="mf-group">
-        <label class="mf-label">Cost Centre</label>
-        <input type="text" class="mf-input" [(ngModel)]="header.costCentre" name="costCentre"
-          placeholder="Enter cost centre..." />
-      </div>
-    </div>
-
-    <!-- Row 4 — the two multi-line fields share a row so neither sits alone. Both are always shown
+    <!-- Row 3 — the two multi-line fields share a row so neither sits alone. Both are always shown
          now; Delivery To applies to every quotation, not only a Cash Sale. -->
     <div class="qf-grid2">
       <div class="mf-group">
@@ -151,7 +147,8 @@
       </div>
     </div>
 
-    <!-- Packages multi -->
+    <!-- Packages multi. (Line Source dropdown removed; header.lineSourceId stays at its
+         default of 2/Bundle Packages so the package selector and custom Add Line both remain.) -->
     <div class="qf-grid2" *ngIf="showPackages">
       <div class="mf-group">
         <label class="mf-label">Select Packages (Multi)</label>

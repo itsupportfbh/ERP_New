@@ -446,6 +446,7 @@ export class DeliveryOrderFormComponent implements OnInit {
         VehicleId: this.isSelfMode ? null : this.vehicleId,
         RouteName: (this.deliveryTo || '').trim() || null,
         DeliveryDate: this.deliveryDate || null,
+        DeliveryTime: this.formatTime(this.deliveryTime),
         ModeOfDeliveryId: this.modeOfDeliveryId,
         DriverMobileNo: this.isSelfMode ? null : (this.driverMobileNo || null)
         // Receiver + signature are deliberately absent: they belong to Confirm Delivery on the
@@ -469,7 +470,7 @@ export class DeliveryOrderFormComponent implements OnInit {
       VehicleId: this.isSelfMode ? null : this.vehicleId,
       RouteName: (this.deliveryTo || '').trim() || null,
       DeliveryDate: this.deliveryDate || null,
-      DeliveryTime: this.deliveryTime || null,
+      DeliveryTime: this.formatTime(this.deliveryTime),
       ModeOfDeliveryId: this.modeOfDeliveryId,
       DriverMobileNo: this.isSelfMode ? null : (this.driverMobileNo || null),
       // No receiver/signature here — a DO is raised before the goods leave.
@@ -517,6 +518,13 @@ export class DeliveryOrderFormComponent implements OnInit {
     const d = new Date(s);
     return isNaN(d.getTime()) ? '' : d.toISOString().substring(0, 10);
   }
+  // TimeSpan-friendly "HH:mm:ss" (or null) for the backend DeliveryTime column —
+  // the time input yields "HH:mm". Mirrors the Sales Order form's OrderTime.
+  private formatTime(t: string | null): string | null {
+    if (!t) return null;
+    return t.length === 5 ? `${t}:00` : t;
+  }
+
   private normalizeTime(v: any): string {
     if (!v) return '';
     const s = String(v);
