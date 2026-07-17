@@ -710,6 +710,15 @@ body.period-locked .item-master-no-lock .dt-icon-btn.del {
   &.view { svg { stroke: var(--primary); } &:hover { background: var(--primary-pale); } }
   &.edit { svg { stroke: #3b82f6; } &:hover { background: #eff6ff; } }
   &.del  { svg { stroke: var(--danger); } &:hover { background: #fef2f2; } }
+
+  // Greyed out but still hoverable, so the title can explain why it is unavailable.
+  // Matches the dimming body.period-locked applies to these same buttons.
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(1);
+    &:hover { background: transparent; }
+  }
 }
 
 .dt-empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }

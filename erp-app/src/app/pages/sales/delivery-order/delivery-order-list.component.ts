@@ -14,6 +14,20 @@ const STATUS_MAP: Record<number, string> = {
   4: 'Posted'
 };
 
+// DeliveryOrder.DeliveryStatus — the customer-signed / billed state, separate from
+// the approval STATUS_MAP above. 2 is set by the API when a Sales Invoice is raised
+// from the DO.
+const DELIVERY_STATUS_MAP: Record<number, string> = {
+  0: 'Pending',
+  1: 'Completed',
+  2: 'Invoice Created'
+};
+const DELIVERY_STATUS_CLASS: Record<number, string> = {
+  0: 'st-1',
+  1: 'st-2',
+  2: 'st-4'
+};
+
 @Component({
   selector: 'erp-delivery-order-list',
   standalone: false,
@@ -111,6 +125,7 @@ export class DeliveryOrderListComponent implements OnInit {
         this.rows = this.svc.unwrap(res).map((r: any) => {
           const status = Number(r.status ?? r.Status ?? 0);
           const posted = !!(r.isPosted ?? r.IsPosted ?? (status === 4));
+          const deliveryStatus = Number(r.deliveryStatus ?? r.DeliveryStatus ?? 0);
           return {
             ...r,
             id: r.id ?? r.Id,
@@ -121,6 +136,12 @@ export class DeliveryOrderListComponent implements OnInit {
             deliveryDate: r.deliveryDate ?? r.DeliveryDate ?? null,
             status,
             statusLabel: STATUS_MAP[status] ?? 'Draft',
+            deliveryStatus,
+            deliveryStatusLabel: DELIVERY_STATUS_MAP[deliveryStatus] ?? 'Pending',
+            deliveryStatusClass: DELIVERY_STATUS_CLASS[deliveryStatus] ?? 'st-1',
+            // Editable only while Pending. Once the customer has signed (1) the delivery is a
+            // record of what happened, and once invoiced (2) it has been billed.
+            editable: deliveryStatus === 0,
             posted,
             postedLabel: posted ? 'Yes' : 'No'
           };

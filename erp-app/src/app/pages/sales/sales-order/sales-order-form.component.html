@@ -16,7 +16,8 @@
   <div class="card qf-card">
     <div class="qf-cardLabel">Customer &amp; Terms</div>
 
-    <!-- Row 1 -->
+    <!-- Rows 1-2 — one grid so the six fields flow: who/what first, then the dates, leaving the
+         short row at the bottom instead of a gap beside Customer. -->
     <div class="qf-grid4">
       <!-- Quotation No -->
       <div class="mf-group">
@@ -34,20 +35,6 @@
           [items]="customers" bindLabel="name" bindValue="id"
           placeholder="Search customer..."
           (ngModelChange)="onCustomerChange($event)"></erp-dropdown>
-      </div>
-
-      <!-- Source Line dropdown removed; header.lineSourceId stays at its default so the package
-           selector and custom Add Line both remain available. -->
-
-    </div>
-
-    <!-- Row 2 -->
-    <div class="qf-grid4">
-      <!-- GST % -->
-      <div class="mf-group">
-        <label class="mf-label">{{ 'GST %' | taxName }}</label>
-        <!-- Read-only: the GST rate comes from the company tax setup. -->
-        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" disabled />
       </div>
 
       <!-- Sales Order Date -->
@@ -68,6 +55,13 @@
         <label class="mf-label">Order Time</label>
         <input type="time" class="mf-input" [(ngModel)]="header.orderTime" name="orderTime" />
       </div>
+
+      <!-- GST % -->
+      <div class="mf-group">
+        <label class="mf-label">{{ 'GST %' | taxName }}</label>
+        <!-- Read-only: the GST rate comes from the company tax setup. -->
+        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" disabled />
+      </div>
     </div>
 
     <!-- Row 3 -->
@@ -84,7 +78,8 @@
       </div>
     </div>
 
-    <!-- Packages multi -->
+    <!-- Packages multi. (Source Line dropdown removed; header.lineSourceId stays at its default
+         so the package selector and custom Add Line both remain available.) -->
     <div class="qf-grid2" *ngIf="showPackages">
       <div class="mf-group">
         <label class="mf-label">Select Packages (Multi)</label>
