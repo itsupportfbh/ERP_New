@@ -218,49 +218,60 @@ export class FinanceLedgerComponent implements OnInit {
     return { opening, debit, credit, debitBase, creditBase };
   }
 
+  /**
+   * Fills in the figures the template renders for one row. A collapsed parent shows its
+   * rolled-up total, an expanded one shows only what was posted to it directly (its children
+   * are on screen carrying the rest), and a leaf always shows its own.
+   *
+   * Must run for EVERY node that can reach the screen, not just the ones the collapsed tree
+   * walks — search renders accounts from any depth.
+   */
+  private applyDisplayValues(node: LedgerNode): void {
+    const hasChildren = !!(node.children?.length);
+    let o = 0, d = 0, c = 0, db = 0, cb = 0;
+
+    if (hasChildren) {
+      if (node.$$expanded) {
+        const hasOwn = (node.ownOpening ?? 0) !== 0 || (node.ownDebit ?? 0) !== 0 || (node.ownCredit ?? 0) !== 0;
+        if (hasOwn) {
+          o = node.ownOpening ?? 0; d = node.ownDebit ?? 0; c = node.ownCredit ?? 0;
+          db = node.ownDebitBase ?? 0; cb = node.ownCreditBase ?? 0;
+        }
+      } else {
+        o = node.totalOpening ?? 0; d = node.totalDebit ?? 0; c = node.totalCredit ?? 0;
+        db = node.totalDebitBase ?? 0; cb = node.totalCreditBase ?? 0;
+      }
+    } else {
+      o = node.ownOpening ?? 0; d = node.ownDebit ?? 0; c = node.ownCredit ?? 0;
+      db = node.ownDebitBase ?? 0; cb = node.ownCreditBase ?? 0;
+    }
+
+    node.openingBalance = o;
+    node.debit          = d;
+    node.credit         = c;
+    node.balance        = Math.abs(this.calcBalance(o, d, c));
+    node.debitBase      = db;
+    node.creditBase     = cb;
+    node.balanceBase    = Math.abs(db - cb);
+
+    if (this.useBaseValues) {
+      node.displayDebit   = db;
+      node.displayCredit  = cb;
+      node.displayBalance = Math.abs(db - cb);
+    } else {
+      node.displayDebit   = d;
+      node.displayCredit  = c;
+      node.displayBalance = Math.abs(this.calcBalance(o, d, c));
+    }
+  }
+
   private rebuildDisplayRows(): void {
     const output: LedgerNode[] = [];
 
     const visit = (node: LedgerNode) => {
-      const hasChildren = !!(node.children?.length);
-      let o = 0, d = 0, c = 0, db = 0, cb = 0;
-
-      if (hasChildren) {
-        if (node.$$expanded) {
-          const hasOwn = (node.ownOpening ?? 0) !== 0 || (node.ownDebit ?? 0) !== 0 || (node.ownCredit ?? 0) !== 0;
-          if (hasOwn) {
-            o = node.ownOpening ?? 0; d = node.ownDebit ?? 0; c = node.ownCredit ?? 0;
-            db = node.ownDebitBase ?? 0; cb = node.ownCreditBase ?? 0;
-          }
-        } else {
-          o = node.totalOpening ?? 0; d = node.totalDebit ?? 0; c = node.totalCredit ?? 0;
-          db = node.totalDebitBase ?? 0; cb = node.totalCreditBase ?? 0;
-        }
-      } else {
-        o = node.ownOpening ?? 0; d = node.ownDebit ?? 0; c = node.ownCredit ?? 0;
-        db = node.ownDebitBase ?? 0; cb = node.ownCreditBase ?? 0;
-      }
-
-      node.openingBalance = o;
-      node.debit          = d;
-      node.credit         = c;
-      node.balance        = Math.abs(this.calcBalance(o, d, c));
-      node.debitBase      = db;
-      node.creditBase     = cb;
-      node.balanceBase    = Math.abs(db - cb);
-
-      if (this.useBaseValues) {
-        node.displayDebit   = db;
-        node.displayCredit  = cb;
-        node.displayBalance = Math.abs(db - cb);
-      } else {
-        node.displayDebit   = d;
-        node.displayCredit  = c;
-        node.displayBalance = Math.abs(this.calcBalance(o, d, c));
-      }
-
+      this.applyDisplayValues(node);
       output.push(node);
-      if (hasChildren && node.$$expanded) node.children.forEach(ch => visit(ch));
+      if (node.children?.length && node.$$expanded) node.children.forEach(ch => visit(ch));
     };
 
     this.roots.forEach(r => visit(r));
@@ -269,6 +280,9 @@ export class FinanceLedgerComponent implements OnInit {
     if (term) {
       const allFlat: LedgerNode[] = [];
       const collectAll = (node: LedgerNode) => {
+        // visit() only descends into expanded rows, so a node nested under a collapsed
+        // parent still holds the zeros it was built with. Search can surface it anyway.
+        this.applyDisplayValues(node);
         allFlat.push(node);
         if (node.children) node.children.forEach(ch => collectAll(ch));
       };
