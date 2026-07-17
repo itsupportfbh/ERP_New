@@ -96,10 +96,16 @@
           <input class="fc-input" type="number" [(ngModel)]="item.uomFactor" name="uomFactor" min="0.0001" step="0.0001" placeholder="1" required />
           <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">e.g. CTN-12 Tins x 1L → L = 12</small>
         </div>
-        <div>
-          <label class="fc-label">Price</label>
-          <input class="fc-input" type="number" [(ngModel)]="item.price" name="price" min="0" step="0.01" placeholder="0.00" />
-          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Default selling price — pre-fills quotation &amp; sales order lines</small>
+        <!-- Prices follow the Category type: Sales Item → Sales Price, Purchase Item → Purchase Price, Both → both. -->
+        <div *ngIf="showSalesPrice">
+          <label class="fc-label">Sales Price *</label>
+          <input class="fc-input" type="number" [(ngModel)]="item.salesPrice" name="salesPrice" min="0" step="0.01" placeholder="0.00" />
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Pre-fills quotation &amp; sales order lines</small>
+        </div>
+        <div *ngIf="showPurchasePrice">
+          <label class="fc-label">Purchase Price *</label>
+          <input class="fc-input" type="number" [(ngModel)]="item.purchasePrice" name="purchasePrice" min="0" step="0.01" placeholder="0.00" />
+          <small style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">Pre-fills purchase &amp; inventory</small>
         </div>
         <div>
           <label class="fc-label">Specifications</label>
@@ -267,6 +273,135 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- ===== Supplier Price History =====
+           Real price points from the purchase documents (PO / GRN / Supplier Invoice).
+           The Unit Prices table above only ever holds the CURRENT price. -->
+      <div class="im-ph-head">
+        <div>
+          <div class="im-ph-title">Supplier Price History</div>
+          <div class="im-ph-sub">How each supplier's price for this item moved over time — from Purchase Orders, GRNs and Supplier Invoices.</div>
+        </div>
+        <div class="im-ph-actions" *ngIf="priceHistory?.length">
+          <button type="button" class="im-ph-btn" (click)="downloadPriceHistoryExcel()" title="Download Excel">
+            <i class="fas fa-file-excel"></i> Excel
+          </button>
+          <button type="button" class="im-ph-btn" (click)="downloadPriceHistoryPdf()" title="Download PDF">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="im-ph-loading" *ngIf="priceHistoryLoading">Loading price history…</div>
+      <div class="im-ph-empty" *ngIf="!priceHistoryLoading && !priceHistory?.length">
+        No purchase history for this item yet.
+      </div>
+
+      <div class="im-ph-viz" *ngIf="!priceHistoryLoading && priceChart">
+        <!-- ===== Latest price per supplier (magnitude → bars, cheapest first) ===== -->
+        <div class="im-chart">
+          <div class="im-chart__cap">
+            Latest price per supplier<span *ngIf="priceChart.currency"> ({{ priceChart.currency }})</span> — cheapest first
+          </div>
+          <svg [attr.viewBox]="'0 0 ' + priceChart.w + ' ' + priceChart.h"
+               class="im-chart__svg" role="img"
+               aria-label="Latest unit price per supplier. Full values in the table below.">
+            <!-- gridlines: solid hairlines, one shade off the surface -->
+            <g class="im-chart__grid">
+              <line *ngFor="let t of priceChart.xTicks"
+                    [attr.x1]="t.x" [attr.x2]="t.x"
+                    [attr.y1]="priceChart.plot.y" [attr.y2]="priceChart.plot.y + priceChart.plot.h" />
+            </g>
+
+            <g *ngFor="let b of priceChart.bars; trackBy: trackByIdx">
+              <!-- supplier name sits outside the plot, so it can never be clipped by a short bar -->
+              <text class="im-chart__cat" [attr.x]="priceChart.plot.x - 10"
+                    [attr.y]="b.y + priceChart.barH / 2 + 4" text-anchor="end">{{ b.name }}</text>
+
+              <!-- one measure across nominal categories → one colour for every bar -->
+              <rect class="im-chart__bar" [attr.x]="priceChart.plot.x" [attr.y]="b.y"
+                    [attr.width]="b.w" [attr.height]="priceChart.barH"
+                    rx="4" ry="4" />
+
+              <!-- value direct-labelled at the bar end; the cheapest is called out in words,
+                   never by colour alone -->
+              <text class="im-chart__val" [attr.x]="priceChart.plot.x + b.w + 8"
+                    [attr.y]="b.y + priceChart.barH / 2 + 4">
+                {{ b.price | number:'1.2-2' }}<tspan class="im-chart__best" *ngIf="b.isCheapest && priceChart.bars.length > 1"> · LOWEST</tspan>
+              </text>
+
+              <rect class="im-chart__hit" [attr.x]="priceChart.plot.x" [attr.y]="b.y - 4"
+                    [attr.width]="priceChart.plot.w" [attr.height]="priceChart.barH + 8"
+                    (mouseenter)="onBarEnter(b)" (mouseleave)="onChartLeave()"
+                    tabindex="0" (focus)="onBarEnter(b)" (blur)="onChartLeave()" />
+            </g>
+
+            <!-- x axis -->
+            <line class="im-chart__axis"
+                  [attr.x1]="priceChart.plot.x" [attr.x2]="priceChart.plot.x + priceChart.plot.w"
+                  [attr.y1]="priceChart.plot.y + priceChart.plot.h + 6"
+                  [attr.y2]="priceChart.plot.y + priceChart.plot.h + 6" />
+            <g class="im-chart__tick">
+              <text *ngFor="let t of priceChart.xTicks"
+                    [attr.x]="t.x" [attr.y]="priceChart.plot.y + priceChart.plot.h + 22"
+                    text-anchor="middle">{{ t.label }}</text>
+            </g>
+          </svg>
+
+          <!-- tooltip enhances; the table below carries every value -->
+          <div class="im-chart__tip" *ngIf="chartHover"
+               [style.left.px]="chartHover.x" [style.top.px]="chartHover.y">
+            <div class="im-chart__tip-name">{{ chartHover.b.name }}</div>
+            <div class="im-chart__tip-price">{{ chartHover.b.currency }} {{ chartHover.b.price | number:'1.2-4' }}</div>
+            <div class="im-chart__tip-meta">
+              {{ chartHover.b.date | date:'dd/MM/yyyy' }} · {{ chartHover.b.docType }} {{ chartHover.b.docNo }}
+            </div>
+            <div class="im-chart__tip-meta">Qty {{ chartHover.b.qty | number:'1.0-4' }} · {{ chartHover.b.purchases }} purchase(s)</div>
+            <div class="im-chart__tip-meta" *ngIf="chartHover.b.diff != null">
+              {{ chartHover.b.diff > 0 ? '▲' : '▼' }}
+              {{ (chartHover.b.diff < 0 ? -chartHover.b.diff : chartHover.b.diff) | number:'1.2-2' }} vs previous
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Table view (every value, WCAG-clean) ===== -->
+        <div class="im-ph-tablewrap">
+          <table class="dt-table im-ph-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Supplier</th>
+                <th>Document</th>
+                <th style="text-align:right">Qty</th>
+                <th style="text-align:right">Unit Price</th>
+                <th style="text-align:right">Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let h of priceHistory; trackBy: trackByIdx">
+                <td>{{ h.txnDate | date:'dd/MM/yyyy' }}</td>
+                <td>{{ h.supplierName || '-' }}</td>
+                <td>
+                  <span class="im-doc-tag" [ngClass]="{
+                        'im-doc-tag--po':  h.docType === 'PO',
+                        'im-doc-tag--grn': h.docType === 'GRN',
+                        'im-doc-tag--inv': h.docType === 'INVOICE' }">{{ h.docType }}</span>
+                  <span style="margin-left:6px">{{ h.docNo }}</span>
+                </td>
+                <td style="text-align:right">{{ h.qty | number:'1.0-4' }}</td>
+                <td style="text-align:right"><b>{{ h.currencyName }} {{ h.unitPrice | number:'1.2-4' }}</b></td>
+                <td style="text-align:right">
+                  <span class="im-ph-diff" *ngIf="h.diff != null"
+                        [class.im-ph-diff--up]="h.diff > 0" [class.im-ph-diff--down]="h.diff < 0">
+                    {{ h.diff > 0 ? '▲' : '▼' }} {{ (h.diff < 0 ? -h.diff : h.diff) | number:'1.2-2' }}
+                  </span>
+                  <span *ngIf="h.diff == null" class="im-ph-muted">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

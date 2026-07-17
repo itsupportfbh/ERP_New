@@ -27,6 +27,15 @@ export interface DocumentPrintConfig {
   /** Extra address lines shown under the customer name inside the "Order To" box
    *  (e.g. the Delivery To address captured on the quotation). */
   orderToLines?: string[];
+  /** Prints an acknowledgement block for the customer to sign on the hardcopy.
+   *  The signed page is scanned back in and attached to the DO (Confirm Delivery). */
+  signature?: {
+    /** Caption under the ruled line, e.g. "Received in good order and condition". */
+    note?: string;
+    /** Pre-printed contact (from the quotation) so the customer knows who should sign. */
+    contactName?: string;
+    contactNo?: string;
+  };
 }
 
 export interface ClassicParty { name?: string; lines?: string[]; tel?: string; fax?: string; attn?: string; acceptance?: string[]; }
@@ -230,6 +239,11 @@ export class DocumentPrintService {
     .gt-row td { background: #1a5c6e; color: #fff; font-weight: 900; font-size: 12px; border-color: #1a5c6e; }
 
     /* FOOTER */
+    .sig-row { margin-top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+    .sig-line { border-bottom: 1px solid #333; height: 46px; }
+    .sig-lbl { margin-top: 4px; font-size: 10.5px; font-weight: 700; color: #333; }
+    .sig-meta { font-size: 10px; color: #555; }
+    .sig-note { font-size: 9.5px; color: #777; margin-top: 2px; }
     .doc-ftr { margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10.5px; color: #333; }
     .behalf { line-height: 1.8; }
     .behalf strong { font-size: 11px; }
@@ -288,6 +302,21 @@ export class DocumentPrintService {
       <table class="tot-tbl">${totalsHtml}</table>
     </div>
   </div>
+
+  ${cfg.signature ? `
+  <!-- Acknowledgement: the customer signs this on the hardcopy, which is scanned back in. -->
+  <div class="sig-row">
+    <div class="sig-cell">
+      <div class="sig-line"></div>
+      <div class="sig-lbl">Received By (Customer)</div>
+      ${cfg.signature.contactName ? `<div class="sig-meta">${this.escape(cfg.signature.contactName)}${cfg.signature.contactNo ? ' · ' + this.escape(cfg.signature.contactNo) : ''}</div>` : ''}
+      ${cfg.signature.note ? `<div class="sig-note">${this.escape(cfg.signature.note)}</div>` : ''}
+    </div>
+    <div class="sig-cell">
+      <div class="sig-line"></div>
+      <div class="sig-lbl">Name &amp; Date</div>
+    </div>
+  </div>` : ''}
 
   <!-- FOOTER -->
   <div class="doc-ftr">

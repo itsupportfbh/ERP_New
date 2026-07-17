@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { environment } from 'environments/environment';
 import { Observable, map } from 'rxjs';
 
-export type UploadFolder = 'items' | 'itemsets';
+export type UploadFolder = 'items' | 'itemsets' | 'do-pod';
 
 /**
  * Uploads an image and returns the relative URL to store on the record.
@@ -17,6 +17,9 @@ export class UploadService {
   static readonly MAX_BYTES = 5 * 1024 * 1024;
   static readonly ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+  /** A signed delivery form comes back as a phone photo or a scanner PDF, so this folder takes both. */
+  static readonly ACCEPTED_POD = [...UploadService.ACCEPTED, 'application/pdf'];
+
   private readonly api = environment.apiUrl;
 
   // Uploaded files are served from the API's ORIGIN (/uploads/...), not from under /api, so the
@@ -25,13 +28,21 @@ export class UploadService {
 
   constructor(private http: HttpClient) {}
 
-  /** Validates the file locally; returns an error message, or null when it is acceptable. */
-  validate(file: File): string | null {
-    if (!UploadService.ACCEPTED.includes(file.type))
-      return 'Only JPG, PNG, WEBP or GIF images are allowed.';
+  /**
+   * Validates the file locally; returns an error message, or null when it is acceptable.
+   * Mirrors the API's per-folder rule: only the signed-form folder accepts PDF.
+   */
+  validate(file: File, folder: UploadFolder = 'items'): string | null {
+    const isPod = folder === 'do-pod';
+    const accepted = isPod ? UploadService.ACCEPTED_POD : UploadService.ACCEPTED;
+
+    if (!accepted.includes(file.type))
+      return isPod
+        ? 'Only JPG, PNG, WEBP, GIF or PDF files are allowed.'
+        : 'Only JPG, PNG, WEBP or GIF images are allowed.';
 
     if (file.size > UploadService.MAX_BYTES)
-      return 'Image must be 5 MB or smaller.';
+      return `${isPod ? 'File' : 'Image'} must be 5 MB or smaller.`;
 
     return null;
   }

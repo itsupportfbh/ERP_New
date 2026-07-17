@@ -169,36 +169,28 @@
     </table>
   </div>
 
-  <!-- Receiver Information -->
+  <!-- Contact — inherited from the Quotation, not re-typed here.
+       Proof of delivery (receiver + signature) is NOT captured at create: the DO is raised before
+       the goods leave, so nobody has received anything yet. It is taken on the Delivery Order list
+       once the goods arrive ("Confirm Delivery"). -->
   <div class="card do-card">
-    <div class="do-sec-title">Receiver Information</div>
-    <div class="do-sec-sub">Capture receiver details and acknowledgement signature</div>
+    <div class="do-sec-title">Contact</div>
+    <div class="do-sec-sub">From the source quotation — the person to hand the goods to</div>
 
     <div class="do-grid3 block-gap">
       <div class="mf-group">
-        <label class="mf-label">Received By</label>
-        <input type="text" class="mf-input" [(ngModel)]="receivedPersonName" name="rcvName" placeholder="Receiver name" />
+        <label class="mf-label">Contact Person</label>
+        <input type="text" class="mf-input" [value]="quotationContactPerson || '—'" readonly disabled />
       </div>
       <div class="mf-group">
-        <label class="mf-label">Received Person Mobile No</label>
-        <input type="text" class="mf-input" [(ngModel)]="receivedPersonMobileNo" name="rcvMobile" placeholder="Mobile number" />
+        <label class="mf-label">Contact Mobile No</label>
+        <input type="text" class="mf-input" [value]="quotationContactNo || '—'" readonly disabled />
       </div>
       <div class="mf-group">
-        <label class="mf-label">Signature by Received By</label>
-        <div class="do-sigbox" (click)="openSignature()" *ngIf="!receivedSignature">
-          <span class="do-sigico">&#9998;</span>
-          <div>
-            <div class="do-sigt">Click to add signature</div>
-            <div class="do-sigh">Open signature pad</div>
-          </div>
-        </div>
-        <div class="do-sigpreview" *ngIf="receivedSignature">
-          <img [src]="receivedSignature" alt="signature" />
-          <div class="do-sigactions">
-            <a class="do-link" (click)="openSignature()">Redo</a>
-            <span class="do-dot">·</span>
-            <a class="do-link" (click)="removeSignature()">Remove</a>
-          </div>
+        <label class="mf-label">Proof of Delivery</label>
+        <div class="do-pod-note">
+          Captured after delivery — open this DO in the list and use <b>Confirm Delivery</b> to add
+          the customer's signature or upload the signed form.
         </div>
       </div>
     </div>
@@ -219,23 +211,6 @@
     <button class="btn btn-primary" type="button" [disabled]="saving || isPosted" (click)="submit()">
       {{ saving ? 'Saving…' : (isEdit ? 'Update DO' : 'Save DO') }}
     </button>
-  </div>
-</div>
-
-<!-- Signature modal -->
-<div class="do-modal-overlay" *ngIf="showSignature" (click)="showSignature=false">
-  <div class="do-modal" (click)="$event.stopPropagation()">
-    <div class="do-modal-head">
-      <span>Signature</span>
-      <button class="do-modal-close" type="button" (click)="showSignature=false">&times;</button>
-    </div>
-    <canvas #sigCanvas class="do-canvas" width="520" height="220"
-      (mousedown)="startDraw($event)" (mousemove)="moveDraw($event)" (mouseup)="endDraw()" (mouseleave)="endDraw()"
-      (touchstart)="startDraw($event)" (touchmove)="moveDraw($event)" (touchend)="endDraw()"></canvas>
-    <div class="do-modal-foot">
-      <button class="btn btn-outline btn-sm" type="button" (click)="clearSignature()">Clear</button>
-      <button class="btn btn-primary btn-sm" type="button" (click)="saveSignature()">Save Signature</button>
-    </div>
   </div>
 </div>
 

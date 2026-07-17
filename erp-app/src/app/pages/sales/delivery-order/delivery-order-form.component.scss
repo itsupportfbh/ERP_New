@@ -98,3 +98,14 @@
 .do-modal-close { border: 0; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: var(--text-muted); &:hover { color: var(--danger); } }
 .do-canvas { width: 100%; height: 220px; border: 1px solid var(--border); border-radius: 10px; touch-action: none; cursor: crosshair; background: #fff; }
 .do-modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* Proof of delivery is captured on the list after the goods arrive — this just says so. */
+.do-pod-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #6b7280;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+}

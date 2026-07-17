@@ -65,10 +65,10 @@ export class DeliveryOrderFormComponent implements OnInit {
   driverMobileNo = '';
   vehicleId: number | null = null;
 
-  // Receiver
-  receivedPersonName = '';
-  receivedPersonMobileNo = '';
-  receivedSignature: string | null = null;
+  // Contact inherited from the source Quotation (display only — nothing to type here).
+  // Proof of delivery is captured on the list page after the goods arrive, not at create.
+  quotationContactPerson = '';
+  quotationContactNo = '';
 
   // Lines
   lines: DoLine[] = [];
@@ -81,13 +81,6 @@ export class DeliveryOrderFormComponent implements OnInit {
     { id: 1, name: 'Delivery' },
     { id: 2, name: 'Self Collected' }
   ];
-
-  // Signature pad
-  showSignature = false;
-  @ViewChild('sigCanvas') sigCanvas!: ElementRef<HTMLCanvasElement>;
-  private ctx: CanvasRenderingContext2D | null = null;
-  private drawing = false;
-  private hasInk = false;
 
   // Inline quick-add ("+ Add new") state
   qaType: QuickAddType | null = null;
@@ -187,6 +180,9 @@ export class DeliveryOrderFormComponent implements OnInit {
         this.customerName = d.customerName ?? d.CustomerName ?? '';
         if (!this.deliveryDate) this.deliveryDate = this.toDate(d.deliveryDate ?? d.DeliveryDate);
         if (!this.deliveryTo) this.deliveryTo = String(d.deliveryTo ?? d.DeliveryTo ?? '');
+        // The contact rides down from the SO's quotation — shown here, never retyped.
+        this.quotationContactPerson = String(d.quotationContactPerson ?? d.QuotationContactPerson ?? '');
+        this.quotationContactNo = String(d.quotationContactNo ?? d.QuotationContactNo ?? '');
 
         const rawLines = d.lineItems ?? d.LineItems ?? d.lines ?? d.salesOrderLines ?? [];
         const arr: any[] = Array.isArray(rawLines) ? rawLines : [];
@@ -390,18 +386,10 @@ export class DeliveryOrderFormComponent implements OnInit {
         this.driverId = (h.driverId ?? h.DriverId) != null ? Number(h.driverId ?? h.DriverId) : null;
         this.vehicleId = (h.vehicleId ?? h.VehicleId) != null ? Number(h.vehicleId ?? h.VehicleId) : null;
         this.driverMobileNo = String(h.driverMobileNo ?? h.DriverMobileNo ?? '');
-        this.receivedPersonName = String(h.receivedPersonName ?? h.ReceivedPersonName ?? '');
-        this.receivedPersonMobileNo = String(h.receivedPersonMobileNo ?? h.ReceivedPersonMobileNo ?? '');
-        const sig = h.receivedSignature ?? h.ReceivedSignature ?? null;
-        if (!sig) {
-          this.receivedSignature = null;
-        } else if (sig.startsWith('data:') || sig.startsWith('http')) {
-          this.receivedSignature = sig;
-        } else {
-          // Backend saved as file path e.g. /uploads/do-signatures/xxx.png
-          const apiOrigin = environment.apiUrl.replace(/\/api.*$/i, '');
-          this.receivedSignature = `${apiOrigin}${sig}`;
-        }
+        // Contact rides down from the Quotation; the receiver/signature belong to the
+        // Confirm Delivery step on the list, not to this form.
+        this.quotationContactPerson = String(h.quotationContactPerson ?? h.QuotationContactPerson ?? '');
+        this.quotationContactNo = String(h.quotationContactNo ?? h.QuotationContactNo ?? '');
 
         const rawLines = data.lines ?? data.Lines ?? h.lines ?? [];
         const arr: any[] = Array.isArray(rawLines) ? rawLines : [];
@@ -438,64 +426,6 @@ export class DeliveryOrderFormComponent implements OnInit {
     });
   }
 
-  // ── Signature pad ─────────────────────────────────────
-  openSignature(): void {
-    this.showSignature = true;
-    this.hasInk = false;
-    setTimeout(() => this.initCanvas(), 50);
-  }
-
-  private initCanvas(): void {
-    const canvas = this.sigCanvas?.nativeElement;
-    if (!canvas) return;
-    this.ctx = canvas.getContext('2d');
-    if (!this.ctx) return;
-    this.ctx.fillStyle = '#fff';
-    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-    this.ctx.lineWidth = 2.2;
-    this.ctx.lineCap = 'round';
-    this.ctx.strokeStyle = '#1f2937';
-  }
-
-  private pos(e: MouseEvent | TouchEvent): { x: number; y: number } {
-    const canvas = this.sigCanvas.nativeElement;
-    const rect = canvas.getBoundingClientRect();
-    const p = (e as TouchEvent).touches?.[0] ?? (e as MouseEvent);
-    return {
-      x: (p.clientX - rect.left) * (canvas.width / rect.width),
-      y: (p.clientY - rect.top) * (canvas.height / rect.height)
-    };
-  }
-
-  startDraw(e: MouseEvent | TouchEvent): void {
-    if (!this.ctx) return;
-    e.preventDefault();
-    this.drawing = true;
-    const { x, y } = this.pos(e);
-    this.ctx.beginPath();
-    this.ctx.moveTo(x, y);
-  }
-  moveDraw(e: MouseEvent | TouchEvent): void {
-    if (!this.drawing || !this.ctx) return;
-    e.preventDefault();
-    const { x, y } = this.pos(e);
-    this.ctx.lineTo(x, y);
-    this.ctx.stroke();
-    this.hasInk = true;
-  }
-  endDraw(): void { this.drawing = false; }
-
-  clearSignature(): void { this.initCanvas(); this.hasInk = false; }
-
-  saveSignature(): void {
-    if (this.hasInk && this.sigCanvas) {
-      this.receivedSignature = this.sigCanvas.nativeElement.toDataURL('image/png');
-    }
-    this.showSignature = false;
-  }
-
-  removeSignature(): void { this.receivedSignature = null; }
-
   // ── Save ──────────────────────────────────────────────
   submit(): void {
     if (this.isPosted) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'This delivery order is already posted.', confirmButtonColor: '#16a34a' }); return; }
@@ -517,10 +447,9 @@ export class DeliveryOrderFormComponent implements OnInit {
         RouteName: (this.deliveryTo || '').trim() || null,
         DeliveryDate: this.deliveryDate || null,
         ModeOfDeliveryId: this.modeOfDeliveryId,
-        DriverMobileNo: this.isSelfMode ? null : (this.driverMobileNo || null),
-        ReceivedPersonName: (this.receivedPersonName || '').trim() || null,
-        ReceivedPersonMobileNo: this.receivedPersonMobileNo || null,
-        ReceivedSignature: this.receivedSignature || null
+        DriverMobileNo: this.isSelfMode ? null : (this.driverMobileNo || null)
+        // Receiver + signature are deliberately absent: they belong to Confirm Delivery on the
+        // list page, after the goods have actually been received.
       };
       this.svc.updateDeliveryOrderHeader(this.id!, header).subscribe({
         next: () => {
@@ -543,9 +472,7 @@ export class DeliveryOrderFormComponent implements OnInit {
       DeliveryTime: this.deliveryTime || null,
       ModeOfDeliveryId: this.modeOfDeliveryId,
       DriverMobileNo: this.isSelfMode ? null : (this.driverMobileNo || null),
-      ReceivedPersonName: (this.receivedPersonName || '').trim() || null,
-      ReceivedPersonMobileNo: this.receivedPersonMobileNo || null,
-      ReceivedSignature: this.receivedSignature || null,
+      // No receiver/signature here — a DO is raised before the goods leave.
       Lines: this.lines
         .filter(l => !l.isSetHeader && (Number(l.deliverQty) || 0) > 0)
         .map(l => ({
@@ -579,8 +506,7 @@ export class DeliveryOrderFormComponent implements OnInit {
     this.deliveryDate = this.deliveryTime = this.deliveryTo = '';
     this.driverId = this.vehicleId = null;
     this.driverMobileNo = '';
-    this.receivedPersonName = this.receivedPersonMobileNo = '';
-    this.receivedSignature = null;
+    this.quotationContactPerson = this.quotationContactNo = '';
   }
 
   // ── Helpers ───────────────────────────────────────────

@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, DocumentPrintConfig, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import { UploadService } from '../../../shared/upload.service';
 import Swal from 'sweetalert2';
 
 const STATUS_MAP: Record<number, string> = {
@@ -30,6 +31,24 @@ export class DeliveryOrderListComponent implements OnInit {
 
   showDeleteModal = false;
   itemToDelete: any = null;
+
+  // ── Confirm Delivery (proof of delivery, captured after the goods arrive) ──
+  showConfirm = false;
+  confirmRow: any = null;
+  cfMode: 'upload' | 'draw' = 'upload';
+  cfName = '';
+  cfMobile = '';
+  cfSignature: string | null = null;   // base64 from the pad
+  cfPodUrl: string | null = null;      // relative URL of the uploaded signed form
+  cfPodIsPdf = false;
+  cfUploading = false;
+  cfSaving = false;
+  cfError = '';
+
+  @ViewChild('sigCanvas') sigCanvas!: ElementRef<HTMLCanvasElement>;
+  private ctx: CanvasRenderingContext2D | null = null;
+  private drawing = false;
+  private hasInk = false;
 
   // lookups for resolving line names
   private uomMap = new Map<number, string>();
@@ -62,7 +81,13 @@ export class DeliveryOrderListComponent implements OnInit {
   ];
 
   readonly fnId = 'do-list2';
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
+  constructor(
+    private svc: SalesService,
+    private router: Router,
+    private printSvc: DocumentPrintService,
+    public perm: PermissionService,
+    private uploadSvc: UploadService
+  ) {}
 
   ngOnInit(): void {
     this.load();
@@ -237,6 +262,13 @@ export class DeliveryOrderListComponent implements OnInit {
       totals: this.viewTotals,
       billTo: this.printBillTo,
       deliverTo: this.printDeliverTo,
+      // The printed DO is what the customer signs; the signed page is scanned back in
+      // and attached via Confirm Delivery.
+      signature: {
+        note: 'Received the above goods in good order and condition.',
+        contactName: this.activeRow?.quotationContactPerson ?? '',
+        contactNo: this.activeRow?.quotationContactNo ?? ''
+      }
     };
   }
 
@@ -292,6 +324,138 @@ export class DeliveryOrderListComponent implements OnInit {
   }
 
   // ── Delete ────────────────────────────────────────────
+  // ── Confirm Delivery ──────────────────────────────────
+  openConfirm(row: any): void {
+    this.confirmRow = row;
+    // The contact was captured on the quotation — start from it rather than making them retype,
+    // but leave it editable: whoever actually took the goods is who should be recorded.
+    this.cfName = String(row?.receivedPersonName || row?.quotationContactPerson || '');
+    this.cfMobile = String(row?.receivedPersonMobileNo || row?.quotationContactNo || '');
+    this.cfMode = 'upload';
+    this.cfSignature = null;
+    this.cfPodUrl = null;
+    this.cfPodIsPdf = false;
+    this.cfError = '';
+    this.cfUploading = this.cfSaving = false;
+    this.hasInk = false;
+    this.showConfirm = true;
+  }
+
+  closeConfirm(): void { this.showConfirm = false; this.confirmRow = null; }
+
+  setDrawMode(): void {
+    this.cfMode = 'draw';
+    this.hasInk = false;
+    setTimeout(() => this.initCanvas(), 50);
+  }
+
+  podSrc(url: string | null): string { return this.uploadSvc.toSrc(url); }
+
+  onPodSelected(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const problem = this.uploadSvc.validate(file, 'do-pod');
+    if (problem) { this.cfError = problem; input.value = ''; return; }
+
+    this.cfError = '';
+    this.cfUploading = true;
+    this.uploadSvc.upload(file, 'do-pod').subscribe({
+      next: url => {
+        this.cfPodUrl = url;
+        this.cfPodIsPdf = /\.pdf$/i.test(url);
+        this.cfUploading = false;
+        input.value = '';
+      },
+      error: () => {
+        this.cfUploading = false;
+        input.value = '';
+        this.cfError = 'The file could not be uploaded. Please try again.';
+      }
+    });
+  }
+
+  removePod(): void { this.cfPodUrl = null; this.cfPodIsPdf = false; }
+
+  // signature pad
+  private initCanvas(): void {
+    const canvas = this.sigCanvas?.nativeElement;
+    if (!canvas) return;
+    this.ctx = canvas.getContext('2d');
+    if (!this.ctx) return;
+    this.ctx.fillStyle = '#fff';
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this.ctx.lineWidth = 2.2;
+    this.ctx.lineCap = 'round';
+    this.ctx.strokeStyle = '#1f2937';
+  }
+  private pos(e: MouseEvent | TouchEvent): { x: number; y: number } {
+    const canvas = this.sigCanvas.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const p = (e as TouchEvent).touches?.[0] ?? (e as MouseEvent);
+    return {
+      x: (p.clientX - rect.left) * (canvas.width / rect.width),
+      y: (p.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  }
+  startDraw(e: MouseEvent | TouchEvent): void {
+    if (!this.ctx) return;
+    e.preventDefault();
+    this.drawing = true;
+    const { x, y } = this.pos(e);
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, y);
+  }
+  moveDraw(e: MouseEvent | TouchEvent): void {
+    if (!this.drawing || !this.ctx) return;
+    e.preventDefault();
+    const { x, y } = this.pos(e);
+    this.ctx.lineTo(x, y);
+    this.ctx.stroke();
+    this.hasInk = true;
+  }
+  endDraw(): void { this.drawing = false; }
+  clearSignature(): void { this.initCanvas(); this.hasInk = false; }
+
+  confirmDelivery(): void {
+    if (!this.confirmRow) return;
+
+    if (!this.cfName.trim()) { this.cfError = 'Received By is required.'; return; }
+
+    if (this.cfMode === 'draw' && this.hasInk && this.sigCanvas) {
+      this.cfSignature = this.sigCanvas.nativeElement.toDataURL('image/png');
+    }
+
+    const hasProof = (this.cfMode === 'draw' && !!this.cfSignature) || (this.cfMode === 'upload' && !!this.cfPodUrl);
+    if (!hasProof) {
+      this.cfError = this.cfMode === 'upload'
+        ? 'Upload the signed delivery form first.'
+        : 'Please capture the signature first.';
+      return;
+    }
+
+    this.cfError = '';
+    this.cfSaving = true;
+    this.svc.confirmDelivery(this.confirmRow.id, {
+      ReceivedPersonName: this.cfName.trim(),
+      ReceivedPersonMobileNo: this.cfMobile.trim() || null,
+      ReceivedSignature: this.cfMode === 'draw' ? this.cfSignature : null,
+      PodFileUrl: this.cfMode === 'upload' ? this.cfPodUrl : null
+    }).subscribe({
+      next: () => {
+        this.cfSaving = false;
+        this.closeConfirm();
+        void Swal.fire({ icon: 'success', title: 'Delivered', text: 'Delivery confirmed and the DO is now Completed.', confirmButtonColor: '#16a34a' });
+        this.load();
+      },
+      error: err => {
+        this.cfSaving = false;
+        this.cfError = err?.error?.message ?? 'Could not confirm delivery.';
+      }
+    });
+  }
+
   openDelete(row: any): void { this.itemToDelete = row; this.showDeleteModal = true; }
 
   confirmDelete(): void {

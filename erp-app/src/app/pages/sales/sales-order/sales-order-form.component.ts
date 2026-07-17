@@ -424,7 +424,8 @@ export class SalesOrderFormComponent implements OnInit {
         itemName: item.itemName ?? item.name ?? '',
         itemCode: item.itemCode ?? '',
         uomId: Number(item.uomId ?? item.UomId ?? item.baseUomId ?? 0) || null,
-        price: Number(item.price ?? item.Price ?? 0) || 0,
+        // Sales module always prices from the item's SALES price (legacy `price` kept as fallback).
+        price: Number(item.salesPrice ?? item.SalesPrice ?? item.price ?? 0) || 0,
         baseUomId: Number(item.baseUomId ?? item.BaseUomId ?? 0) || null,
         uomFactor: Number(item.uomFactor ?? item.UomFactor ?? 1) || 1,
         baseUomName: item.baseUomName ?? item.BaseUomName ?? null
