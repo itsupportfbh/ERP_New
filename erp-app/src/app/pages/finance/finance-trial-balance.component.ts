@@ -413,5 +413,10 @@ export class FinanceTrialBalanceComponent implements OnInit {
   get startIndex(): number { return this.totalRows === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1; }
   get endIndex():   number { return Math.min(this.currentPage * this.pageSize, this.totalRows); }
 
-  private dateOnly(d: Date): string { return d.toISOString().slice(0, 10); }
+  // Local calendar date, not UTC. toISOString() converts first, so anywhere east of
+  // Greenwich the default "to" date landed on YESTERDAY for the whole morning (IST until
+  // 05:30), silently cutting today's postings out of the report.
+  private dateOnly(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 }

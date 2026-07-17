@@ -69,6 +69,14 @@
             placeholder="Select Purchase Budget Line">
           </erp-dropdown>
         </div>
+        <div class="mf-group" *ngIf="showPurchase">
+          <label class="mf-label">Stock Budget Line</label>
+          <erp-dropdown name="stockParentHeadCode" [(ngModel)]="form.stockParentHeadCode"
+            [items]="stockBudgetLines" bindLabel="label" bindValue="headCode"
+            placeholder="Select Stock Budget Line">
+          </erp-dropdown>
+          <small class="mf-hint">Where this category's items hold stock — normally 101013 STOCK.</small>
+        </div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit">
             <svg viewBox="0 0 20 20"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>

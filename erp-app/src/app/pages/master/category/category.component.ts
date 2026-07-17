@@ -2,7 +2,17 @@ import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
-const blank = () => ({ catagoryName: '', itemCategoryType: null as number | null, salesParentHeadCode: null as number | null, purchaseParentHeadCode: null as number | null });
+const blank = () => ({
+  catagoryName: '',
+  itemCategoryType: null as number | null,
+  salesParentHeadCode: null as number | null,
+  purchaseParentHeadCode: null as number | null,
+  // Asset-side parent (under 1 Assets). Items in this category get their own stock leaf
+  // beneath it; without one their stock lands on the shared INVENTORY CONTROL account and
+  // the Trial Balance loses its per-item stock line. Kept as a string — account codes are
+  // not numbers.
+  stockParentHeadCode: null as string | null
+});
 
 @Component({
   selector: 'erp-category',
@@ -24,6 +34,7 @@ export class CategoryComponent implements OnInit {
 
   salesBudgetLines: any[] = [];
   purchaseBudgetLines: any[] = [];
+  stockBudgetLines: any[] = [];
 
   form = blank();
   permission: FunctionPermission;
@@ -46,20 +57,50 @@ export class CategoryComponent implements OnInit {
       next: (res: any) => {
         const all = (res?.data || res || []).filter((x: any) => x.isActive !== false);
 
+        const parentOf = (item: any) =>
+          all.find((x: any) => String(x.headCode) === String(item.parentHead));
+
         const buildPath = (item: any): string => {
           let path = item.headName;
-          let cur = all.find((x: any) => Number(x.headCode) === Number(item.parentHead));
-          while (cur) { path = `${cur.headName} >> ${path}`; cur = all.find((x: any) => Number(x.headCode) === Number(cur.parentHead)); }
+          let cur = parentOf(item);
+          const seen = new Set<string>([String(item.headCode)]);
+          while (cur && !seen.has(String(cur.headCode))) {
+            seen.add(String(cur.headCode));
+            path = `${cur.headName} >> ${path}`;
+            cur = parentOf(cur);
+          }
           return path;
         };
 
-        this.salesBudgetLines = all
-          .filter((x: any) => String(x.headCode).startsWith('4'))
-          .map((x: any) => ({ headCode: Number(x.headCode), label: `${x.headCode} - ${buildPath(x)}` }));
+        // An account's class comes from the ROOT of its ParentHead chain, never from the first
+        // digit of its code. '403002 PURCHASE' starts with a 4 but hangs under 403 Cost of Goods
+        // Sold -> 5 Expenses. The old filters keyed off the code prefix, so PURCHASE never
+        // appeared in the Purchase list and turned up in the Sales list instead — pick it there
+        // and every purchase for that category posts into Income.
+        const rootOf = (item: any): string => {
+          let cur = item;
+          const seen = new Set<string>();
+          while (cur?.parentHead != null && String(cur.parentHead) !== '' && !seen.has(String(cur.headCode))) {
+            seen.add(String(cur.headCode));
+            const p = parentOf(cur);
+            if (!p) break;
+            cur = p;
+          }
+          return String(cur?.headCode ?? '');
+        };
 
-        this.purchaseBudgetLines = all
-          .filter((x: any) => String(x.headCode).startsWith('5'))
-          .map((x: any) => ({ headCode: Number(x.headCode), label: `${x.headCode} - ${buildPath(x)}` }));
+        // asNumber matches CatagoryDTO, where Sales/PurchaseParentHeadCode are still long? —
+        // StockParentHeadCode is the one new column typed nvarchar, like HeadCode itself.
+        const lines = (root: string, asNumber: boolean) => all
+          .filter((x: any) => rootOf(x) === root)
+          .map((x: any) => ({
+            headCode: asNumber ? Number(x.headCode) : String(x.headCode),
+            label: `${x.headCode} - ${buildPath(x)}`
+          }));
+
+        this.salesBudgetLines    = lines('4', true);    // Income
+        this.purchaseBudgetLines = lines('5', true);    // Expenses  (includes 403002 PURCHASE)
+        this.stockBudgetLines    = lines('1', false);   // Assets    (includes 101013 STOCK)
       },
       error: () => {}
     });
@@ -88,7 +129,8 @@ export class CategoryComponent implements OnInit {
       catagoryName: item.catagoryName || item.categoryName || item.name || '',
       itemCategoryType: item.itemCategoryType ? Number(item.itemCategoryType) : null,
       salesParentHeadCode: item.salesParentHeadCode ? Number(item.salesParentHeadCode) : null,
-      purchaseParentHeadCode: item.purchaseParentHeadCode ? Number(item.purchaseParentHeadCode) : null
+      purchaseParentHeadCode: item.purchaseParentHeadCode ? Number(item.purchaseParentHeadCode) : null,
+      stockParentHeadCode: item.stockParentHeadCode ? String(item.stockParentHeadCode) : null
     };
     this.message = '';
   }
@@ -103,6 +145,14 @@ export class CategoryComponent implements OnInit {
   onSubmit(): void {
     if (!this.form.catagoryName?.trim()) { this.message = 'Category Name is required.'; this.isError = true; return; }
     if (!this.form.itemCategoryType) { this.message = 'Item Category Type is required.'; this.isError = true; return; }
+    if (this.showPurchase && !this.form.stockParentHeadCode) {
+      // Blocked here as well as server-side: without it the items silently post their stock to
+      // the shared INVENTORY CONTROL account, which is only noticed once the Trial Balance is
+      // already missing its per-item stock lines.
+      this.message = 'Stock Budget Line is required for a purchasable category.';
+      this.isError = true;
+      return;
+    }
 
     const userId = Number(localStorage.getItem('id') || 0);
     const payload = {
@@ -110,6 +160,7 @@ export class CategoryComponent implements OnInit {
       itemCategoryType: Number(this.form.itemCategoryType),
       salesParentHeadCode: this.showSales ? this.form.salesParentHeadCode : null,
       purchaseParentHeadCode: this.showPurchase ? this.form.purchaseParentHeadCode : null,
+      stockParentHeadCode: this.showPurchase ? this.form.stockParentHeadCode : null,
       createdBy: userId,
       updatedBy: userId,
       isActive: true
