@@ -628,6 +628,14 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   recalcLines(): void { this.lines.forEach(l => this.recalcLine(l)); }
 
+  /**
+   * Typing a rate must also re-rate the lines. recalcLine alone reads taxMode, so a line left
+   * as 'Zero' would keep charging no tax however high the % typed.
+   */
+  onTaxRateChange(rate: number): void {
+    this.applyTaxDecision(Number(rate ?? 0));
+  }
+
   get subTotal(): number { return +this.lines.reduce((s, l) => s + l.lineTotal, 0).toFixed(2); }
   get totalTax(): number { return +this.lines.reduce((s, l) => s + l.taxAmt, 0).toFixed(2); }
   get grandTotal(): number { return +this.lines.reduce((s, l) => s + l.lineGrandTotal, 0).toFixed(2); }
@@ -651,7 +659,6 @@ export class SupplierInvoiceFormComponent implements OnInit {
         this.supplierName = d.supplierName ?? '';
         this.currencyId = d.currencyId ?? null;
         this.fxRate = d.fxRate ?? 1;
-        this.taxRate = d.taxRate ?? d.taxPct ?? 0;
         this.isPartial = d.isPartialInvoice ?? d.isPartial ?? false;
         this.isGlPosted = d.isGlPosted ?? d.glPosted ?? false;
         this.isOverseas = !!(d.isOverseas ?? d.IsOverseas);
@@ -662,12 +669,35 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
         const rawLines = d.linesJson ?? d.LinesJson ?? d.lines ?? '[]';
         const parsed: any[] = typeof rawLines === 'string' ? JSON.parse(rawLines || '[]') : (Array.isArray(rawLines) ? rawLines : []);
+        this.taxRate = d.taxRate ?? d.taxPct ?? this.recoverTaxRate(parsed);
         this.lines = parsed.map((l: any) => this.mapEditLine(l));
         this.loading = false;
         this.loadGrnListForEdit();
       },
       error: () => { this.loading = false; }
     });
+  }
+
+  /**
+   * Recovers the invoice's tax % from its saved lines. Lines saved by the current form carry
+   * `taxRate` directly; older ones only have `taxAmt`, so the rate is worked back out of the
+   * amount. Returning 0 leaves the existing PO/GRN lookups to fill it in.
+   */
+  private recoverTaxRate(lines: any[]): number {
+    return lines.reduce((max: number, l: any) => {
+      const stated = Number(l?.taxRate ?? 0);
+      if (stated > 0) return Math.max(max, stated);
+
+      const taxAmt = Number(l?.taxAmt ?? 0);
+      const lineTotal = Number(l?.lineTotal ?? 0);
+      if (taxAmt <= 0 || lineTotal <= 0) return max;
+
+      // Exclusive: tax sits on top of lineTotal. Inclusive: lineTotal already contains it.
+      const derived = l?.taxMode === 'Inclusive'
+        ? (lineTotal - taxAmt > 0 ? taxAmt / (lineTotal - taxAmt) * 100 : 0)
+        : taxAmt / lineTotal * 100;
+      return Math.max(max, +derived.toFixed(4));
+    }, 0);
   }
 
   private mapEditLine(l: any): PinLine {
@@ -772,6 +802,10 @@ export class SupplierInvoiceFormComponent implements OnInit {
       unitPrice: l.unitPrice,
       discountPct: l.discountPct,
       taxMode: l.taxMode,
+      // The tax % has no column on SupplierInvoicePin, so it rides in the line JSON the way
+      // the PO lines already carry it. Without it an edit reloads with taxRate 0, re-rates
+      // every line as Zero, and silently strips the tax off the invoice.
+      taxRate: this.taxRate,
       lineTotal: l.lineTotal,
       taxAmt: l.taxAmt,
       lineGrandTotal: l.lineGrandTotal,

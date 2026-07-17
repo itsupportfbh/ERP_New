@@ -1,6 +1,24 @@
 $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 :host { display: block; }
 .bs-page { display: flex; flex-direction: column; gap: 12px; padding: 0 0 32px; }
+
+/* ── Filter bar ── (mirrors finance-trial-balance.component.scss; component styles are
+   scoped, so the shared look has to be restated rather than inherited) */
+.rpt-filter-bar {
+  display: flex; align-items: flex-end; gap: 10px;
+  padding: 10px 12px; border: 1px solid $border; border-radius: 8px; background: #fff;
+}
+.filter-lbl { display: flex; flex-direction: column; gap: 4px; color: $muted; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.filter-lbl input { height: 30px; border: 1px solid $border; border-radius: 6px; padding: 0 9px; font-size: 12px; }
+.filter-note { color: $muted; font-size: 11px; font-weight: 600; align-self: center; }
+.spacer { flex: 1; }
+.rpt-btn { height: 30px; border-radius: 6px; border: 1px solid $teal; padding: 0 12px; font-size: 12px; cursor: pointer; }
+.rpt-btn-primary { color: #fff; background: $teal; &:disabled { opacity: .6; cursor: default; } }
+.rpt-btn-outline { color: $teal; background: transparent; &:hover { background: #e8f4f8; } &:disabled { opacity: .6; cursor: default; } }
+
+@media (max-width: 720px) {
+  .rpt-filter-bar { flex-direction: column; align-items: stretch; }
+}
 .rpt-head { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 1rem; padding: .7rem 1.2rem; box-shadow: 0 2px 8px rgba(15,23,42,.05); border: 1px solid $border; }
 .rpt-title { font-size: 1.15rem; font-weight: 700; color: $teal; margin: 0; }
 .rpt-actions { display: flex; gap: 8px; }
@@ -33,6 +51,35 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 .fw-bold { font-weight: 700 !important; }
 .acc-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .acc-amt { font-size: .88rem; font-variant-numeric: tabular-nums; }
+
+/* ── Comparative columns ──
+   Fixed widths so the as-at / compare / change figures line up down the page; the row is a
+   flex line, not a table, so nothing else aligns them. */
+$cmp-col: 92px;
+
+.cmp-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .3rem .25rem; border-bottom: 1px solid $border;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; color: $muted;
+  .cmp-h-name { flex: 1; }
+  .cmp-h { width: $cmp-col; text-align: right; flex-shrink: 0; }
+}
+.acc-right .cmp-amt,
+.acc-right .chg-amt { width: $cmp-col; text-align: right; }
+.acc-right .acc-amt:first-child { min-width: $cmp-col; text-align: right; }
+.cmp-amt { color: $muted; }
+.chg-amt { font-weight: 600; }
+.chg-up   { color: #1a7a4a; }
+.chg-down { color: #b91c1c; }
+
+.tot-vals { display: flex; align-items: center; gap: 8px;
+  > span { min-width: $cmp-col; text-align: right; }
+}
+
+@media (max-width: 900px) {
+  .cmp-head .cmp-h, .acc-right .cmp-amt, .acc-right .chg-amt,
+  .acc-right .acc-amt:first-child, .tot-vals > span { width: auto; min-width: 64px; }
+}
 .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .68rem; font-weight: 700; color: #374151; }
 .acc-empty { font-size: .82rem; color: $muted; padding: .5rem .25rem; }
 .col-total { display: flex; justify-content: space-between; padding: .5rem .25rem; font-weight: 700; font-size: .9rem; border-top: 2px solid $border; margin-top: 2px; }

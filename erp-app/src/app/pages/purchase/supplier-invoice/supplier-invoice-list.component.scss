@@ -183,6 +183,26 @@
 .mk { color: var(--text-muted); }
 .mv { font-weight: 600; color: var(--text); &.bold { font-size: 13px; font-weight: 700; } }
 
+/* ── Line-level breakdown ────────────────── */
+.match-lines { margin-bottom: 16px; }
+.match-lines-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.match-lines-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+.match-lines-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 720px;
+  th { background: var(--bg-muted, #f9fafb); color: var(--text-muted); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  tr.blocked { background: rgba(239,68,68,.05); }
+  .num { text-align: right; }
+  .item { font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+}
+.line-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  &.b-ok     { background: rgba(72,199,142,.14); color: #1a7a4a; }
+  &.b-info   { background: rgba(59,130,246,.12); color: #1d4ed8; }
+  &.b-warn   { background: rgba(217,119,6,.12);  color: #b45309; }
+  &.b-danger { background: rgba(239,68,68,.12);  color: #b91c1c; }
+  &.b-muted  { background: rgba(107,114,128,.12); color: #4b5563; }
+}
+
 /* ── Match status bar ────────────────────── */
 .match-status-bar { display: flex; align-items: center; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
   &.ok { background: rgba(72,199,142,.10); color: #1a7a4a; border: 1px solid rgba(72,199,142,.3); }

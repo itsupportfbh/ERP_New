@@ -70,7 +70,7 @@
         <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
       </div>
       <div class="form-row cols-2 block-gap">
-        <erp-input label="Tax %" type="number" [(ngModel)]="taxRate" (ngModelChange)="recalcLines()" [disabled]="isGlPosted" placeholder="0"></erp-input>
+        <erp-input label="Tax %" type="number" [(ngModel)]="taxRate" (ngModelChange)="onTaxRateChange($event)" [disabled]="isGlPosted" placeholder="0"></erp-input>
         <!-- Read-only: the rate is owned by Master > Exchange Rate, not typed in here. -->
         <erp-input label="FX Rate" type="number" [(ngModel)]="fxRate" [disabled]="true" *ngIf="fxRate !== 1"></erp-input>
       </div>

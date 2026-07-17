@@ -29,13 +29,41 @@ export class FinancePlComponent implements OnInit {
   constructor(private finance: FinanceService, private permissionService: PermissionService, private auditPrint: AuditPrintService) {}
 
   ngOnInit(): void {
+    this.resetDates();
     this.load();
     this.permissionService.getFunctionPermission(this.userId, 'reports').subscribe({
       next: perm => { this.permission = perm; }
     });
   }
 
+  /** P&L reports movement over a period, so it defaults to year-to-date rather than all time. */
+  resetDates(): void {
+    const today = new Date();
+    this.fromDate = `${today.getFullYear()}-01-01`;
+    this.toDate = this.dateOnly(today);
+  }
+
+  private dateOnly(d: Date): string {
+    const m = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  get dateError(): string {
+    return this.fromDate && this.toDate && this.fromDate > this.toDate
+      ? 'From date cannot be after To date.'
+      : '';
+  }
+
+  get rangeLabel(): string {
+    if (!this.fromDate && !this.toDate) return 'All dates';
+    if (this.fromDate && !this.toDate) return `From ${this.fromDate}`;
+    if (!this.fromDate && this.toDate) return `Up to ${this.toDate}`;
+    return `${this.fromDate} to ${this.toDate}`;
+  }
+
   load(): void {
+    if (this.dateError) return;
     this.loading = true;
     this.error = '';
     this.finance.list(this.endpoint, { fromDate: this.fromDate, toDate: this.toDate }).subscribe({

@@ -33,6 +33,33 @@
     </div>
   </div>
 
+  <!-- Filters. A balance sheet is a position at an instant, so the second date is a second
+       snapshot to compare against — not the far end of a range. -->
+  <div class="rpt-filter-bar">
+    <label class="filter-lbl">
+      <span>AS AT DATE</span>
+      <input type="date" [(ngModel)]="asOnDate">
+    </label>
+    <label class="filter-lbl">
+      <span>COMPARE WITH</span>
+      <input type="date" [(ngModel)]="compareDate" [max]="asOnDate || null" placeholder="optional">
+    </label>
+    <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Running…' : 'Run Report' }}
+    </button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="resetDate()" [disabled]="loading">
+      Today
+    </button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="comparePriorYearEnd()" [disabled]="loading">
+      Prior Year End
+    </button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="clearCompare()" [disabled]="loading || !compareOn">
+      Clear Compare
+    </button>
+    <div class="spacer"></div>
+    <span class="filter-note">{{ rangeLabel }}</span>
+  </div>
+
   <div class="rpt-error" *ngIf="error">{{ error }}</div>
   <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
 
@@ -43,6 +70,12 @@
       <div class="col-head">Liabilities &amp; Equity</div>
 
       <div class="col-subhead">Liabilities</div>
+      <div class="cmp-head" *ngIf="compareOn">
+        <span class="cmp-h-name">Account</span>
+        <span class="cmp-h">{{ asOnDate }}</span>
+        <span class="cmp-h">{{ compareDate }}</span>
+        <span class="cmp-h">Change</span>
+      </div>
       <ul class="acc-list">
         <li class="acc-item" *ngFor="let r of visibleIn(liabilityRows)"
             [class.acc-parent]="r._hasChildren" (click)="r._hasChildren && toggle(r)">
@@ -55,17 +88,35 @@
           </div>
           <div class="acc-right">
             <span class="acc-amt">{{ (r.amount || 0) | money }}</span>
-            <span class="avatar" *ngIf="!r._hasChildren" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
+            <ng-container *ngIf="compareOn">
+              <span class="acc-amt cmp-amt">{{ (r.compareAmount || 0) | money }}</span>
+              <span class="acc-amt chg-amt" [class.chg-up]="r.change > 0" [class.chg-down]="r.change < 0">
+                {{ r.change > 0 ? '+' : '' }}{{ (r.change || 0) | money }}
+              </span>
+            </ng-container>
+            <span class="avatar" *ngIf="!r._hasChildren && !compareOn" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
           </div>
         </li>
         <li class="acc-empty" *ngIf="!liabilityRows.length">No liability data.</li>
       </ul>
       <div class="col-subtotal">
         <span>Subtotal — Liabilities</span>
-        <span>{{ totalLiabilities | money }}</span>
+        <span class="tot-vals">
+          <span>{{ totalLiabilities | money }}</span>
+          <ng-container *ngIf="compareOn">
+            <span class="cmp-amt">{{ cmpTotalLiabilities | money }}</span>
+            <span class="chg-amt">{{ (totalLiabilities - cmpTotalLiabilities) | money }}</span>
+          </ng-container>
+        </span>
       </div>
 
       <div class="col-subhead">Equity</div>
+      <div class="cmp-head" *ngIf="compareOn">
+        <span class="cmp-h-name">Account</span>
+        <span class="cmp-h">{{ asOnDate }}</span>
+        <span class="cmp-h">{{ compareDate }}</span>
+        <span class="cmp-h">Change</span>
+      </div>
       <ul class="acc-list">
         <li class="acc-item" *ngFor="let r of visibleIn(equityRows)"
             [class.acc-parent]="r._hasChildren" (click)="r._hasChildren && toggle(r)">
@@ -78,7 +129,13 @@
           </div>
           <div class="acc-right">
             <span class="acc-amt">{{ (r.amount || 0) | money }}</span>
-            <span class="avatar" *ngIf="!r._hasChildren" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
+            <ng-container *ngIf="compareOn">
+              <span class="acc-amt cmp-amt">{{ (r.compareAmount || 0) | money }}</span>
+              <span class="acc-amt chg-amt" [class.chg-up]="r.change > 0" [class.chg-down]="r.change < 0">
+                {{ r.change > 0 ? '+' : '' }}{{ (r.change || 0) | money }}
+              </span>
+            </ng-container>
+            <span class="avatar" *ngIf="!r._hasChildren && !compareOn" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
           </div>
         </li>
         <!-- Balancing Figure -->
@@ -90,12 +147,24 @@
       </ul>
       <div class="col-subtotal">
         <span>Subtotal — Equity</span>
-        <span>{{ totalEquity | money }}</span>
+        <span class="tot-vals">
+          <span>{{ totalEquity | money }}</span>
+          <ng-container *ngIf="compareOn">
+            <span class="cmp-amt">{{ cmpTotalEquity | money }}</span>
+            <span class="chg-amt">{{ (totalEquity - cmpTotalEquity) | money }}</span>
+          </ng-container>
+        </span>
       </div>
 
       <div class="col-total">
         <span>Total Liabilities &amp; Equity</span>
-        <span>{{ (totalAssets > totalLiabilitiesAndEquity ? totalAssets : totalLiabilitiesAndEquity) | money }}</span>
+        <span class="tot-vals">
+          <span>{{ (totalAssets > totalLiabilitiesAndEquity ? totalAssets : totalLiabilitiesAndEquity) | money }}</span>
+          <ng-container *ngIf="compareOn">
+            <span class="cmp-amt">{{ (cmpTotalAssets > cmpTotalLiabilitiesAndEquity ? cmpTotalAssets : cmpTotalLiabilitiesAndEquity) | money }}</span>
+            <span class="chg-amt"></span>
+          </ng-container>
+        </span>
       </div>
     </div>
 
@@ -104,6 +173,12 @@
     <!-- Assets -->
     <div class="col-section">
       <div class="col-head">Assets</div>
+      <div class="cmp-head" *ngIf="compareOn">
+        <span class="cmp-h-name">Account</span>
+        <span class="cmp-h">{{ asOnDate }}</span>
+        <span class="cmp-h">{{ compareDate }}</span>
+        <span class="cmp-h">Change</span>
+      </div>
       <ul class="acc-list">
         <li class="acc-item" *ngFor="let r of visibleIn(assetRows)"
             [class.acc-parent]="r._hasChildren" (click)="r._hasChildren && toggle(r)">
@@ -116,7 +191,13 @@
           </div>
           <div class="acc-right">
             <span class="acc-amt">{{ (r.amount || 0) | money }}</span>
-            <span class="avatar" *ngIf="!r._hasChildren" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
+            <ng-container *ngIf="compareOn">
+              <span class="acc-amt cmp-amt">{{ (r.compareAmount || 0) | money }}</span>
+              <span class="acc-amt chg-amt" [class.chg-up]="r.change > 0" [class.chg-down]="r.change < 0">
+                {{ r.change > 0 ? '+' : '' }}{{ (r.change || 0) | money }}
+              </span>
+            </ng-container>
+            <span class="avatar" *ngIf="!r._hasChildren && !compareOn" [style.background]="avatarColor(r.accountName)">{{ initials(r.accountName) }}</span>
           </div>
         </li>
         <!-- Balancing Figure on asset side -->
@@ -128,7 +209,13 @@
       </ul>
       <div class="col-total">
         <span>Total Assets</span>
-        <span>{{ (totalLiabilitiesAndEquity > totalAssets ? totalLiabilitiesAndEquity : totalAssets) | money }}</span>
+        <span class="tot-vals">
+          <span>{{ (totalLiabilitiesAndEquity > totalAssets ? totalLiabilitiesAndEquity : totalAssets) | money }}</span>
+          <ng-container *ngIf="compareOn">
+            <span class="cmp-amt">{{ (cmpTotalLiabilitiesAndEquity > cmpTotalAssets ? cmpTotalLiabilitiesAndEquity : cmpTotalAssets) | money }}</span>
+            <span class="chg-amt"></span>
+          </ng-container>
+        </span>
       </div>
     </div>
   </div>

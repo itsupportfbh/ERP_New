@@ -72,7 +72,7 @@
         <thead>
           <tr>
             <th>Inv No (Auto)</th>
-            <th>Sup. Inv. No / DO.NO</th>
+            <th>Sup. Inv. No / Do. No</th>
             <th>GRN</th>
             <th>Inv Date</th>
             <th class="r">Amount</th>
@@ -429,7 +429,7 @@
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12"/><path d="M6 3V1M10 3V1"/></svg>
             Goods Receipt (GRN)
           </div>
-          <div class="match-row"><span class="mk">GRN No</span><span class="mv">{{ threeWay.grnNo || '—' }}</span></div>
+          <div class="match-row"><span class="mk">GRN No</span><span class="mv">{{ threeWay.grnNos || threeWay.grnNo || '—' }}</span></div>
           <div class="match-row"><span class="mk">Received Qty</span><span class="mv">{{ threeWay.grnReceivedQty ?? '—' }}</span></div>
           <div class="match-row"><span class="mk">Pending</span><span class="mv">{{ (threeWay.poQty || 0) - (threeWay.grnReceivedQty || 0) }}</span></div>
           <div class="match-row">
@@ -454,18 +454,59 @@
           <div class="match-row"><span class="mk">Invoice Total</span><span class="mv bold">{{ (threeWay.pinTotal || 0) | money:matchCurrency }}</span></div>
           <div class="match-row">
             <span class="mk">Match</span>
-            <span class="mv" [style.color]="threeWay.pinMatch ? '#1a7a4a' : '#b91c1c'" style="font-weight:700;">
-              {{ threeWay.pinMatch ? (threeWay.isPartialInvoice ? '✓ Partial Invoice' : '✓ Matched') : '⚠ Mismatch' }}
+            <span class="mv" [style.color]="threeWay.canPostToAp ? '#1a7a4a' : '#b91c1c'" style="font-weight:700;">
+              {{ threeWay.canPostToAp ? (isPartialMatch ? '✓ Partial Invoice' : '✓ Matched') : '⚠ Blocked' }}
             </span>
           </div>
         </div>
       </div>
 
+      <!-- Line-level breakdown: rate is compared against the PO, qty against the GRN.
+           A partial bills less than the billable qty at the SAME rate, so it stays OK. -->
+      <div class="match-lines" *ngIf="threeWay.lines?.length">
+        <div class="match-lines-title">Line Detail</div>
+        <div class="match-lines-scroll">
+          <table class="match-lines-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="num">PO Rate</th>
+                <th class="num">Inv Rate</th>
+                <th class="num">Price Var</th>
+                <th class="num">Received</th>
+                <th class="num">Billable</th>
+                <th class="num">Inv Qty</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let l of threeWay.lines" [class.blocked]="l.isBlocking" [title]="l.message || ''">
+                <td class="item">{{ l.itemName }}</td>
+                <td class="num">{{ (l.poRate || 0) | money:matchCurrency }}</td>
+                <td class="num">{{ (l.invRate || 0) | money:matchCurrency }}</td>
+                <td class="num" [style.color]="priceVarColor(l)">
+                  {{ l.invQty ? ((l.priceVariancePct > 0 ? '+' : '') + (l.priceVariancePct || 0) + '%') : '—' }}
+                </td>
+                <td class="num">{{ l.grnQty }}</td>
+                <td class="num">{{ l.billableQty }}</td>
+                <td class="num">{{ l.invQty }}</td>
+                <td><span class="line-badge" [ngClass]="badgeClass(l.status)">{{ statusLabel(l.status) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Overall status -->
-      <div class="match-status-bar" [class.ok]="threeWay.pinMatch" [class.mm]="!threeWay.pinMatch">
-        <span *ngIf="threeWay.pinMatch && !threeWay.isPartialInvoice">&#10003; 3-Way Match OK — PO, GRN and Invoice quantities match</span>
-        <span *ngIf="threeWay.pinMatch && threeWay.isPartialInvoice">&#10003; Partial Invoice — {{ threeWay.mismatchLabel || 'Invoice qty is within GRN qty' }}</span>
-        <span *ngIf="!threeWay.pinMatch">&#9651; Mismatch — Invoice qty does not match GRN/PO. Review before posting.</span>
+      <div class="match-status-bar" [class.ok]="threeWay.canPostToAp" [class.mm]="!threeWay.canPostToAp">
+        <span *ngIf="!threeWay.canPostToAp">&#9651; Cannot post to A/P — {{ threeWay.blockReason }}</span>
+        <span *ngIf="threeWay.canPostToAp && threeWay.warnReason">&#10003; Match OK (review) — {{ threeWay.warnReason }}</span>
+        <span *ngIf="threeWay.canPostToAp && !threeWay.warnReason && isPartialMatch">
+          &#10003; Partial Invoice — {{ threeWay.mismatchLabel || 'invoice qty is within the billable qty and rates match the PO' }}
+        </span>
+        <span *ngIf="threeWay.canPostToAp && !threeWay.warnReason && !isPartialMatch">
+          &#10003; 3-Way Match OK — invoice rates match the PO and quantities match the GRN
+        </span>
       </div>
     </div>
 
@@ -484,7 +525,8 @@
         Already Posted to A/P
       </span>
       <button class="btn btn-primary btn-sm" *ngIf="!isPosted(currentRow) && perm.canPost(fnId)"
-        [disabled]="isPosting || !threeWay"
+        [disabled]="isPosting || !threeWay || !threeWay.canPostToAp"
+        [title]="threeWay && !threeWay.canPostToAp ? threeWay.blockReason : ''"
         (click)="approveAndPostToAp()">
         <span class="btn-spinner" *ngIf="isPosting"></span>
         {{ isPosting ? 'Posting…' : '&#128229; Approve & Post to A/P' }}

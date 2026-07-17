@@ -563,9 +563,52 @@ table.lines thead th:last-child{border-right:none;}
 
   closeMatchModal(): void { this.showMatchModal = false; this.threeWay = null; this.currentRow = null; }
 
+  /** Partial is derived from the quantities, not from the isPartialInvoice flag. */
+  get isPartialMatch(): boolean {
+    return (this.threeWay?.lines ?? []).some((l: any) => l.status === 'PARTIAL' || l.status === 'NOT_INVOICED');
+  }
+
+  private static readonly STATUS_LABELS: Record<string, string> = {
+    OK: 'OK',
+    PARTIAL: 'Partial',
+    NOT_INVOICED: 'Not invoiced',
+    FAV_PRICE: 'Below PO rate',
+    PRICE_MISMATCH: 'Price mismatch',
+    OVER_BILL: 'Over-billed',
+    AMOUNT_MISMATCH: 'Amount error',
+    NO_PO_LINE: 'Not on PO'
+  };
+
+  private static readonly STATUS_BADGES: Record<string, string> = {
+    OK: 'b-ok',
+    PARTIAL: 'b-info',
+    NOT_INVOICED: 'b-muted',
+    FAV_PRICE: 'b-warn',
+    PRICE_MISMATCH: 'b-danger',
+    OVER_BILL: 'b-danger',
+    AMOUNT_MISMATCH: 'b-danger',
+    NO_PO_LINE: 'b-danger'
+  };
+
+  statusLabel(status: string): string {
+    return SupplierInvoiceListComponent.STATUS_LABELS[status] ?? status;
+  }
+
+  badgeClass(status: string): string {
+    return SupplierInvoiceListComponent.STATUS_BADGES[status] ?? 'b-muted';
+  }
+
+  priceVarColor(line: any): string {
+    if (!line?.invQty) return '#9ca3af';
+    if (line.status === 'PRICE_MISMATCH') return '#b91c1c';
+    if (line.status === 'FAV_PRICE') return '#d97706';
+    return '#1a7a4a';
+  }
+
   approveAndPostToAp(): void {
     if (!this.currentRow) return;
     if (this.isPosted(this.currentRow)) return;
+    if (this.threeWay && !this.threeWay.canPostToAp) return;
     const row = this.currentRow;
     this.isPosting = true;
     const amount = Number(row.amount ?? 0);
