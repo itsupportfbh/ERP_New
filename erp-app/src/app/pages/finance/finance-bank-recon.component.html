@@ -108,11 +108,11 @@
            (dragleave)="$any($event.currentTarget).classList.remove('drag')"
            (drop)="wizDrop($event)">
         <p class="br-dz-icon">&#128196;</p>
-        <p><b>Drag &amp; drop the statement CSV here</b></p>
-        <p class="br-dz-sub">for <b>{{ bankNameOf(wizBankId) }}</b></p>
+        <p><b>Drag &amp; drop the statement file here</b></p>
+        <p class="br-dz-sub">for <b>{{ bankNameOf(wizBankId) }}</b> — CSV or Excel (.xlsx / .xls)</p>
         <button class="br-btn br-btn-primary" type="button" (click)="fileInput.click()">Choose file</button>
         <button class="br-btn br-btn-outline" type="button" (click)="loadSample()">Use sample file (demo)</button>
-        <input #fileInput type="file" accept=".csv,.txt" hidden (change)="wizFileChosen($any($event.target).files)">
+        <input #fileInput type="file" accept=".csv,.txt,.xlsx,.xls,.xlsm" hidden (change)="wizFileChosen($any($event.target).files)">
       </div>
 
       <!-- format spec: every field the importer looks for (actual mapping is shown after upload) -->

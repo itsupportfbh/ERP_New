@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import * as XLSX from 'xlsx';
 
 type BrView    = 'dashboard' | 'flow' | 'import' | 'account';
 type AcctTab   = 'rec' | 'stmts' | 'txns' | 'report';
@@ -429,9 +430,27 @@ export class FinanceBankReconComponent implements OnInit {
   wizFileChosen(files: FileList | null): void {
     const f = files?.[0];
     if (!f) return;
+    // DBS / UOB / RHB portals often export .xls/.xlsx, not CSV. Read those with SheetJS and flatten
+    // the first sheet to CSV so the same header-detection + column mapping handles every format.
+    const isExcel = /\.(xlsx|xls|xlsm)$/i.test(f.name);
     const reader = new FileReader();
-    reader.onload = () => this.buildPreview(String(reader.result || ''), f.name);
-    reader.readAsText(f);
+    reader.onload = () => {
+      let text = '';
+      if (isExcel) {
+        try {
+          const wb = XLSX.read(new Uint8Array(reader.result as ArrayBuffer), { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          text = XLSX.utils.sheet_to_csv(sheet);
+        } catch {
+          this.error = 'Could not read this Excel file. Re-save it as .csv from the bank portal and try again.';
+          return;
+        }
+      } else {
+        text = String(reader.result || '');
+      }
+      this.buildPreview(text, f.name);
+    };
+    if (isExcel) reader.readAsArrayBuffer(f); else reader.readAsText(f);
   }
   wizDrop(e: DragEvent): void {
     e.preventDefault();
@@ -519,8 +538,20 @@ export class FinanceBankReconComponent implements OnInit {
     const emptyBal = { opening: null, closing: null, source: 'manual', acctNo: '', ccy: '' };
     const rows = text.split(/\r?\n/).filter(l => l.trim().length);
     if (rows.length < 2) return { items: [], bal: emptyBal, mapping: {} };
-    const header    = this.splitLine(rows[0]).map(h => h.trim().toLowerCase());
-    const headerRaw = this.splitLine(rows[0]).map(h => h.trim());
+
+    // Find the real header row. Many exports carry preamble rows (a BOM, an account-info block) before
+    // the column header, and some (e.g. UOB) prefix every row with a record-type column (H1/H2/D1/D2/T)
+    // — the header is the "D1" row, data are the "D2" rows. Score the first rows by how many known
+    // column names they contain and take the best as the header; the data rows follow it.
+    const SCORE = ['date', 'description', 'debit', 'credit', 'withdraw', 'deposit', 'balance', 'reference', 'narration', 'amount'];
+    let headerIdx = 0, best = -1;
+    for (let r = 0; r < Math.min(rows.length, 25); r++) {
+      const cells = this.splitLine(rows[r]).map(h => h.trim().toLowerCase());
+      const score = SCORE.reduce((s, t) => s + (cells.some(c => c.includes(t)) ? 1 : 0), 0);
+      if (score > best) { best = score; headerIdx = r; }
+    }
+    const header    = this.splitLine(rows[headerIdx]).map(h => h.trim().toLowerCase());
+    const headerRaw = this.splitLine(rows[headerIdx]).map(h => h.trim());
 
     // Column matcher: try the specific/"… amount"/"… date" names first, then loose single words —
     // and skip summary columns (Total …, … Count, … Balance). Bank exports like DBS carry both a
@@ -540,9 +571,11 @@ export class FinanceBankReconComponent implements OnInit {
     const iDate   = find(['transaction date', 'post date', 'statement date', 'value date', 'txn date'], ['date'], ['count']);
     const iDesc   = find(['statement details', 'transaction description', 'description', 'narration', 'particular', 'details'], ['info', 'remark']);
     const iRef    = find(['our ref', 'cheque', 'chq', 'reference no', 'reference'], ['ref', 'txn']);
-    const iDebit  = find(['debit amount', 'withdrawal', 'withdraw'], ['debit', 'dr'], AMT_EXCL);
-    const iCredit = find(['credit amount', 'deposit'], ['credit', 'cr'], AMT_EXCL);
-    const iAmount = find(['transaction amount'], ['amount'], [...AMT_EXCL, 'debit', 'credit']);
+    // 'dr'/'cr' as bare words are too greedy — 'cr' matches "des-CR-iption", 'dr' matches other text —
+    // so match the parenthesised "Amount (DR)/(CR)" forms explicitly and keep the safe longer words.
+    const iDebit  = find(['debit amount', 'amount (dr', 'dr amount', 'withdrawal', 'withdraw'], ['debit', '(dr)'], [...AMT_EXCL, 'credit']);
+    const iCredit = find(['credit amount', 'amount (cr', 'cr amount', 'deposit'], ['credit', '(cr)'], [...AMT_EXCL, 'debit']);
+    const iAmount = find(['transaction amount'], ['amount'], [...AMT_EXCL, 'debit', 'credit', '(dr', '(cr']);
     const iPayee  = find(['ref for account owner', 'account owner', 'beneficiary', 'counterparty', 'payee', 'payer'], []);
     const iOpen   = find(['opening balance'], [], ['available']);
     const iClose  = find(['closing book balance', 'closing ledger balance', 'closing balance', 'ledger balance'], [], ['available', 'opening']);
@@ -553,18 +586,25 @@ export class FinanceBankReconComponent implements OnInit {
     const num = (s: string) => Number(String(s || '').replace(/[^0-9.\-]/g, '')) || 0;
     const get = (cols: string[], n: number) => (n >= 0 && n < cols.length ? cols[n].trim() : '');
 
-    const dataRows = rows.slice(1).map(l => this.splitLine(l));
+    const dataRows = rows.slice(headerIdx + 1).map(l => this.splitLine(l));
     const items: any[] = [];
     dataRows.forEach(cols => {
       const dateRaw = get(cols, iDate);
       if (!dateRaw) return;
       const debit = num(get(cols, iDebit)), credit = num(get(cols, iCredit));
       const amount = iAmount >= 0 ? num(get(cols, iAmount)) : credit - debit;
+      const iso = this.toIso(dateRaw);
+      // Skip decoration / summary rows (dash separators, "End Of File", Total, opening/closing lines):
+      // no valid date AND no money. A genuine transaction with a bad date still surfaces as an error.
+      if (!iso && debit === 0 && credit === 0) return;
       items.push({
-        transactionDate: this.toIso(dateRaw), dateRaw,
+        transactionDate: iso, dateRaw,
         payee: get(cols, iPayee),
         description: get(cols, iDesc), referenceNo: get(cols, iRef),
-        debit, credit, amount
+        debit, credit, amount,
+        _open:  iOpen  >= 0 ? num(get(cols, iOpen))  : null,
+        _close: iClose >= 0 ? num(get(cols, iClose)) : null,
+        _run:   iRun   >= 0 ? num(get(cols, iRun))   : null
       });
     });
 
@@ -572,14 +612,17 @@ export class FinanceBankReconComponent implements OnInit {
     // the closing) from the file when the bank exports them; else derive from a running "Balance"
     // column; else leave blank for manual entry. These feed the opening + movement = closing check.
     let opening: number | null = null, closing: number | null = null, source = 'manual';
-    if (iOpen  >= 0 && dataRows.length) opening = num(get(dataRows[0], iOpen));
-    if (iClose >= 0 && dataRows.length) closing = num(get(dataRows[dataRows.length - 1], iClose));
-    if (opening !== null && closing !== null) {
-      source = 'file';
-    } else if (iRun >= 0 && dataRows.length && items.length) {
-      closing = num(get(dataRows[dataRows.length - 1], iRun));
-      opening = +(num(get(dataRows[0], iRun)) - (items[0].amount || 0)).toFixed(2);
-      source = 'derived';
+    if (items.length) {
+      const first = items[0], last = items[items.length - 1];
+      if (iOpen  >= 0) opening = first._open;   // constant on every row
+      if (iClose >= 0) closing = last._close;   // running — last valid row is the closing
+      if (opening !== null && closing !== null) {
+        source = 'file';
+      } else if (iRun >= 0) {
+        closing = last._run;
+        opening = +((first._run ?? 0) - (first.amount || 0)).toFixed(2);
+        source = 'derived';
+      }
     }
 
     // The actual column each ERP field was mapped from — shown to the user as the "format profile"
@@ -631,7 +674,8 @@ export class FinanceBankReconComponent implements OnInit {
     return result;
   }
   private toIso(s: string): string {
-    s = s.trim();
+    // Strip Excel's text-marker apostrophe / stray quotes (RHB exports dates as '01-07-2026).
+    s = (s || '').trim().replace(/^['"]+/, '').trim();
     // yyyymmdd with no separators (e.g. DBS "20260714")
     let m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
     if (m) return `${m[1]}-${m[2]}-${m[3]}`;
