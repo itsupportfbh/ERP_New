@@ -41,18 +41,10 @@
       </button>
     </div>
 
-    <!-- Show entries + Search -->
+    <!-- Search. The page-size selector is gone: a ledger is read whole — every account and
+         every line it expands to — so it always shows all entries. -->
     <div class="table-search-bar">
-      <div class="tsb-left">
-        Show
-        <select class="tsb-page-select" [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
-          <option [ngValue]="10">10</option>
-          <option [ngValue]="25">25</option>
-          <option [ngValue]="50">50</option>
-          <option [ngValue]="9999">All</option>
-        </select>
-        entries
-      </div>
+      <div class="tsb-left"></div>
       <input class="table-search-input" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
     </div>
 
@@ -91,13 +83,15 @@
                         [style.color]="row.level === 0 ? '#1e3a4f' : '#374151'">{{ row.headName }}</span>
                 </div>
               </td>
-              <td class="right muted">{{ (row.openingBalance || 0) | money }}</td>
-              <td class="right debit-val">{{ (row.displayDebit || 0) | money }}</td>
-              <td class="right credit-val">{{ (row.displayCredit || 0) | money }}</td>
+              <!-- Accounting style: a negative reads as (100.00), never -100.00 -->
+              <td class="right muted" [class.neg]="(row.openingBalance || 0) < 0">{{ (row.openingBalance || 0) | money:null:'1.2-2':true }}</td>
+              <td class="right debit-val">{{ (row.displayDebit || 0) | money:null:'1.2-2':true }}</td>
+              <td class="right credit-val">{{ (row.displayCredit || 0) | money:null:'1.2-2':true }}</td>
               <td class="right teal-bold"
+                  [class.neg]="(row.displayBalance || 0) < 0"
                   [style.fontWeight]="row.level === 0 ? '700' : '500'"
                   [style.color]="(row.displayBalance || 0) !== 0 ? '#111827' : '#9ca3af'">
-                {{ (row.displayBalance || 0) | money }}
+                {{ (row.displayBalance || 0) | money:null:'1.2-2':true }}
               </td>
             </tr>
           </ng-container>
@@ -108,27 +102,19 @@
         <tfoot *ngIf="pagedRows.length > 0">
           <tr class="foot-row">
             <td colspan="2"><strong>Total</strong></td>
-            <td class="right muted"></td>
-            <td class="right debit-val fw-bold">{{ totalDebit | money }}</td>
-            <td class="right credit-val fw-bold">{{ totalCredit | money }}</td>
-            <td class="right teal-bold fw-bold">{{ totalBalance | money }}</td>
+            <td class="right muted fw-bold" [class.neg]="totalOpening < 0">{{ totalOpening | money:null:'1.2-2':true }}</td>
+            <td class="right debit-val fw-bold">{{ totalDebit | money:null:'1.2-2':true }}</td>
+            <td class="right credit-val fw-bold">{{ totalCredit | money:null:'1.2-2':true }}</td>
+            <td class="right teal-bold fw-bold" [class.neg]="totalBalance < 0">{{ totalBalance | money:null:'1.2-2':true }}</td>
           </tr>
         </tfoot>
       </table>
     </div>
 
-    <!-- Pagination -->
+    <!-- No pager: the ledger always renders every row, so an expanded account never has its
+         lines cut off across pages. -->
     <div class="gl-pager" *ngIf="displayRows.length > 0 && !loading">
-      <span class="pager-info">Showing {{ pageFrom }}-{{ pageTo }} of {{ displayRows.length }} entries</span>
-      <div class="pager-btns">
-        <button class="pager-btn" type="button" (click)="setPage(currentPage - 1)" [disabled]="currentPage === 1">&#8249;</button>
-        <button class="pager-btn"
-                *ngFor="let p of pageNumbers"
-                type="button"
-                [class.active]="p === currentPage"
-                (click)="setPage(p)">{{ p }}</button>
-        <button class="pager-btn" type="button" (click)="setPage(currentPage + 1)" [disabled]="currentPage === totalPages">&#8250;</button>
-      </div>
+      <span class="pager-info">Showing all {{ displayRows.length }} entries</span>
     </div>
 
   </div>
