@@ -141,8 +141,11 @@ export class DocumentPrintService {
       `<th class="${this.alignCls(c.align)}">${this.escape(c.header)}</th>`
     ).join('');
 
-    const bodyHtml = (cfg.lines || []).map((row, i) =>
-      `<tr><td class="c">${i + 1}</td>${
+    // Package sub-items (isPackageChild) sit under their package header and are not
+    // numbered; only top-level lines advance the S.No counter.
+    let seq = 0;
+    const bodyHtml = (cfg.lines || []).map((row) =>
+      `<tr><td class="c">${row?.isPackageChild ? '' : ++seq}</td>${
         (cfg.columns || []).map(c =>
           `<td class="${this.alignCls(c.align)}">${this.cell(c, row)}</td>`
         ).join('')

@@ -205,11 +205,15 @@ export class SalesInvoiceListComponent implements OnInit {
               lineTax: setTax,
               lineTotal: setTotal,
             };
-          }).subscribe(grouped => {
-            this.viewLines = grouped;
-            const net = grouped.reduce((s, l) => s + (+l.lineNet || 0), 0);
-            const tax = grouped.reduce((s, l) => s + (+l.lineTax || 0), 0);
-            const total = grouped.reduce((s, l) => s + (+l.lineTotal || 0), 0);
+          }, true).subscribe(grouped => {
+            // Children are shown for reference only — the header carries the money, so
+            // zero the child amounts to keep the totals correct.
+            this.viewLines = grouped.map((l: any) => l.isPackageChild
+              ? { ...l, itemName: `— ${l.itemName}`, unitPrice: 0, discountPct: 0, lineNet: 0, lineTax: 0, lineTotal: 0 }
+              : l);
+            const net = this.viewLines.reduce((s, l) => s + (+l.lineNet || 0), 0);
+            const tax = this.viewLines.reduce((s, l) => s + (+l.lineTax || 0), 0);
+            const total = this.viewLines.reduce((s, l) => s + (+l.lineTotal || 0), 0);
             this.viewInfo = [
               { label: 'Invoice No', value: row.invoiceNo },
               { label: 'Customer', value: custName },

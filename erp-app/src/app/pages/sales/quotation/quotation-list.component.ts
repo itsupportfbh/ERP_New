@@ -209,7 +209,8 @@ export class QuotationListComponent implements OnInit {
           lineTotal: l.lineTotal ?? 0,
         }));
         const cur = row.currency || 'SGD';
-        // Replace package child lines with the "Executive Lunch Buffet" header (money on the header).
+        // Show the "Executive Lunch Buffet" header (money on the header) followed by its
+        // package contents (Chicken Briyani, White Bread, …) listed as indented sub-items.
         this.svc.groupViewLinesByPackage(baseLines, d.itemSets ?? d.ItemSets ?? [], (s: any) => ({
           itemId: 0,
           itemCode: '',
@@ -221,11 +222,15 @@ export class QuotationListComponent implements OnInit {
           lineNet: +(s.lineNet ?? s.LineNet ?? 0) || 0,
           lineTax: +(s.lineTax ?? s.LineTax ?? 0) || 0,
           lineTotal: +(s.lineTotal ?? s.LineTotal ?? 0) || 0,
-        })).subscribe(grouped => {
-          this.viewLines = grouped;
-          const net = grouped.reduce((s, l) => s + (+l.lineNet || 0), 0);
-          const tax = grouped.reduce((s, l) => s + (+l.lineTax || 0), 0);
-          const total = grouped.reduce((s, l) => s + (+l.lineTotal || 0), 0);
+        }), true).subscribe(grouped => {
+          // Package children are shown for reference only — the package header already
+          // carries the money, so zero the child amounts to keep the totals correct.
+          this.viewLines = grouped.map((l: any) => l.isPackageChild
+            ? { ...l, itemName: `— ${l.itemName}`, unitPrice: 0, discountPct: 0, lineNet: 0, lineTax: 0, lineTotal: 0 }
+            : l);
+          const net = this.viewLines.reduce((s, l) => s + (+l.lineNet || 0), 0);
+          const tax = this.viewLines.reduce((s, l) => s + (+l.lineTax || 0), 0);
+          const total = this.viewLines.reduce((s, l) => s + (+l.lineTotal || 0), 0);
           this.viewInfo = [
             { label: 'QT No', value: row.number },
             { label: 'Status', value: row.statusLabel },

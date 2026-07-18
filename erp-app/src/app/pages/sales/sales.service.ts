@@ -54,12 +54,16 @@ export class SalesService {
    * Package child lines (items that belong to one of `itemSets`) are removed and
    * replaced by a single header row built by `headerFactory` from each set — so a
    * view shows "Executive Lunch Buffet" (with its money) instead of the zero-value child.
+   * When `includeChildren` is true, each header is instead followed by its own child
+   * rows (tagged `isPackageChild: true`) so a view can list the package contents —
+   * e.g. "Executive Lunch Buffet" then Chicken Briyani, White Bread beneath it.
    * Returns the original lines unchanged when the document has no item sets.
    */
   groupViewLinesByPackage(
     lines: any[],
     itemSets: any[],
-    headerFactory: (set: any, children: any[]) => any
+    headerFactory: (set: any, children: any[]) => any,
+    includeChildren = false
   ): Observable<any[]> {
     const sets = (itemSets || [])
       .map((x: any) => ({ raw: x, id: Number(x.itemSetId ?? x.ItemSetId ?? x.id ?? x.Id ?? 0) }))
@@ -85,14 +89,16 @@ export class SalesService {
         const nonPkg = (lines ?? []).filter((l: any) => !allMembers.has(Number(l.itemId ?? l.ItemId ?? 0)));
         // Resolve the package name from the item-set definition when the document's own
         // map row doesn't carry it (only Quotation stores setName on its map).
-        const headers = sets.map((s: any, idx: number) => {
+        const grouped: any[] = [];
+        sets.forEach((s: any, idx: number) => {
           const sdto = this.unwrapOne(responses[idx]);
           const name = s.raw?.setName ?? s.raw?.SetName ?? sdto?.setName ?? sdto?.SetName
             ?? sdto?.itemSetName ?? sdto?.ItemSetName ?? sdto?.name ?? sdto?.Name ?? 'Package';
           const children = (lines ?? []).filter((l: any) => perSetMembers[idx].has(Number(l.itemId ?? l.ItemId ?? 0)));
-          return headerFactory({ ...s.raw, setName: name }, children);
+          grouped.push(headerFactory({ ...s.raw, setName: name }, children));
+          if (includeChildren) grouped.push(...children.map((c: any) => ({ ...c, isPackageChild: true })));
         });
-        return [...headers, ...nonPkg];
+        return [...grouped, ...nonPkg];
       })
     );
   }
