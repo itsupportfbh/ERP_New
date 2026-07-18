@@ -318,7 +318,25 @@ export class SalesService {
   deleteCreditNote(id: number | string): Observable<any> {
     return this.http.delete(`${this.api}/CreditNote/Delete/${id}`);
   }
+ /** Compose dialog: pre-fill info (customer To + which SO/DO exist) for one sales invoice. */
+  getInvoiceEmailComposeInfo(siId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/invoiceemail/compose-info/${siId}`);
+  }
 
+  /** Compose dialog: send ONE email from the logged-in user with the selected SO/DO/SI PDFs. */
+  sendInvoiceEmailComposed(siId: number | string, dto: any): Observable<any> {
+    return this.http.post(`${this.api}/invoiceemail/compose/${siId}`, dto);
+  }
+
+  /** The logged-in user's own outbound email (SMTP) settings — password never returned. */
+  getMyEmailSettings(): Observable<any> {
+    return this.http.get(`${this.api}/UserEmailSetting/my`);
+  }
+
+  /** Save the logged-in user's SMTP settings (app-password encrypted server-side). */
+  saveMyEmailSettings(dto: any): Observable<any> {
+    return this.http.post(`${this.api}/UserEmailSetting/save`, dto);
+  }
   // ── Shared Lookups ───────────────────────────────────
   getCustomers(): Observable<any> {
     return this.http.get(`${this.api}/CustomerMaster/GetAllCustomerMaster`);

@@ -74,4 +74,10 @@
     [info]="viewInfo" [columns]="lineColumns" [lines]="viewLines" [totals]="viewTotals"
     (print)="printActive()" (close)="showView=false">
   </erp-doc-view-modal>
+
+  <erp-email-compose
+    [open]="showEmailModal" [loading]="emailLoading" [sending]="emailSending"
+    [model]="emailModel" [attachments]="emailAttachments" title="Email Customer"
+    (send)="sendComposedEmail()" (cancel)="closeEmailModal()">
+  </erp-email-compose>
 </div>

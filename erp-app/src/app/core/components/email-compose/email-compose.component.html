@@ -1,0 +1,55 @@
+<div class="ec-overlay" *ngIf="open" (click)="onCancel()">
+  <div class="ec-modal" (click)="$event.stopPropagation()">
+    <div class="ec-head">
+      <h3>{{ title }}</h3>
+      <button class="ec-x" (click)="onCancel()" [disabled]="sending">&times;</button>
+    </div>
+
+    <div *ngIf="loading" class="ec-loading">Loading details…</div>
+
+    <div *ngIf="!loading && model" class="ec-body">
+      <label class="ec-fld">
+        <span>From</span>
+        <input type="text" [value]="model.fromLabel" readonly
+               title="The customer sees your name; replies come back to you." />
+      </label>
+
+      <label class="ec-fld">
+        <span>{{ toLabel }}</span>
+        <input type="email" [(ngModel)]="model.toEmail" placeholder="name@email.com" />
+      </label>
+
+      <label class="ec-fld">
+        <span>Cc</span>
+        <input type="email" [(ngModel)]="model.ccEmail" placeholder="optional" />
+      </label>
+
+      <label class="ec-fld">
+        <span>Subject</span>
+        <input type="text" [(ngModel)]="model.subject" />
+      </label>
+
+      <div class="ec-fld" *ngIf="attachments?.length">
+        <span>Attach</span>
+        <div class="ec-checks">
+          <label *ngFor="let a of attachments" [class.disabled]="a.disabled">
+            <input type="checkbox" [(ngModel)]="a.checked" [disabled]="a.disabled" />
+            {{ a.label }} <em *ngIf="a.sublabel">{{ a.sublabel }}</em>
+          </label>
+        </div>
+      </div>
+
+      <label class="ec-fld ec-fld-col">
+        <span>Message</span>
+        <textarea rows="5" [(ngModel)]="model.bodyHtml"></textarea>
+      </label>
+    </div>
+
+    <div class="ec-actions" *ngIf="!loading">
+      <button class="ec-btn ec-cancel" (click)="onCancel()" [disabled]="sending">Cancel</button>
+      <button class="ec-btn ec-send" (click)="onSend()" [disabled]="sending">
+        {{ sending ? 'Sending…' : 'Send Email' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -84,4 +84,64 @@
       <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
     </div>
   </div>
+
+  <!-- Email compose modal -->
+  <div class="mconfirm-overlay" *ngIf="showEmailModal" (click)="closeEmailModal()">
+    <div class="email-modal" (click)="$event.stopPropagation()">
+      <div class="email-head">
+        <h3>Email Customer</h3>
+        <button class="email-x" (click)="closeEmailModal()" [disabled]="emailSending">&times;</button>
+      </div>
+
+      <div *ngIf="emailLoading" class="email-loading">Loading invoice details…</div>
+
+      <div *ngIf="!emailLoading" class="email-body">
+        <label class="email-fld">
+          <span>From</span>
+          <input type="text" [value]="emailModel.fromLabel" readonly title="The customer sees your name; replies come back to you." />
+        </label>
+
+        <label class="email-fld">
+          <span>To</span>
+          <input type="email" [(ngModel)]="emailModel.toEmail" placeholder="customer@email.com" />
+        </label>
+
+        <label class="email-fld">
+          <span>Cc</span>
+          <input type="email" [(ngModel)]="emailModel.ccEmail" placeholder="optional" />
+        </label>
+
+        <label class="email-fld">
+          <span>Subject</span>
+          <input type="text" [(ngModel)]="emailModel.subject" />
+        </label>
+
+        <div class="email-fld">
+          <span>Attach</span>
+          <div class="email-checks">
+            <label><input type="checkbox" [(ngModel)]="emailModel.includeSalesInvoice" />
+              Sales Invoice <em>{{ emailInfo?.invoiceNo }}</em></label>
+            <label [class.disabled]="!emailInfo?.soId">
+              <input type="checkbox" [(ngModel)]="emailModel.includeSalesOrder" [disabled]="!emailInfo?.soId" />
+              Sales Order <em>{{ emailInfo?.soNo || (emailInfo?.soId ? '' : '(none)') }}</em></label>
+            <label [class.disabled]="!emailInfo?.doId">
+              <input type="checkbox" [(ngModel)]="emailModel.includeDeliveryOrder" [disabled]="!emailInfo?.doId" />
+              Delivery Order <em>{{ emailInfo?.doNo || (emailInfo?.doId ? '' : '(none)') }}</em></label>
+          </div>
+        </div>
+
+        <label class="email-fld email-fld-col">
+          <span>Message</span>
+          <textarea rows="5" [(ngModel)]="emailModel.bodyHtml"></textarea>
+        </label>
+      </div>
+
+      <div class="email-actions" *ngIf="!emailLoading">
+        <button class="mf-btn cancel-modal" (click)="closeEmailModal()" [disabled]="emailSending">Cancel</button>
+        <button class="mf-btn del-confirm" style="background:#16a34a" (click)="sendComposedEmail()" [disabled]="emailSending">
+          {{ emailSending ? 'Sending…' : 'Send Email' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

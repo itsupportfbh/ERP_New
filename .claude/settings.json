@@ -419,7 +419,23 @@
       "Bash(xargs echo \" list.html markers:\")",
       "Bash(grep -n \"po.SupplierId, s.Name\\\\|ON s.Id = po.SupplierId\\\\|        po.SupplierId,$\" Repositories/AccountsPayableRepository.cs)",
       "Bash(grep -nE \"'[0-9]{3,}'|= [0-9]{4,}\")",
-      "Bash('/c/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/sqlcmd' -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -I -W -s '|' -Q ' *)"
+      "Bash('/c/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/sqlcmd' -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -I -W -s '|' -Q ' *)",
+      "Bash('/c/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/sqlcmd' -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -I -i 'C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi\\\\SqlScripts\\\\UserEmailSetting_Create.sql')",
+      "Bash('/c/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/sqlcmd' -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -I -W -s '|' -Q 'SELECT STRING_AGG\\(name,'\\\\'', '\\\\''\\) FROM sys.columns WHERE object_id=OBJECT_ID\\('\\\\''dbo.UserEmailSetting'\\\\''\\);')",
+      "PowerShell(cd \"C:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\FinanceApi\\\\FinanceApi\"; dotnet build -nologo -v q 2>&1 | Select-String -Pattern \"error \" | Where-Object { $_ -notmatch \"MSB302\" } | Select-Object -First 20)",
+      "PowerShell(cd \"c:\\\\Users\\\\CCSPLNB03\\\\source\\\\repos\\\\ERP_New\\\\erp-app\"; $out = npx ng build --configuration development 2>&1; \"=== bank-recon errors ===\"; \\($out | Select-String -Pattern \"bank-recon\" | Measure-Object\\).Count; \"=== all TS error lines ===\"; $out | Select-String -Pattern \"ERROR|TS2339|TS2551|does not exist\" | Select-Object -First 30)",
+      "Bash(where chrome *)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Bash(node_modules/.bin/sass --no-source-map \"src/app/pages/finance/finance-bank-recon.component.scss\" \"/c/Users/CCSPLN~1/AppData/Local/Temp/claude/c--Users-CCSPLNB03-source-repos-ERP-New/6b953305-2608-4acd-8370-ed6e4b63c96f/scratchpad/br.css\")",
+      "Bash(echo \"exit: $?\")",
+      "Read(//c/Users/CCSPLN~1/AppData/Local/Temp/claude/c--Users-CCSPLNB03-source-repos-ERP-New/6b953305-2608-4acd-8370-ed6e4b63c96f/scratchpad/**)",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --hide-scrollbars --screenshot=preview.png --window-size=1240,1500 \"preview.html\")",
+      "Read(//c/temp/brpreview/**)",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --screenshot=\"C:/temp/brpreview/preview2.png\" --window-size=1240,1500 \"file:///C:/temp/brpreview/preview2.html\")",
+      "Bash(node_modules/.bin/sass --no-source-map \"src/app/pages/finance/finance-bank-recon.component.scss\" \"/c/temp/brpreview/br.css\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --screenshot=\"C:/temp/brpreview/preview.png\" --window-size=1240,1150 \"file:///C:/temp/brpreview/preview.html\")",
+      "Bash(sed -i \"s#/c/temp/brpreview/dbs.csv#C:/temp/brpreview/dbs.csv#\" parsetest.js)",
+      "Bash(node parsetest.js)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
@@ -434,7 +450,8 @@
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\ModelDTO",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI_Lat\\FinanceApi\\ModelDTO",
       "C:\\Users\\CCSPLNB03\\source\\repos\\FinanceAPI\\FinanceApi\\Services",
-      "C:\\Program Files\\Microsoft SQL Server\\MSSQL16.SQLSERVER2022\\MSSQL\\DATA"
+      "C:\\Program Files\\Microsoft SQL Server\\MSSQL16.SQLSERVER2022\\MSSQL\\DATA",
+      "C:\\temp\\brpreview"
     ]
   }
 }
