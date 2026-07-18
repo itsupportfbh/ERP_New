@@ -71,6 +71,7 @@ export class FinanceBankReconComponent implements OnInit {
     { opening: null, closing: null, source: 'manual', acctNo: '', ccy: '' };
   wizBalInput: { opening: number | null; closing: number | null } = { opening: null, closing: null };
   wizOverride = false;
+  wizMapping: any = {};   // ERP field → column the parser read it from (shown as the format profile)
 
   constructor(
     private finance: FinanceService,
@@ -90,6 +91,14 @@ export class FinanceBankReconComponent implements OnInit {
 
   bankNameOf(id: number | null): string { return this.banks.find(b => b.id === id)?.name || ''; }
   bankOf(id: number | null): BankRef | undefined { return this.banks.find(b => b.id === id); }
+
+  // A stable colour per bank (by name) so each account's chip is distinguishable, like the prototype.
+  private readonly chipColors = ['#2E5F73', '#d1112b', '#0b3a75', '#1a1a1a', '#0067b1', '#7a0c2e', '#0e8a4c', '#b7791f'];
+  bankColor(name: string): string {
+    let h = 0;
+    for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return this.chipColors[h % this.chipColors.length];
+  }
 
   toast(m: string): void {
     this.toastMsg = m;
@@ -259,8 +268,12 @@ export class FinanceBankReconComponent implements OnInit {
     if (r._init) return;
     r._init = true;
     r._contraId = null;
-    r._createWho = '';
-    r._createDesc = r.description && r.description !== '-' ? r.description : '';
+    // Import folds payee into the description as "Payee — details"; split it back so Create's
+    // Who/Why come pre-filled (the prototype's auto-suggest).
+    const full = r.description && r.description !== '-' ? r.description : '';
+    const dash = full.indexOf(' — ');
+    r._createWho = dash > -1 ? full.slice(0, dash).trim() : '';
+    r._createDesc = dash > -1 ? full.slice(dash + 3).trim() : full;
     r._counterBankId = null;
     r._note = '';
 
@@ -454,6 +467,7 @@ export class FinanceBankReconComponent implements OnInit {
     });
     this.wizBal = parsed.bal;
     this.wizBalInput = { opening: parsed.bal.opening, closing: parsed.bal.closing };
+    this.wizMapping = parsed.mapping;
     this.wizOverride = false;
     this.wizFileName = fname;
     this.wizStep = 3;
@@ -501,21 +515,26 @@ export class FinanceBankReconComponent implements OnInit {
   wizGoReconcile(): void { if (this.wizBankId) this.openReconcile(this.wizBankId); }
 
   // ── CSV parsing (bank export → rows) ────────────────────────
-  private parseCsv(text: string): { items: any[]; bal: any } {
+  private parseCsv(text: string): { items: any[]; bal: any; mapping: any } {
     const emptyBal = { opening: null, closing: null, source: 'manual', acctNo: '', ccy: '' };
     const rows = text.split(/\r?\n/).filter(l => l.trim().length);
-    if (rows.length < 2) return { items: [], bal: emptyBal };
-    const header = this.splitLine(rows[0]).map(h => h.trim().toLowerCase());
+    if (rows.length < 2) return { items: [], bal: emptyBal, mapping: {} };
+    const header    = this.splitLine(rows[0]).map(h => h.trim().toLowerCase());
+    const headerRaw = this.splitLine(rows[0]).map(h => h.trim());
 
     // Column matcher: try the specific/"… amount"/"… date" names first, then loose single words —
     // and skip summary columns (Total …, … Count, … Balance). Bank exports like DBS carry both a
     // "Total Credit Amount" summary and the real "Credit Amount", plus "Total Debit Count", so a
     // naive "first header containing debit/credit/date" grabs the wrong column.
+    // Priority match: try each preferred name in order (so "Post Date" wins over "Statement Value
+    // Date"), then the loose single words — skipping summary columns via `exclude`.
     const find = (prefer: string[], loose: string[], exclude: string[] = []): number => {
       const bad = (h: string) => exclude.some(x => h.includes(x));
-      let i = header.findIndex(h => !bad(h) && prefer.some(n => h.includes(n)));
-      if (i < 0) i = header.findIndex(h => !bad(h) && loose.some(n => h.includes(n)));
-      return i;
+      for (const term of [...prefer, ...loose]) {
+        const i = header.findIndex(h => !bad(h) && h.includes(term));
+        if (i >= 0) return i;
+      }
+      return -1;
     };
     const AMT_EXCL = ['count', 'total', 'balance', 'opening', 'closing', 'available', 'hold'];
     const iDate   = find(['transaction date', 'post date', 'statement date', 'value date', 'txn date'], ['date'], ['count']);
@@ -563,14 +582,42 @@ export class FinanceBankReconComponent implements OnInit {
       source = 'derived';
     }
 
+    // The actual column each ERP field was mapped from — shown to the user as the "format profile"
+    // so they can see exactly how their file was read (works for any bank layout, no hard-coding).
+    const nm = (i: number) => (i >= 0 ? headerRaw[i] : '');
+    const mapping = {
+      date:    nm(iDate),
+      payee:   nm(iPayee),
+      desc:    nm(iDesc),
+      ref:     nm(iRef),
+      debit:   iAmount >= 0 ? '' : nm(iDebit),
+      credit:  iAmount >= 0 ? '' : nm(iCredit),
+      amount:  nm(iAmount),
+      opening: nm(iOpen),
+      closing: iClose >= 0 ? nm(iClose) : (iRun >= 0 ? nm(iRun) + ' (running)' : ''),
+      acct:    nm(iAcct),
+      ccy:     nm(iCcy),
+      dateFmt: this.guessDateFmt(items.length ? items[0].dateRaw : '')
+    };
+
     return {
       items,
       bal: {
         opening, closing, source,
         acctNo: iAcct >= 0 && dataRows.length ? get(dataRows[0], iAcct) : '',
         ccy:    iCcy  >= 0 && dataRows.length ? get(dataRows[0], iCcy)  : ''
-      }
+      },
+      mapping
     };
+  }
+
+  private guessDateFmt(raw: string): string {
+    raw = (raw || '').trim();
+    if (/^\d{8}$/.test(raw)) return 'yyyymmdd';
+    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(raw)) return 'yyyy-mm-dd';
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(raw)) return 'dd/mm/yyyy';
+    if (/^\d{1,2}\s+[A-Za-z]{3}/.test(raw)) return 'dd mmm yyyy';
+    return raw ? 'auto' : '';
   }
   private splitLine(line: string): string[] {
     const result: string[] = [];

@@ -25,7 +25,7 @@
     <div class="br-acct-grid">
       <div class="br-acct-card" *ngFor="let c of cards">
         <div class="br-acct-top">
-          <span class="br-bank-chip">{{ c.name }}</span>
+          <span class="br-bank-chip" [style.background]="bankColor(c.name)">{{ c.name }}</span>
           <span class="br-badge" [ngClass]="c.unrecon ? 'badge-open' : 'badge-success'">
             {{ c.loaded ? (c.unrecon ? c.unrecon + ' to reconcile' : 'All reconciled') : '…' }}
           </span>
@@ -95,7 +95,7 @@
     <!-- step 1: bank -->
     <div *ngIf="wizStep===1" class="br-bank-grid">
       <button class="br-bank-opt" *ngFor="let b of banks" (click)="wizPickBank(b.id)">
-        <span class="br-bank-chip">{{ b.name }}</span>
+        <span class="br-bank-chip" [style.background]="bankColor(b.name)">{{ b.name }}</span>
         <div class="nm">{{ b.name }}</div>
         <div class="fm">CSV export<span *ngIf="b.ccy"> · {{ b.ccy }}</span><span *ngIf="b.acctNo"> · A/c {{ b.acctNo }}</span></div>
       </button>
@@ -115,18 +115,22 @@
         <input #fileInput type="file" accept=".csv,.txt" hidden (change)="wizFileChosen($any($event.target).files)">
       </div>
 
-      <!-- format spec: how the CSV columns are mapped -->
+      <!-- format spec: every field the importer looks for (actual mapping is shown after upload) -->
       <div class="br-fmt-spec">
-        <b>Format profile</b> — the first header row names the columns; amounts may contain thousand separators; dates accept <code>dd/mm/yyyy</code> or <code>yyyy-mm-dd</code>.
+        <b>Format profile</b> — the first header row names the columns; amounts may contain thousand separators; dates accept <code>yyyymmdd</code>, <code>dd/mm/yyyy</code>, <code>dd mmm yyyy</code> or <code>yyyy-mm-dd</code>.
         <table>
           <tr><th>ERP FIELD</th><th>MAPPED FROM COLUMN (auto-detected)</th></tr>
-          <tr><td>Date</td><td><code>Date</code></td></tr>
-          <tr><td>Description</td><td><code>Description</code> / <code>Narration</code> / <code>Details</code></td></tr>
-          <tr><td>Reference</td><td><code>Reference</code> / <code>Cheque</code> / <code>Txn</code></td></tr>
-          <tr><td>Money out (debit)</td><td><code>Debit</code> / <code>Withdrawal</code></td></tr>
-          <tr><td>Money in (credit)</td><td><code>Credit</code> / <code>Deposit</code></td></tr>
+          <tr><td>Date</td><td><code>Post Date</code> / <code>Transaction Date</code> / <code>Value Date</code> / <code>Date</code></td></tr>
+          <tr><td>Payee / payer</td><td><code>Ref For Account Owner</code> / <code>Beneficiary</code> / <code>Payee</code></td></tr>
+          <tr><td>Description</td><td><code>Statement Details Info</code> / <code>Description</code> / <code>Narration</code> / <code>Details</code></td></tr>
+          <tr><td>Reference</td><td><code>Our Ref</code> / <code>Reference</code> / <code>Cheque</code> / <code>Txn</code></td></tr>
+          <tr><td>Money out (debit)</td><td><code>Debit Amount</code> / <code>Withdrawal</code></td></tr>
+          <tr><td>Money in (credit)</td><td><code>Credit Amount</code> / <code>Deposit</code></td></tr>
+          <tr><td>Opening balance</td><td><code>Opening Balance</code></td></tr>
+          <tr><td>Closing balance</td><td><code>Closing Book Balance</code> / <code>Balance</code> (running)</td></tr>
+          <tr><td>Account / currency check</td><td><code>Account No.</code> + <code>Account Currency</code></td></tr>
         </table>
-        <p class="br-note">Column names are matched loosely, so most banks' exports map without any change.</p>
+        <p class="br-note">Column names are matched loosely across bank layouts — after you upload, the exact column used for each field is shown.</p>
       </div>
 
       <p class="br-wiz-back"><button class="br-link-btn" type="button" (click)="wizBack(1)">&#8592; Back to bank selection</button></p>
@@ -134,6 +138,25 @@
 
     <!-- step 3: preview -->
     <div *ngIf="wizStep===3">
+
+      <!-- Detected format profile: which column each ERP field was read from -->
+      <div class="br-fmt-spec">
+        <b>Format profile</b> — first <code>1</code> header row skipped · dates <code>{{ wizMapping.dateFmt || 'auto' }}</code> · amounts may contain thousand separators
+        <table>
+          <tr><th>ERP FIELD</th><th>MAPPED FROM COLUMN</th></tr>
+          <tr><td>Date</td><td><code>{{ wizMapping.date || '—' }}</code></td></tr>
+          <tr *ngIf="wizMapping.payee"><td>Payee / payer</td><td><code>{{ wizMapping.payee }}</code></td></tr>
+          <tr><td>Description</td><td><code>{{ wizMapping.desc || '—' }}</code></td></tr>
+          <tr><td>Reference</td><td><code *ngIf="wizMapping.ref">{{ wizMapping.ref }}</code><i *ngIf="!wizMapping.ref">none in file</i></td></tr>
+          <tr *ngIf="wizMapping.amount"><td>Amount</td><td><code>{{ wizMapping.amount }}</code></td></tr>
+          <tr *ngIf="!wizMapping.amount"><td>Money out (debit)</td><td><code *ngIf="wizMapping.debit">{{ wizMapping.debit }}</code><i *ngIf="!wizMapping.debit">—</i></td></tr>
+          <tr *ngIf="!wizMapping.amount"><td>Money in (credit)</td><td><code *ngIf="wizMapping.credit">{{ wizMapping.credit }}</code><i *ngIf="!wizMapping.credit">—</i></td></tr>
+          <tr *ngIf="wizMapping.opening"><td>Opening balance</td><td><code>{{ wizMapping.opening }}</code> (constant on every row)</td></tr>
+          <tr *ngIf="wizMapping.closing"><td>Closing balance</td><td><code>{{ wizMapping.closing }}</code></td></tr>
+          <tr *ngIf="wizMapping.acct || wizMapping.ccy"><td>Account / currency check</td><td><code *ngIf="wizMapping.acct">{{ wizMapping.acct }}</code><span *ngIf="wizMapping.acct && wizMapping.ccy"> + </span><code *ngIf="wizMapping.ccy">{{ wizMapping.ccy }}</code></td></tr>
+        </table>
+        <p class="br-note">Columns are matched automatically from your file's header — works across bank export layouts, no configuration needed.</p>
+      </div>
 
       <!-- Statement balances + control check -->
       <div class="br-bal-panel">
