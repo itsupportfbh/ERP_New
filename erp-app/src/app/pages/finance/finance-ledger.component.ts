@@ -6,6 +6,7 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import Swal from 'sweetalert2';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { AuditPrintService } from '../../core/services/audit-print.service';
+import * as XLSX from 'xlsx';
 
 interface LedgerFlat {
   id: number;
@@ -65,8 +66,15 @@ export class FinanceLedgerComponent implements OnInit {
   fromDate = '';
   toDate = '';
   search = '';
+  pageSize = 9999;   // default to "All" entries
+  currentPage = 1;
 
   baseCurrency = localStorage.getItem('companyCurrencyName') || 'SGD';
+
+  // Excel export options the user ticks before downloading.
+  exportMenuOpen   = false;
+  exportValuesOnly = true;   // ticked → only accounts carrying a balance; unticked → full chart of accounts
+  exportGrouped    = true;   // ticked → +/− drill-down outline in Excel
 
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
@@ -354,22 +362,73 @@ export class FinanceLedgerComponent implements OnInit {
     return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
   }
 
+  /**
+   * Real .xlsx with the same drill-down as the screen: every account keeps its tree depth as an
+   * Excel outline level, so the sheet renders the +/− group buttons (parent on top, children under).
+   * A parent shows its rolled-up total — collapse a group and you read its subtotal, expand it and
+   * the children carry their own figures underneath. Grand total sits at the bottom, outside any group.
+   */
+  toggleExportMenu(): void { this.exportMenuOpen = !this.exportMenuOpen; }
+
+  /** True when this account (rolled up with its children) carries any balance. */
+  private glHasValue(n: LedgerNode): boolean {
+    return !!((n.totalOpening ?? 0) || (n.totalDebitBase ?? 0) || (n.totalCreditBase ?? 0));
+  }
+
   exportExcel(): void {
-    const data = this.exportRows();
-    const rows: any[][] = [
+    const period = `From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`;
+    const ccy = this.baseCurrency;
+
+    // Header block (4 rows) is ungrouped; the +/− outline only covers the account rows.
+    const aoa: any[][] = [
       ['General Ledger'],
-      [`From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`],
+      [period],
       [],
-      ['Code', 'Account Name', 'Opening Bal', `Debit (${this.baseCurrency})`, `Credit (${this.baseCurrency})`, `Balance (${this.baseCurrency})`],
-      ...data.map(r => [r.code, r.name, r.opening.toFixed(2), r.debit.toFixed(2), r.credit.toFixed(2), r.balance.toFixed(2)]),
-      [],
-      ['', 'Total', '', this.totalDebit.toFixed(2), this.totalCredit.toFixed(2), this.totalBalance.toFixed(2)]
+      ['Code', 'Account Name', 'Opening Bal', `Debit (${ccy})`, `Credit (${ccy})`, `Balance (${ccy})`]
     ];
-    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'GeneralLedger.csv'; a.click();
-    URL.revokeObjectURL(url);
+    const levels: number[] = [0, 0, 0, 0];
+
+    const walk = (n: LedgerNode) => {
+      if (this.exportValuesOnly && !this.glHasValue(n)) return; // rolled-up zero → skip the whole branch
+      const parent = !!(n.children?.length);
+      // Excel caps outline depth at 7; deeper accounts just share the last level.
+      const depth = Math.min(n.level || 0, 7);
+      const opening = parent ? (n.totalOpening ?? 0)    : (n.ownOpening ?? 0);
+      const debit   = parent ? (n.totalDebitBase ?? 0)  : (n.ownDebitBase ?? 0);
+      const credit  = parent ? (n.totalCreditBase ?? 0) : (n.ownCreditBase ?? 0);
+      const name    = (this.exportGrouped ? '    '.repeat(depth) : '') + n.headName.trim();
+      aoa.push([String(n.headCode), name, opening, debit, credit, Math.abs(debit - credit)]);
+      levels.push(this.exportGrouped ? depth : 0);
+      n.children?.forEach(walk);
+    };
+    this.roots.forEach(walk);
+
+    aoa.push([]);
+    aoa.push(['', 'Total', '', this.totalDebit, this.totalCredit, this.totalBalance]);
+    levels.push(0, 0);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+    if (this.exportGrouped) {
+      ws['!rows'] = levels.map(l => (l ? { level: l } : {}));
+      // summaryBelow=false → the group button attaches to the parent row above, matching the screen.
+      (ws as any)['!outline'] = { above: true };
+    }
+
+    // Two-decimal money format on the numeric columns (C–F) of every account + total row.
+    for (let r = 4; r < aoa.length; r++) {
+      if (!aoa[r] || aoa[r].length < 6) continue;
+      for (let c = 2; c <= 5; c++) {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        const cell = ws[ref];
+        if (cell && typeof cell.v === 'number') cell.z = '#,##0.00';
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'General Ledger');
+    XLSX.writeFile(wb, 'GeneralLedger.xlsx');
+    this.exportMenuOpen = false;
   }
 
   exportPdf(): void {

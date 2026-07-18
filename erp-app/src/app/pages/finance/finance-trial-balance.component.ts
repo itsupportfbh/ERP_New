@@ -5,6 +5,7 @@ import { FinanceService } from './finance.service';
 import { FunctionPermission, PermissionService } from '../../shared/permission.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { AuditPrintService } from '../../core/services/audit-print.service';
+import * as XLSX from 'xlsx';
 
 interface TbNode {
   headCode:      string;
@@ -56,6 +57,11 @@ export class FinanceTrialBalanceComponent implements OnInit {
   pageSize    = 25;
   currentPage = 1;
   totalRows   = 0;
+
+  // Excel export options the user ticks before downloading.
+  exportMenuOpen  = false;
+  exportValuesOnly = true;   // ticked → only accounts carrying a balance; unticked → full chart of accounts
+  exportGrouped    = true;   // ticked → +/− drill-down outline in Excel
 
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
@@ -325,28 +331,71 @@ export class FinanceTrialBalanceComponent implements OnInit {
     return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
   }
 
+  toggleExportMenu(): void { this.exportMenuOpen = !this.exportMenuOpen; }
+
+  /** True when this account (already rolled up with its children) carries any balance. */
+  private tbHasValue(n: TbNode): boolean {
+    return !!((n.openingDebit || 0) || (n.openingCredit || 0) || (n.closingDebit || 0) || (n.closingCredit || 0));
+  }
+
+  /**
+   * Real .xlsx built from the ticked options:
+   *  • "Only accounts with values" → empty branches are dropped (rolled-up zero = no valued descendant);
+   *    unticked exports the full chart of accounts.
+   *  • "Drill-down grouping" → each account keeps its tree depth as an Excel outline level, so the sheet
+   *    shows the +/− group buttons (parent on top, children under, collapse to read subtotals).
+   * Parent rows already hold rolled-up totals; leaves hold their own figures.
+   */
   exportExcel(): void {
-    const leaves = this.exportLeaves();
-    const rows: any[][] = [
+    const period = `From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`;
+
+    const aoa: any[][] = [
       ['Trial Balance'],
-      [`From ${this.fmtDisplayDate(this.fromDate)} To ${this.fmtDisplayDate(this.toDate)}`],
+      [period],
       [],
-      ['Account Code', 'Account', 'Opening Debit', 'Opening Credit', 'Closing Debit', 'Closing Credit'],
-      ...leaves.map(n => [
-        n.headCode, n.headName,
-        (n.openingDebit || 0).toFixed(2), (n.openingCredit || 0).toFixed(2),
-        (n.closingDebit || 0).toFixed(2), (n.closingCredit || 0).toFixed(2)
-      ]),
-      [],
-      ['', 'Total',
-        this.totalOpeningDebit.toFixed(2), this.totalOpeningCredit.toFixed(2),
-        this.totalClosingDebit.toFixed(2), this.totalClosingCredit.toFixed(2)]
+      ['Account Code', 'Account', 'Opening Debit', 'Opening Credit', 'Closing Debit', 'Closing Credit']
     ];
-    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'TrialBalance.csv'; a.click();
-    URL.revokeObjectURL(url);
+    const levels: number[] = [0, 0, 0, 0];
+
+    const walk = (n: TbNode) => {
+      if (this.exportValuesOnly && !this.tbHasValue(n)) return; // rolled-up zero → skip the whole branch
+      const depth = Math.min(n.level || 0, 7);
+      aoa.push([
+        n.headCode,
+        (this.exportGrouped ? '    '.repeat(depth) : '') + n.headName,
+        n.openingDebit || 0, n.openingCredit || 0, n.closingDebit || 0, n.closingCredit || 0
+      ]);
+      levels.push(this.exportGrouped ? depth : 0);
+      n.children.forEach(walk);
+    };
+    this.roots.forEach(walk);
+
+    aoa.push([]);
+    aoa.push(['', 'Total', this.totalOpeningDebit, this.totalOpeningCredit, this.totalClosingDebit, this.totalClosingCredit]);
+    levels.push(0, 0);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 14 }, { wch: 42 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+    if (this.exportGrouped) {
+      ws['!rows'] = levels.map(l => (l ? { level: l } : {}));
+      // summaryBelow=false → the group button attaches to the parent row above, matching the screen.
+      (ws as any)['!outline'] = { above: true };
+    }
+
+    // Two-decimal money format on the numeric columns (C–F) of every account + total row.
+    for (let r = 4; r < aoa.length; r++) {
+      if (!aoa[r] || aoa[r].length < 6) continue;
+      for (let c = 2; c <= 5; c++) {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        const cell = ws[ref];
+        if (cell && typeof cell.v === 'number') cell.z = '#,##0.00';
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Trial Balance');
+    XLSX.writeFile(wb, 'TrialBalance.xlsx');
+    this.exportMenuOpen = false;
   }
 
   exportPdf(): void {

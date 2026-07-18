@@ -693,11 +693,18 @@ export class SalesOrderFormComponent implements OnInit {
 
   private applyHeaderFromSource(dto: any): void {
     const custId = Number(dto.customerId ?? dto.CustomerId ?? 0);
+    const custName = dto.customerName ?? dto.CustomerName ?? '';
+    const isCash = !!(dto.isCashSales ?? dto.IsCashSales ?? false) || (custId === 0 && !String(custName).trim());
     if (custId > 0) {
       this.header.customerId = custId;
       this.onCustomerChange(custId);
-      const custName = dto.customerName ?? dto.CustomerName ?? '';
       if (custName) this.customerSearch = String(custName);
+    } else if (isCash) {
+      // Cash-sales quotation carries customerId 0 (synthetic Cash Sales customer).
+      // custId > 0 alone would drop it, so bind the Cash Sales entry explicitly.
+      const cashCust = this.customers.find(x => x.isCashSales) || { id: 0, name: 'Cash Sales', countryId: 0, isCashSales: true } as Customer;
+      this.onCustomerChange(0, cashCust);
+      this.customerSearch = custName ? String(custName) : 'Cash Sales';
     }
     const curId = Number(dto.currencyId ?? dto.CurrencyId ?? 0);
     if (curId > 0) {

@@ -114,9 +114,9 @@
             <td>
               <button class="si-match-btn"
                 [class.posted]="isPosted(row)"
-                (click)="openMatchModal(row)"
-                [title]="isPosted(row) ? 'Already Posted to A/P — view only' : 'View 3-Way Match'">
-                {{ isPosted(row) ? '&#10003; Posted' : '3-Way Match' }}
+                (click)="onPostAction(row)"
+                [title]="isPosted(row) ? 'Already Posted to A/P — view only' : (isCashPurchase(row) ? 'Direct purchase — post to A/P' : 'View 3-Way Match')">
+                {{ isPosted(row) ? '&#10003; Posted' : (isCashPurchase(row) ? 'Post to A/P' : '3-Way Match') }}
               </button>
             </td>
             <td>

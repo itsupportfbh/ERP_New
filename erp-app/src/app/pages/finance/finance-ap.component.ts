@@ -429,17 +429,31 @@ export class FinanceApComponent implements OnInit {
    *    into the pay currency = payableBase / (payCurrency→base rate).
    * The base field (paymentAmountBase) then always resolves back to the company-currency value.
    */
+  /**
+   * One invoice's outstanding, expressed in the currently selected PAY currency.
+   *
+   *  - paying in the invoice's own currency → its foreign face value as-is
+   *  - paying in base or a third currency   → the base payable converted at the
+   *    pay currency's rate (payableBase / payCurrency→base rate)
+   *
+   * Both the default amount and the allocation cap have to agree on this, or the form
+   * offers a total it then rejects.
+   */
+  private outstandingInPayCurrency(inv: any): number {
+    const payCur = Number(this.paymentCurrencyId) || 0;
+    if (payCur && Number(inv.currencyId) === payCur) {
+      return Number(inv.payableAfterAdvance) || 0;
+    }
+    const rate = Number(this.paymentFxRate) || 1;
+    const base = Number(inv.payableBase ?? inv.payableAfterAdvance) || 0;
+    return rate > 0 ? base / rate : base;
+  }
+
   private applyPaymentAmountDefault(): void {
     if (this.amountEditedManually) { this.recalcPaymentBase(); return; }
     const invs = (this.supplierInvoicesAll || []).filter(x => x.isSelected);
     if (!invs.length) { this.recalcPaymentBase(); return; }
-    const payCur = Number(this.paymentCurrencyId) || 0;
-    const rate = Number(this.paymentFxRate) || 1;
-    const total = invs.reduce((s, inv) => {
-      if (payCur && Number(inv.currencyId) === payCur) return s + (Number(inv.payableAfterAdvance) || 0);
-      const base = Number(inv.payableBase) || 0;
-      return s + (rate > 0 ? base / rate : base);
-    }, 0);
+    const total = invs.reduce((s, inv) => s + this.outstandingInPayCurrency(inv), 0);
     this.paymentForm.amount = +total.toFixed(2);
     this.recalcPaymentBase();
   }
@@ -513,7 +527,14 @@ export class FinanceApComponent implements OnInit {
     const allocations: { inv: any; amount: number }[] = [];
     for (const inv of selected) {
       if (remaining <= 0.001) break;
-      const bal = Number(inv.payableAfterAdvance ?? inv.balance ?? 0);
+      // Cap in the PAY currency, which is what paymentForm.amount is in.
+      //
+      // This used to cap on payableAfterAdvance — the invoice's outstanding in the INVOICE's
+      // own currency. Settling a S$1,060 invoice in base MYR meant comparing 3,498 MYR against
+      // 1,060 SGD and refusing it as "too high by 2438" — 2438 being nothing but 3498 − 1060,
+      // two different currencies subtracted from each other. Same conversion as
+      // applyPaymentAmountDefault, which had it right.
+      const bal = this.outstandingInPayCurrency(inv);
       const alloc = Math.min(remaining, bal);
       if (alloc > 0) {
         allocations.push({ inv, amount: parseFloat(alloc.toFixed(2)) });
