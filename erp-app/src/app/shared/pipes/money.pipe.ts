@@ -8,6 +8,7 @@ import { CurrencyDisplayService } from '../../core/services/currency-display.ser
  *   {{ amount | money }}                 -> base (company) currency symbol   e.g. "S$1,250.00"
  *   {{ amount | money:doc.currencyId }}  -> document-selected currency       e.g. "RM 1,250.00"
  *   {{ amount | money:currencyId:'1.2-0' }} -> custom digits
+ *   {{ amount | money:null:'1.2-2':true }}  -> accounting negatives          e.g. "(RM 1,250.00)"
  *
  * Impure so the symbol appears once the async currency load completes (cheap string work).
  */
@@ -15,7 +16,11 @@ import { CurrencyDisplayService } from '../../core/services/currency-display.ser
 export class MoneyPipe implements PipeTransform {
   constructor(private cur: CurrencyDisplayService) {}
 
-  transform(value: any, currency?: number | string | null, digits: string = '1.2-2'): string {
+  /**
+   * @param brackets Accounting style: render a negative as "(RM 100.00)" instead of "-RM 100.00".
+   *                 Opt-in, so every existing caller keeps the leading minus it renders today.
+   */
+  transform(value: any, currency?: number | string | null, digits: string = '1.2-2', brackets = false): string {
     let symbol: string;
     if (currency === null || currency === undefined || currency === '') {
       symbol = this.cur.baseSymbol();
@@ -35,6 +40,8 @@ export class MoneyPipe implements PipeTransform {
     } catch {
       formatted = Math.abs(num).toFixed(2);
     }
-    return `${neg ? '-' : ''}${symbol}${sep}${formatted}`;
+    const amount = `${symbol}${sep}${formatted}`;
+    if (!neg) return amount;
+    return brackets ? `(${amount})` : `-${amount}`;
   }
 }

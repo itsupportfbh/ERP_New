@@ -193,8 +193,12 @@ export class FinanceLedgerComponent implements OnInit {
     });
   }
 
+  /** Closing balance, signed the same way the ledger is: +ve = debit, -ve = credit.
+   *  Mirrors the backend's ClosingSigned = OpeningSigned + Debit - Credit, so the two
+   *  never disagree. The opening balance is part of the closing balance — leaving it out
+   *  reported movement, not balance. */
   private calcBalance(opening: number, debit: number, credit: number): number {
-    return opening + credit - debit;
+    return opening + debit - credit;
   }
 
   private computeTotals(node: LedgerNode): { opening: number; debit: number; credit: number; debitBase: number; creditBase: number } {
@@ -258,12 +262,12 @@ export class FinanceLedgerComponent implements OnInit {
     node.balance        = Math.abs(this.calcBalance(o, d, c));
     node.debitBase      = db;
     node.creditBase     = cb;
-    node.balanceBase    = Math.abs(db - cb);
+    node.balanceBase    = Math.abs(this.calcBalance(o, db, cb));
 
     if (this.useBaseValues) {
       node.displayDebit   = db;
       node.displayCredit  = cb;
-      node.displayBalance = Math.abs(db - cb);
+      node.displayBalance = Math.abs(this.calcBalance(o, db, cb));
     } else {
       node.displayDebit   = d;
       node.displayCredit  = c;
@@ -299,8 +303,6 @@ export class FinanceLedgerComponent implements OnInit {
     } else {
       this.displayRows = output;
     }
-
-    this.currentPage = 1;
   }
 
   toggle(row: LedgerNode): void {
@@ -309,41 +311,21 @@ export class FinanceLedgerComponent implements OnInit {
     this.rebuildDisplayRows();
   }
 
+  /** The ledger is never paged — expanding an account must show every one of its lines,
+   *  and a page break would hide the rest of them. */
   get pagedRows(): LedgerNode[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.displayRows.slice(start, start + this.pageSize);
-  }
-
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.displayRows.length / this.pageSize));
-  }
-
-  get pageFrom(): number {
-    return this.displayRows.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
-  }
-
-  get pageTo(): number {
-    return Math.min(this.currentPage * this.pageSize, this.displayRows.length);
-  }
-
-  get pageNumbers(): number[] {
-    const total = this.totalPages, cur = this.currentPage;
-    const pages: number[] = [];
-    for (let i = Math.max(1, cur - 2); i <= Math.min(total, cur + 2); i++) pages.push(i);
-    return pages;
-  }
-
-  setPage(p: number): void {
-    if (p >= 1 && p <= this.totalPages) this.currentPage = p;
+    return this.displayRows;
   }
 
   onSearchChange(): void {
     this.rebuildDisplayRows();
   }
 
+  get totalOpening(): number { return this.roots.reduce((s, r) => s + (r.totalOpening    || 0), 0); }
   get totalDebit():   number { return this.roots.reduce((s, r) => s + (r.totalDebitBase  || 0), 0); }
   get totalCredit():  number { return this.roots.reduce((s, r) => s + (r.totalCreditBase || 0), 0); }
-  get totalBalance(): number { return Math.abs(this.totalDebit - this.totalCredit); }
+  /** Closing = opening + movement, same as every row above it. */
+  get totalBalance(): number { return Math.abs(this.calcBalance(this.totalOpening, this.totalDebit, this.totalCredit)); }
 
   // ─── Export (Excel / PDF) ──────────────────────────────────────
   /**
