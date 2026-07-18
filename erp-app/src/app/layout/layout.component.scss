@@ -420,3 +420,42 @@
   padding: 16px 20px 0;
 }
 
+/* ============================================================
+   Mobile / tablet drawer — sidebar becomes an overlay drawer
+   below 768px instead of squeezing the content area.
+   ============================================================ */
+.sidebar-backdrop { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-width) !important;
+    z-index: 1000;
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 14px rgba(0,0,0,0.25);
+  }
+  /* drawer closed = slide fully off-canvas (keep full width, not the 52px mini) */
+  .shell.sidebar-closed .sidebar { transform: translateX(-100%); }
+  /* drawer open = slide in as an overlay */
+  .shell:not(.sidebar-closed) .sidebar { transform: translateX(0); }
+
+  /* content uses the full width; the drawer floats over it */
+  .main-area { width: 100%; }
+
+  /* dim backdrop while the drawer is open; tap to close */
+  .shell:not(.sidebar-closed) .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 999;
+  }
+
+  .content { padding: 12px 12px 0; }
+  .topbar { padding: 0 10px; }
+  .topbar-company { display: none; }
+}
+
