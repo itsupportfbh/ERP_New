@@ -219,7 +219,8 @@ export class DeliveryOrderListComponent implements OnInit {
 
         const finish = (rawLines: any[]) => {
           const baseLines = (Array.isArray(rawLines) ? rawLines : []).map(l => this.mapLine(l));
-          // Package money/name comes from the source SO's item sets → group children under the header.
+          // Package name comes from the source SO's item sets → show the header followed by
+          // its contents as indented sub-items (e.g. Chicken Briyani, White Bread).
           this.svc.getSourceSoItemSets({ soId: hdr.soId ?? hdr.SoId, doId: row.id }).subscribe(itemSets => {
             this.svc.groupViewLinesByPackage(baseLines, itemSets, (s: any) => ({
               itemId: 0,
@@ -230,8 +231,10 @@ export class DeliveryOrderListComponent implements OnInit {
               warehouseName: '',
               binName: '',
               notes: '',
-            })).subscribe(grouped => {
-              this.viewLines = grouped;
+            }), true).subscribe(grouped => {
+              this.viewLines = grouped.map((l: any) => l.isPackageChild
+                ? { ...l, itemName: `— ${l.itemName}` }
+                : l);
               this.viewInfo = [
                 { label: 'DO No', value: row.doNumber },
                 { label: 'SO No', value: row.salesOrderNo || '—' },

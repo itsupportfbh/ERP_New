@@ -42,6 +42,15 @@ export class DocViewModalComponent {
 
   get totalTrailing(): number[] { return Array(Math.max(this.totalTrailingCols, 0)).fill(0); }
 
+  /** Display sequence number for a row. Package sub-items (isPackageChild) are not
+   *  numbered — they sit under their package header, so their # cell is left blank. */
+  seq(i: number): string {
+    if (this.lines?.[i]?.isPackageChild) return '';
+    let n = 0;
+    for (let k = 0; k <= i; k++) { if (!this.lines?.[k]?.isPackageChild) n++; }
+    return String(n);
+  }
+
   cellValue(col: PrintColumn, row: any): string {
     const raw = row?.[col.key];
     switch (col.type) {

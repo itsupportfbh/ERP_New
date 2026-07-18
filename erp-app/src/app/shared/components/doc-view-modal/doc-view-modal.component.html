@@ -26,7 +26,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let row of lines; let i = index">
-              <td class="ta-center">{{ i + 1 }}</td>
+              <td class="ta-center">{{ seq(i) }}</td>
               <td *ngFor="let c of columns" [ngClass]="alignCls(c.align)">{{ cellValue(c, row) }}</td>
             </tr>
             <tr *ngIf="loading"><td class="dv-empty" [attr.colspan]="columns.length + 1">Loading…</td></tr>
