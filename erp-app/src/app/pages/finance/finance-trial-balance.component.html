@@ -10,10 +10,27 @@
       </div>
     </div>
     <div class="rpt-actions" *ngIf="displayRows.length">
-      <button class="btn-export btn-excel" type="button" (click)="exportExcel()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Export Excel
-      </button>
+      <div class="export-backdrop" *ngIf="exportMenuOpen" (click)="exportMenuOpen=false"></div>
+      <div class="export-wrap">
+        <button class="btn-export btn-excel" type="button" (click)="toggleExportMenu()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export Excel
+          <span class="caret" [class.caret-up]="exportMenuOpen">&#9662;</span>
+        </button>
+
+        <div class="export-menu" *ngIf="exportMenuOpen">
+          <div class="export-menu-title">What to export</div>
+          <label class="export-opt">
+            <input type="checkbox" [(ngModel)]="exportValuesOnly">
+            <span>Only accounts with values<small>Off = full chart of accounts</small></span>
+          </label>
+          <label class="export-opt">
+            <input type="checkbox" [(ngModel)]="exportGrouped">
+            <span>Drill-down grouping (+/−)<small>Expand / collapse in Excel</small></span>
+          </label>
+          <button class="rpt-btn rpt-btn-primary export-go" type="button" (click)="exportExcel()">Download .xlsx</button>
+        </div>
+      </div>
       <button class="btn-export btn-pdf" type="button" (click)="exportPdf()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Export PDF

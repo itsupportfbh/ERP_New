@@ -32,6 +32,9 @@ interface PinLine {
   itemCode?: string | null;
   itemName: string;
   locationId: number | null;
+  // Direct purchase only. Where a stock line's goods land. locationId above is a Location,
+  // not a warehouse; a line with no warehouse is treated as an expense (nothing received).
+  warehouseId: number | null;
   poQty: number;
   grnQty: number;
   qty: number;
@@ -89,6 +92,18 @@ export class SupplierInvoiceFormComponent implements OnInit {
 
   ledgerOptions: any[] = [];
   locationOptions: any[] = [];
+  warehouseOptions: any[] = [];
+  private defaultWarehouseId: number | null = null;
+  supplierOptions: { label: string; value: number }[] = [];
+  private supplierById = new Map<number, any>();
+
+  /**
+   * Direct purchase — bought over the counter, so there is no PO and no GRN to tick. Not a
+   * mode the user switches: it simply IS one while no GRN is selected, which is exactly the
+   * condition the server keys off. One less field to get wrong, and the two sides can't
+   * disagree about what kind of invoice this is.
+   */
+  get isCashPurchase(): boolean { return this.selectedGrnIds.length === 0; }
   private itemLedgerMap = new Map<number, number>();
   private itemCategoryMap = new Map<number, number>();
   private categoryLedgerMap = new Map<number, number>();
@@ -195,6 +210,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       itemId: null,
       itemName: String(l.item ?? l.itemName ?? ''),
       locationId: null,
+      warehouseId: null,
       poQty: 0,
       grnQty: qty,
       qty,
@@ -224,6 +240,30 @@ export class SupplierInvoiceFormComponent implements OnInit {
       this.locationOptions = this.svc.unwrap(r).map((l: any) => ({
         label: l.locationName ?? l.name, value: l.id
       })));
+
+    // A stock line on a direct purchase has to say which warehouse the goods went to —
+    // there is no GRN to carry it. Only used when no GRN is selected.
+    this.svc.getWarehouses().subscribe(r => {
+      this.warehouseOptions = this.svc.unwrap(r).map((w: any) => ({
+        label: w.name ?? w.warehouseName, value: w.id
+      }));
+      // Default the warehouse used by stock lines (the column is hidden). First one if only one.
+      this.defaultWarehouseId = this.warehouseOptions[0]?.value ?? null;
+      this.lines.forEach(l => { if (l.warehouseId == null) l.warehouseId = this.defaultWarehouseId; });
+    });
+
+    // Normally the supplier is read off the selected GRN, so this screen never needed a list.
+    // A direct purchase has no GRN and still has to name who was paid — the AP leg resolves
+    // Suppliers.BudgetLineId and the proc refuses to post without it. The supplier's currency
+    // and rate come from here too, since there is no GRN to bring them.
+    this.svc.getSuppliers().subscribe(r => {
+      const list = this.svc.unwrap(r);
+      this.supplierOptions = list.map((s: any) => ({
+        label: s.name ?? s.supplierName ?? s.Name, value: Number(s.id ?? s.Id)
+      }));
+      this.supplierById.clear();
+      list.forEach((s: any) => this.supplierById.set(Number(s.id ?? s.Id), s));
+    });
 
     // Load COA + categories + items together so we can resolve each item's
     // own leaf ledger (Item → Category → category COA → item leaf COA).
@@ -302,6 +342,57 @@ export class SupplierInvoiceFormComponent implements OnInit {
         const leafCoa = coaByParentAndName.get(`${Number(categoryCoa.headCode)}|${norm(itemName)}`);
         if (leafCoa?.id != null) this.itemLeafLedgerMap.set(itemId, Number(leafCoa.id));
       });
+    });
+  }
+
+  // ─── Direct purchase (no PO/GRN) ────────────────────────────────
+
+  /** A blank invoice line to type into. Expense by default; becomes stock only when the
+   *  description matches an item and a warehouse is set. */
+  addCashLine(): void {
+    this.lines.push({
+      itemId: null, itemCode: null, itemName: '', locationId: null,
+      // Warehouse is no longer a column — a stock line just goes to the default warehouse.
+      // Harmless on an expense line: the server only receives a line whose name matches an item.
+      warehouseId: this.defaultWarehouseId,
+      poQty: 0, grnQty: 0, qty: 1, unitPrice: 0, discountPct: 0,
+      taxMode: this.defaultTaxMode === 'ZeroRated' ? 'Zero' : 'Exclusive',
+      lineTotal: 0, taxAmt: 0, lineGrandTotal: 0,
+      budgetLineId: null, dcNoteNo: '', remarks: '', matchStatus: '', isPartial: false
+    });
+  }
+
+  removeCashLine(i: number): void { this.lines.splice(i, 1); }
+
+  /** Supplier picked by hand (no GRN to read it off): bring its name, country — which drives
+   *  the tax treatment — currency and rate, exactly as selecting a GRN would. */
+  onSupplierPicked(): void {
+    const s = this.supplierById.get(Number(this.supplierId));
+    if (!s) {
+      this.supplierName = ''; this.selectedSupplierCountryId = null;
+      this.currencyId = null; this.currencyName = ''; this.fxRate = 1;
+      return;
+    }
+    this.supplierName = s.name ?? s.supplierName ?? s.Name ?? '';
+    this.selectedSupplierCountryId = Number(s.countryId ?? s.CountryId) || null;
+    this.currencyId = Number(s.currencyId ?? s.CurrencyId) || null;
+    this.currencyName = s.currencyName ?? s.CurrencyName ?? '';
+    this.applyTaxDecision(this.taxRate);
+    this.resolveCashFxRate();
+  }
+
+  /** Rate for the supplier's currency on the invoice date, from Master > Exchange Rate.
+   *  Left at 1 rather than guessed — a wrong rate is worse than an obvious one. */
+  private resolveCashFxRate(): void {
+    const baseId = Number(localStorage.getItem('companyCurrencyId') || 0);
+    if (!this.currencyId || !baseId || !this.invoiceDate) { this.fxRate = 1; return; }
+    if (Number(this.currencyId) === baseId) { this.fxRate = 1; return; }
+    this.svc.getExchangeRate(Number(this.currencyId), baseId, this.invoiceDate).subscribe({
+      next: (r: any) => {
+        const rate = Number(r?.data?.rate ?? r?.rate ?? 0);
+        this.fxRate = rate > 0 ? rate : 1;
+      },
+      error: () => { this.fxRate = 1; }
     });
   }
 
@@ -563,6 +654,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
           itemCode,
           itemName,
           locationId: null,
+          warehouseId: null,   // GRN line — stock was placed by the receipt already
           poQty,
           grnQty,
           qty: grnQty,
@@ -712,6 +804,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
       itemId: l.itemId ?? null,
       itemName: l.itemName ?? l.item ?? '',
       locationId: l.locationId ?? null,
+      warehouseId: l.warehouseId ?? null,
       poQty,
       grnQty,
       qty,
@@ -761,7 +854,9 @@ export class SupplierInvoiceFormComponent implements OnInit {
   }
 
   submit(draft = false): void {
-    if (!this.selectedGrnIds.length) {
+    // A direct purchase has no GRN on purpose — the lines are the receipt. The per-line and
+    // supplier checks for that path live in doSubmit(); only a GRN-based invoice needs one here.
+    if (!this.isCashPurchase && !this.selectedGrnIds.length) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'Please select at least one GRN.', confirmButtonColor: '#16a34a' });
       return;
     }
@@ -792,10 +887,42 @@ export class SupplierInvoiceFormComponent implements OnInit {
   }
 
   private doSubmit(draft: boolean): void {
+    // Direct purchase: no GRN, so the invoice has to stand on its own. The AP leg needs a
+    // supplier, and each line needs enough to post — a stock line (matched item + warehouse)
+    // carries a receipt, an expense line (typed description) needs a Ledger. Caught here where
+    // it can still be fixed; the server would otherwise drop the line or refuse the whole post.
+    if (!draft && this.isCashPurchase) {
+      if (!this.supplierId) {
+        Swal.fire({ icon: 'warning', title: 'Supplier required', text: 'Pick who you bought from — the payable has to be owed to someone.', confirmButtonColor: '#16a34a' });
+        return;
+      }
+      if (!this.lines.length) {
+        Swal.fire({ icon: 'warning', title: 'No lines', text: 'Add what you bought.', confirmButtonColor: '#16a34a' });
+        return;
+      }
+      const bad = this.lines.findIndex(l =>
+        !l.itemName?.trim() || !(Number(l.unitPrice) > 0) || !l.budgetLineId);
+      if (bad >= 0) {
+        const l = this.lines[bad];
+        Swal.fire({
+          icon: 'warning',
+          title: `Line ${bad + 1} is incomplete`,
+          text: !l.itemName?.trim() ? 'Type what was bought.'
+              : !(Number(l.unitPrice) > 0) ? 'Enter the unit price.'
+              : 'Pick a Ledger — the cost needs an account to post to.',
+          confirmButtonColor: '#16a34a'
+        });
+        return;
+      }
+    }
+
     const linesData = this.lines.map(l => ({
       itemId: l.itemId,
+      itemCode: l.itemCode ?? null,
       itemName: l.itemName,
       locationId: l.locationId,
+      // Read server-side to build the direct-purchase GRN and place the stock.
+      warehouseId: l.warehouseId,
       poQty: l.poQty,
       grnQty: l.grnQty,
       qty: l.qty,

@@ -543,6 +543,44 @@ table.lines thead th:last-child{border-right:none;}
 
   closeLinesModal(): void { this.showLinesModal = false; this.modalLines = []; }
 
+  /**
+   * A direct/cash purchase has no purchase order — the invoice lines are the receipt. The
+   * 3-way match compares an invoice against a PO and a GRN, so with no PO there is nothing to
+   * match and it would always read "Not on PO / Blocked". Such an invoice posts straight to A/P.
+   */
+  isCashPurchase(row: any): boolean {
+    const poId = Number(row?.poid ?? row?.poId ?? row?.POID ?? row?.pOID ?? 0);
+    return !(poId > 0);
+  }
+
+  /** The action button routes here: 3-way match for a PO-based invoice, a direct post otherwise. */
+  onPostAction(row: any): void {
+    if (this.isPosted(row)) { this.openMatchModal(row); return; }   // view-only
+    if (this.isCashPurchase(row)) { this.confirmDirectPost(row); return; }
+    this.openMatchModal(row);
+  }
+
+  private async confirmDirectPost(row: any): Promise<void> {
+    const ok = await Swal.fire({
+      icon: 'question',
+      title: 'Post to A/P?',
+      html: `Direct purchase <b>${row.invoiceNo}</b> — no PO/GRN to match.<br>Post it straight to Accounts Payable?`,
+      showCancelButton: true,
+      confirmButtonText: 'Post to A/P',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#6b7280'
+    });
+    if (!ok.isConfirmed) return;
+
+    this.currentRow = row;
+    this.isPosting = true;
+    // Same approve-then-post as the matched path, minus the 3-way gate.
+    this.svc.approveSupplierInvoice(row.id, Number(row.amount ?? 0)).subscribe({
+      next: () => this.doPostToAp(row),
+      error: () => this.doPostToAp(row)
+    });
+  }
+
   openMatchModal(row: any): void {
     this.currentRow = row;
     // PO and invoice figures in the 3-way match are in the supplier's currency, not the base.

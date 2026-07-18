@@ -67,7 +67,16 @@
 
       <div class="form-row cols-2 block-gap">
         <erp-input label="Invoice Date" type="date" [(ngModel)]="invoiceDate" [disabled]="isGlPosted"></erp-input>
-        <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"></erp-input>
+
+        <!-- With a GRN the supplier is whoever the goods came from — read-only. A direct
+             purchase has no GRN, so it must be picked: the AP leg posts to
+             Suppliers.BudgetLineId and the invoice cannot post without one. -->
+        <erp-input label="Supplier" [(ngModel)]="supplierName" [disabled]="true"
+                   *ngIf="!isCashPurchase || isGlPosted"></erp-input>
+        <erp-dropdown label="Supplier" [options]="supplierOptions" [(ngModel)]="supplierId"
+                      (ngModelChange)="onSupplierPicked()" name="cashSupplier"
+                      placeholder="Who you bought from"
+                      *ngIf="isCashPurchase && !isGlPosted"></erp-dropdown>
       </div>
       <div class="form-row cols-2 block-gap">
         <erp-input label="Tax %" type="number" [(ngModel)]="taxRate" (ngModelChange)="onTaxRateChange($event)" [disabled]="isGlPosted" placeholder="0"></erp-input>
@@ -88,14 +97,16 @@
             <tr>
               <th class="col-num">#</th>
               <th class="col-item">Item</th>
+              <th class="col-ledger" *ngIf="isCashPurchase && !isGlPosted">Ledger</th>
               <th class="col-qty num-cell">Inv Qty</th>
-              <th class="col-partial" *ngIf="!isGlPosted">Partial</th>
+              <th class="col-partial" *ngIf="!isGlPosted && !isCashPurchase">Partial</th>
               <th class="col-price num-cell">Unit Price</th>
               <th class="col-disc num-cell">Disc %</th>
               <th class="col-tax">Tax Mode</th>
               <th class="col-amt num-cell">Tax Amt</th>
               <th class="col-amt num-cell">Grand Total</th>
               <th class="col-ledger" style="display:none">Ledger</th>
+              <th class="col-num" *ngIf="isCashPurchase && !isGlPosted"></th>
             </tr>
           </thead>
           <tbody>
@@ -103,11 +114,29 @@
                 [class.match-ok-row]="l.matchStatus === 'OK'"
                 [class.match-mm-row]="l.matchStatus === 'Mismatch'">
               <td class="row-num">{{ i + 1 }}</td>
-              <td class="col-item-val">{{ l.itemName || '—' }}</td>
+
+              <!-- With a GRN the item is whatever was received. A direct purchase types it:
+                   plain text, because most of what is bought over the counter — stationery, a
+                   repair, a taxi — was never in the item master. If the text happens to match a
+                   stock item AND a warehouse is set, the server treats it as stock. -->
+              <td class="col-item-val" *ngIf="!isCashPurchase || isGlPosted">{{ l.itemName || '—' }}</td>
+              <td class="col-item-val" *ngIf="isCashPurchase && !isGlPosted">
+                <erp-input [(ngModel)]="l.itemName" name="cashName{{i}}" placeholder="What was bought"></erp-input>
+              </td>
+
+              <!-- Where an expense line posts. For a stock line this is filled from the item.
+                   menuMinWidth widens the menu past the narrow cell so the full account name
+                   ("501001 PURCHASE …") is readable instead of being clipped to "501…". -->
+              <td class="col-ledger" *ngIf="isCashPurchase && !isGlPosted">
+                <erp-dropdown [options]="ledgerOptions" [(ngModel)]="l.budgetLineId"
+                              [menuMinWidth]="340"
+                              name="cashLedger{{i}}" placeholder="Ledger"></erp-dropdown>
+              </td>
+
               <td class="num-cell">
                 <erp-input type="number" [(ngModel)]="l.qty" (ngModelChange)="recalcLine(l)" [disabled]="isGlPosted" placeholder="0"></erp-input>
               </td>
-              <td class="col-partial" *ngIf="!isGlPosted" style="text-align:center;">
+              <td class="col-partial" *ngIf="!isGlPosted && !isCashPurchase" style="text-align:center;">
                 <input type="checkbox" [(ngModel)]="l.isPartial" name="partial{{i}}" />
               </td>
               <td class="num-cell">
@@ -124,9 +153,14 @@
               <td class="col-ledger" style="display:none">
                 <erp-dropdown [options]="ledgerOptions" [(ngModel)]="l.budgetLineId" [disabled]="isGlPosted" placeholder="Ledger"></erp-dropdown>
               </td>
+              <td class="row-num" *ngIf="isCashPurchase && !isGlPosted">
+                <button type="button" class="mf-btn danger" (click)="removeCashLine(i)" title="Remove line">✕</button>
+              </td>
             </tr>
             <tr *ngIf="!lines.length">
-              <td colspan="10" class="empty-lines">Select GRN(s) above to populate invoice lines</td>
+              <td colspan="12" class="empty-lines">
+                Select GRN(s) above — or add lines below for a direct purchase (bought in a shop, no PO/GRN).
+              </td>
             </tr>
           </tbody>
           <tfoot *ngIf="lines.length">
@@ -137,6 +171,18 @@
             </tr>
           </tfoot>
         </table>
+
+        <!-- Direct purchase: no GRN to pull lines from, so they are typed. Hidden once a GRN is
+             selected — the GRN then owns what was received, and typing lines alongside it would
+             let the invoice claim goods the receipt never recorded. -->
+        <div class="cash-line-actions" *ngIf="isCashPurchase && !isGlPosted" style="padding:10px 0;">
+          <button type="button" class="mf-btn" (click)="addCashLine()">+ Add Line</button>
+          <small class="mf-hint" style="margin-left:10px;">
+            Direct purchase — no PO/GRN. Type what you bought, pick a Ledger, enter the price.
+            If the description matches one of your stock items, the quantity goes into stock and the
+            price becomes its cost — otherwise it is simply an expense on the ledger you pick.
+          </small>
+        </div>
       </div>
 
       <!-- Summary totals -->
