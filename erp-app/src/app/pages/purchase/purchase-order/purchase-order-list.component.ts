@@ -4,6 +4,8 @@ import { forkJoin } from 'rxjs';
 import { PurchaseService } from '../purchase.service';
 import { TableColumn, RowAction } from '../../../shared/components/data-table/data-table.component';
 import { PermissionService } from '../../../core/services/permission.service';
+import { EmailComposeService } from '../../../core/services/email-compose.service';
+import { EmailComposeModel, EmailComposeAttachment } from '../../../core/components/email-compose/email-compose.component';
 import { CURRENT_PERIOD_LOCKED_KEY } from '../../../core/services/period-lock-state.service';
 import Swal from 'sweetalert2';
 
@@ -172,7 +174,7 @@ export class PurchaseOrderListComponent implements OnInit {
     return 1;
   }
 
-  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService, private emailSvc: EmailComposeService) {}
 
   ngOnInit(): void {
     this.load();
@@ -675,35 +677,58 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
     this.openConfirm(row, status);
   }
 
-  async emailSupplier(row: any): Promise<void> {
+  // ── Email compose dialog (server renders the PO PDF) ──
+  showEmailModal = false;
+  emailSending = false;
+  emailLoading = false;
+  emailModel: EmailComposeModel = { fromLabel: '', fromEmail: '', fromName: '', toEmail: '', ccEmail: '', subject: '', bodyHtml: '' };
+  emailAttachments: EmailComposeAttachment[] = [];
+  private emailDocId = 0;
+  private emailDocNo = '';
+
+  emailSupplier(row: any): void {
     if (!this.perm.canPrint(this.fnId)) return;
-    const result = await Swal.fire({
-      title: 'Email Supplier?',
-      text: `Send PO ${row.purchaseOrderNo} to supplier via email?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#16a34a',
-      cancelButtonColor: '#dc2626',
-      confirmButtonText: 'Yes, send it!'
-    });
-    if (!result.isConfirmed) return;
+    const email = (localStorage.getItem('email') || '').trim();
+    const name = (localStorage.getItem('username') || '').trim();
+    const docNo = row.purchaseOrderNo ?? row.pO_No ?? '';
+    this.emailDocId = row.id;
+    this.emailDocNo = docNo;
 
-    Swal.fire({
-      title: 'Sending Email…',
-      html: 'Generating PDF and sending to supplier.<br/>Please wait.',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      didOpen: () => Swal.showLoading()
-    });
+    this.showEmailModal = true;
+    this.emailLoading = true;
+    this.emailAttachments = [{ label: 'Purchase Order', sublabel: docNo, checked: true, disabled: true }];
+    this.emailModel = {
+      fromLabel: name ? `${name}${email ? ' <' + email + '>' : ''}` : email,
+      fromEmail: email, fromName: name,
+      toEmail: '', ccEmail: '',
+      subject: `Purchase Order ${docNo}`.trim(),
+      bodyHtml: `<p>Dear Supplier,</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`
+    };
 
-    this.svc.emailSupplierPo(row.id).subscribe({
-      next: () => {
-        Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#16a34a' });
+    this.emailSvc.getRecipient('PO', row.id).subscribe({
+      next: res => {
+        const info = this.emailSvc.unwrapOne(res) || {};
+        this.emailModel.toEmail = info.email ?? info.Email ?? '';
+        const party = info.partyName ?? info.PartyName;
+        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`;
+        this.emailLoading = false;
       },
-      error: err => {
-        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' });
-      }
+      error: () => { this.emailLoading = false; }
+    });
+  }
+
+  closeEmailModal(): void { if (!this.emailSending) this.showEmailModal = false; }
+
+  sendComposedEmail(): void {
+    const m = this.emailModel;
+    if (!m.toEmail) { void Swal.fire({ icon: 'warning', title: 'To is required', text: 'Supplier email is missing.', confirmButtonColor: '#16a34a' }); return; }
+    this.emailSending = true;
+    this.emailSvc.sendComposeDoc('PO', this.emailDocId, {
+      toEmail: m.toEmail, ccEmail: m.ccEmail, subject: m.subject, bodyHtml: m.bodyHtml,
+      fromEmail: m.fromEmail, fromName: m.fromName, invoiceNo: this.emailDocNo
+    }).subscribe({
+      next: () => { this.emailSending = false; this.showEmailModal = false; void Swal.fire({ icon: 'success', title: 'Sent!', text: `Email sent to ${m.toEmail}.`, confirmButtonColor: '#16a34a' }); },
+      error: err => { this.emailSending = false; void Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' }); }
     });
   }
 
@@ -796,26 +821,10 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
         }
       });
     } else if (this.actionType === 'email-supplier') {
+      // Route through the compose dialog instead of a blind send.
+      this.actionLoading = false;
       this.closeActionConfirm();
-      Swal.fire({
-        title: 'Sending Email…',
-        html: 'Generating PDF and sending to supplier.<br/>Please wait.',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => Swal.showLoading()
-      });
-      this.svc.emailSupplierPo(row.id).subscribe({
-        next: () => {
-          this.actionLoading = false;
-          Swal.fire({ icon: 'success', title: 'Sent!', text: `PO ${row.purchaseOrderNo} emailed to supplier.`, confirmButtonColor: '#16a34a' });
-        },
-        error: err => {
-          this.actionLoading = false;
-          this.actionError = err?.error?.message || 'Unable to send email.';
-          Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' });
-        }
-      });
+      this.emailSupplier(row);
     } else if (this.actionType === 'promote-draft') {
       this.svc.promotePurchaseOrderDraft(row.id ?? row.iD, this.currentUserId()).subscribe({
         next: () => {

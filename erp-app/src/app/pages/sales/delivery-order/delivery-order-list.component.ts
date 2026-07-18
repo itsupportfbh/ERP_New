@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, DocumentPrintConfig, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import { EmailComposeService } from '../../../core/services/email-compose.service';
+import { EmailComposeModel, EmailComposeAttachment } from '../../../core/components/email-compose/email-compose.component';
 import { UploadService } from '../../../shared/upload.service';
 import Swal from 'sweetalert2';
 
@@ -100,7 +102,8 @@ export class DeliveryOrderListComponent implements OnInit {
     private router: Router,
     private printSvc: DocumentPrintService,
     public perm: PermissionService,
-    private uploadSvc: UploadService
+    private uploadSvc: UploadService,
+    private emailSvc: EmailComposeService
   ) {}
 
   ngOnInit(): void {
@@ -304,39 +307,64 @@ export class DeliveryOrderListComponent implements OnInit {
 
   printActive(): void { if (this.activeRow) this.print(this.activeRow); }
 
-  // ── Email to customer ─────────────────────────────────
-  async emailCustomer(row: any): Promise<void> {
+  // ── Email compose dialog ──────────────────────────────
+  showEmailModal = false;
+  emailSending = false;
+  emailLoading = false;
+  emailModel: EmailComposeModel = { fromLabel: '', fromEmail: '', fromName: '', toEmail: '', ccEmail: '', subject: '', bodyHtml: '' };
+  emailAttachments: EmailComposeAttachment[] = [];
+
+  emailCustomer(row: any): void {
     if (!this.perm.canPrint(this.fnId)) return;
-    const result = await Swal.fire({
-      title: 'Email Customer?',
-      text: `Send delivery order ${row.doNumber} to the customer via email?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#16a34a',
-      cancelButtonColor: '#dc2626',
-      confirmButtonText: 'Yes, send it!'
-    });
-    if (!result.isConfirmed) return;
+    const email = (localStorage.getItem('email') || '').trim();
+    const name = (localStorage.getItem('username') || '').trim();
+    const docNo = row.doNumber ?? '';
 
-    Swal.fire({
-      title: 'Sending Email…',
-      html: 'Generating PDF and sending to customer.<br/>Please wait.',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => Swal.showLoading()
+    this.showEmailModal = true;
+    this.emailLoading = true;
+    this.emailAttachments = [];
+    this.emailModel = {
+      fromLabel: name ? `${name}${email ? ' <' + email + '>' : ''}` : email,
+      fromEmail: email, fromName: name,
+      toEmail: '', ccEmail: '',
+      subject: `Delivery Order ${docNo}`.trim(),
+      bodyHtml: `<p>Dear Customer,</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`
+    };
+
+    this.emailSvc.getRecipient('DO', row.id).subscribe({
+      next: res => {
+        const info = this.emailSvc.unwrapOne(res) || {};
+        this.emailModel.toEmail = info.email ?? info.Email ?? '';
+        const party = info.partyName ?? info.PartyName;
+        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`;
+      },
+      error: () => {}
     });
 
-    // Build the same layout print() produces, render it to a PDF, then upload.
     this.buildDetail(row, async () => {
       try {
-        const pdf = await this.printSvc.generatePdfBlob(this.buildDocConfig());
-        this.svc.emailDeliveryOrderCustomer(row.id, pdf).subscribe({
-          next: () => Swal.fire({ icon: 'success', title: 'Sent!', text: `Delivery order ${row.doNumber} emailed to customer.`, confirmButtonColor: '#16a34a' }),
-          error: err => Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' })
-        });
-      } catch {
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to generate the PDF.', confirmButtonColor: '#16a34a' });
-      }
+        const blob = await this.printSvc.generatePdfBlob(this.buildDocConfig());
+        this.emailAttachments = [{ label: 'Delivery Order', sublabel: docNo, checked: true, blob, fileName: `${docNo || 'DeliveryOrder'}.pdf` }];
+      } catch {}
+      this.emailLoading = false;
+    });
+  }
+
+  closeEmailModal(): void { if (!this.emailSending) this.showEmailModal = false; }
+
+  sendComposedEmail(): void {
+    const m = this.emailModel;
+    if (!m.toEmail) { void Swal.fire({ icon: 'warning', title: 'To is required', text: 'Customer email is missing.', confirmButtonColor: '#16a34a' }); return; }
+    const files = this.emailAttachments.filter(a => a.checked && a.blob).map(a => ({ fileName: a.fileName || 'document.pdf', blob: a.blob! }));
+    if (!files.length) { void Swal.fire({ icon: 'warning', title: 'No document', text: 'Nothing to attach.', confirmButtonColor: '#16a34a' }); return; }
+
+    this.emailSending = true;
+    this.emailSvc.sendWithAttachments({
+      toEmail: m.toEmail, ccEmail: m.ccEmail, subject: m.subject, bodyHtml: m.bodyHtml,
+      fromEmail: m.fromEmail, fromName: m.fromName, files
+    }).subscribe({
+      next: () => { this.emailSending = false; this.showEmailModal = false; void Swal.fire({ icon: 'success', title: 'Sent!', text: `Email sent to ${m.toEmail}.`, confirmButtonColor: '#16a34a' }); },
+      error: err => { this.emailSending = false; void Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' }); }
     });
   }
 

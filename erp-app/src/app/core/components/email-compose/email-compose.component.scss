@@ -1,0 +1,46 @@
+.ec-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1200;
+}
+.ec-modal {
+  background: #fff; border-radius: 10px; width: 520px; max-width: 94vw;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,.22);
+  display: flex; flex-direction: column;
+}
+.ec-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid #e5e7eb;
+  h3 { margin: 0; font-size: 16px; color: #1f2937; }
+}
+.ec-x { border: none; background: none; font-size: 24px; line-height: 1; cursor: pointer; color: #6b7280; }
+.ec-loading { padding: 30px; text-align: center; color: #6b7280; }
+.ec-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ec-fld {
+  display: flex; align-items: center; gap: 10px;
+  > span { width: 70px; flex: 0 0 70px; font-size: 13px; color: #374151; font-weight: 600; }
+  input, textarea {
+    flex: 1; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 13px; font-family: inherit; outline: none;
+    &:focus { border-color: #16a34a; }
+  }
+  input[readonly] { background: #f3f4f6; color: #4b5563; cursor: default; }
+}
+.ec-fld-col { align-items: flex-start; > span { padding-top: 8px; } }
+.ec-checks {
+  flex: 1; display: flex; flex-direction: column; gap: 8px;
+  label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; cursor: pointer;
+    em { color: #6b7280; font-style: normal; font-weight: 600; }
+    &.disabled { color: #9ca3af; cursor: not-allowed; }
+  }
+  input[type="checkbox"] { width: 16px; height: 16px; accent-color: #16a34a; }
+}
+.ec-actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 18px; border-top: 1px solid #e5e7eb;
+}
+.ec-btn {
+  padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+  &:disabled { opacity: .6; cursor: not-allowed; }
+}
+.ec-cancel { background: #2563eb; color: #fff; }
+.ec-send { background: #16a34a; color: #fff; }

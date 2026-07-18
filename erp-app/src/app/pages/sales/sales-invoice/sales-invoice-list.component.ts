@@ -292,39 +292,126 @@ export class SalesInvoiceListComponent implements OnInit {
 
 
 
-  // ── Email to customer ─────────────────────────────────
-  async emailCustomer(row: any): Promise<void> {
+  // ── Email compose dialog ──────────────────────────────
+  showEmailModal = false;
+  emailSending = false;
+  emailLoading = false;
+  /** compose-info resolved from the server (which SO/DO exist for this invoice) */
+  emailInfo: { siId: number; invoiceNo: string; customerName: string; toEmail: string;
+               soId: number; soNo?: string; doId: number; doNo?: string } | null = null;
+
+  emailModel = {
+    siId: 0,
+    fromEmail: '',
+    fromName: '',
+    fromLabel: '',
+    toEmail: '',
+    toName: '',
+    ccEmail: '',
+    subject: '',
+    bodyHtml: '',
+    includeSalesInvoice: true,
+    includeSalesOrder: false,
+    includeDeliveryOrder: false
+  };
+
+  /** Opens the compose dialog: To = customer, checkboxes for SO/DO/SI. The email is sent from the
+   *  company mailbox with the logged-in user shown as sender + Reply-To (no password needed). */
+  emailCustomer(row: any): void {
     if (!this.perm.canPrint(this.fnId)) return;
-    const result = await Swal.fire({
-      title: 'Email Customer?',
-      text: `Send invoice ${row.invoiceNo} to the customer via email?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#16a34a',
-      cancelButtonColor: '#dc2626',
-      confirmButtonText: 'Yes, send it!'
-    });
-    if (!result.isConfirmed) return;
 
-    Swal.fire({
-      title: 'Sending Email…',
-      html: 'Generating PDF and sending to customer.<br/>Please wait.',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      didOpen: () => Swal.showLoading()
-    });
+    const fromEmail = (localStorage.getItem('email') || '').trim();
+    const fromName = (localStorage.getItem('username') || '').trim();
+    const fromLabel = fromName ? `${fromName}${fromEmail ? ' <' + fromEmail + '>' : ''}` : fromEmail;
 
-    // Build the same layout print() produces, render it to a PDF, then upload.
-    this.buildDetail(row, async () => {
-      try {
-        const pdf = await this.printSvc.generatePdfBlob(this.buildDocConfig());
-        this.svc.emailSalesInvoiceCustomer(row.id, pdf).subscribe({
-          next: () => Swal.fire({ icon: 'success', title: 'Sent!', text: `Invoice ${row.invoiceNo} emailed to customer.`, confirmButtonColor: '#16a34a' }),
-          error: err => Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' })
-        });
-      } catch {
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to generate the PDF.', confirmButtonColor: '#16a34a' });
+    this.showEmailModal = true;
+    this.emailLoading = true;
+    this.emailInfo = null;
+    this.emailModel = {
+      siId: row.id,
+      fromEmail,
+      fromName,
+      fromLabel,
+      toEmail: '',
+      toName: '',
+      ccEmail: '',
+      subject: `Sales Invoice ${row.invoiceNo ?? ''}`.trim(),
+      bodyHtml: '',
+      includeSalesInvoice: true,
+      includeSalesOrder: false,
+      includeDeliveryOrder: false
+    };
+
+    this.svc.getInvoiceEmailComposeInfo(row.id).subscribe({
+      next: res => {
+        const info = this.svc.unwrapOne(res) || {};
+        this.emailInfo = {
+          siId: Number(info.siId ?? info.SiId ?? row.id),
+          invoiceNo: String(info.invoiceNo ?? info.InvoiceNo ?? row.invoiceNo ?? ''),
+          customerName: String(info.customerName ?? info.CustomerName ?? ''),
+          toEmail: String(info.toEmail ?? info.ToEmail ?? ''),
+          soId: Number(info.soId ?? info.SoId ?? 0),
+          soNo: info.soNo ?? info.SoNo ?? '',
+          doId: Number(info.doId ?? info.DoId ?? 0),
+          doNo: info.doNo ?? info.DoNo ?? ''
+        };
+        this.emailModel.toEmail = this.emailInfo.toEmail;
+        this.emailModel.toName = this.emailInfo.customerName;
+        this.emailModel.includeSalesOrder = this.emailInfo.soId > 0;
+        this.emailModel.includeDeliveryOrder = this.emailInfo.doId > 0;
+        this.emailModel.subject = `Sales Invoice ${this.emailInfo.invoiceNo}`.trim();
+        this.emailModel.bodyHtml =
+          `<p>Dear ${this.emailInfo.customerName || 'Customer'},</p>` +
+          `<p>Please find attached the requested document(s).</p>` +
+          `<p>Regards,<br/>${fromName || fromEmail}</p>`;
+        this.emailLoading = false;
+      },
+      error: err => {
+        this.emailLoading = false;
+        this.showEmailModal = false;
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to load invoice email details.', confirmButtonColor: '#16a34a' });
+      }
+    });
+  }
+
+  closeEmailModal(): void {
+    if (this.emailSending) return;
+    this.showEmailModal = false;
+    this.emailInfo = null;
+  }
+
+  sendComposedEmail(): void {
+    const m = this.emailModel;
+    if (!m.toEmail) { Swal.fire({ icon: 'warning', title: 'To is required', text: 'Customer email is missing.', confirmButtonColor: '#16a34a' }); return; }
+    if (!m.includeSalesInvoice && !m.includeSalesOrder && !m.includeDeliveryOrder) {
+      Swal.fire({ icon: 'warning', title: 'Select a document', text: 'Tick at least one document to attach.', confirmButtonColor: '#16a34a' });
+      return;
+    }
+
+    this.emailSending = true;
+    const dto = {
+      fromEmail: m.fromEmail,
+      fromName: m.fromName,
+      toEmail: m.toEmail,
+      toName: m.toName,
+      ccEmail: m.ccEmail,
+      subject: m.subject,
+      bodyHtml: m.bodyHtml,
+      includeSalesInvoice: m.includeSalesInvoice,
+      includeSalesOrder: m.includeSalesOrder,
+      includeDeliveryOrder: m.includeDeliveryOrder
+    };
+
+    this.svc.sendInvoiceEmailComposed(m.siId, dto).subscribe({
+      next: () => {
+        this.emailSending = false;
+        this.showEmailModal = false;
+        this.emailInfo = null;
+        Swal.fire({ icon: 'success', title: 'Sent!', text: `Email sent to ${dto.toEmail}.`, confirmButtonColor: '#16a34a' });
+      },
+      error: err => {
+        this.emailSending = false;
+        Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' });
       }
     });
   }

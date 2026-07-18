@@ -155,7 +155,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Period-close',        icon: 'close',   route: '/app/finance/period-close',      permId: 'period' },
         { label: 'Year End Close',      icon: 'close',   route: '/app/finance/year-end-close',    permId: 'year-end' },
         { label: 'Trial Balance',       icon: 'report',  route: '/app/finance/trial-balance',     permId: 'tb' },
-        { label: 'Bank Reconciliation', icon: 'ledger',  route: '/app/finance/bank-reconciliation' },
+        { label: 'Bank Reconciliation', icon: 'ledger',  route: '/app/finance/bank-reconciliation', permId: 'ledger' },
         { label: 'Fixed Assets',        icon: 'finance', route: '/app/finance/fixed-assets' },
         { label: 'Reports',             icon: 'report',  route: '/app/finance/reports',           permId: 'reports' },
       ]

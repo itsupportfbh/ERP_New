@@ -1,214 +1,426 @@
 <div class="br-page">
 
-  <!-- Page Header -->
+  <!-- Page Header + nav -->
   <div class="br-page-head">
     <div>
       <h2>Bank Reconciliation</h2>
-      <p>Match bank statement lines with accounting ledger entries</p>
+      <p>Import statements, match or post ledger entries, and sign off the difference</p>
     </div>
-    <div class="br-head-actions">
-      <button class="br-btn br-btn-outline" type="button" (click)="importStatement()" [disabled]="saving || !selectedBankId">
-        <span class="br-btn-icon">&#8659;</span> Import Statement (CSV)
-      </button>
-    </div>
+    <nav class="br-topnav">
+      <button [class.active]="view==='dashboard'" type="button" (click)="goDashboard()">Bank accounts</button>
+      <button [class.active]="view==='import'" type="button" (click)="startImport(selectedBankId)">Import statement</button>
+      <button [class.active]="view==='flow'" type="button" (click)="goFlow()">Flow map</button>
+    </nav>
   </div>
 
   <!-- Alerts -->
   <div class="br-alert br-success" *ngIf="message">{{ message }}</div>
   <div class="br-alert br-danger"  *ngIf="error">{{ error }}</div>
 
-  <!-- Summary Cards -->
-  <div class="br-summary-grid">
-    <div class="br-sum-card br-sum-total">
-      <span class="br-sum-icon">&#9636;</span>
-      <span class="br-sum-body">
-        <span class="br-sum-label">Total Lines</span>
-        <strong class="br-sum-val">{{ summary.total }}</strong>
-      </span>
-    </div>
-    <div class="br-sum-card br-sum-recon">
-      <span class="br-sum-icon">&#10003;</span>
-      <span class="br-sum-body">
-        <span class="br-sum-label">Reconciled</span>
-        <strong class="br-sum-val green">{{ summary.reconciled }}</strong>
-      </span>
-    </div>
-    <div class="br-sum-card br-sum-unrecon">
-      <span class="br-sum-icon">&#9675;</span>
-      <span class="br-sum-body">
-        <span class="br-sum-label">Unreconciled</span>
-        <strong class="br-sum-val orange">{{ summary.unreconciled }}</strong>
-      </span>
-    </div>
-    <div class="br-sum-card br-sum-diff">
-      <span class="br-sum-icon">&#8597;</span>
-      <span class="br-sum-body">
-        <span class="br-sum-label">Unreconciled Net</span>
-        <strong class="br-sum-val" [class.red]="summary.difference !== 0" [class.green]="summary.difference === 0">
-          {{ summary.difference | money }}
-        </strong>
-      </span>
+
+  <!-- ================= DASHBOARD ================= -->
+  <div *ngIf="view === 'dashboard'">
+    <p class="br-note">Phase 1: manual statement import from each bank's export file. Phase 2 (see Flow map): direct bank-feed integration.</p>
+    <div class="br-empty br-card" *ngIf="!cards.length">No bank accounts found. Add a bank account in the masters first.</div>
+    <div class="br-acct-grid">
+      <div class="br-acct-card" *ngFor="let c of cards">
+        <div class="br-acct-top">
+          <span class="br-bank-chip">{{ c.name }}</span>
+          <span class="br-badge" [ngClass]="c.unrecon ? 'badge-open' : 'badge-success'">
+            {{ c.loaded ? (c.unrecon ? c.unrecon + ' to reconcile' : 'All reconciled') : '…' }}
+          </span>
+        </div>
+        <div class="br-acct-meta">
+          <span *ngIf="c.acctNo">A/c {{ c.acctNo }}</span>
+          <span *ngIf="c.ccy">{{ c.ccy }}</span>
+          <span>{{ c.loaded ? (c.total ? c.total + ' statement line(s)' : 'No statements yet') : '…' }}</span>
+        </div>
+        <div class="br-acct-balances">
+          <div><span class="br-acct-lbl">Statement net</span><strong class="br-acct-val">{{ c.statementNet | money }}</strong></div>
+          <div><span class="br-acct-lbl">Balance in ERP</span><strong class="br-acct-val">{{ c.book | money }}</strong></div>
+        </div>
+        <div class="br-acct-actions">
+          <button class="br-btn br-btn-outline br-btn-sm" type="button" (click)="startImport(c.id)">Import statement</button>
+          <button class="br-btn br-btn-primary br-btn-sm" type="button" (click)="openReconcile(c.id)">
+            {{ c.unrecon ? 'Reconcile ' + c.unrecon + ' item' + (c.unrecon > 1 ? 's' : '') : 'Open account' }}
+          </button>
+          <button class="br-btn br-btn-ghost br-btn-sm" type="button" (click)="openReport(c.id)">Report</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Bank + Filter -->
-  <div class="br-filter-bar">
-    <label class="br-filter-field">
-      <span>Bank Account</span>
-      <select [(ngModel)]="selectedBankId" (ngModelChange)="onBankChange()">
-        <option [ngValue]="null" disabled>Select bank…</option>
-        <option *ngFor="let b of banks" [ngValue]="b.id">{{ b.name }}</option>
-      </select>
-    </label>
-    <button class="br-btn br-btn-primary" type="button" (click)="load()" [disabled]="loading || !selectedBankId">
-      {{ loading ? 'Loading...' : 'Refresh' }}
-    </button>
-    <div class="br-search-wrap">
-      <input class="br-search" type="text" placeholder="Search reference, description..." [(ngModel)]="search" (ngModelChange)="applyFilter()">
+
+  <!-- ================= FLOW MAP ================= -->
+  <div *ngIf="view === 'flow'">
+    <p class="br-note">Click a step to jump to that screen. The dashed step is the future bank-integration phase.</p>
+    <div class="br-flow-grid">
+      <div class="br-flow-node" (click)="startImport(selectedBankId)">
+        <div class="step">STEP 1</div><div class="t">Download from bank</div>
+        <div class="d">Export the statement from your bank's portal (CSV / Excel).</div>
+      </div>
+      <div class="br-flow-arrow">→</div>
+      <div class="br-flow-node" (click)="startImport(selectedBankId)">
+        <div class="step">STEP 2</div><div class="t">Import wizard</div>
+        <div class="d">Pick the bank → upload the file → columns are mapped, dates parsed, duplicates flagged.</div>
+      </div>
+      <div class="br-flow-arrow">→</div>
+      <div class="br-flow-node" (click)="goDashboard()">
+        <div class="step">STEP 3</div><div class="t">Reconcile</div>
+        <div class="d">Statement line vs Match / Create / Transfer / Discuss. Press OK to reconcile.</div>
+      </div>
+      <div class="br-flow-arrow">→</div>
+      <div class="br-flow-node" (click)="goDashboard()">
+        <div class="step">STEP 4</div><div class="t">Report &amp; sign-off</div>
+        <div class="d">Statement balance vs ledger balance; the difference must be zero before period close.</div>
+      </div>
+      <div class="br-flow-arrow">→</div>
+      <div class="br-flow-node future">
+        <div class="step">PHASE 2</div><div class="t">Bank feed integration</div>
+        <div class="d">Direct API / SFTP feeds (MT940 / CAMT.053) replace manual upload. Same reconcile flow.</div>
+      </div>
     </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="br-tabs">
-    <button class="br-tab" [class.active]="activeTab === 'unreconciled'" type="button" (click)="setTab('unreconciled')">
-      Unreconciled
-      <span class="br-tab-badge" *ngIf="unreconciledCount">{{ unreconciledCount }}</span>
-    </button>
-    <button class="br-tab" [class.active]="activeTab === 'reconciled'" type="button" (click)="setTab('reconciled')">
-      Reconciled
-      <span class="br-tab-badge recon" *ngIf="reconciledCount">{{ reconciledCount }}</span>
-    </button>
+
+  <!-- ================= IMPORT WIZARD ================= -->
+  <div *ngIf="view === 'import'">
+    <div class="br-wiz-steps">
+      <div class="br-wiz-step" [class.on]="wizStep===1" [class.done]="wizStep>1"><span class="n">1</span> Choose bank</div>
+      <div class="br-wiz-step" [class.on]="wizStep===2" [class.done]="wizStep>2"><span class="n">2</span> Upload file</div>
+      <div class="br-wiz-step" [class.on]="wizStep===3" [class.done]="wizStep>3"><span class="n">3</span> Preview &amp; validate</div>
+      <div class="br-wiz-step" [class.on]="wizStep===4"><span class="n">4</span> Import</div>
+    </div>
+
+    <!-- step 1: bank -->
+    <div *ngIf="wizStep===1" class="br-bank-grid">
+      <button class="br-bank-opt" *ngFor="let b of banks" (click)="wizPickBank(b.id)">
+        <span class="br-bank-chip">{{ b.name }}</span>
+        <div class="nm">{{ b.name }}</div>
+        <div class="fm">CSV export<span *ngIf="b.ccy"> · {{ b.ccy }}</span><span *ngIf="b.acctNo"> · A/c {{ b.acctNo }}</span></div>
+      </button>
+    </div>
+
+    <!-- step 2: upload -->
+    <div *ngIf="wizStep===2">
+      <div class="br-dropzone"
+           (dragover)="$event.preventDefault(); $any($event.currentTarget).classList.add('drag')"
+           (dragleave)="$any($event.currentTarget).classList.remove('drag')"
+           (drop)="wizDrop($event)">
+        <p class="br-dz-icon">&#128196;</p>
+        <p><b>Drag &amp; drop the statement CSV here</b></p>
+        <p class="br-dz-sub">for <b>{{ bankNameOf(wizBankId) }}</b></p>
+        <button class="br-btn br-btn-primary" type="button" (click)="fileInput.click()">Choose file</button>
+        <button class="br-btn br-btn-outline" type="button" (click)="loadSample()">Use sample file (demo)</button>
+        <input #fileInput type="file" accept=".csv,.txt" hidden (change)="wizFileChosen($any($event.target).files)">
+      </div>
+
+      <!-- format spec: how the CSV columns are mapped -->
+      <div class="br-fmt-spec">
+        <b>Format profile</b> — the first header row names the columns; amounts may contain thousand separators; dates accept <code>dd/mm/yyyy</code> or <code>yyyy-mm-dd</code>.
+        <table>
+          <tr><th>ERP FIELD</th><th>MAPPED FROM COLUMN (auto-detected)</th></tr>
+          <tr><td>Date</td><td><code>Date</code></td></tr>
+          <tr><td>Description</td><td><code>Description</code> / <code>Narration</code> / <code>Details</code></td></tr>
+          <tr><td>Reference</td><td><code>Reference</code> / <code>Cheque</code> / <code>Txn</code></td></tr>
+          <tr><td>Money out (debit)</td><td><code>Debit</code> / <code>Withdrawal</code></td></tr>
+          <tr><td>Money in (credit)</td><td><code>Credit</code> / <code>Deposit</code></td></tr>
+        </table>
+        <p class="br-note">Column names are matched loosely, so most banks' exports map without any change.</p>
+      </div>
+
+      <p class="br-wiz-back"><button class="br-link-btn" type="button" (click)="wizBack(1)">&#8592; Back to bank selection</button></p>
+    </div>
+
+    <!-- step 3: preview -->
+    <div *ngIf="wizStep===3">
+
+      <!-- Statement balances + control check -->
+      <div class="br-bal-panel">
+        <div class="br-bal-head">
+          <b>Statement balances</b>
+          <span class="br-badge badge-open" *ngIf="wizBal.acctNo">File A/c {{ wizBal.acctNo }}<span *ngIf="wizBal.ccy"> · {{ wizBal.ccy }}</span></span>
+        </div>
+        <p class="br-note" *ngIf="wizIsFirstImport"><b>First import for this account.</b> Confirm the opening balance — later imports only need the control check to pass.</p>
+        <p class="br-note">
+          {{ wizBal.source==='file' ? 'Opening & closing read straight from the file.' :
+             wizBal.source==='derived' ? 'Derived from the running-balance column — please confirm.' :
+             'This file has no balance columns — key in the balances from the statement.' }}
+        </p>
+        <div class="br-bal-grid">
+          <label class="br-field"><span>Opening balance</span>
+            <input type="number" step="0.01" [(ngModel)]="wizBalInput.opening" [readonly]="wizBal.source==='file'"></label>
+          <label class="br-field"><span>Closing balance</span>
+            <input type="number" step="0.01" [(ngModel)]="wizBalInput.closing" [readonly]="wizBal.source==='file'"></label>
+          <div class="br-bal-chip">Net movement<b>{{ wizNet | money }}</b></div>
+          <div class="br-bal-chip">Control check<b [ngClass]="wizControl.state==='ok' ? 'green' : wizControl.state==='bad' ? 'red' : 'orange'">{{ wizControl.msg }}</b></div>
+        </div>
+        <label class="br-bal-override" *ngIf="wizControl.state==='bad'">
+          <input type="checkbox" [(ngModel)]="wizOverride"> Import anyway — post the variance to a suspense account and investigate
+        </label>
+      </div>
+
+      <div class="br-summary-chips">
+        <div class="br-schip">File<b>{{ wizFileName }}</b></div>
+        <div class="br-schip">Rows found<b>{{ wizItems.length }}</b></div>
+        <div class="br-schip">Will import<b class="green">{{ wizValid.length }}</b></div>
+        <div class="br-schip">Duplicates skipped<b class="orange">{{ wizDup.length }}</b></div>
+        <div class="br-schip">Errors<b class="red">{{ wizErr.length }}</b></div>
+        <div class="br-schip">Net movement<b>{{ wizNet | money }}</b></div>
+      </div>
+      <div class="br-card br-scroll">
+        <table class="br-table">
+          <thead><tr><th>#</th><th>Date</th><th>Description</th><th>Reference</th><th class="right">Debit</th><th class="right">Credit</th><th>Check</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let x of wizItems" [class.err]="x.err" [class.dup]="x.dup">
+              <td>{{ x.row }}</td>
+              <td class="date-cell">{{ x.dateRaw }}</td>
+              <td class="desc-cell">
+                <ng-container *ngIf="x.payee"><b>{{ x.payee }}</b><br><span class="br-sub-desc">{{ x.description }}</span></ng-container>
+                <ng-container *ngIf="!x.payee">{{ x.description }}</ng-container>
+              </td>
+              <td class="ref-cell">{{ x.referenceNo || '—' }}</td>
+              <td class="right amt">{{ x.debit ? (x.debit | money) : '' }}</td>
+              <td class="right amt">{{ x.credit ? (x.credit | money) : '' }}</td>
+              <td>
+                <span class="br-badge" [ngClass]="x.err ? 'badge-danger' : x.dup ? 'badge-warn' : 'badge-success'">
+                  {{ x.err || (x.dup ? 'Duplicate — skip' : 'Valid') }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="br-wiz-actions">
+        <button class="br-btn br-btn-primary" type="button" [disabled]="saving || !wizCanImport" (click)="wizDoImport()">
+          {{ saving ? 'Importing…' : 'Import ' + wizValid.length + ' valid line(s)' }}
+        </button>
+        <span class="br-hint" *ngIf="wizValid.length && !wizControl.pass && !wizOverride">Balance the statement first (opening + movement = closing).</span>
+        <button class="br-btn br-btn-outline" type="button" (click)="wizBack(2)">&#8592; Choose another file</button>
+      </p>
+      <p class="br-note">Duplicate lines (same date + amount + reference already imported) are skipped automatically. Rows with errors are excluded.</p>
+    </div>
+
+    <!-- step 4: done -->
+    <div *ngIf="wizStep===4" class="br-card br-success-box">
+      <div class="br-tick">&#10003;</div>
+      <h3>{{ wizImportedCount }} statement line(s) imported</h3>
+      <p>{{ bankNameOf(wizBankId) }} · {{ wizFileName }} · duplicates &amp; error rows were excluded</p>
+      <div>
+        <button class="br-btn br-btn-primary" type="button" (click)="wizGoReconcile()">Start reconciling</button>
+        <button class="br-btn br-btn-outline" type="button" (click)="startImport(wizBankId)">Import another statement</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Table -->
-  <div class="br-card">
-    <div class="br-loading" *ngIf="loading">Loading...</div>
-    <div class="br-table-wrap" *ngIf="!loading">
-      <table class="br-table">
-        <thead>
-          <tr>
-            <th>Statement Date</th>
-            <th>Reference No</th>
-            <th>Description</th>
-            <th class="right">Debit</th>
-            <th class="right">Credit</th>
-            <th class="right">Amount</th>
-            <th>Matched Doc</th>
-            <th>Status</th>
-            <th class="center">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of filtered" class="br-row">
-            <td class="date-cell">{{ row.transactionDate | date:'dd-MMM-yyyy' }}</td>
-            <td class="ref-cell">{{ row.referenceNo }}</td>
-            <td class="desc-cell">{{ row.description }}</td>
-            <td class="right amt">{{ row.debit | money }}</td>
-            <td class="right amt">{{ row.credit | money }}</td>
-            <td class="right amt">{{ row.amount | money }}</td>
-            <td class="ref-cell">
-              <span *ngIf="row.matchedDocumentNo">{{ row.matchedDocumentType }} {{ row.matchedDocumentNo }}</span>
-              <span *ngIf="!row.matchedDocumentNo">—</span>
-            </td>
-            <td>
-              <span class="br-badge" [ngClass]="row.status === 'Reconciled' ? 'badge-success' : 'badge-open'">
-                {{ row.status }}
+
+  <!-- ================= ACCOUNT PAGE (4 tabs) ================= -->
+  <div *ngIf="view === 'account'">
+    <div class="br-acct-head">
+      <div>
+        <button class="br-link-btn" type="button" (click)="goDashboard()">&#8592; Bank accounts</button>
+        <h3 class="br-acct-title">{{ bankNameOf(selectedBankId) }}</h3>
+        <p class="br-acct-subline">{{ acctSub }}</p>
+      </div>
+      <div class="br-stmt-bal">Balance in ERP<b>{{ acctStmtBalance | money }}</b></div>
+    </div>
+
+    <div class="br-acct-tabs">
+      <button [class.active]="acctTab==='rec'" (click)="setAcctTab('rec')">Reconcile <span class="br-tab-badge" *ngIf="unreconciledCount">{{ unreconciledCount }}</span></button>
+      <button [class.active]="acctTab==='stmts'" (click)="setAcctTab('stmts')">Bank statements</button>
+      <button [class.active]="acctTab==='txns'" (click)="setAcctTab('txns')">Account transactions</button>
+      <button [class.active]="acctTab==='report'" (click)="setAcctTab('report')">Report</button>
+    </div>
+
+    <div class="br-loading" *ngIf="loading">Loading…</div>
+
+    <!-- ── Reconcile tab ── -->
+    <div *ngIf="!loading && acctTab==='rec'">
+      <div class="br-filter-bar">
+        <label class="br-filter-field">
+          <span>Bank Account</span>
+          <select [(ngModel)]="selectedBankId" (ngModelChange)="onBankChange()">
+            <option *ngFor="let b of banks" [ngValue]="b.id">{{ b.name }}</option>
+          </select>
+        </label>
+        <button class="br-btn br-btn-outline" type="button" (click)="startImport(selectedBankId)">Import statement</button>
+        <div class="br-search-wrap">
+          <input class="br-search" type="text" placeholder="Search reference, description…" [(ngModel)]="search" (ngModelChange)="applyFilter()">
+        </div>
+      </div>
+
+      <div class="br-help">💡 Left = imported bank statement line. Right = what it becomes in the ledger (match a posted entry, create a new one, mark a transfer, or leave a note). Press <b>OK</b> when they agree.</div>
+
+      <div class="br-empty br-card" *ngIf="!filtered.length">No unreconciled lines. 🎉</div>
+
+      <div class="br-rec-row" *ngFor="let row of filtered">
+        <!-- statement line -->
+        <div class="br-stmt-line" [ngClass]="row.amount < 0 ? 'out' : 'in'">
+          <div class="br-stmt-top">
+            <span class="br-src">BANK STATEMENT LINE</span>
+            <span class="br-badge badge-open">Open</span>
+          </div>
+          <div class="br-stmt-date">{{ row.transactionDate | date:'dd-MMM-yyyy' }}</div>
+          <div class="br-stmt-payee">{{ row.description }}</div>
+          <div class="br-stmt-ref">{{ row.referenceNo && row.referenceNo !== '-' ? 'Ref ' + row.referenceNo : 'No reference' }}</div>
+          <div class="br-stmt-amt">
+            <span>{{ row.amount < 0 ? 'Money out' : 'Money in' }}</span>
+            <strong>{{ row.amount | money }}</strong>
+          </div>
+        </div>
+
+        <!-- OK button -->
+        <div class="br-ok-cell">
+          <button class="br-ok-btn" type="button" [disabled]="!canOk(row)" (click)="doOk(row)">OK</button>
+        </div>
+
+        <!-- right panel -->
+        <div class="br-rec-panel">
+          <div class="br-mini-tabs">
+            <button [class.active]="row._pane==='match'"    (click)="setPane(row,'match')">Match</button>
+            <button [class.active]="row._pane==='create'"   (click)="setPane(row,'create')">Create</button>
+            <button [class.active]="row._pane==='transfer'" (click)="setPane(row,'transfer')">Transfer</button>
+            <button [class.active]="row._pane==='discuss'"  (click)="setPane(row,'discuss')">Discuss</button>
+          </div>
+
+          <!-- Match -->
+          <div class="br-pane" *ngIf="row._pane==='match'">
+            <div class="br-match-found" *ngIf="row._selEntry">
+              <b>✓ Possible match</b> — {{ row._selEntry.documentType }} {{ row._selEntry.documentNo }} for {{ row._selEntry.amount | money }}
+            </div>
+            <div class="br-entry-list" *ngIf="suggestedEntries(row).length; else noEntries">
+              <div class="br-entry" *ngFor="let e of suggestedEntries(row)"
+                   [class.selected]="row._selEntry===e" (click)="selectEntry(row,e)">
+                <div class="br-entry-main">
+                  <span class="br-entry-type" [ngClass]="e.amount >= 0 ? 'in' : 'out'">{{ e.documentType }}</span>
+                  <span class="br-entry-no">{{ e.documentNo }}</span>
+                  <span class="br-entry-party">{{ e.partyName }}</span>
+                </div>
+                <div class="br-entry-right">
+                  <span class="br-entry-date">{{ e.documentDate | date:'dd-MMM-yy' }}</span>
+                  <strong>{{ e.amount | money }}</strong>
+                  <span class="br-entry-suggest" *ngIf="isAmountMatch(row,e)">✓ match</span>
+                </div>
+              </div>
+            </div>
+            <ng-template #noEntries>
+              <div class="br-entry-empty">No ledger entry matches {{ row.amount | money }}. Use <b>Create</b> to code it{{ row._statusHint==='transfer' ? ', or confirm it on Transfer' : '' }}.</div>
+            </ng-template>
+            <div class="br-pane-foot">
+              <button class="br-link-btn" type="button" (click)="findAndMatch()">Find &amp; Match</button>
+              <span class="br-badge" [ngClass]="row._statusHint==='match' ? 'badge-success' : row._statusHint==='transfer' ? 'badge-warn' : 'badge-open'">
+                {{ row._statusHint==='match' ? 'Ready' : row._statusHint==='transfer' ? 'Looks like a transfer' : 'Unmatched' }}
               </span>
-            </td>
-            <td class="center">
-              <button class="br-action-btn recon-btn" type="button"
-                *ngIf="!row.isMatched"
-                (click)="reconcile(row)" [disabled]="saving">
-                Reconcile
-              </button>
-              <button class="br-action-btn unrecon-btn" type="button"
-                *ngIf="row.isMatched"
-                (click)="unreconcile(row)" [disabled]="saving">
-                Unreconcile
-              </button>
-            </td>
+            </div>
+          </div>
+
+          <!-- Create: Who / What / Why -->
+          <div class="br-pane" *ngIf="row._pane==='create'">
+            <label class="br-field">
+              <span>Who (contact)</span>
+              <input type="text" [(ngModel)]="row._createWho" placeholder="Payee / payer">
+            </label>
+            <label class="br-field">
+              <span>What (GL account)</span>
+              <select [(ngModel)]="row._contraId">
+                <option [ngValue]="null" disabled>Select account…</option>
+                <option *ngFor="let a of coaAccounts" [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+              </select>
+            </label>
+            <label class="br-field">
+              <span>Why (description)</span>
+              <input type="text" [(ngModel)]="row._createDesc" placeholder="What was this for?">
+            </label>
+            <div class="br-pane-foot">
+              <span class="br-hint">Posts: {{ row.amount < 0 ? 'Dr account / Cr bank' : 'Dr bank / Cr account' }} · {{ row.amount | money }}</span>
+              <span class="br-hint">Tax auto-applied</span>
+            </div>
+          </div>
+
+          <!-- Transfer -->
+          <div class="br-pane" *ngIf="row._pane==='transfer'">
+            <label class="br-field">
+              <span>{{ row.amount < 0 ? 'Transferred to' : 'Transferred from' }} bank account</span>
+              <select [(ngModel)]="row._counterBankId">
+                <option [ngValue]="null" disabled>Select account…</option>
+                <option *ngFor="let b of transferTargets()" [ngValue]="b.id">{{ b.name }}</option>
+              </select>
+            </label>
+            <div class="br-pane-foot">
+              <span class="br-hint">Records an inter-account transfer of {{ row.amount | money }}. No P&amp;L impact.</span>
+            </div>
+          </div>
+
+          <!-- Discuss -->
+          <div class="br-pane" *ngIf="row._pane==='discuss'">
+            <label class="br-field">
+              <span>Note for the finance team</span>
+              <textarea rows="2" [(ngModel)]="row._note" placeholder="e.g. Awaiting supporting document."></textarea>
+            </label>
+            <div class="br-pane-foot">
+              <button class="br-btn br-btn-outline br-btn-sm" type="button" [disabled]="saving" (click)="doNote(row)">Save note</button>
+              <span class="br-hint">Line stays unreconciled.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Bank statements tab ── -->
+    <div class="br-card br-scroll" *ngIf="!loading && acctTab==='stmts'">
+      <table class="br-table">
+        <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th class="right">Debit</th><th class="right">Credit</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let l of statementRows">
+            <td class="date-cell">{{ l.transactionDate | date:'dd-MMM-yyyy' }}</td>
+            <td class="desc-cell">{{ l.description }}</td>
+            <td class="ref-cell">{{ l.referenceNo }}</td>
+            <td class="right amt">{{ l.debit ? (l.debit | money) : '' }}</td>
+            <td class="right amt">{{ l.credit ? (l.credit | money) : '' }}</td>
+            <td><span class="br-badge" [ngClass]="l.isMatched ? 'badge-success' : 'badge-open'">{{ l.status }}</span></td>
           </tr>
-          <tr *ngIf="filtered.length === 0 && !loading">
-            <td colspan="9" class="br-empty">
-              <span *ngIf="!selectedBankId">Select a bank account to view statement lines.</span>
-              <span *ngIf="selectedBankId">{{ activeTab === 'unreconciled' ? 'No unreconciled lines found.' : 'No reconciled lines found.' }}</span>
-            </td>
-          </tr>
+          <tr *ngIf="!statementRows.length"><td colspan="6" class="br-empty">No statement lines imported yet.</td></tr>
         </tbody>
       </table>
     </div>
-  </div>
 
-  <!-- Reconcile Modal -->
-  <div *ngIf="showReconcile" class="br-modal-overlay" (click)="closeReconcile()">
-    <div class="br-modal" (click)="$event.stopPropagation()">
-      <div class="br-modal-head">
-        <strong>Reconcile Statement Line</strong>
-        <button class="br-modal-close" type="button" (click)="closeReconcile()">&#215;</button>
-      </div>
-      <div class="br-modal-body">
-        <div class="br-modal-line" *ngIf="reconcileRow">
-          <span>{{ reconcileRow.transactionDate | date:'dd-MMM-yyyy' }}</span>
-          <span>{{ reconcileRow.description }}</span>
-          <strong>{{ reconcileRow.amount | money }}</strong>
+    <!-- ── Account transactions tab ── -->
+    <div class="br-card br-scroll" *ngIf="!loading && acctTab==='txns'">
+      <table class="br-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Matched Doc</th><th class="right">Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let l of txnRows">
+            <td class="date-cell">{{ l.transactionDate | date:'dd-MMM-yyyy' }}</td>
+            <td>{{ txnType(l) }}</td>
+            <td class="ref-cell">{{ l.referenceNo }}</td>
+            <td class="ref-cell">{{ l.matchedDocumentNo ? (l.matchedDocumentType + ' ' + l.matchedDocumentNo) : '—' }}</td>
+            <td class="right amt">{{ l.amount | money }}</td>
+            <td>
+              <span class="br-badge badge-success">Reconciled</span>
+              <button class="br-action-btn unrecon-btn" type="button" (click)="unreconcile(l)" [disabled]="saving" style="margin-left:8px">Unreconcile</button>
+            </td>
+          </tr>
+          <tr *ngIf="!txnRows.length"><td colspan="6" class="br-empty">Reconciled lines will appear here as posted ledger entries.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Report tab ── -->
+    <div *ngIf="!loading && acctTab==='report'">
+      <h3 class="br-report-title">{{ reportBankName }} — Reconciliation report</h3>
+      <div class="br-card br-report">
+        <div class="br-report-line"><span>Statement net (imported movement)</span><span class="num">{{ summary.statementNet | money }}</span></div>
+        <div class="br-report-line"><span>Balance per ERP ledger</span><span class="num">{{ summary.book | money }}</span></div>
+        <div class="br-report-line"><span>Unreconciled statement lines</span><span class="num">{{ summary.unreconciled }} of {{ summary.total }}</span></div>
+        <div class="br-report-line total"><span>Unreconciled difference (statement − ledger)</span>
+          <span class="num" [class.red]="summary.difference !== 0" [class.green]="summary.difference === 0">{{ summary.difference | money }}</span>
         </div>
-
-        <!-- Book entries to match against -->
-        <div *ngIf="!manualMode">
-          <div class="br-match-title">Match to a book entry <span *ngIf="suggestedEntries.length">({{ suggestedEntries.length }})</span></div>
-          <div class="br-entry-list" *ngIf="suggestedEntries.length">
-            <div class="br-entry" *ngFor="let e of suggestedEntries"
-                 [class.selected]="selectedEntry === e"
-                 (click)="selectBookEntry(e)">
-              <div class="br-entry-main">
-                <span class="br-entry-type" [ngClass]="e.documentType === 'Receipt' ? 'in' : 'out'">{{ e.documentType }}</span>
-                <span class="br-entry-no">{{ e.documentNo }}</span>
-                <span class="br-entry-party">{{ e.partyName }}</span>
-              </div>
-              <div class="br-entry-right">
-                <span class="br-entry-date">{{ e.documentDate | date:'dd-MMM-yy' }}</span>
-                <strong class="br-entry-amt">{{ e.amount | money }}</strong>
-                <span class="br-entry-suggest" *ngIf="isAmountMatch(e)">✓ match</span>
-              </div>
-            </div>
-          </div>
-          <div class="br-entry-empty" *ngIf="!suggestedEntries.length">
-            No unmatched payments / receipts for this bank. Use manual adjustment.
-          </div>
-          <button class="br-link-btn" type="button" (click)="toggleManual()">Can't find it? Reconcile manually →</button>
-        </div>
-
-        <!-- Manual adjustment -->
-        <div *ngIf="manualMode">
-          <label class="br-modal-field">
-            <span>Document Type</span>
-            <select [(ngModel)]="reconcileForm.documentType">
-              <option value="Payment">Supplier Payment</option>
-              <option value="Receipt">Customer Receipt</option>
-              <option value="Journal">Journal Entry</option>
-              <option value="Manual">Manual Adjustment</option>
-            </select>
-          </label>
-          <label class="br-modal-field">
-            <span>Document / Reference No</span>
-            <input type="text" [(ngModel)]="reconcileForm.documentNo" placeholder="e.g. PMT-0001 / cheque no">
-          </label>
-          <button class="br-link-btn" type="button" (click)="toggleManual()" *ngIf="bookEntries.length">← Back to book entries</button>
-        </div>
-
-        <label class="br-modal-field">
-          <span>Remarks</span>
-          <input type="text" [(ngModel)]="reconcileForm.remarks" placeholder="optional">
-        </label>
       </div>
-      <div class="br-modal-foot">
-        <button class="br-btn br-btn-outline" type="button" (click)="closeReconcile()" [disabled]="saving">Cancel</button>
-        <button class="br-btn br-btn-primary" type="button" (click)="confirmReconcile()"
-                [disabled]="saving || (!manualMode && !selectedEntry)">
-          {{ saving ? 'Saving...' : 'Reconcile' }}
-        </button>
-      </div>
+      <p class="br-note">{{ reportNote }} In the ERP this report is snapshotted and signed off at each period close.</p>
     </div>
   </div>
+
+  <!-- Toast -->
+  <div class="br-toast" [class.show]="toastMsg">{{ toastMsg }}</div>
 
 </div>

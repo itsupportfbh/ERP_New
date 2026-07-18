@@ -95,6 +95,7 @@ import { PickingFormComponent } from './pages/sales/picking/picking-form.compone
 import { DeliveryOrderListComponent } from './pages/sales/delivery-order/delivery-order-list.component';
 import { DeliveryOrderFormComponent } from './pages/sales/delivery-order/delivery-order-form.component';
 import { SalesInvoiceListComponent } from './pages/sales/sales-invoice/sales-invoice-list.component';
+import { EmailComposeComponent } from './core/components/email-compose/email-compose.component';
 import { SalesInvoiceFormComponent } from './pages/sales/sales-invoice/sales-invoice-form.component';
 import { CreditNoteListComponent } from './pages/sales/credit-note/credit-note-list.component';
 import { CreditNoteFormComponent } from './pages/sales/credit-note/credit-note-form.component';
@@ -155,6 +156,7 @@ import { PlanningOrdersComponent } from './pages/dashboard/planning-orders/plann
 @NgModule({
   declarations: [
     App,
+    EmailComposeComponent,
     LoginComponent,
     ForgotPasswordComponent,
     ResetPasswordComponent,

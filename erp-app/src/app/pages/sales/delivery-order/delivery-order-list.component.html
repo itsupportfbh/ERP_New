@@ -154,4 +154,10 @@
       <div class="mconfirm-actions"><button class="mf-btn del-confirm" (click)="confirmDelete()">Delete</button><button class="mf-btn cancel-modal" (click)="showDeleteModal=false">Cancel</button></div>
     </div>
   </div>
+
+  <erp-email-compose
+    [open]="showEmailModal" [loading]="emailLoading" [sending]="emailSending"
+    [model]="emailModel" [attachments]="emailAttachments" title="Email Customer"
+    (send)="sendComposedEmail()" (cancel)="closeEmailModal()">
+  </erp-email-compose>
 </div>
