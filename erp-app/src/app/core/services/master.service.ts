@@ -75,7 +75,11 @@ export class MasterService {
 
   // COMPANY
   getOrganizationCompanyList(approvalLevelName = '', orgGuid = ''): Observable<any> { return this.http.get(`${this.api}/Company/organization-company-list`, { params: { approvalLevelName, orgGuid } }); }
-  getCompanyById(id: number): Observable<any> { return this.http.get(`${this.api}/Company/${id}`); }
+  getCompanyById(id: number, orgGuid?: string): Observable<any> {
+    const params: any = {};
+    if (orgGuid) params.orgGuid = orgGuid;
+    return this.http.get(`${this.api}/Company/${id}`, { params });
+  }
 
   cacheCompanyLogo(): void {
     const companyId = Number(localStorage.getItem('companyId') || 0);

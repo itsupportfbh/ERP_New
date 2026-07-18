@@ -245,10 +245,20 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
      this.masterSvc.cacheCompanyLogo();
+    // On phones/tablets start with the drawer closed so it doesn't cover the page.
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      this.sidebarOpen = false;
+    }
     this.syncOpenMenuFromUrl(this.router.url);
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe((e: NavigationEnd) => this.syncOpenMenuFromUrl(e.urlAfterRedirects));
+      .subscribe((e: NavigationEnd) => {
+        this.syncOpenMenuFromUrl(e.urlAfterRedirects);
+        // Auto-close the mobile drawer after navigating to a page.
+        if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+          this.sidebarOpen = false;
+        }
+      });
 
     if (this.showAll) {
       this.permLoaded = true;

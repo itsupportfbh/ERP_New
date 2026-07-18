@@ -180,7 +180,12 @@ export class DocumentPrintService {
   <style>
     @page { size: A4 portrait; margin: 12mm 12mm 16mm 12mm; }
     *, *::before, *::after { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; background: #fff; margin: 0; }
+    /* Fill exactly one A4 content area (297mm − 12mm top − 16mm bottom = 269mm,
+       trimmed ~2mm so rounding can't spill a blank second page). The flex column
+       lets the lines table grow to a standard height and pins the totals/footer
+       to the bottom regardless of how many rows there are. */
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; background: #fff; margin: 0;
+      display: flex; flex-direction: column; min-height: 267mm; }
 
     /* HEADER */
     .doc-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
@@ -218,7 +223,13 @@ export class DocumentPrintService {
     table.m-tbl tr:last-child .m-val { border-bottom: none; }
 
     /* LINES TABLE */
-    .tbl { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 0; }
+    /* Wrapper grows to fill the leftover page height; the filler continues the
+       table's side borders down so a short table still reads as a full-page box. */
+    .lines-wrap { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+    .tbl-filler { flex: 1 1 auto; border-left: 1px solid #ccc; border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; }
+    .tbl { flex: 0 0 auto; width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 0; }
+    .tbl thead { display: table-header-group; }        /* repeat header when rows overflow to a new page */
+    .tbl tbody tr { page-break-inside: avoid; }         /* don't split a row across pages */
     .tbl thead tr { background: #1a5c6e; }
     .tbl thead th {
       padding: 7px 8px; color: #fff; font-weight: 700;
@@ -290,10 +301,13 @@ export class DocumentPrintService {
   </div>
 
   <!-- LINES TABLE -->
-  <table class="tbl">
-    <thead><tr><th class="c">S.No</th>${headHtml}</tr></thead>
-    <tbody>${bodyHtml || emptyRow}</tbody>
-  </table>
+  <div class="lines-wrap">
+    <table class="tbl">
+      <thead><tr><th class="c">S.No</th>${headHtml}</tr></thead>
+      <tbody>${bodyHtml || emptyRow}</tbody>
+    </table>
+    <div class="tbl-filler"></div>
+  </div>
 
   <!-- BOTTOM: remarks + totals -->
   <div class="bottom-row">

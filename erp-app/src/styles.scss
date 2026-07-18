@@ -1132,3 +1132,41 @@ body.period-locked .item-master-no-lock .dt-icon-btn.del {
   .btn-group .btn { display: none !important; }
   .ng-dropdown-panel { display: none !important; }
 }
+
+/* ============================================================
+   GLOBAL RESPONSIVE SAFETY NETS (app-wide)
+   Multi-column form/summary grids collapse on small screens, and
+   media/tables never force horizontal page overflow.
+   Component-specific @media rules still win where they exist.
+   ============================================================ */
+
+/* never let the page itself scroll sideways */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, video, canvas, svg { max-width: 100%; }
+
+/* Tablet portrait & below: 3-4 column grids drop to 2 columns */
+@media (max-width: 900px) {
+  [class*="-grid4"],
+  [class*="-grid3"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Phones: every common form/summary grid stacks to a single column */
+@media (max-width: 640px) {
+  [class*="-grid4"],
+  [class*="-grid3"],
+  [class*="-grid2"],
+  [class$="-grid"],
+  .form-grid, .filter-grid, .adv-form-grid, .kpi-grid, .sum-grid, .sum-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* modals / dialogs fit the viewport */
+  .modal, .modal-content, [class*="-modal"], [class*="modal-"] {
+    max-width: 95vw !important;
+  }
+
+  /* page paddings tighten a little */
+  .page-container, .page-content, .page-head { padding-left: 10px; padding-right: 10px; }
+}

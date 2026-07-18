@@ -310,10 +310,10 @@
             </erp-dropdown>
           </div>
           <div class="mf-group">
-            <label class="mf-label">Supplier Deposit Account (GL)</label>
+            <label class="mf-label">Supplier Advance Account (GL)</label>
             <erp-dropdown name="supplierDepositAccountId" [(ngModel)]="financeTax.supplierDepositAccountId"
               [items]="chartOfAccounts" bindLabel="headCodeName" bindValue="id"
-              placeholder="-- Select Supplier Deposit Account --">
+              placeholder="-- Select Supplier Advance Account --">
             </erp-dropdown>
           </div>
         </div>
@@ -394,6 +394,7 @@
 
     <!-- Tab nav + Save -->
     <div class="cmp-tab-actions">
+      <button class="mf-btn clear" type="button" (click)="cancel()">← Back to List</button>
       <button class="mf-btn cancel" type="button" (click)="goPrev()" *ngIf="!isFirstTab()">← Previous</button>
       <button class="mf-btn clear" type="button" (click)="goNext()" *ngIf="!isLastTab()">Next →</button>
       <button class="mf-btn submit" type="button" (click)="save()" [disabled]="saving" *ngIf="isLastTab()">

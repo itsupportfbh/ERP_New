@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { DocumentNumberService } from '../../../core/services/document-number.service';
@@ -78,7 +79,9 @@ export class CompanyComponent implements OnInit {
     private masterSvc: MasterService,
     private permissionService: PermissionService,
     private docNoSvc: DocumentNumberService,
-    private auth: AuthService
+    private auth: AuthService,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.userId = Number(localStorage.getItem('id') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
@@ -88,7 +91,36 @@ export class CompanyComponent implements OnInit {
    *  company under their existing organization (enforced on the backend too). */
   get isSuperAdmin(): boolean { return this.auth.isSuperAdmin(); }
 
-  ngOnInit(): void { this.loadPermission(); }
+  ngOnInit(): void {
+    this.loadPermission();
+    this.restoreFormFromUrl();
+  }
+
+  /** Keeps the open wizard addressable in the URL (?form=add / ?form=edit&id=..)
+   *  so a browser refresh stays on the form instead of dropping back to the list. */
+  private syncFormParam(form: 'add' | 'edit' | null, id?: number, org?: string): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: form
+        ? { form, id: id ?? null, org: org ?? null }
+        : { form: null, id: null, org: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  /** On load/refresh, reopen the wizard if the URL asks for it. */
+  private restoreFormFromUrl(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const form = qp.get('form');
+    if (form === 'add') {
+      this.showAddForm();
+    } else if (form === 'edit') {
+      const id = Number(qp.get('id') || 0);
+      const org = qp.get('org') || undefined;
+      if (id > 0) this.editCompany({ id, orgGuid: org });
+    }
+  }
 
   load(): void {
     this.loading = true;
@@ -173,6 +205,7 @@ export class CompanyComponent implements OnInit {
     this.selectedOrgGuid = '';
     this.message = ''; this.isError = false;
     this.loadDropdowns();
+    this.syncFormParam('add');
   }
 
   // ── Open edit form
@@ -182,10 +215,11 @@ export class CompanyComponent implements OnInit {
     this.selectedId = company.id;
     this.activeTab = 'general';
     this.message = ''; this.isError = false;
+    this.syncFormParam('edit', company.id, company.orgGuid);
     this.loadDropdowns();
     this.loading = true;
 
-    this.masterSvc.getCompanyById(company.id).subscribe({
+    this.masterSvc.getCompanyById(company.id, company.orgGuid).subscribe({
       next: (res: any) => {
         this.loading = false;
         const g = res.general || {};
@@ -261,12 +295,37 @@ export class CompanyComponent implements OnInit {
           ...c,
           headCodeName: c.headCodeName || `${c.headCode ?? ''} - ${c.headName ?? ''}`
         }));
+        this.applyDefaultFinanceAccounts();
       },
       error: () => {}
     });
   }
 
-  cancel(): void { this.isFormVisible = false; this.message = ''; }
+  /**
+   * Pre-selects the Finance & Tax GL dropdowns by HeadCode when creating a NEW
+   * company, so the user doesn't pick every account by hand. Mirrors the server
+   * default map (OrganizationProvisionService.MapDefaultFinanceAccountsAsync) —
+   * GST Payable reuses Output GST (201027), GST Receivable reuses Input GST
+   * (101028). Only fills blanks and never runs in edit mode, so a saved choice
+   * is never overwritten. The provisioning re-resolves by HeadCode on submit,
+   * so these ids only drive the visual selection.
+   */
+  private applyDefaultFinanceAccounts(): void {
+    if (this.isEditMode) return;
+    const idByCode = (code: string) =>
+      this.chartOfAccounts.find((c: any) => String(c.headCode).trim() === code)?.id ?? null;
+    const f = this.financeTax;
+    f.cashAccountId             = f.cashAccountId             ?? idByCode('101001'); // Cash on Hand
+    f.advanceAccountId          = f.advanceAccountId          ?? idByCode('201050'); // Advance Received from Customer
+    f.retainedEarningsAccountId = f.retainedEarningsAccountId ?? idByCode('302001'); // Retained Earnings
+    f.outputTaxAccountId        = f.outputTaxAccountId        ?? idByCode('201027'); // Output GST
+    f.inputTaxAccountId         = f.inputTaxAccountId         ?? idByCode('101028'); // Input GST
+    f.gstPayableAccountId       = f.gstPayableAccountId       ?? idByCode('201027'); // = Output GST
+    f.gstReceivableAccountId    = f.gstReceivableAccountId    ?? idByCode('101028'); // = Input GST
+    f.supplierDepositAccountId  = f.supplierDepositAccountId  ?? idByCode('101050'); // Advance Paid to Supplier
+  }
+
+  cancel(): void { this.isFormVisible = false; this.message = ''; this.syncFormParam(null); }
 
   get activeTabIndex(): number { return this.tabsOrder.indexOf(this.activeTab); }
   setTab(tab: CompanyTab): void { this.activeTab = tab; }

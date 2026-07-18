@@ -250,3 +250,20 @@
     filter: grayscale(0.15);
   }
 }
+
+/* ============================================================
+   Mobile: wide tables scroll horizontally instead of squeezing
+   every column into a phone width (which made rows unreadable).
+   ============================================================ */
+@media (max-width: 768px) {
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .erp-table {
+    min-width: 680px;   /* force a readable min width; container scrolls */
+  }
+  .dt-controls { flex-wrap: wrap; gap: 8px; }
+  .dt-search-input { width: 140px; }
+  .dt-footer { flex-wrap: wrap; gap: 8px; }
+}
