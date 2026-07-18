@@ -474,6 +474,8 @@ export class UserAccessComponent implements OnInit {
 
     const payload = {
       orgGuid,
+      // Company name of the logged-in admin — used to sign off the new-user credentials email.
+      companyName: (localStorage.getItem('companyName') || '').trim(),
       user,
       permissions: this.getPermissionPayload()
     };
