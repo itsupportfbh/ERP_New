@@ -38,7 +38,7 @@ export class PermissionService {
   getFunctionPermission(userId: number, functionId: string): Observable<FunctionPermission> {
     const normalizedFunctionId = this.normalizeFunctionId(functionId);
 
-    if (localStorage.getItem('isMasterOwner') === 'true') {
+    if (this.isFullAccessContext()) {
       return of(this.getFullPermission(normalizedFunctionId));
     }
 
@@ -91,6 +91,23 @@ export class PermissionService {
       export: true,
       post: true
     };
+  }
+
+  private isFullAccessContext(): boolean {
+    if (
+      localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES' ||
+      localStorage.getItem('selectedOrgKey') === 'ALL_ORGANIZATIONS' ||
+      Number(localStorage.getItem('companyId') || 0) === 0
+    ) {
+      return false;
+    }
+
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    const fullAccessRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
+    return Array.isArray(roles) && roles.some(r =>
+      fullAccessRoles.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
+    );
   }
 
   hasView(permission: FunctionPermission | null | undefined): boolean { return !!permission?.view; }
