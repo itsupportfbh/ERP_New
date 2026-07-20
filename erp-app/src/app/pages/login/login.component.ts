@@ -22,7 +22,8 @@ export class LoginComponent implements OnInit {
   showCompanySelect = false;
   companies: any[] = [];
   selectedCompanyId: number | null = null;
-  private pendingOrgGuid = '';
+  pendingOrgGuid = '';
+  selectedAllCompanies = false;
 
   constructor(private auth: AuthService, private router: Router) {}
 
@@ -44,7 +45,9 @@ export class LoginComponent implements OnInit {
 
         if (res.data.requiresCompanySelection && res.data.companies?.length > 1) {
           this.companies = res.data.companies;
-          this.pendingOrgGuid = res.data.orgGuid;
+          this.selectedCompanyId = null;
+          this.pendingOrgGuid = '';
+          this.selectedAllCompanies = false;
           this.showCompanySelect = true;
         } else {
           this.afterLogin();
@@ -57,8 +60,29 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  chooseCompany(company: any): void {
+    this.selectedCompanyId = Number(company?.id ?? company?.Id) || null;
+    this.pendingOrgGuid = company?.orgGuid ?? company?.OrgGuid ?? '';
+    this.selectedAllCompanies = false;
+    this.error = '';
+  }
+
+  chooseAllCompanies(): void {
+    const first = this.companies[0];
+    this.selectedCompanyId = Number(first?.id ?? first?.Id) || null;
+    this.pendingOrgGuid = first?.orgGuid ?? first?.OrgGuid ?? '';
+    this.selectedAllCompanies = true;
+    this.error = '';
+  }
+
   selectCompany(): void {
     if (!this.selectedCompanyId) { this.error = 'Please select a company.'; return; }
+    const selected = this.companies.find(c =>
+      Number(c.id ?? c.Id) === Number(this.selectedCompanyId) &&
+      (!this.pendingOrgGuid || (c.orgGuid ?? c.OrgGuid) === this.pendingOrgGuid)
+    );
+    this.pendingOrgGuid = selected?.orgGuid ?? selected?.OrgGuid ?? '';
+
     this.loading = true;
     this.auth.login({
       email: this.email.trim(),
@@ -69,6 +93,11 @@ export class LoginComponent implements OnInit {
       next: () => {
         this.loading = false;
         this.showCompanySelect = false;
+        if (this.selectedAllCompanies) {
+          localStorage.setItem('companyId', '0');
+          localStorage.setItem('companyName', 'All companies');
+          localStorage.setItem('selectedCompanyKey', 'ALL_COMPANIES');
+        }
         this.afterLogin();
       },
       error: (err) => {

@@ -9,8 +9,16 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const token = auth.getToken();
   if (token && req.url.startsWith(environment.apiUrl)) {
+    const orgGuid = localStorage.getItem('orgGuid') || '';
+    const companyId = localStorage.getItem('companyId') || '';
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`
+    };
+    if (orgGuid) headers['X-Org-Guid'] = orgGuid;
+    if (companyId && companyId !== '0') headers['X-Company-Id'] = companyId;
+
     req = req.clone({
-      setHeaders: { Authorization: `Bearer ${token}` }
+      setHeaders: headers
     });
   }
   return next(req).pipe(

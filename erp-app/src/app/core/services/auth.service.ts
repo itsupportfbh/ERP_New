@@ -100,10 +100,12 @@ export class AuthService {
     localStorage.setItem('departmentId', numStr(data.departmentId));
     localStorage.setItem('orgGuid', data.orgGuid ?? '');
     localStorage.setItem('databaseName', data.databaseName);
+    localStorage.setItem('selectedOrgKey', data.orgGuid ?? '');
+    localStorage.setItem('selectedCompanyKey', `${data.orgGuid ?? ''}|${numStr(data.companyId)}`);
     localStorage.setItem('isMasterOwner', String(data.isMasterOwner));
     localStorage.setItem('isTenantUser', String(data.isTenantUser));
-    localStorage.setItem('organizations', JSON.stringify(data.organizations));
-    localStorage.setItem('companies', JSON.stringify(data.companies));
+    localStorage.setItem('organizations', JSON.stringify(data.organizations ?? []));
+    localStorage.setItem('companies', JSON.stringify(data.companies ?? []));
     localStorage.setItem('organizationId', data.organizationId ?? '');
     localStorage.setItem('companyCurrencyId', numStr(data.companyCurrencyId));
     localStorage.setItem('companyCurrencyName', data.companyCurrencyName ?? '');
@@ -117,7 +119,7 @@ export class AuthService {
       'approvalRoles', 'approvalLevelIds', 'teams', 'allowedMenuIds',
       'companyId', 'companyName', 'locationId', 'departmentId',
       'orgGuid', 'databaseName', 'isMasterOwner', 'isTenantUser',
-      'organizations', 'companies', 'organizationId',
+      'organizations', 'companies', 'organizationId', 'selectedOrgKey', 'selectedCompanyKey',
       'companyCurrencyId', 'companyCurrencyName',
       'appCurrencySymbol', 'appTaxName',
       'currencySymByIdMap', 'currencySymByNameMap',
@@ -147,10 +149,9 @@ export class AuthService {
    * visible companies by CompanyId instead of granting full access).
    */
   isSuperAdmin(): boolean {
-    if (localStorage.getItem('isMasterOwner') === 'true') return true;
     let roles: string[] = [];
     try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
-    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'owner', 'systemadministrator']);
+    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'master', 'systemadministrator']);
     return Array.isArray(roles) && roles.some(r =>
       SUPER_ADMIN_ROLES.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
     );
@@ -174,6 +175,17 @@ export class AuthService {
 
   resetPassword(data: { token: string; email: string; newPassword: string }): Observable<any> {
     return this.http.post<any>(`${environment.apiUrl}/user/resetPassword`, data);
+  }
+
+  getAccessContext(): Observable<LoginResponse> {
+    return this.http.get<LoginResponse>(`${environment.apiUrl}/user/access-context`).pipe(
+      tap(res => {
+        if (res.success && res.data) {
+          localStorage.setItem('organizations', JSON.stringify(res.data.organizations ?? []));
+          localStorage.setItem('companies', JSON.stringify(res.data.companies ?? []));
+        }
+      })
+    );
   }
 
   changePassword(data: { currentPassword: string; newPassword: string; confirmNewPassword: string }): Observable<any> {
