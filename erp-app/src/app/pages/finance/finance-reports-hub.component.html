@@ -5,10 +5,23 @@
       <div class="report-card" *ngFor="let r of reports">
         <div class="report-card-row">
           <span class="report-name">{{ r.title }}</span>
-          <button class="btn-open" [class.btn-open--active]="isActive(r.route)" type="button" (click)="open(r)">Open</button>
+          <button class="btn-open" [class.btn-open--active]="isActive(r)" type="button" (click)="open(r)">{{ isActive(r) ? 'Viewing' : 'Open' }}</button>
         </div>
         <div class="report-sub">{{ r.subtitle }}</div>
       </div>
     </div>
   </div>
+</div>
+
+<div class="inline-report" *ngIf="isReportsPage && selected === 'tb'">
+  <erp-finance-trial-balance></erp-finance-trial-balance>
+</div>
+<div class="inline-report" *ngIf="isReportsPage && selected === 'ledger'">
+  <erp-finance-ledger></erp-finance-ledger>
+</div>
+<div class="inline-report" *ngIf="isReportsPage && selected === 'receipts'">
+  <erp-finance-register-report kind="receipts"></erp-finance-register-report>
+</div>
+<div class="inline-report" *ngIf="isReportsPage && selected === 'payments'">
+  <erp-finance-register-report kind="payments"></erp-finance-register-report>
 </div>

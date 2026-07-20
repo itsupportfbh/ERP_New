@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import * as XLSX from 'xlsx';
+import { MasterService } from '../../core/services/master.service';
 
 interface LedgerFlat {
   id: number;
@@ -66,6 +67,15 @@ export class FinanceLedgerComponent implements OnInit {
   fromDate = '';
   toDate = '';
   search = '';
+  columnsOpen = false;
+  loginBranch = '';
+  selectedBranch = '';
+  groupBy = 'none';
+  readonly reportColumns = [
+    { key: 'code', label: 'Code', selected: true }, { key: 'account', label: 'Account Name', selected: true },
+    { key: 'opening', label: 'Opening Balance', selected: true }, { key: 'debit', label: 'Debit', selected: true },
+    { key: 'credit', label: 'Credit', selected: true }, { key: 'balance', label: 'Balance', selected: true }
+  ];
   pageSize = 9999;   // default to "All" entries
   currentPage = 1;
 
@@ -83,18 +93,39 @@ export class FinanceLedgerComponent implements OnInit {
   constructor(
     private finance: FinanceService,
     private permissionService: PermissionService,
-    private auditPrint: AuditPrintService
+    private auditPrint: AuditPrintService,
+    private masterService: MasterService
   ) {}
 
   ngOnInit(): void {
     const now = new Date();
     this.fromDate = `${now.getFullYear()}-01-01`;
     this.toDate   = `${now.getFullYear()}-12-31`;
+    this.loadLoginBranch();
     this.load();
     this.permissionService.getFunctionPermission(this.userId, 'ledger').subscribe({
       next: perm => { this.permission = perm; }
     });
   }
+
+  private loadLoginBranch(): void {
+    const id = Number(localStorage.getItem('locationId') || 0);
+    this.loginBranch = id ? `Outlet ${id}` : 'All'; this.selectedBranch = this.loginBranch;
+    if (!id) return;
+    this.masterService.getLocations().subscribe({ next: (res: any) => {
+      const list = res?.data ?? res ?? [];
+      const x = Array.isArray(list) ? list.find((v: any) => Number(v.id ?? v.locationId ?? v.outletId ?? v.LocationId) === id) : null;
+      this.loginBranch = x?.name ?? x?.locationName ?? x?.outletName ?? this.loginBranch; this.selectedBranch = this.loginBranch;
+    }, error: () => {} });
+  }
+  columnVisible(key: string): boolean { return this.reportColumns.find(c => c.key === key)?.selected !== false; }
+  toggleColumn(key: string): void { const c = this.reportColumns.find(x => x.key === key); if (!c || (c.selected && this.reportColumns.filter(x => x.selected).length === 1)) return; c.selected = !c.selected; }
+  get visibleColumnCount(): number { return this.reportColumns.filter(c => c.selected).length; }
+  changeGrouping(): void {
+    const set = (n: LedgerNode) => { n.$$expanded = this.groupBy === 'section' && n.level === 0; n.children?.forEach(set); };
+    this.roots.forEach(set); this.rebuildDisplayRows();
+  }
+  clearFilters(): void { this.search = ''; this.groupBy = 'none'; this.selectedBranch = this.loginBranch; this.changeGrouping(); }
 
   get useBaseValues(): boolean {
     return true;

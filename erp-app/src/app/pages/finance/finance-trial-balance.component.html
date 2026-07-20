@@ -2,14 +2,9 @@
 
   <!-- Header -->
   <div class="rpt-head">
-    <div class="rpt-head-left">
-      <div class="rpt-icon">&#9776;</div>
-      <div>
-        <h2>Trial Balance</h2>
-        <p>Account debit, credit and closing balance</p>
-      </div>
-    </div>
+    <h4 class="pl-style-title">Trial Balance</h4>
     <div class="rpt-actions" *ngIf="displayRows.length">
+      <button class="btn-export btn-columns" type="button" (click)="columnsOpen=true">▦&nbsp; Columns</button>
       <div class="export-backdrop" *ngIf="exportMenuOpen" (click)="exportMenuOpen=false"></div>
       <div class="export-wrap">
         <button class="btn-export btn-excel" type="button" (click)="toggleExportMenu()">
@@ -60,6 +55,7 @@
 
   <!-- Filters -->
   <div class="rpt-filter-bar">
+    <label class="filter-lbl search-field"><span>SEARCH</span><input type="search" placeholder="Type to filter rows..." [(ngModel)]="search" (ngModelChange)="onSearchChange()"></label>
     <label class="filter-lbl">
       <span>FROM DATE</span>
       <input type="date" [(ngModel)]="fromDate">
@@ -68,13 +64,15 @@
       <span>TO DATE</span>
       <input type="date" [(ngModel)]="toDate">
     </label>
+    <label class="filter-lbl"><span>BRANCH</span><select [(ngModel)]="selectedBranch"><option [value]="loginBranch">{{ loginBranch }}</option></select></label>
+    <label class="filter-lbl"><span>GROUP BY</span><select [(ngModel)]="groupBy" (ngModelChange)="changeGrouping()"><option value="none">No grouping</option><option value="section">Section</option><option value="branch">Branch</option></select></label>
     <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()" [disabled]="loading">
       {{ loading ? 'Running…' : 'Run TB' }}
     </button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="clearFilters()">Clear filters</button>
     <div class="spacer"></div>
     <button class="rpt-btn rpt-btn-outline" type="button" (click)="expandAll()">+ All</button>
     <button class="rpt-btn rpt-btn-outline" type="button" (click)="collapseAll()">− All</button>
-    <input class="rpt-search" type="text" placeholder="Search account..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
   </div>
 
   <div class="rpt-alert rpt-danger" *ngIf="error">{{ error }}</div>
@@ -101,11 +99,9 @@
       <table class="rpt-table">
         <thead>
           <tr>
-            <th>ACCOUNT</th>
-            <th class="right">OPENING DEBIT</th>
-            <th class="right">OPENING CREDIT</th>
-            <th class="right teal-hdr">CLOSING DEBIT</th>
-            <th class="right teal-hdr">CLOSING CREDIT</th>
+            <th *ngIf="columnVisible('account')">ACCOUNT</th><th *ngIf="columnVisible('openingDebit')" class="right">OPENING DEBIT</th>
+            <th *ngIf="columnVisible('openingCredit')" class="right">OPENING CREDIT</th><th *ngIf="columnVisible('closingDebit')" class="right teal-hdr">CLOSING DEBIT</th>
+            <th *ngIf="columnVisible('closingCredit')" class="right teal-hdr">CLOSING CREDIT</th>
             <th class="center" style="width:96px;">ACTION</th>
           </tr>
         </thead>
@@ -119,7 +115,7 @@
                 (click)="row.isLeaf ? onRowClick(row) : null">
 
               <!-- Account column with indent + chevron -->
-              <td class="tb-account-col">
+              <td *ngIf="columnVisible('account')" class="tb-account-col">
                 <span [style.paddingLeft]="indentPx(row)"></span>
 
                 <!-- chevron for parent rows -->
@@ -135,7 +131,7 @@
               </td>
 
               <!-- Opening Debit (editable on leaf rows) -->
-              <td class="right debit-val">
+              <td *ngIf="columnVisible('openingDebit')" class="right debit-val">
                 <ng-container *ngIf="row.isLeaf && row.isEditingOpening; else openingDebitRead">
                   <input type="number" step="0.01" class="tb-edit-input" [(ngModel)]="row.openingDebitEdit"
                          (click)="$event.stopPropagation()">
@@ -144,7 +140,7 @@
               </td>
 
               <!-- Opening Credit (editable on leaf rows) -->
-              <td class="right credit-val">
+              <td *ngIf="columnVisible('openingCredit')" class="right credit-val">
                 <ng-container *ngIf="row.isLeaf && row.isEditingOpening; else openingCreditRead">
                   <input type="number" step="0.01" class="tb-edit-input" [(ngModel)]="row.openingCreditEdit"
                          (click)="$event.stopPropagation()">
@@ -152,8 +148,8 @@
                 <ng-template #openingCreditRead>{{ openingCredit(row) | money }}</ng-template>
               </td>
 
-              <td class="right teal-bold">{{ closingDebit(row) | money }}</td>
-              <td class="right muted">{{ closingCredit(row) | money }}</td>
+              <td *ngIf="columnVisible('closingDebit')" class="right teal-bold">{{ closingDebit(row) | money }}</td>
+              <td *ngIf="columnVisible('closingCredit')" class="right muted">{{ closingCredit(row) | money }}</td>
 
               <!-- Action: edit opening (leaf only), then save / cancel -->
               <td class="center">
@@ -217,11 +213,11 @@
         </tbody>
         <tfoot *ngIf="displayRows.length > 0">
           <tr class="foot-row">
-            <td><strong>Total</strong></td>
-            <td class="right debit-val fw-bold">{{ totalOpeningDebit | money }}</td>
-            <td class="right credit-val fw-bold">{{ totalOpeningCredit | money }}</td>
-            <td class="right teal-bold fw-bold">{{ totalClosingDebit | money }}</td>
-            <td class="right muted fw-bold">{{ totalClosingCredit | money }}</td>
+            <td *ngIf="columnVisible('account')"><strong>Total</strong></td>
+            <td *ngIf="columnVisible('openingDebit')" class="right debit-val fw-bold">{{ totalOpeningDebit | money }}</td>
+            <td *ngIf="columnVisible('openingCredit')" class="right credit-val fw-bold">{{ totalOpeningCredit | money }}</td>
+            <td *ngIf="columnVisible('closingDebit')" class="right teal-bold fw-bold">{{ totalClosingDebit | money }}</td>
+            <td *ngIf="columnVisible('closingCredit')" class="right muted fw-bold">{{ totalClosingCredit | money }}</td>
             <td></td>
           </tr>
         </tfoot>
@@ -239,3 +235,9 @@
   </div>
 
 </div>
+
+<div class="columns-backdrop" *ngIf="columnsOpen" (click)="columnsOpen=false"><section class="columns-dialog" (click)="$event.stopPropagation()">
+  <header><div><h3>Headers (Columns)</h3><p>Pick columns for the report.</p></div><button type="button" (click)="columnsOpen=false">×</button></header>
+  <div class="columns-list"><button type="button" *ngFor="let col of reportColumns" [class.selected]="col.selected" (click)="toggleColumn(col.key)"><span>{{ col.label }}</span><strong>{{ col.selected ? '✓' : '' }}</strong></button></div>
+  <footer><button class="rpt-btn rpt-btn-primary" type="button" (click)="columnsOpen=false">Apply</button></footer>
+</section></div>

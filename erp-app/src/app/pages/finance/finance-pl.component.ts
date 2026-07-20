@@ -6,6 +6,7 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { MasterService } from '../../core/services/master.service';
 
 @Component({
   selector: 'erp-finance-pl',
@@ -20,19 +21,50 @@ export class FinancePlComponent implements OnInit {
   error = '';
   fromDate = '';
   toDate = '';
+  searchTerm = '';
+  columnsOpen = false;
+  columnSearch = '';
+  loginBranch = '';
+  selectedBranch = '';
+  groupBy = 'none';
+  readonly reportColumns = [
+    { key: 'code', label: 'Code', group: 'Basic', selected: true },
+    { key: 'account', label: 'Account', group: 'Basic', selected: true },
+    { key: 'section', label: 'Section', group: 'Basic', selected: true },
+    { key: 'branch', label: 'Branch', group: 'Basic', selected: true },
+    { key: 'debit', label: `Debit (${localStorage.getItem('companyCurrencyName') || 'SGD'})`, group: 'Amounts', selected: true },
+    { key: 'credit', label: `Credit (${localStorage.getItem('companyCurrencyName') || 'SGD'})`, group: 'Amounts', selected: true }
+  ];
 
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
   private endpoint = { list: '/FinanceReport/GetProfitLossDetails' };
   private readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService, private permissionService: PermissionService, private auditPrint: AuditPrintService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService,
+    private auditPrint: AuditPrintService, private masterService: MasterService) {}
 
   ngOnInit(): void {
     this.resetDates();
+    this.loadLoginBranch();
     this.load();
     this.permissionService.getFunctionPermission(this.userId, 'reports').subscribe({
       next: perm => { this.permission = perm; }
+    });
+  }
+
+  private loadLoginBranch(): void {
+    const locationId = Number(localStorage.getItem('locationId') || 0);
+    this.loginBranch = locationId ? `Outlet ${locationId}` : 'All';
+    if (!locationId) return;
+    this.masterService.getLocations().subscribe({
+      next: (res: any) => {
+        const locations = res?.data ?? res ?? [];
+        const match = Array.isArray(locations) ? locations.find((x: any) =>
+          Number(x.id ?? x.locationId ?? x.outletId ?? x.LocationId) === locationId) : null;
+        this.loginBranch = match?.name ?? match?.locationName ?? match?.outletName ?? match?.code ?? this.loginBranch;
+        if (!this.selectedBranch) this.selectedBranch = this.loginBranch;
+      }, error: () => {}
     });
   }
 
@@ -106,6 +138,55 @@ export class FinancePlComponent implements OnInit {
   get totalExpense(): number { return this.expenseRows.reduce((s, r) => s + (Number(r.amount ?? r.purchase ?? 0)), 0); }
   get netProfit():    number { return this.totalIncome - this.totalExpense; }
 
+  get visibleColumns(): typeof this.reportColumns { return this.reportColumns.filter(c => c.selected); }
+  get filteredColumnOptions(): typeof this.reportColumns {
+    const q = this.columnSearch.trim().toLowerCase();
+    return q ? this.reportColumns.filter(c => c.label.toLowerCase().includes(q)) : this.reportColumns;
+  }
+  get reportRows(): any[] {
+    const all = [
+      ...this.expenseRows.map(r => this.toReportRow(r, 'Expense', Number(r.amount ?? r.purchase ?? 0))),
+      ...this.incomeRows.map(r => this.toReportRow(r, 'Income', Number(r.amount ?? r.sales ?? 0)))
+    ];
+    const branchRows = this.selectedBranch ? all.filter(r => r.branch === this.selectedBranch) : all;
+    const q = this.searchTerm.trim().toLowerCase();
+    return q ? branchRows.filter(r => [r.code, r.account, r.section, r.branch, r.debit, r.credit]
+      .some(v => String(v ?? '').toLowerCase().includes(q))) : branchRows;
+  }
+  get branchOptions(): string[] {
+    const values = [...this.rows.map(r => r.branchName ?? r.branch ?? r.locationName ?? r.outletName).filter(Boolean), this.loginBranch].filter(Boolean);
+    return [...new Set(values.map(String))].sort();
+  }
+  get displayRows(): any[] {
+    if (this.groupBy === 'none') return this.reportRows;
+    const groups = new Map<string, any[]>();
+    this.reportRows.forEach(r => { const key = String(r[this.groupBy] || 'Unspecified'); groups.set(key, [...(groups.get(key) || []), r]); });
+    return [...groups.entries()].flatMap(([label, rows]) => [
+      { _rowType: 'group', label, count: rows.length }, ...rows,
+      { _rowType: 'subtotal', label, debit: rows.reduce((s, r) => s + r.debit, 0), credit: rows.reduce((s, r) => s + r.credit, 0) }
+    ]);
+  }
+  clearFilters(): void { this.searchTerm = ''; this.selectedBranch = ''; this.groupBy = 'none'; }
+  private toReportRow(row: any, kind: 'Income' | 'Expense', actual: number): any {
+    return {
+      code: row.accountCode ?? row.headCode ?? '', account: row.accountName ?? row.headName ?? '',
+      section: row.category ?? row.accountType ?? row.section ?? row.headType ?? kind,
+      branch: row.branchName ?? row.branch ?? row.locationName ?? row.outletName ?? this.loginBranch,
+      debit: kind === 'Expense' ? actual : 0,
+      credit: kind === 'Income' ? actual : 0,
+      kind: kind.toLowerCase()
+    };
+  }
+  toggleColumn(key: string): void {
+    const col = this.reportColumns.find(c => c.key === key);
+    if (!col || (col.selected && this.visibleColumns.length === 1)) return;
+    col.selected = !col.selected;
+  }
+  setAllColumns(selected: boolean): void {
+    this.reportColumns.forEach(c => c.selected = selected);
+    if (!selected) this.reportColumns[0].selected = true;
+  }
+
   indentLevel(code: string): number {
     const len = String(code ?? '').trim().length;
     if (len <= 1) return 0;
@@ -170,15 +251,15 @@ export class FinancePlComponent implements OnInit {
   }
 
   exportExcel(): void {
-    const net = this.netRow;
     const rows: any[][] = [
       [localStorage.getItem('companyPrintName') || localStorage.getItem('companyName') || ''],
       ['Profit and Loss'],
       [`For The Period From ${this.fmtDate(this.fromDate)} To ${this.fmtDate(this.toDate)}`], [],
-      ['Acc Code', 'Description', 'Debit', 'Credit'],
-      ...this.auditRows.map(r => [r.code, r.name, r.debit ? r.debit.toFixed(2) : '', r.credit ? r.credit.toFixed(2) : '']),
-      ['', net.label, net.debit ? net.debit.toFixed(2) : '', net.credit ? net.credit.toFixed(2) : ''],
-      ['', `Grand Total Amount (${this.baseCurrencyName})`, this.grandTotal.toFixed(2), this.grandTotal.toFixed(2)]
+      this.visibleColumns.map(c => c.label),
+      ...this.reportRows.map(r => this.visibleColumns.map(c =>
+        c.key === 'debit' || c.key === 'credit' ? (Number(r[c.key]) ? Number(r[c.key]).toFixed(2) : '') : r[c.key])),
+      [], this.visibleColumns.map(c => c.key === 'account' ? 'Total' : c.key === 'debit' ? this.totalExpense.toFixed(2) : c.key === 'credit' ? this.totalIncome.toFixed(2) : ''),
+      this.visibleColumns.map(c => c.key === 'account' ? 'Net Profit / (Loss)' : c.key === 'debit' && this.netProfit < 0 ? (-this.netProfit).toFixed(2) : c.key === 'credit' && this.netProfit >= 0 ? this.netProfit.toFixed(2) : '')
     ];
     const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
     this.download(csv, 'ProfitLoss.csv', 'text/csv;charset=utf-8;');
@@ -187,24 +268,22 @@ export class FinancePlComponent implements OnInit {
   exportPdf(): void {
     const fromTxt = this.fmtDate(this.fromDate);
     const toTxt   = this.fmtDate(this.toDate);
-    const net     = this.netRow;
-    const grand   = this.grandTotal;
-
     this.auditPrint.print({
       reportTitle: 'Profit and Loss',
       periodLine: `For The Period From ${fromTxt} To ${toTxt}`,
       metaLines: [`Date : From ${fromTxt} to ${toTxt}`, 'Sort By : Code;Description', 'Project : All'],
-      labelColumnKey: 'name',
-      columns: [
-        { header: 'Acc Code', key: 'code' },
-        { header: 'Description', key: 'name' },
-        { header: 'Debit', key: 'debit', align: 'right', type: 'number' },
-        { header: 'Credit', key: 'credit', align: 'right', type: 'number' }
-      ],
-      rows: this.auditRows,
+      labelColumnKey: this.visibleColumns.find(c => c.key === 'account') ? 'account' : this.visibleColumns[0].key,
+      columns: this.visibleColumns.map(c => ({ header: c.label, key: c.key,
+        align: c.key === 'debit' || c.key === 'credit' ? 'right' as const : undefined,
+        type: c.key === 'debit' || c.key === 'credit' ? 'number' as const : undefined,
+        colorByKey: c.key === 'debit' || c.key === 'credit' ? 'kind' : undefined })),
+      rows: this.reportRows,
       totalRows: [
-        { label: net.label, values: { debit: net.debit, credit: net.credit } },
-        { label: `Grand Total Amount (${this.baseCurrencyName})`, values: { debit: grand, credit: grand }, grand: true }
+        { label: 'Total', values: { debit: this.totalExpense, credit: this.totalIncome } },
+        { label: 'Net Profit / (Loss)', values: {
+          debit: this.netProfit < 0 ? -this.netProfit : 0,
+          credit: this.netProfit >= 0 ? this.netProfit : 0
+        }, grand: true }
       ]
     });
   }

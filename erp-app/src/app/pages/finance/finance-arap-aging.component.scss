@@ -1,7 +1,23 @@
 $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 :host { display: block; }
 .aging-page { display: flex; flex-direction: column; gap: 12px; padding: 0 0 32px; }
-.rpt-head { background: #fff; border-radius: 1rem; padding: .7rem 1.2rem; box-shadow: 0 2px 8px rgba(15,23,42,.05); border: 1px solid $border; }
+.rpt-head { display:flex; justify-content:space-between; align-items:center; background:#fff; border-radius:1rem; padding:.7rem 1.2rem; box-shadow:0 2px 8px rgba(15,23,42,.05); border:1px solid $border; }
+.rpt-actions { display:flex; gap:10px; align-items:center; }
+.btn-export { display:flex; align-items:center; gap:6px; padding:.45rem 1rem; border-radius:.5rem; font-size:.82rem; font-weight:500; cursor:pointer; white-space:nowrap; }
+.btn-columns { background:#fff; color:$teal; border:1px solid $teal; }
+.btn-excel { background:#16a34a; color:#fff; border:1px solid #16a34a; }
+.btn-pdf { background:#ea580c; color:#fff; border:1px solid #ea580c; }
+.columns-backdrop { position:fixed; inset:0; z-index:1200; display:grid; place-items:center; padding:20px; background:rgba(15,23,42,.48); }
+.columns-dialog { width:min(760px,100%); background:#fff; border-radius:16px; box-shadow:0 24px 60px rgba(15,23,42,.28); overflow:hidden; }
+.columns-dialog header { display:flex; justify-content:space-between; align-items:flex-start; padding:26px 34px; border-bottom:1px solid #e5e7eb; }
+.columns-dialog h3 { margin:0; color:#164e5a; font-size:1.25rem; }.columns-dialog p { margin:5px 0 0; color:#6b7280; font-size:.9rem; }
+.dialog-close { border:0; background:transparent; font-size:1.8rem; line-height:1; cursor:pointer; color:#111827; }
+.columns-list { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:30px 34px; }
+.columns-list button { display:flex; justify-content:space-between; align-items:center; min-height:64px; padding:14px 18px; border:1px solid #d6e0e4; border-radius:11px; background:#fff; font-size:1rem; cursor:pointer; }
+.columns-list button.selected { border-color:#55bfd0; background:#edf9fb; }.columns-list button strong { font-size:1.25rem; color:#111; }
+.columns-dialog footer { display:flex; justify-content:flex-end; padding:20px 34px; border-top:1px solid #e5e7eb; }
+.dialog-apply { padding:10px 22px; border:0; border-radius:8px; background:#2e667d; color:#fff; font-size:1rem; cursor:pointer; }
+@media(max-width:600px){.columns-list{grid-template-columns:1fr}.columns-dialog header,.columns-list,.columns-dialog footer{padding-left:20px;padding-right:20px}}
 .rpt-title { font-size: 1.15rem; font-weight: 700; color: $teal; margin: 0; }
 .tab-bar { display: flex; gap: 0; border-bottom: 2px solid $border; background: #fff; border-radius: 1rem 1rem 0 0; padding: .5rem 1rem 0; box-shadow: 0 2px 8px rgba(15,23,42,.04); border: 1px solid $border; border-bottom: none; }
 .tab-btn { background: none; border: none; padding: .5rem 1.2rem .7rem; font-size: .9rem; font-weight: 500; color: $muted; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
@@ -42,3 +58,7 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 .rpt-loading { color: $muted; font-size: .9rem; display: flex; align-items: center; gap: 6px; padding: .5rem 0; }
 .spinner { width: 16px; height: 16px; border: 2px solid $border; border-top-color: $teal; border-radius: 50%; animation: spin .6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
++.columns-popover { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; padding:14px 18px; margin:-4px 0 10px; border:1px solid #d8e0e4; border-radius:10px; background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.08); }
+.columns-popover > strong { grid-column:1/-1; color:#164e5a; }
+.columns-popover label { font-size:.82rem; color:#374151; }
+.columns-popover button { justify-self:end; padding:6px 14px; border:0; border-radius:6px; color:#fff; background:#2e5f73; }
