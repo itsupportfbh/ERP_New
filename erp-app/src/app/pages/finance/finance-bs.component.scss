@@ -10,6 +10,7 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 }
 .filter-lbl { display: flex; flex-direction: column; gap: 4px; color: $muted; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .filter-lbl input { height: 30px; border: 1px solid $border; border-radius: 6px; padding: 0 9px; font-size: 12px; }
+.filter-lbl select { height: 30px; min-width: 125px; border: 1px solid $border; border-radius: 6px; padding: 0 9px; background: #fff; font-size: 12px; }
 .filter-note { color: $muted; font-size: 11px; font-weight: 600; align-self: center; }
 .spacer { flex: 1; }
 .rpt-btn { height: 30px; border-radius: 6px; border: 1px solid $teal; padding: 0 12px; font-size: 12px; cursor: pointer; }
@@ -25,6 +26,40 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 .btn-export { display: flex; align-items: center; gap: 6px; padding: .38rem 1rem; font-size: .82rem; font-weight: 500; border-radius: .5rem; border: none; cursor: pointer; }
 .btn-excel { background: #16a34a; color: #fff; }
 .btn-pdf   { background: #ea580c; color: #fff; }
+.btn-columns { background: #fff; color: $teal; border: 1px solid $teal; }
+.search-filter input { min-width: 190px; }
+.legacy-layout { display: none !important; }
+
+.report-table-card { background: #fff; border: 1px solid $border; border-radius: 1rem; overflow: hidden; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
+.table-scroll { overflow-x: auto; }
+.report-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.report-table th { padding: .75rem 1rem; text-align: left; color: #fff; background: #176b75; font-size: .75rem; text-transform: uppercase; }
+.report-table td { padding: .7rem 1rem; color: #374151; border-bottom: 1px solid #e5e7eb; }
+.report-table tbody tr:hover { background: #f7fbfc; }
+.report-table .group-row td { background: #e8f4f6; color: #0f5f69; font-weight: 700; }
+.report-table .subtotal-row td { background: #f4f9fa; color: #0f5f69; font-weight: 700; font-style: italic; border-bottom: 2px solid #c9e2e6; }
+.report-table .amount-col { text-align: right; font-variant-numeric: tabular-nums; }
+.empty-row { text-align: center !important; color: $muted !important; padding: 1.5rem !important; }
+.table-summary { display: flex; justify-content: space-between; padding: .75rem 1rem; color: $muted; font-size: .82rem; background: #f8fafc; }
+.table-summary strong { color: $teal; }
+
+.modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(15,23,42,.48); }
+.columns-modal { width: min(720px, 100%); max-height: 88vh; overflow: auto; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(15,23,42,.25); }
+.columns-modal header { display: flex; justify-content: space-between; padding: 24px 28px 12px; }
+.columns-modal h3 { margin: 0; color: #164e5a; font-size: 1.25rem; }
+.columns-modal p { margin: 4px 0 0; color: $muted; font-size: .9rem; }
+.modal-close { border: 0; background: transparent; color: $muted; font-size: 1.8rem; cursor: pointer; }
+.selected-count { padding: 0 28px 10px; text-align: right; color: $muted; font-size: .85rem; }
+.column-search { display: block; width: calc(100% - 56px); height: 44px; margin: 0 28px 12px; padding: 0 14px; border: 1px solid #d6e0e4; border-radius: 9px; box-sizing: border-box; }
+.column-tools { display: flex; justify-content: flex-end; gap: 8px; padding: 0 28px 12px; }
+.column-tools button { padding: 6px 12px; border: 1px solid #d6e0e4; border-radius: 18px; background: #fff; cursor: pointer; }
+.column-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 28px 24px; }
+.column-option { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; text-align: left; border: 1px solid #d6e0e4; border-radius: 10px; background: #fff; cursor: pointer; }
+.column-option.selected { border-color: #a8d8e1; background: #edf9fb; }
+.column-option small { display: block; margin-top: 3px; color: $muted; }
+.checkbox { display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid #85939a; border-radius: 3px; color: #fff; }
+.column-option.selected .checkbox { border-color: #178595; background: #178595; }
+.columns-modal footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 28px 18px; border-top: 1px solid $border; }
 .sum-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; @media(max-width:700px){ grid-template-columns: 1fr; } }
 .sum-card { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 1rem; padding: .9rem 1.1rem; border: 1px solid $border; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
 .sum-icon-wrap { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

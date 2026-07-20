@@ -5,6 +5,7 @@ import { FinanceService } from './finance.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { MasterService } from '../../core/services/master.service';
 
 @Component({
   selector: 'erp-finance-collection-forecast',
@@ -20,6 +21,11 @@ export class FinanceCollectionForecastComponent implements OnInit {
   fromDate = '';
   toDate = '';
   search = '';
+  groupBy = 'none'; columnsOpen = false;
+  loginBranch = 'All branches';
+  selectedBranch = 'All branches';
+  readonly reportColumns = ['Customer', '0–7 Days', '8–14 Days', '15–30 Days', '30+ Days', 'Total Outstanding'];
+  columnSelection: Record<string, boolean> = {};
 
   /** Customer-level day-bucket totals — this is the actual shape /ArCollectionForecast/summary returns. */
   rows: any[] = [];
@@ -43,11 +49,13 @@ export class FinanceCollectionForecastComponent implements OnInit {
   })();
   readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService, private auditPrint: AuditPrintService) {}
+  constructor(private finance: FinanceService, private auditPrint: AuditPrintService, private masterService: MasterService) {}
 
   ngOnInit(): void {
+    this.reportColumns.forEach(c => this.columnSelection[c] = true);
     this.fromDate = this.today;
     this.toDate = this.monthAhead;
+    this.loadLoginBranch();
     this.load();
   }
 
@@ -77,6 +85,28 @@ export class FinanceCollectionForecastComponent implements OnInit {
     this.filtered = q
       ? this.rows.filter(r => String(r.customerName ?? '').toLowerCase().includes(q))
       : [...this.rows];
+  }
+  columnVisible(c: string): boolean { return this.columnSelection[c] !== false; }
+  toggleColumn(c: string): void {
+    if (this.columnSelection[c] && this.reportColumns.filter(x => this.columnSelection[x]).length === 1) return;
+    this.columnSelection[c] = !this.columnSelection[c];
+  }
+  get visibleColumnCount(): number { return this.reportColumns.filter(c => this.columnVisible(c)).length + 1; }
+  clearFilters(): void { this.search = ''; this.groupBy = 'none'; this.selectedBranch = this.loginBranch; this.applyFilter(); }
+
+  get displayRows(): any[] {
+    if (this.groupBy === 'none') return this.filtered;
+    const groups = new Map<string, any[]>();
+    this.filtered.forEach(row => {
+      const key = this.groupBy === 'customer' ? row.customerName : this.loginBranch;
+      groups.set(key || '-', [...(groups.get(key || '-') || []), row]);
+    });
+    const result: any[] = [];
+    groups.forEach((items, label) => {
+      result.push({ _displayKind: 'group', label, count: items.length });
+      result.push(...items);
+    });
+    return result;
   }
 
   private normalize(r: any): any {
@@ -181,5 +211,31 @@ export class FinanceCollectionForecastComponent implements OnInit {
         }
       ]
     });
+  }
+
+  exportExcel(): void {
+    const header = ['Customer', '0-7 Days', '8-14 Days', '15-30 Days', '30+ Days', 'Total Outstanding'];
+    const data = [header, ...this.filtered.map(row => [
+      row.customerName, row.bucket0_7.toFixed(2), row.bucket8_14.toFixed(2),
+      row.bucket15_30.toFixed(2), row.bucket30Plus.toFixed(2), row.totalOutstanding.toFixed(2)
+    ])];
+    const csv = data.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'CollectionsForecast.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  private loadLoginBranch(): void {
+    const locationId = Number(localStorage.getItem('locationId') || 0);
+    if (!locationId) return;
+    this.masterService.getLocations().subscribe({ next: (res: any) => {
+      const locations = res?.data ?? res ?? [];
+      const x = Array.isArray(locations) ? locations.find((v: any) => Number(v.id ?? v.locationId ?? v.outletId) === locationId) : null;
+      this.loginBranch = x?.name ?? x?.locationName ?? x?.outletName ?? x?.code ?? `Outlet ${locationId}`;
+      this.selectedBranch = this.loginBranch;
+    }, error: () => { this.loginBranch = `Outlet ${locationId}`; this.selectedBranch = this.loginBranch; } });
   }
 }

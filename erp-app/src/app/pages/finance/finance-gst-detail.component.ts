@@ -7,6 +7,7 @@ import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { TaxNamePipe } from '../../shared/pipes/tax-name.pipe';
+import { MasterService } from '../../core/services/master.service';
 
 @Component({
   selector: 'erp-finance-gst-detail',
@@ -23,6 +24,11 @@ export class FinanceGstDetailComponent implements OnInit {
   toDate = '';
   docType: 'ALL' | 'SI' | 'PIN' = 'ALL';
   search = '';
+  groupBy = 'none'; columnsOpen = false;
+  loginBranch = 'All branches';
+  selectedBranch = 'All branches';
+  readonly reportColumns = ['Type', 'Source', 'Date', 'Document No', 'Customer / Supplier', 'Taxable', 'Tax', 'Net'];
+  columnSelection: Record<string, boolean> = {};
 
   rows: any[] = [];
   filtered: any[] = [];
@@ -35,18 +41,28 @@ export class FinanceGstDetailComponent implements OnInit {
   private readonly api = environment.apiUrl;
   readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private http: HttpClient, private auditPrint: AuditPrintService) {}
+  constructor(
+    private http: HttpClient,
+    private auditPrint: AuditPrintService,
+    private masterService: MasterService
+  ) {}
 
   ngOnInit(): void {
+    this.reportColumns.forEach(c => this.columnSelection[c] = true);
     this.fromDate = this.threeMonthsAgo;
     this.toDate = this.today;
+    this.loadLoginBranch();
     this.load();
+  }
+  columnVisible(c: string): boolean { return this.columnSelection[c] !== false; }
+  toggleColumn(c: string): void {
+    if (this.columnSelection[c] && this.reportColumns.filter(x => this.columnSelection[x]).length === 1) return;
+    this.columnSelection[c] = !this.columnSelection[c];
   }
 
   load(): void {
     this.loading = true; this.error = ''; this.page = 1;
-    let p = new HttpParams().set('startDate', this.fromDate).set('endDate', this.toDate);
-    if (this.docType !== 'ALL') p = p.set('docType', this.docType);
+    const p = new HttpParams().set('startDate', this.fromDate).set('endDate', this.toDate);
     this.http.get<any>(`${this.api}/GstReturns/details`, { params: p }).subscribe({
       next: res => {
         const data = Array.isArray(res) ? res : (res?.data ?? res?.result ?? []);
@@ -59,20 +75,54 @@ export class FinanceGstDetailComponent implements OnInit {
   }
 
   applyFilter(): void {
-    const q = this.search.toLowerCase();
+    const q = this.search.trim().toLowerCase();
+    let result = this.rows.filter(r =>
+      this.docType === 'ALL' ||
+      (this.docType === 'SI' && this.typeLabel(r) === 'Customer') ||
+      (this.docType === 'PIN' && this.typeLabel(r) === 'Supplier')
+    );
     this.filtered = q
-      ? this.rows.filter(r =>
+      ? result.filter(r =>
+          this.typeLabel(r).toLowerCase().includes(q) ||
+          String(r.source ?? '').toLowerCase().includes(q) ||
+          String(r.txnDate ?? '').toLowerCase().includes(q) ||
           String(r.docNo ?? '').toLowerCase().includes(q) ||
           String(r.partyName ?? '').toLowerCase().includes(q))
-      : [...this.rows];
+      : result;
     this.page = 1;
   }
 
   reset(): void { this.search = ''; this.docType = 'ALL'; this.fromDate = this.threeMonthsAgo; this.toDate = this.today; this.load(); }
+  clearFilters(): void { this.search = ''; this.docType = 'ALL'; this.groupBy = 'none'; this.selectedBranch = this.loginBranch; this.applyFilter(); }
 
   get pagedRows(): any[] {
     const start = (this.page - 1) * this.pageSize;
     return this.filtered.slice(start, start + this.pageSize);
+  }
+
+  get displayRows(): any[] {
+    if (this.groupBy === 'none') return this.pagedRows;
+    const groups = new Map<string, any[]>();
+    for (const row of this.pagedRows) {
+      const key = this.groupBy === 'type' ? this.typeLabel(row) : (row.branch || this.loginBranch);
+      groups.set(key, [...(groups.get(key) || []), row]);
+    }
+    const display: any[] = [];
+    groups.forEach((items, label) => {
+      display.push({ _rowType: 'group', label, count: items.length });
+      display.push(...items);
+      display.push({
+        _rowType: 'subtotal', label,
+        taxable: items.reduce((sum, row) => sum + row.taxable, 0),
+        taxAmt: items.reduce((sum, row) => sum + row.taxAmt, 0),
+        net: items.reduce((sum, row) => sum + row.net, 0)
+      });
+    });
+    return display;
+  }
+
+  get visibleColumnCount(): number {
+    return this.reportColumns.filter(column => this.columnVisible(column)).length;
   }
 
   get totalPages(): number { return Math.ceil(this.filtered.length / this.pageSize); }
@@ -80,9 +130,9 @@ export class FinanceGstDetailComponent implements OnInit {
 
   minVal(a: number, b: number): number { return Math.min(a, b); }
 
-  get totalTaxable(): number { return this.rows.reduce((s, r) => s + r.taxable, 0); }
-  get totalTax():     number { return this.rows.reduce((s, r) => s + r.taxAmt, 0); }
-  get totalNet():     number { return this.rows.reduce((s, r) => s + r.net, 0); }
+  get totalTaxable(): number { return this.filtered.reduce((s, r) => s + r.taxable, 0); }
+  get totalTax():     number { return this.filtered.reduce((s, r) => s + r.taxAmt, 0); }
+  get totalNet():     number { return this.filtered.reduce((s, r) => s + r.net, 0); }
 
   typeLabel(r: any): string {
     const src = String(r.source ?? r.type ?? '').toUpperCase();
@@ -156,9 +206,31 @@ export class FinanceGstDetailComponent implements OnInit {
       txnDate:   r.date ?? r.docDate ?? r.DocDate ?? r.txnDate ?? r.invoiceDate ?? '',
       docNo:     r.documentNo ?? r.docNo ?? r.DocNo ?? r.invoiceNo ?? r.pinNo ?? '-',
       partyName: r.partyName ?? r.description ?? r.PartyName ?? r.customerName ?? r.supplierName ?? '-',
+      branch:    this.loginBranch,
       taxable,
       taxAmt,
       net:       taxable + taxAmt
     };
+  }
+
+  private loadLoginBranch(): void {
+    const locationId = Number(localStorage.getItem('locationId') || 0);
+    if (!locationId) return;
+    this.masterService.getLocations().subscribe({
+      next: (res: any) => {
+        const locations = res?.data ?? res ?? [];
+        const match = Array.isArray(locations)
+          ? locations.find((location: any) => Number(location.id ?? location.locationId ?? location.outletId) === locationId)
+          : null;
+        this.loginBranch = match?.name ?? match?.locationName ?? match?.outletName ?? match?.code ?? `Outlet ${locationId}`;
+        this.selectedBranch = this.loginBranch;
+        this.rows.forEach(row => row.branch = this.loginBranch);
+        this.applyFilter();
+      },
+      error: () => {
+        this.loginBranch = `Outlet ${locationId}`;
+        this.selectedBranch = this.loginBranch;
+      }
+    });
   }
 }

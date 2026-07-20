@@ -6,6 +6,7 @@ import { FinanceService } from './finance.service';
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { MasterService } from '../../core/services/master.service';
 
 @Component({
   selector: 'erp-finance-daybook',
@@ -22,6 +23,11 @@ export class FinanceDaybookComponent implements OnInit {
   fromDate = '';
   toDate = '';
   search = '';
+  groupBy = 'none'; columnsOpen = false;
+  loginBranch = 'All branches';
+  selectedBranch = 'All branches';
+  readonly reportColumns = ['Date', 'Voucher No', 'Type', 'Account', 'Debit', 'Credit', 'Running Balance'];
+  columnSelection: Record<string, boolean> = {};
   viewMode: 'detailed' | 'summary' = 'detailed';
 
   showModal = true;
@@ -41,11 +47,13 @@ export class FinanceDaybookComponent implements OnInit {
   })();
   private readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService, private auditPrint: AuditPrintService, private router: Router) {}
+  constructor(private finance: FinanceService, private auditPrint: AuditPrintService, private router: Router, private masterService: MasterService) {}
 
   ngOnInit(): void {
+    this.reportColumns.forEach(c => this.columnSelection[c] = true);
     this.modalFrom = this.monthAgo;
     this.modalTo = this.today;
+    this.loadLoginBranch();
   }
 
   viewDaybook(): void {
@@ -93,6 +101,13 @@ export class FinanceDaybookComponent implements OnInit {
         )
       : [...this.rows];
   }
+  columnVisible(c: string): boolean { return this.columnSelection[c] !== false; }
+  toggleColumn(c: string): void {
+    if (this.columnSelection[c] && this.reportColumns.filter(x => this.columnSelection[x]).length === 1) return;
+    this.columnSelection[c] = !this.columnSelection[c];
+  }
+  get visibleColumnCount(): number { return this.reportColumns.filter(c => this.columnVisible(c)).length; }
+  clearFilters(): void { this.search = ''; this.groupBy = 'none'; this.selectedBranch = this.loginBranch; this.applyFilter(); }
 
   private buildSummary(): void {
     // Summarise per document (one row per voucher), matching the Detailed register.
@@ -105,12 +120,10 @@ export class FinanceDaybookComponent implements OnInit {
 
   exportExcel(): void {
     const header = ['Date', 'Voucher No', 'Type', 'Account', 'Debit', 'Credit', 'Running Balance'];
-    let running = 0;
-    const data = [header, ...this.filtered.map(r => {
-      running += (r.debit || 0) - (r.credit || 0);
-      return [r.postingDate, r.voucherNo, r.voucherType, r.accountName,
-        (r.debit || 0).toFixed(2), (r.credit || 0).toFixed(2), running.toFixed(2)];
-    })];
+    const data = [header, ...this.runningRows.map(r => [
+      r.postingDate, r.voucherNo, this.typeLabel(r.voucherType), r.accountName,
+      (r.debit || 0).toFixed(2), (r.credit || 0).toFixed(2), r._running.toFixed(2)
+    ])];
     const csv = data.map(row => row.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Daybook.csv'; a.click();
@@ -164,6 +177,23 @@ export class FinanceDaybookComponent implements OnInit {
         _rowType: d > 0 ? 'Dr' : 'Cr'
       };
     });
+  }
+
+  get displayedRunningRows(): any[] {
+    const rows = this.runningRows;
+    if (this.groupBy === 'none') return rows;
+    const groups = new Map<string, any[]>();
+    rows.forEach(row => {
+      const key = this.groupBy === 'type' ? this.typeLabel(row.voucherType)
+        : this.groupBy === 'account' ? row.accountName : this.loginBranch;
+      groups.set(key || '-', [...(groups.get(key || '-') || []), row]);
+    });
+    const result: any[] = [];
+    groups.forEach((items, label) => {
+      result.push({ _displayKind: 'group', label, count: items.length });
+      result.push(...items);
+    });
+    return result;
   }
 
   get summaryGroups(): any[] {
@@ -264,5 +294,16 @@ export class FinanceDaybookComponent implements OnInit {
     c.voucherType  = rawType;
     c.voucherTypeCode = rawType;
     return c;
+  }
+
+  private loadLoginBranch(): void {
+    const locationId = Number(localStorage.getItem('locationId') || 0);
+    if (!locationId) return;
+    this.masterService.getLocations().subscribe({ next: (res: any) => {
+      const locations = res?.data ?? res ?? [];
+      const x = Array.isArray(locations) ? locations.find((v: any) => Number(v.id ?? v.locationId ?? v.outletId) === locationId) : null;
+      this.loginBranch = x?.name ?? x?.locationName ?? x?.outletName ?? x?.code ?? `Outlet ${locationId}`;
+      this.selectedBranch = this.loginBranch;
+    }, error: () => { this.loginBranch = `Outlet ${locationId}`; this.selectedBranch = this.loginBranch; } });
   }
 }

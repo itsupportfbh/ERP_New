@@ -7,6 +7,7 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import { FinanceReportsHubComponent } from './finance-reports-hub.component';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { MasterService } from '../../core/services/master.service';
 
 @Component({
   selector: 'erp-finance-bs',
@@ -28,6 +29,20 @@ export class FinanceBsComponent implements OnInit {
 
   /** Optional second snapshot. Blank = single-column report. */
   compareDate = '';
+  searchTerm = '';
+  columnsOpen = false;
+  columnSearch = '';
+  loginBranch = '';
+  selectedBranch = '';
+  groupBy = 'none';
+  readonly reportColumns = [
+    { key: 'code', label: 'Code', group: 'Basic', selected: true },
+    { key: 'account', label: 'Account', group: 'Basic', selected: true },
+    { key: 'section', label: 'Section', group: 'Basic', selected: true },
+    { key: 'branch', label: 'Branch', group: 'Basic', selected: true },
+    { key: 'debit', label: `Debit (${localStorage.getItem('companyCurrencyName') || 'SGD'})`, group: 'Amounts', selected: true },
+    { key: 'credit', label: `Credit (${localStorage.getItem('companyCurrencyName') || 'SGD'})`, group: 'Amounts', selected: true }
+  ];
 
   permission: FunctionPermission | null = null;
   private readonly userId = Number(localStorage.getItem('id'));
@@ -35,14 +50,29 @@ export class FinanceBsComponent implements OnInit {
   private endpoint = { list: '/FinanceReport/GetBalanceSheetDetails' };
   private readonly baseCurrencyName = localStorage.getItem('companyCurrencyName') || 'SGD';
 
-  constructor(private finance: FinanceService, private permissionService: PermissionService, private auditPrint: AuditPrintService) {}
+  constructor(private finance: FinanceService, private permissionService: PermissionService,
+    private auditPrint: AuditPrintService, private masterService: MasterService) {}
 
   ngOnInit(): void {
     this.resetDate();
+    this.loadLoginBranch();
     this.load();
     this.permissionService.getFunctionPermission(this.userId, 'reports').subscribe({
       next: perm => { this.permission = perm; }
     });
+  }
+
+  private loadLoginBranch(): void {
+    const locationId = Number(localStorage.getItem('locationId') || 0);
+    this.loginBranch = locationId ? `Outlet ${locationId}` : 'All';
+    if (!locationId) return;
+    this.masterService.getLocations().subscribe({ next: (res: any) => {
+      const locations = res?.data ?? res ?? [];
+      const match = Array.isArray(locations) ? locations.find((x: any) =>
+        Number(x.id ?? x.locationId ?? x.outletId ?? x.LocationId) === locationId) : null;
+      this.loginBranch = match?.name ?? match?.locationName ?? match?.outletName ?? match?.code ?? this.loginBranch;
+      if (!this.selectedBranch) this.selectedBranch = this.loginBranch;
+    }, error: () => {} });
   }
 
   resetDate(): void {
@@ -199,6 +229,43 @@ export class FinanceBsComponent implements OnInit {
   get totalEquity():      number { return this.equityRows.reduce((s, r)    => s + (r.amount || 0), 0); }
   get totalLiabilitiesAndEquity(): number { return this.totalLiabilities + this.totalEquity; }
 
+  get visibleColumns(): typeof this.reportColumns { return this.reportColumns.filter(c => c.selected); }
+  get filteredColumnOptions(): typeof this.reportColumns {
+    const q = this.columnSearch.trim().toLowerCase();
+    return q ? this.reportColumns.filter(c => c.label.toLowerCase().includes(q)) : this.reportColumns;
+  }
+  get reportRows(): any[] {
+    const all = [
+      ...this.assetRows.map(r => this.toReportRow(r, true)),
+      ...this.liabilityAndEquityRows.map(r => this.toReportRow(r, false))
+    ];
+    const branchRows = this.selectedBranch ? all.filter(r => r.branch === this.selectedBranch) : all;
+    const q = this.searchTerm.trim().toLowerCase();
+    return q ? branchRows.filter(r => [r.code, r.account, r.section, r.branch, r.debit, r.credit]
+      .some(v => String(v ?? '').toLowerCase().includes(q))) : branchRows;
+  }
+  get branchOptions(): string[] {
+    const values = [...this.rows.map(r => r.branchName ?? r.branch ?? r.locationName ?? r.outletName).filter(Boolean), this.loginBranch].filter(Boolean);
+    return [...new Set(values.map(String))].sort();
+  }
+  get displayRows(): any[] {
+    if (this.groupBy === 'none') return this.reportRows;
+    const groups = new Map<string, any[]>();
+    this.reportRows.forEach(r => { const key = String(r[this.groupBy] || 'Unspecified'); groups.set(key, [...(groups.get(key) || []), r]); });
+    return [...groups.entries()].flatMap(([label, rows]) => [
+      { _rowType: 'group', label, count: rows.length }, ...rows,
+      { _rowType: 'subtotal', label, debit: rows.reduce((s, r) => s + r.debit, 0), credit: rows.reduce((s, r) => s + r.credit, 0) }
+    ]);
+  }
+  clearFilters(): void { this.searchTerm = ''; this.selectedBranch = ''; this.groupBy = 'none'; }
+  private toReportRow(row: any, isAsset: boolean): any {
+    return { code: row.accountCode ?? '', account: row.accountName ?? '', section: row.section ?? (isAsset ? 'Assets' : 'Liabilities & Equity'),
+      branch: row.branchName ?? row.branch ?? row.locationName ?? row.outletName ?? this.loginBranch,
+      debit: isAsset ? Number(row.amount || 0) : 0, credit: isAsset ? 0 : Number(row.amount || 0) };
+  }
+  toggleColumn(key: string): void { const c = this.reportColumns.find(x => x.key === key); if (!c || (c.selected && this.visibleColumns.length === 1)) return; c.selected = !c.selected; }
+  setAllColumns(selected: boolean): void { this.reportColumns.forEach(c => c.selected = selected); if (!selected) this.reportColumns[0].selected = true; }
+
   get cmpTotalAssets():      number { return this.assetRows.reduce((s, r)     => s + (r.compareAmount || 0), 0); }
   get cmpTotalLiabilities(): number { return this.liabilityRows.reduce((s, r) => s + (r.compareAmount || 0), 0); }
   get cmpTotalEquity():      number { return this.equityRows.reduce((s, r)    => s + (r.compareAmount || 0), 0); }
@@ -234,28 +301,11 @@ export class FinanceBsComponent implements OnInit {
   }
 
   exportExcel(): void {
-    const cmp = this.compareOn;
-    const head = cmp
-      ? ['Account', `As at ${this.asOnDate}`, `As at ${this.compareDate}`, 'Change']
-      : ['Account', 'Amount'];
-    const line = (r: any) => cmp
-      ? [r.accountName, (r.amount || 0).toFixed(2), (r.compareAmount || 0).toFixed(2), (r.change || 0).toFixed(2)]
-      : [r.accountName, (r.amount || 0).toFixed(2)];
-    const total = (label: string, now: number, then: number) => cmp
-      ? [label, now.toFixed(2), then.toFixed(2), (now - then).toFixed(2)]
-      : [label, now.toFixed(2)];
-
     const rows: any[][] = [
       ['Balance Sheet'],
-      [cmp ? `As at ${this.asOnDate} compared with ${this.compareDate}` : `As at ${this.asOnDate}`], [],
-      total('Total Liabilities & Equity', this.totalLiabilitiesAndEquity, this.cmpTotalLiabilitiesAndEquity),
-      total('Total Assets', this.totalAssets, this.cmpTotalAssets), [],
-      ['Liabilities'], head,
-      ...this.liabilityRows.map(line),
-      [], ['Equity'], head,
-      ...this.equityRows.map(line),
-      [], ['Assets'], head,
-      ...this.assetRows.map(line)
+      [`As at ${this.asOnDate}`], [], this.visibleColumns.map(c => c.label),
+      ...this.reportRows.map(r => this.visibleColumns.map(c => c.key === 'debit' || c.key === 'credit' ? (r[c.key] ? Number(r[c.key]).toFixed(2) : '') : r[c.key])),
+      [], this.visibleColumns.map(c => c.key === 'account' ? 'Grand Total' : c.key === 'debit' ? this.totalAssets.toFixed(2) : c.key === 'credit' ? this.totalLiabilitiesAndEquity.toFixed(2) : '')
     ];
     const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -302,14 +352,11 @@ export class FinanceBsComponent implements OnInit {
       reportTitle: 'Balance Sheet',
       periodLine: `As At ${asAt}`,
       metaLines: [`Date : As At ${asAt}`, 'Sort By : Code;Description', 'Project : All'],
-      labelColumnKey: 'name',
-      columns: [
-        { header: 'Acc Code', key: 'code' },
-        { header: 'Description', key: 'name' },
-        { header: 'Debit (Assets)', key: 'debit', align: 'right', type: 'number' },
-        { header: 'Credit (Liabilities & Equity)', key: 'credit', align: 'right', type: 'number' }
-      ],
-      rows: this.auditRows,
+      labelColumnKey: this.visibleColumns.find(c => c.key === 'account') ? 'account' : this.visibleColumns[0].key,
+      columns: this.visibleColumns.map(c => ({ header: c.label, key: c.key,
+        align: c.key === 'debit' || c.key === 'credit' ? 'right' as const : undefined,
+        type: c.key === 'debit' || c.key === 'credit' ? 'number' as const : undefined })),
+      rows: this.reportRows,
       totalRows: [
         { label: bal.label, values: { debit: bal.debit, credit: bal.credit } },
         { label: `Grand Total Amount (${this.baseCurrencyName})`, values: { debit: this.grandTotal, credit: this.grandTotal }, grand: true }

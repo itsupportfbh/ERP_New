@@ -26,6 +26,10 @@ export class FinanceArapAgingComponent implements OnInit {
   selectedSupplierId: number | null = null;
   customers: any[] = [];
   suppliers: any[] = [];
+  search = ''; groupBy = 'none'; columnsOpen = false;
+  readonly loginBranch = `Outlet ${localStorage.getItem('locationId') || 'All'}`;
+  readonly reportColumns = ['Party', '0–30', '31–60', '61–90', '90+', 'Total'];
+  columnSelection: Record<string, boolean> = {};
 
   // AR summary
   arRows: any[] = [];
@@ -47,6 +51,7 @@ export class FinanceArapAgingComponent implements OnInit {
   constructor(private http: HttpClient, private auditPrint: AuditPrintService) {}
 
   ngOnInit(): void {
+    this.reportColumns.forEach(c => this.columnSelection[c] = true);
     this.fromDate = this.monthAgo;
     this.toDate = this.today;
     this.loadCustomers();
@@ -92,6 +97,14 @@ export class FinanceArapAgingComponent implements OnInit {
     if (this.activeTab === 'ar') this.loadAr();
     else this.loadAp();
   }
+  columnVisible(c: string): boolean { return this.columnSelection[c] !== false; }
+  toggleColumn(c: string): void {
+    if (this.columnSelection[c] && this.reportColumns.filter(x => this.columnSelection[x]).length === 1) return;
+    this.columnSelection[c] = !this.columnSelection[c];
+  }
+  get arDisplayRows(): any[] { const q = this.search.toLowerCase(); return q ? this.arRows.filter(r => String(r.customerName).toLowerCase().includes(q)) : this.arRows; }
+  get apDisplayRows(): any[] { const q = this.search.toLowerCase(); return q ? this.apRows.filter(r => String(r.supplierName).toLowerCase().includes(q)) : this.apRows; }
+  clearFilters(): void { this.search = ''; this.groupBy = 'none'; this.selectedCustomerId = null; this.selectedSupplierId = null; }
 
   private loadCustomers(): void {
     this.http.get<any>(`${this.api}/CustomerMaster/GetAllCustomerMaster`).subscribe({
@@ -113,6 +126,9 @@ export class FinanceArapAgingComponent implements OnInit {
   private normAr(r: any): any {
     return {
       customerName: r.customerName ?? r.CustomerName ?? '-',
+      invoiceNo: r.invoiceNo ?? r.InvoiceNo ?? r.invoiceNumber ?? r.InvoiceNumber ?? r.invoiceNos ?? r.InvoiceNos ?? '',
+      invoiceDate: r.invoiceDate ?? r.InvoiceDate ?? null,
+      dueDate: r.dueDate ?? r.DueDate ?? null,
       days030:  Number(r.bucket0_30Base   ?? r.Bucket0_30Base   ?? r.days030 ?? r.current ?? r.bucket0_30 ?? 0),
       days3160: Number(r.bucket31_60Base  ?? r.Bucket31_60Base  ?? r.days3160 ?? r.days30 ?? r.bucket31_60 ?? 0),
       days6190: Number(r.bucket61_90Base  ?? r.Bucket61_90Base  ?? r.days6190 ?? r.days60 ?? r.bucket61_90 ?? 0),
@@ -124,6 +140,9 @@ export class FinanceArapAgingComponent implements OnInit {
   private normAp(r: any): any {
     return {
       supplierName: r.supplierName ?? r.SupplierName ?? '-',
+      invoiceNo: r.invoiceNo ?? r.InvoiceNo ?? r.pinNo ?? r.PinNo ?? r.invoiceNos ?? r.InvoiceNos ?? '',
+      invoiceDate: r.invoiceDate ?? r.InvoiceDate ?? null,
+      dueDate: r.dueDate ?? r.DueDate ?? null,
       days030:  Number(r.bucket0_30Base   ?? r.Bucket0_30Base   ?? r.days030 ?? r.current ?? r.bucket0_30 ?? 0),
       days3160: Number(r.bucket31_60Base  ?? r.Bucket31_60Base  ?? r.days3160 ?? r.days30 ?? r.bucket31_60 ?? 0),
       days6190: Number(r.bucket61_90Base  ?? r.Bucket61_90Base  ?? r.days6190 ?? r.days60 ?? r.bucket61_90 ?? 0),

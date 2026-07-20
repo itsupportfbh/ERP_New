@@ -7,12 +7,18 @@
     <h4 class="rpt-title">Collections Forecast</h4>
     <div class="rpt-head-actions" style="display:flex;align-items:center;gap:14px;">
       <span class="rpt-sub">Expected customer collections by due date, per customer</span>
-      <button class="btn-run" type="button" (click)="exportPdf()">
+      <button class="btn-export btn-columns" type="button" (click)="columnsOpen=!columnsOpen">▦ Columns</button>
+      <button class="btn-export btn-excel" type="button" (click)="exportExcel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Export Excel
+      </button>
+      <button class="btn-export btn-pdf" type="button" (click)="exportPdf()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Export PDF
       </button>
     </div>
   </div>
+  <div class="columns-backdrop" *ngIf="columnsOpen" (click)="columnsOpen=false"><section class="columns-dialog" (click)="$event.stopPropagation()"><header><div><h3>Headers (Columns)</h3><p>Pick columns for the report.</p></div><button type="button" class="dialog-close" (click)="columnsOpen=false">×</button></header><div class="columns-list"><button type="button" *ngFor="let col of reportColumns" [class.selected]="columnSelection[col]" (click)="toggleColumn(col)"><span>{{ col }}</span><strong>{{ columnSelection[col] ? '✓' : '' }}</strong></button></div><footer><button type="button" class="dialog-apply" (click)="columnsOpen=false">Apply</button></footer></section></div>
 
   <!-- Bucket Summary Cards -->
   <div class="bucket-row">
@@ -57,6 +63,7 @@
   <!-- Filter Card -->
   <div class="filter-card">
     <div class="filter-grid">
+      <label class="filter-lbl"><span>Search</span><input type="search" [(ngModel)]="search" placeholder="Type to filter rows..." (input)="applyFilter()"></label>
       <label class="filter-lbl">
         <span>From Date</span>
         <input type="date" [(ngModel)]="fromDate">
@@ -65,16 +72,15 @@
         <span>To Date</span>
         <input type="date" [(ngModel)]="toDate">
       </label>
-      <label class="filter-lbl">
-        <span>Search</span>
-        <input type="text" [(ngModel)]="search" placeholder="Customer" (input)="applyFilter()">
-      </label>
+      <label class="filter-lbl"><span>Branch</span><select [(ngModel)]="selectedBranch"><option [value]="loginBranch">{{ loginBranch }}</option></select></label>
+      <label class="filter-lbl"><span>Group By</span><select [(ngModel)]="groupBy"><option value="none">No grouping</option><option value="customer">Customer</option><option value="branch">Branch</option></select></label>
     </div>
     <div class="filter-actions">
       <button class="btn-run" type="button" (click)="load()" [disabled]="loading">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         {{ loading ? 'Loading…' : 'Run Forecast' }}
       </button>
+      <button class="btn-run" type="button" (click)="clearFilters()">Clear filters</button>
     </div>
   </div>
 
@@ -94,28 +100,23 @@
         <thead>
           <tr>
             <th style="width:32px"></th>
-            <th>CUSTOMER</th>
-            <th class="num">0-7 DAYS</th>
-            <th class="num">8-14 DAYS</th>
-            <th class="num">15-30 DAYS</th>
-            <th class="num">30+ DAYS</th>
-            <th class="num">TOTAL OUTSTANDING ({{ baseCurrencyName }})</th>
+            <th *ngIf="columnVisible('Customer')">CUSTOMER</th><th *ngIf="columnVisible('0–7 Days')" class="num">0-7 DAYS</th>
+            <th *ngIf="columnVisible('8–14 Days')" class="num">8-14 DAYS</th><th *ngIf="columnVisible('15–30 Days')" class="num">15-30 DAYS</th>
+            <th *ngIf="columnVisible('30+ Days')" class="num">30+ DAYS</th><th *ngIf="columnVisible('Total Outstanding')" class="num">TOTAL OUTSTANDING ({{ baseCurrencyName }})</th>
           </tr>
         </thead>
         <tbody>
-          <ng-container *ngFor="let r of filtered">
-            <tr class="customer-row" (click)="toggleCustomer(r)">
+          <ng-container *ngFor="let r of displayRows">
+            <tr *ngIf="r._displayKind === 'group'" class="group-row"><td [attr.colspan]="visibleColumnCount">▸ {{ r.label }} · {{ r.count }} record(s)</td></tr>
+            <tr class="customer-row" *ngIf="!r._displayKind" (click)="toggleCustomer(r)">
               <td class="expand-cell">
                 <button class="expand-btn" type="button">{{ isExpanded(r) ? '−' : '+' }}</button>
               </td>
-              <td class="cust-cell">{{ r.customerName }}</td>
-              <td class="num">{{ r.bucket0_7 | money }}</td>
-              <td class="num">{{ r.bucket8_14 | money }}</td>
-              <td class="num">{{ r.bucket15_30 | money }}</td>
-              <td class="num">{{ r.bucket30Plus | money }}</td>
-              <td class="num amt-cell">{{ r.totalOutstanding | money }}</td>
+              <td *ngIf="columnVisible('Customer')" class="cust-cell">{{ r.customerName }}</td><td *ngIf="columnVisible('0–7 Days')" class="num">{{ r.bucket0_7 | number:'1.2-2' }}</td>
+              <td *ngIf="columnVisible('8–14 Days')" class="num">{{ r.bucket8_14 | number:'1.2-2' }}</td><td *ngIf="columnVisible('15–30 Days')" class="num">{{ r.bucket15_30 | number:'1.2-2' }}</td>
+              <td *ngIf="columnVisible('30+ Days')" class="num">{{ r.bucket30Plus | number:'1.2-2' }}</td><td *ngIf="columnVisible('Total Outstanding')" class="num amt-cell">{{ r.totalOutstanding | number:'1.2-2' }}</td>
             </tr>
-            <tr class="detail-row" *ngIf="isExpanded(r)">
+            <tr class="detail-row" *ngIf="!r._displayKind && isExpanded(r)">
               <td colspan="7">
                 <div class="rpt-loading" *ngIf="detailLoading[r.customerId]"><span class="spinner"></span> Loading invoices...</div>
                 <table class="detail-table" *ngIf="!detailLoading[r.customerId]">
@@ -127,7 +128,7 @@
                       <td>{{ d.invoiceNo }}</td>
                       <td>{{ d.invoiceDate | date:'dd-MMM-yyyy' }}</td>
                       <td>{{ d.dueDate | date:'dd-MMM-yyyy' }}</td>
-                      <td class="num">{{ d.balance | money }}</td>
+                      <td class="num">{{ d.balance | number:'1.2-2' }}</td>
                       <td>{{ d.bucketName }}</td>
                     </tr>
                     <tr *ngIf="!detailRows[r.customerId]?.length">

@@ -6,6 +6,7 @@ export interface AuditColumn {
   align?: 'left' | 'right' | 'center';
   /** text (default) | number (2dp, blank when 0) | date (dd/mm/yyyy) */
   type?: 'text' | 'number' | 'date';
+  colorByKey?: string;
 }
 
 export interface AuditTotalRow {
@@ -83,7 +84,10 @@ export class AuditPrintService {
     const headHtml = cfg.columns.map(c => `<th class="${this.alignCls(c.align)}">${this.escape(c.header)}</th>`).join('');
 
     const bodyHtml = (cfg.rows || []).map(row =>
-      `<tr>${cfg.columns.map(c => `<td class="${this.alignCls(c.align)}">${this.cell(c, row)}</td>`).join('')}</tr>`
+      `<tr>${cfg.columns.map(c => {
+        const color = c.colorByKey ? ` ${this.escape(row?.[c.colorByKey] ?? '')}-value` : '';
+        return `<td class="${this.alignCls(c.align)}${color}">${this.cell(c, row)}</td>`;
+      }).join('')}</tr>`
     ).join('');
 
     const emptyRow = cfg.rows?.length ? '' :
@@ -118,6 +122,8 @@ export class AuditPrintService {
   thead th.r, td.r { text-align: right; }
   thead th.c, td.c { text-align: center; }
   tbody td { padding: 2px 4px; font-size: 10.5px; }
+  td.income-value { color: #15803d; font-weight: 700; }
+  td.expense-value { color: #dc2626; font-weight: 700; }
   .sub-row td { border-top: 1px solid #111; font-weight: 700; padding-top: 5px; }
   .grand-row td { border-top: 2px solid #111; border-bottom: 3px double #111; font-weight: 700; padding-top: 5px; }
   .pg { text-align: right; font-size: 10px; color: #444; margin-top: 10px; }

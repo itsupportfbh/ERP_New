@@ -2,10 +2,17 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 :host { display: block; }
 .gst-page { display: flex; flex-direction: column; gap: 12px; padding: 0 0 32px; }
 .rpt-head { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 1rem; padding: .7rem 1.2rem; box-shadow: 0 2px 8px rgba(15,23,42,.05); border: 1px solid $border; }
+.rpt-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .rpt-title { font-size: 1.15rem; font-weight: 700; color: $teal; margin: 0; }
 .btn-export { display: flex; align-items: center; gap: 6px; padding: .35rem .9rem; background: #fff; border: 1px solid $border; border-radius: .5rem; font-size: .82rem; cursor: pointer; color: #374151;
   &:hover { background: #f3f4f6; }
 }
+.btn-columns { color:$teal; border-color:$teal; background:#fff; }.btn-excel { color:#fff; border-color:#16a34a; background:#16a34a; }.btn-pdf { color:#fff; border-color:#ea580c; background:#ea580c; }
+.columns-backdrop { position:fixed; inset:0; z-index:1200; display:grid; place-items:center; padding:20px; background:rgba(15,23,42,.48); }
+.columns-dialog { width:min(780px,100%); background:#fff; border-radius:16px; box-shadow:0 24px 60px rgba(15,23,42,.28); overflow:hidden; }.columns-dialog header { display:flex; justify-content:space-between; padding:26px 34px; border-bottom:1px solid #e5e7eb; }
+.columns-dialog h3 { margin:0; color:#164e5a; font-size:1.25rem; }.columns-dialog p { margin:5px 0 0; color:#6b7280; }.dialog-close { border:0; background:transparent; font-size:1.8rem; cursor:pointer; }
+.columns-list { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:30px 34px; }.columns-list button { display:flex; justify-content:space-between; align-items:center; min-height:62px; padding:14px 18px; border:1px solid #d6e0e4; border-radius:11px; background:#fff; font-size:1rem; cursor:pointer; }.columns-list button.selected { border-color:#55bfd0; background:#edf9fb; }
+.columns-dialog footer { display:flex; justify-content:flex-end; padding:20px 34px; border-top:1px solid #e5e7eb; }.dialog-apply { padding:10px 22px; border:0; border-radius:8px; background:#2e667d; color:#fff; cursor:pointer; }
 .sum-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; @media(max-width:600px){ grid-template-columns: 1fr; } }
 .sum-card { display: flex; align-items: flex-start; gap: 12px; background: #fff; border-radius: 1rem; padding: .9rem 1.1rem; border: 1px solid $border; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
 .sum-icon-wrap { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
@@ -31,6 +38,8 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
   thead { background: $teal; color: #fff; th { padding: .55rem .75rem; text-align: left; &.num { text-align: right; } } }
   tbody tr { &:hover { background: #f0f9ff; } td { padding: .45rem .75rem; border-bottom: 1px solid $border; &.num { text-align: right; font-variant-numeric: tabular-nums; } &.doc-link { color: $teal; font-weight: 500; } } }
   .no-data { text-align: center; color: #dc2626; padding: 1.2rem; }
+  .group-row td { background:#e8f3f6; color:#15566a; font-weight:700; border-top:2px solid #c6e0e6; }
+  .subtotal-row td { background:#f5fafb; color:#15566a; font-weight:700; font-style:italic; }
 }
 .type-badge { display: inline-block; padding: .18rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
 .badge-supplier { background: #ccfbf1; color: #0f766e; }
@@ -47,3 +56,7 @@ $teal: #2e5f73; $border: #e5e7eb; $muted: #6b7280;
 .rpt-loading { color: $muted; font-size: .9rem; display: flex; align-items: center; gap: 6px; }
 .spinner { width: 16px; height: 16px; border: 2px solid $border; border-top-color: $teal; border-radius: 50%; animation: spin .6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.columns-popover { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; padding:14px 18px; margin:-4px 0 10px; border:1px solid #d8e0e4; border-radius:10px; background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.08); }
+.columns-popover > strong { grid-column:1/-1; color:#164e5a; }
+.columns-popover label { font-size:.82rem; color:#374151; }
+.columns-popover button { justify-self:end; padding:6px 14px; border:0; border-radius:6px; color:#fff; background:#2e5f73; }

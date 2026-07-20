@@ -1,0 +1,17 @@
+<div class="register-page">
+  <div class="rpt-head"><h4>{{ title }}</h4><div class="actions"><button class="columns" (click)="columnsOpen=true">▦ Columns</button><button class="excel" (click)="exportExcel()">▣ Export Excel</button><button class="pdf" (click)="exportPdf()">▣ Export PDF</button></div></div>
+  <div class="summary"><div><span>Total {{ kind === 'receipts' ? 'Received' : 'Paid' }} ({{ currency }})</span><strong>{{ total | money }}</strong></div><div><span>{{ title }}</span><strong>{{ filtered.length }}</strong></div></div>
+  <div class="filters">
+    <label class="search"><span>SEARCH</span><input [(ngModel)]="search" (input)="applyFilter()" placeholder="Type to filter rows..."></label>
+    <label><span>FROM DATE</span><input type="date" [(ngModel)]="fromDate"></label><label><span>TO DATE</span><input type="date" [(ngModel)]="toDate"></label>
+    <label><span>BRANCH</span><select [(ngModel)]="selectedBranch"><option [value]="loginBranch">{{ loginBranch }}</option></select></label>
+    <label><span>GROUP BY</span><select [(ngModel)]="groupBy"><option value="none">No grouping</option><option value="partner">{{ partnerLabel }}</option><option value="method">Method</option><option value="branch">Branch</option></select></label>
+    <button class="run" (click)="load()">Run Report</button><button class="clear" (click)="clearFilters()">Clear filters</button>
+  </div>
+  <div class="error" *ngIf="error">{{ error }}</div><div class="loading" *ngIf="loading">Loading...</div>
+  <div class="table-wrap" *ngIf="!loading"><table><thead><tr><th *ngFor="let col of visibleColumns" [class.num]="col.amount">{{ col.label }}</th></tr></thead><tbody>
+    <ng-container *ngFor="let row of displayRows"><tr class="group" *ngIf="row._group"><td [attr.colspan]="visibleColumns.length">▸ {{ row.label }} · {{ row.count }} record(s)</td></tr><tr *ngIf="!row._group"><td *ngFor="let col of visibleColumns" [class.num]="col.amount"><ng-container *ngIf="col.date">{{ row[col.key] | date:'dd-MM-yyyy' }}</ng-container><ng-container *ngIf="!col.date && !col.amount">{{ row[col.key] }}</ng-container><ng-container *ngIf="col.amount">{{ row[col.key] | number:'1.2-2' }}</ng-container></td></tr></ng-container>
+    <tr *ngIf="!filtered.length"><td class="empty" [attr.colspan]="visibleColumns.length">No records found.</td></tr>
+  </tbody><tfoot *ngIf="filtered.length"><tr><td [attr.colspan]="visibleColumns.length">Showing {{ filtered.length }} record(s) <strong>Grand Total ({{ currency }}): {{ total | number:'1.2-2' }}</strong></td></tr></tfoot></table></div>
+</div>
+<div class="backdrop" *ngIf="columnsOpen" (click)="columnsOpen=false"><section class="dialog" (click)="$event.stopPropagation()"><header><div><h3>Headers (Columns)</h3><p>Pick columns for the report.</p></div><button (click)="columnsOpen=false">×</button></header><div class="column-grid"><button *ngFor="let col of columns" [class.selected]="columnSelection[col.key]" (click)="toggleColumn(col.key)"><span>{{ col.label }}</span><b>{{ columnSelection[col.key] ? '✓' : '' }}</b></button></div><footer><button (click)="columnsOpen=false">Apply</button></footer></section></div>

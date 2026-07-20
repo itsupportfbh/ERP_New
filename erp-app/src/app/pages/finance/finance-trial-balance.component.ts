@@ -6,6 +6,7 @@ import { FunctionPermission, PermissionService } from '../../shared/permission.s
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { AuditPrintService } from '../../core/services/audit-print.service';
 import * as XLSX from 'xlsx';
+import { MasterService } from '../../core/services/master.service';
 
 interface TbNode {
   headCode:      string;
@@ -44,6 +45,15 @@ export class FinanceTrialBalanceComponent implements OnInit {
   search   = '';
   loading  = false;
   error    = '';
+  columnsOpen = false;
+  loginBranch = '';
+  selectedBranch = '';
+  groupBy = 'none';
+  readonly reportColumns = [
+    { key: 'account', label: 'Account', selected: true }, { key: 'openingDebit', label: 'Opening Debit', selected: true },
+    { key: 'openingCredit', label: 'Opening Credit', selected: true }, { key: 'closingDebit', label: 'Closing Debit', selected: true },
+    { key: 'closingCredit', label: 'Closing Credit', selected: true }
+  ];
 
   roots:       TbNode[] = [];
   displayRows: TbNode[] = [];
@@ -71,13 +81,15 @@ export class FinanceTrialBalanceComponent implements OnInit {
   constructor(
     private finance: FinanceService,
     private permissionService: PermissionService,
-    private auditPrint: AuditPrintService
+    private auditPrint: AuditPrintService,
+    private masterService: MasterService
   ) {}
 
   ngOnInit(): void {
     const today = new Date();
     this.fromDate = `${today.getFullYear()}-01-01`;
     this.toDate   = this.dateOnly(today);
+    this.loadLoginBranch();
     this.permissionService.getFunctionPermission(this.userId, 'tb').subscribe({
       next: perm => { this.permission = perm; }
     });
@@ -85,6 +97,22 @@ export class FinanceTrialBalanceComponent implements OnInit {
     // an empty table until the user clicks Run TB.
     this.load();
   }
+
+  private loadLoginBranch(): void {
+    const id = Number(localStorage.getItem('locationId') || 0);
+    this.loginBranch = id ? `Outlet ${id}` : 'All'; this.selectedBranch = this.loginBranch;
+    if (!id) return;
+    this.masterService.getLocations().subscribe({ next: (res: any) => {
+      const list = res?.data ?? res ?? [];
+      const x = Array.isArray(list) ? list.find((v: any) => Number(v.id ?? v.locationId ?? v.outletId ?? v.LocationId) === id) : null;
+      this.loginBranch = x?.name ?? x?.locationName ?? x?.outletName ?? this.loginBranch; this.selectedBranch = this.loginBranch;
+    }, error: () => {} });
+  }
+  columnVisible(key: string): boolean { return this.reportColumns.find(c => c.key === key)?.selected !== false; }
+  toggleColumn(key: string): void { const c = this.reportColumns.find(x => x.key === key); if (!c || (c.selected && this.reportColumns.filter(x => x.selected).length === 1)) return; c.selected = !c.selected; }
+  get visibleColumnCount(): number { return this.reportColumns.filter(c => c.selected).length + 1; }
+  changeGrouping(): void { this.groupBy === 'section' ? this.expandAll() : this.collapseAll(); }
+  clearFilters(): void { this.search = ''; this.groupBy = 'none'; this.selectedBranch = this.loginBranch; this.collapseAll(); this.onSearchChange(); }
 
   load(): void {
     this.loading = true;

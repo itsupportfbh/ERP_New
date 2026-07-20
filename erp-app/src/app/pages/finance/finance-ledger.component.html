@@ -3,18 +3,9 @@
 
     <!-- Header -->
     <div class="list-card-head">
-      <div class="list-card-title-block">
-        <div class="list-card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-          </svg>
-        </div>
-        <div>
-          <h3 class="list-card-title">General Ledger</h3>
-          <p class="list-card-sub">Account balances &amp; movements &nbsp;·&nbsp; <strong>{{ baseCurrency }}</strong></p>
-        </div>
-      </div>
+      <h4 class="pl-style-title">Account Ledger</h4>
       <div class="list-card-actions">
+        <button class="btn-export btn-columns" type="button" (click)="columnsOpen=true">▦&nbsp; Columns</button>
         <div class="export-backdrop" *ngIf="exportMenuOpen" (click)="exportMenuOpen=false"></div>
         <div class="export-wrap">
           <button class="btn-export btn-excel" type="button" (click)="toggleExportMenu()" [disabled]="!displayRows.length">
@@ -45,6 +36,7 @@
 
     <!-- Date Filter Row -->
     <div class="gl-filter-bar">
+      <label class="gl-filter-field search-field"><span>SEARCH</span><input type="search" placeholder="Type to filter rows..." [(ngModel)]="search" (ngModelChange)="onSearchChange()"></label>
       <label class="gl-filter-field">
         <span>FROM DATE</span>
         <input type="date" [(ngModel)]="fromDate">
@@ -53,17 +45,16 @@
         <span>TO DATE</span>
         <input type="date" [(ngModel)]="toDate">
       </label>
+      <label class="gl-filter-field"><span>BRANCH</span><select [(ngModel)]="selectedBranch"><option [value]="loginBranch">{{ loginBranch }}</option></select></label>
+      <label class="gl-filter-field"><span>GROUP BY</span><select [(ngModel)]="groupBy" (ngModelChange)="changeGrouping()"><option value="none">No grouping</option><option value="section">Section</option><option value="branch">Branch</option></select></label>
       <button class="gl-btn-primary" type="button" (click)="load()" [disabled]="loading">
         {{ loading ? 'Loading…' : 'Load' }}
       </button>
+      <button class="gl-btn-outline" type="button" (click)="clearFilters()">Clear filters</button>
     </div>
 
     <!-- Search. The page-size selector is gone: a ledger is read whole — every account and
          every line it expands to — so it always shows all entries. -->
-    <div class="table-search-bar">
-      <div class="tsb-left"></div>
-      <input class="table-search-input" type="text" placeholder="Search accounts..." [(ngModel)]="search" (ngModelChange)="onSearchChange()">
-    </div>
 
     <!-- Loading -->
     <div class="gl-loading" *ngIf="loading">Loading...</div>
@@ -73,20 +64,20 @@
       <table class="gl-table">
         <thead>
           <tr>
-            <th class="th-code">CODE</th>
-            <th>ACCOUNT NAME</th>
-            <th class="right">OPENING BAL</th>
-            <th class="right">DEBIT ({{ baseCurrency }})</th>
-            <th class="right">CREDIT ({{ baseCurrency }})</th>
-            <th class="right">BALANCE ({{ baseCurrency }})</th>
+            <th *ngIf="columnVisible('code')" class="th-code">CODE</th>
+            <th *ngIf="columnVisible('account')">ACCOUNT NAME</th>
+            <th *ngIf="columnVisible('opening')" class="right">OPENING BAL</th>
+            <th *ngIf="columnVisible('debit')" class="right">DEBIT ({{ baseCurrency }})</th>
+            <th *ngIf="columnVisible('credit')" class="right">CREDIT ({{ baseCurrency }})</th>
+            <th *ngIf="columnVisible('balance')" class="right">BALANCE ({{ baseCurrency }})</th>
           </tr>
         </thead>
         <tbody>
           <ng-container *ngFor="let row of pagedRows">
             <tr [ngClass]="levelClass(row)"
                 [style.border-left]="row.level === 1 ? '3px solid #c7dde4' : row.level > 1 ? '3px solid #e5eff2' : 'none'">
-              <td class="td-code mono">{{ row.headCode }}</td>
-              <td class="td-name">
+              <td *ngIf="columnVisible('code')" class="td-code mono">{{ row.headCode }}</td>
+              <td *ngIf="columnVisible('account')" class="td-name">
                 <div class="name-wrap" [style.paddingLeft]="indentPx(row)">
                   <button *ngIf="row.hasChildren"
                           class="toggle-btn"
@@ -101,10 +92,10 @@
                 </div>
               </td>
               <!-- Accounting style: a negative reads as (100.00), never -100.00 -->
-              <td class="right muted" [class.neg]="(row.openingBalance || 0) < 0">{{ (row.openingBalance || 0) | money:null:'1.2-2':true }}</td>
-              <td class="right debit-val">{{ (row.displayDebit || 0) | money:null:'1.2-2':true }}</td>
-              <td class="right credit-val">{{ (row.displayCredit || 0) | money:null:'1.2-2':true }}</td>
-              <td class="right teal-bold"
+              <td *ngIf="columnVisible('opening')" class="right muted" [class.neg]="(row.openingBalance || 0) < 0">{{ (row.openingBalance || 0) | money:null:'1.2-2':true }}</td>
+              <td *ngIf="columnVisible('debit')" class="right debit-val">{{ (row.displayDebit || 0) | money:null:'1.2-2':true }}</td>
+              <td *ngIf="columnVisible('credit')" class="right credit-val">{{ (row.displayCredit || 0) | money:null:'1.2-2':true }}</td>
+              <td *ngIf="columnVisible('balance')" class="right teal-bold"
                   [class.neg]="(row.displayBalance || 0) < 0"
                   [style.fontWeight]="row.level === 0 ? '700' : '500'"
                   [style.color]="(row.displayBalance || 0) !== 0 ? '#111827' : '#9ca3af'">
@@ -118,11 +109,11 @@
         </tbody>
         <tfoot *ngIf="pagedRows.length > 0">
           <tr class="foot-row">
-            <td colspan="2"><strong>Total</strong></td>
-            <td class="right muted fw-bold" [class.neg]="totalOpening < 0">{{ totalOpening | money:null:'1.2-2':true }}</td>
-            <td class="right debit-val fw-bold">{{ totalDebit | money:null:'1.2-2':true }}</td>
-            <td class="right credit-val fw-bold">{{ totalCredit | money:null:'1.2-2':true }}</td>
-            <td class="right teal-bold fw-bold" [class.neg]="totalBalance < 0">{{ totalBalance | money:null:'1.2-2':true }}</td>
+            <td *ngIf="columnVisible('code')"></td><td *ngIf="columnVisible('account')"><strong>Total</strong></td>
+            <td *ngIf="columnVisible('opening')" class="right muted fw-bold" [class.neg]="totalOpening < 0">{{ totalOpening | money:null:'1.2-2':true }}</td>
+            <td *ngIf="columnVisible('debit')" class="right debit-val fw-bold">{{ totalDebit | money:null:'1.2-2':true }}</td>
+            <td *ngIf="columnVisible('credit')" class="right credit-val fw-bold">{{ totalCredit | money:null:'1.2-2':true }}</td>
+            <td *ngIf="columnVisible('balance')" class="right teal-bold fw-bold" [class.neg]="totalBalance < 0">{{ totalBalance | money:null:'1.2-2':true }}</td>
           </tr>
         </tfoot>
       </table>
@@ -136,3 +127,9 @@
 
   </div>
 </div>
+
+<div class="columns-backdrop" *ngIf="columnsOpen" (click)="columnsOpen=false"><section class="columns-dialog" (click)="$event.stopPropagation()">
+  <header><div><h3>Headers (Columns)</h3><p>Pick columns for the report and export.</p></div><button type="button" (click)="columnsOpen=false">×</button></header>
+  <div class="columns-list"><button type="button" *ngFor="let col of reportColumns" [class.selected]="col.selected" (click)="toggleColumn(col.key)"><span>{{ col.label }}</span><strong>{{ col.selected ? '✓' : '' }}</strong></button></div>
+  <footer><button class="gl-btn-primary" type="button" (click)="columnsOpen=false">Apply</button></footer>
+</section></div>

@@ -6,6 +6,7 @@
   <div class="rpt-head">
     <h4 class="rpt-title">Balance Sheet</h4>
     <div class="rpt-actions">
+      <button class="btn-export btn-columns" type="button" (click)="columnsOpen = true">▦&nbsp; Columns</button>
       <button class="btn-export btn-excel" type="button" (click)="exportExcel()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Export Excel
@@ -36,35 +37,57 @@
   <!-- Filters. A balance sheet is a position at an instant, so the second date is a second
        snapshot to compare against — not the far end of a range. -->
   <div class="rpt-filter-bar">
+    <label class="filter-lbl search-filter"><span>SEARCH</span>
+      <input type="search" [(ngModel)]="searchTerm" placeholder="Type to filter rows...">
+    </label>
     <label class="filter-lbl">
-      <span>AS AT DATE</span>
+      <span>FROM DATE</span>
       <input type="date" [(ngModel)]="asOnDate">
     </label>
     <label class="filter-lbl">
-      <span>COMPARE WITH</span>
+      <span>TO DATE</span>
       <input type="date" [(ngModel)]="compareDate" [max]="asOnDate || null" placeholder="optional">
     </label>
+    <label class="filter-lbl"><span>BRANCH</span><select [(ngModel)]="selectedBranch"><option value="">All branches</option><option *ngFor="let branch of branchOptions" [value]="branch">{{ branch }}</option></select></label>
+    <label class="filter-lbl"><span>GROUP BY</span><select [(ngModel)]="groupBy"><option value="none">No grouping</option><option value="section">Section</option><option value="branch">Branch</option></select></label>
     <button class="rpt-btn rpt-btn-primary" type="button" (click)="load()" [disabled]="loading">
       {{ loading ? 'Running…' : 'Run Report' }}
     </button>
-    <button class="rpt-btn rpt-btn-outline" type="button" (click)="resetDate()" [disabled]="loading">
-      Today
-    </button>
-    <button class="rpt-btn rpt-btn-outline" type="button" (click)="comparePriorYearEnd()" [disabled]="loading">
-      Prior Year End
-    </button>
-    <button class="rpt-btn rpt-btn-outline" type="button" (click)="clearCompare()" [disabled]="loading || !compareOn">
-      Clear Compare
-    </button>
+    <button class="rpt-btn rpt-btn-outline" type="button" (click)="clearFilters()">Clear filters</button>
     <div class="spacer"></div>
-    <span class="filter-note">{{ rangeLabel }}</span>
   </div>
 
   <div class="rpt-error" *ngIf="error">{{ error }}</div>
   <div class="rpt-loading" *ngIf="loading"><span class="spinner"></span> Loading...</div>
 
+  <div class="report-table-card" *ngIf="!loading">
+    <div class="table-scroll"><table class="report-table">
+      <thead><tr><th *ngFor="let col of visibleColumns" [class.amount-col]="col.key === 'debit' || col.key === 'credit'">{{ col.label }}</th></tr></thead>
+      <tbody>
+        <ng-container *ngFor="let row of displayRows">
+        <tr *ngIf="row._rowType === 'group'" class="group-row"><td [attr.colspan]="visibleColumns.length">▸ {{ row.label }} &nbsp;·&nbsp; {{ row.count }} record(s)</td></tr>
+        <tr *ngIf="!row._rowType">
+          <td *ngFor="let col of visibleColumns" [class.amount-col]="col.key === 'debit' || col.key === 'credit'">
+            <ng-container *ngIf="col.key !== 'debit' && col.key !== 'credit'">{{ row[col.key] }}</ng-container>
+            <ng-container *ngIf="(col.key === 'debit' || col.key === 'credit') && row[col.key]">{{ row[col.key] | money }}</ng-container>
+          </td>
+        </tr>
+        <tr *ngIf="row._rowType === 'subtotal'" class="subtotal-row">
+          <td *ngFor="let col of visibleColumns" [class.amount-col]="col.key === 'debit' || col.key === 'credit'">
+            <ng-container *ngIf="col.key === 'account'">Subtotal — {{ row.label }}</ng-container>
+            <ng-container *ngIf="col.key === 'debit' && row.debit">{{ row.debit | money }}</ng-container>
+            <ng-container *ngIf="col.key === 'credit' && row.credit">{{ row.credit | money }}</ng-container>
+          </td>
+        </tr>
+        </ng-container>
+        <tr *ngIf="!reportRows.length"><td class="empty-row" [attr.colspan]="visibleColumns.length">No matching rows.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="table-summary"><span>Showing {{ reportRows.length }} row(s)</span><strong>Assets: {{ totalAssets | money }} &nbsp; Liabilities &amp; Equity: {{ totalLiabilitiesAndEquity | money }}</strong></div>
+  </div>
+
   <!-- Two Column -->
-  <div class="two-col-card" *ngIf="!loading">
+  <div class="two-col-card legacy-layout" *ngIf="!loading">
     <!-- Liabilities & Equity -->
     <div class="col-section">
       <div class="col-head">Liabilities &amp; Equity</div>
@@ -220,4 +243,17 @@
     </div>
   </div>
 
+</div>
+
+<div class="modal-backdrop" *ngIf="columnsOpen" (click)="columnsOpen = false">
+  <section class="columns-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <header><div><h3>Headers (Columns)</h3><p>Pick columns for the list and export.</p></div><button class="modal-close" type="button" (click)="columnsOpen = false">×</button></header>
+    <div class="selected-count">Selected: {{ visibleColumns.length }} / {{ reportColumns.length }}</div>
+    <input class="column-search" type="search" [(ngModel)]="columnSearch" placeholder="Search header...">
+    <div class="column-tools"><button type="button" (click)="setAllColumns(true)">Select all</button><button type="button" (click)="setAllColumns(false)">Clear</button></div>
+    <div class="column-grid"><button type="button" class="column-option" *ngFor="let col of filteredColumnOptions" [class.selected]="col.selected" (click)="toggleColumn(col.key)">
+      <span><strong>{{ col.label }}</strong><small>{{ col.group }}</small></span><span class="checkbox">{{ col.selected ? '✓' : '' }}</span>
+    </button></div>
+    <footer><button class="rpt-btn rpt-btn-outline" type="button" (click)="columnsOpen = false">Cancel</button><button class="rpt-btn rpt-btn-primary" type="button" (click)="columnsOpen = false">Apply</button></footer>
+  </section>
 </div>
