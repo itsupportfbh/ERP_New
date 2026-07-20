@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
 import { PurchaseGuard } from './core/guards/purchase.guard';
+import { ReportPermissionGuard } from './core/guards/report-permission.guard';
 import { LoginComponent } from './pages/login/login.component';
 import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './pages/auth/reset-password/reset-password.component';
@@ -31,6 +32,8 @@ import { DebitNoteFormComponent } from './pages/purchase/debit-note/debit-note-f
 import { SupplierScorecardComponent } from './pages/purchase/supplier-scorecard/supplier-scorecard.component';
 import { ThreeWayMatchComponent } from './pages/purchase/three-way-match/three-way-match.component';
 import { PeriodCloseComponent } from './pages/purchase/period-close/period-close.component';
+import { PurchaseReportComponent } from './pages/purchase/reports/purchase-report.component';
+import { InventoryReportComponent } from './pages/inventory/reports/inventory-report.component';
 
 // Master module components
 import { ApprovalLevelComponent } from './pages/master/approval-level/approval-level.component';
@@ -134,6 +137,15 @@ const routes: Routes = [
       { path: 'dashboard',                     component: DashboardComponent  },
       { path: 'sales-order',                   component: SalesOrderComponent },
       { path: 'sales-order/new',               component: NewOrderComponent   },
+      // Declared ahead of the lazy inventory module so this exact path wins the
+      // match. The hub renders <erp-dynamic-report>, which AppModule declares
+      // and does not export, so it cannot live inside InventoryModule.
+      {
+        path: 'inventory/reports',
+        component: InventoryReportComponent,
+        canActivate: [ReportPermissionGuard],
+        data: { permissionFunctionId: 'inventory-report' }
+      },
       {
         path: 'inventory',
         loadChildren: () => import('./main/inventory.module').then(m => m.InventoryModule)
@@ -173,6 +185,7 @@ const routes: Routes = [
           { path: 'debit-note/new',            component: DebitNoteFormComponent },
           { path: 'debit-note/:id',            component: DebitNoteFormComponent },
 
+          { path: 'reports', component: PurchaseReportComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'purchase-report' } },
           { path: 'scorecard',                 component: SupplierScorecardComponent },
           { path: 'three-way-match',           component: ThreeWayMatchComponent },
           { path: 'mobile-receiving',          component: MobileReceivingComponent },
@@ -205,8 +218,8 @@ const routes: Routes = [
       { path: 'finance/chart-of-accounts',    component: FinanceCoaComponent },
       { path: 'finance/general-ledger',       component: FinanceLedgerComponent },
       { path: 'finance/trial-balance',        component: FinanceTrialBalanceComponent },
-      { path: 'finance/profit-loss',          component: FinancePlComponent },
-      { path: 'finance/balance-sheet',        component: FinanceBsComponent },
+      { path: 'finance/profit-loss', component: FinancePlComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'finance-report-profit-loss', permissionFallback: '/app/finance/reports' } },
+      { path: 'finance/balance-sheet', component: FinanceBsComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'finance-report-balance-sheet', permissionFallback: '/app/finance/reports' } },
       { path: 'finance/accounts-payable',     component: FinanceApComponent },
       { path: 'finance/ap-aging',             component: FinanceApComponent },
       { path: 'finance/ap-advance',           component: FinanceApComponent },
@@ -223,12 +236,12 @@ const routes: Routes = [
       { path: 'finance/year-end-close',          component: FinanceYearEndCloseComponent },
       { path: 'finance/bank-reconciliation',     component: FinanceBankReconComponent },
       { path: 'finance/fixed-assets',            component: FixedAssetsComponent },
-      { path: 'finance/daybook',                 component: FinanceDaybookComponent },
-      { path: 'finance/collection-forecast',     component: FinanceCollectionForecastComponent },
+      { path: 'finance/daybook', component: FinanceDaybookComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'finance-report-daybook', permissionFallback: '/app/finance/reports' } },
+      { path: 'finance/collection-forecast', component: FinanceCollectionForecastComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'finance-report-collection-forecast', permissionFallback: '/app/finance/reports' } },
       { path: 'finance/invoice-email',           component: FinanceInvoiceEmailComponent },
-      { path: 'finance/arap-aging',              component: FinanceArapAgingComponent },
-      { path: 'finance/gst-detail',              component: FinanceGstDetailComponent },
-      { path: 'finance/reports',                 component: FinanceReportsHubComponent },
+      { path: 'finance/arap-aging', component: FinanceArapAgingComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'finance-report-arap-aging', permissionFallback: '/app/finance/reports' } },
+      { path: 'finance/gst-detail', component: FinanceGstDetailComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'finance-report-gst-detail', permissionFallback: '/app/finance/reports' } },
+      { path: 'finance/reports', component: FinanceReportsHubComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'reports' } },
       { path: 'finance/:section',                component: FinanceWorkspaceComponent },
       { path: 'financial/dashboard',           component: FinanceDashboardComponent },
       { path: 'financial/ChartOfAccount',      component: FinanceCoaComponent },
@@ -319,7 +332,7 @@ const routes: Routes = [
       { path: 'sales/credit-notes/new',        component: CreditNoteFormComponent },
       { path: 'sales/credit-notes/:id',        component: CreditNoteFormComponent },
 
-      { path: 'sales/reports',                 component: ReportComponent },
+      { path: 'sales/reports', component: ReportComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'sales-report' } },
       { path: 'sales/reports/delivery-note',   component: ReportDeliveryNoteComponent },
 
       // ── Recipe / Production ─────────────────────────────

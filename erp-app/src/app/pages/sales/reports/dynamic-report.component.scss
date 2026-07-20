@@ -1,0 +1,399 @@
+/* Shared dynamic report renderer. Builds on the global .dt-* datatable styles
+   in styles.scss; only the pieces that grid does not already provide live here. */
+
+.dyn-rep {
+  .dt-card-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .dyn-crumb {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    background: var(--primary-pale);
+    border-radius: 10px;
+    padding: 2px 10px;
+  }
+
+  .dyn-lock {
+    font-size: 11.5px;
+    color: var(--warning);
+    font-weight: 600;
+  }
+
+  .dyn-head-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Headers stay on one line; body text wraps so the table fits the panel
+     instead of forcing a horizontal scrollbar. Numbers and dates never wrap. */
+  .dt-table th { cursor: pointer; white-space: nowrap; }
+  .dt-table td { white-space: normal; word-break: break-word; }
+  .dt-num { text-align: right; white-space: nowrap; }
+  .dt-error { text-align: center; color: var(--danger); padding: 18px; }
+
+  .dt-table-wrap {
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar { height: 8px; }
+    &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+  }
+}
+
+/* ---------- inline filter toolbar ---------- */
+.dyn-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dyn-fld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  input,
+  select {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    min-width: 132px;
+
+    &:focus { outline: none; border-color: var(--primary-light); }
+    &:disabled { background: #eef2f3; color: var(--text-muted); }
+  }
+
+  .dyn-fld-lock { color: var(--warning); font-weight: 600; }
+}
+
+/* ---------- saved views ---------- */
+.dyn-views {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+
+  .dyn-views-lbl { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
+  .dyn-views-none { font-size: 12px; color: var(--text-muted); }
+}
+
+.dyn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 11px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+
+  &:hover { border-color: var(--primary-light); }
+
+  .dyn-chip-x {
+    color: var(--text-muted);
+    font-weight: 700;
+    &:hover { color: var(--danger); }
+  }
+}
+
+/* ---------- group / total rows ---------- */
+.dyn-grp td {
+  background: var(--primary-pale);
+  font-weight: 600;
+  color: var(--primary);
+  border-top: 2px solid var(--border);
+}
+
+.dyn-sub td {
+  background: var(--bg);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--primary);
+}
+
+.dyn-grand td {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ---------- columns picker modal ---------- */
+.dyn-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 48, 56, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.dyn-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 580px;
+  max-width: 94vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+}
+
+/* ---------- toast ---------- */
+.dyn-toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .2);
+  cursor: pointer;
+  z-index: 1100;
+  animation: dyn-toast-in .18s ease-out;
+}
+
+@keyframes dyn-toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.dyn-modal-sm { width: 420px; }
+
+.dyn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* full-width field inside a modal, unlike the toolbar's inline fields */
+.dyn-fld-block {
+  width: 100%;
+  input, select { width: 100%; min-width: 0; }
+}
+
+.dyn-save-msg {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.dyn-modal-head {
+  padding: 16px 20px 6px;
+  display: flex;
+  align-items: flex-start;
+
+  h3 { font-size: 15.5px; color: var(--primary); font-weight: 700; margin: 0; }
+  p { font-size: 12px; color: var(--text-muted); margin: 3px 0 0; }
+}
+
+.dyn-close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dyn-modal-body { padding: 10px 20px; overflow-y: auto; }
+
+.dyn-tabs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+
+  .dyn-tab-cnt { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+  .dyn-tab-cnt b { color: var(--text); }
+}
+
+.dyn-tab {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+
+  &.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+}
+
+.dyn-modal-search {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin-bottom: 10px;
+}
+
+.dyn-selrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+
+  label { display: flex; align-items: center; gap: 6px; }
+  .dyn-mini { margin-left: auto; display: flex; gap: 8px; }
+}
+
+.dyn-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  .dyn-fnone {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    padding: 14px;
+  }
+}
+
+.dyn-fcard {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  cursor: pointer;
+
+  &.checked { background: var(--primary-pale); border-color: var(--primary-light); }
+
+  .dyn-fmeta { display: flex; flex-direction: column; min-width: 0; }
+  .dyn-fname { font-size: 12.5px; font-weight: 600; }
+  .dyn-ftab { font-size: 10.5px; color: var(--text-muted); }
+
+  input { margin-left: auto; accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* Sensitive-but-permitted fields keep a lock hint; fields the role may not
+     see at all are shown greyed rather than removed, so the user can see what
+     exists and ask for access. */
+  &.denied {
+    opacity: .55;
+    cursor: not-allowed;
+    background: #fff;
+    border-color: var(--border);
+    .dyn-ftab { color: #a8760d; }
+    input { cursor: not-allowed; }
+  }
+}
+
+.dyn-flock { font-size: 10px; margin-left: 4px; vertical-align: middle; }
+
+.dyn-modal-foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.dyn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+@media (max-width: 700px) {
+  .dyn-fields { grid-template-columns: 1fr; }
+}
+
+/* ============ KPI tiles ============ */
+.dyn-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0 0 14px;
+}
+.dyn-kpi {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.dyn-kpi-label {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 700;
+}
+.dyn-kpi-value {
+  font-size: 21px; font-weight: 800; margin-top: 6px; color: var(--primary);
+  line-height: 1.2; word-break: break-word;
+}
+.dyn-kpi-success .dyn-kpi-value { color: #1e9e56; }
+.dyn-kpi-warning .dyn-kpi-value { color: #d99a1b; }
+.dyn-kpi-danger  .dyn-kpi-value { color: #d9534f; }
+
+/* ============ bar chart ============ */
+.dyn-chart {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.dyn-chart-title {
+  font-size: 12.5px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px;
+}
+/* Bars grow from the baseline, so each column is bottom-aligned and the
+   value label rides on top of its own bar. */
+.dyn-bars {
+  display: flex; align-items: flex-end; gap: 10px; height: 170px;
+}
+.dyn-bar-wrap {
+  flex: 1; min-width: 0; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px;
+}
+.dyn-bar {
+  width: 100%; max-width: 56px; min-height: 3px;
+  background: linear-gradient(180deg, var(--primary-light, #2a7080), var(--primary));
+  border-radius: 5px 5px 0 0;
+  transition: height .35s ease;
+  &:hover { filter: brightness(1.12); }
+}
+.dyn-bar-val { font-size: 11px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+.dyn-bar-label {
+  font-size: 11px; color: var(--text-muted); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .dyn-bars { height: 140px; }
+  .dyn-bar-label { font-size: 10px; }
+}

@@ -198,6 +198,22 @@
 
 .perm-intro { margin-bottom: 14px; }
 
+.perm-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.perm-title-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .perm-hint {
   font-size: 12px;
   color: var(--text-muted);
@@ -361,12 +377,6 @@
   }
 }
 
-.perm-card-footer {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 /* ── Step 3 — Review ─────────────────────────────── */
 .review-grid {
   display: grid;
@@ -469,4 +479,6 @@
   .wizard-page { padding: 10px 10px 28px; }
   .review-grid { grid-template-columns: 1fr; }
   .step-label  { display: none; }
+  .perm-title-row { align-items: flex-start; flex-direction: column; }
+  .perm-title-actions { width: 100%; justify-content: flex-start; }
 }

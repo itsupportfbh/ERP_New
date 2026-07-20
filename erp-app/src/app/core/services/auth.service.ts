@@ -111,6 +111,12 @@ export class AuthService {
     localStorage.setItem('companyCurrencyName', data.companyCurrencyName ?? '');
     // Refresh currency symbols + tax name for the freshly selected company.
     this.currencyDisplay.reload();
+
+    // Pull this user's permissions now that their id is known. PermissionService
+    // and the layout both listen for this; logout() clears the cached copy, so
+    // without it the first session after a login runs with no permission data
+    // and every guarded route falls back to the master-owner check.
+    window.dispatchEvent(new Event('menu-permission-updated'));
   }
 
   logout(): void {

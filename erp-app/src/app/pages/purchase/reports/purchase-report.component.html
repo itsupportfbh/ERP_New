@@ -1,0 +1,54 @@
+<div class="rp-page">
+
+  <!-- ============ HUB ============ -->
+  <ng-container *ngIf="!activeReport">
+    <ng-container *ngFor="let g of groups">
+      <ng-container *ngIf="visibleReports(g).length">
+        <div class="rp-group-label">{{ g.label }}</div>
+        <div class="rp-grid">
+          <div class="rp-card" *ngFor="let r of visibleReports(g)">
+            <div class="rp-left">
+              <div class="rp-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="8" y1="13" x2="16" y2="13"/>
+                  <line x1="8" y1="17" x2="16" y2="17"/>
+                </svg>
+              </div>
+              <div class="rp-text">
+                <div class="rp-title">{{ r.name }}</div>
+                <div class="rp-sub">{{ r.crumb }}</div>
+              </div>
+            </div>
+            <button class="rp-open" type="button" (click)="openReport(r)">Open</button>
+          </div>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <!-- Every card is permission-gated, so an ungranted role would otherwise
+         land on a silent blank page with nothing to explain it. -->
+    <div class="rp-empty" *ngIf="!loadingPermissions && !hasVisibleReports">
+      <div class="rp-empty-title">No purchase reports available for your role</div>
+      <div class="rp-empty-hint">
+        If you expect reports here, ask an administrator to grant the Purchase report
+        permissions under Roles &amp; Permissions, then sign out and back in.
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ============ REPORT ============ -->
+  <!-- Opening a report replaces the hub rather than appending below it, so the
+       report gets the full page instead of sitting under a screen of cards. -->
+  <ng-container *ngIf="activeReport">
+    <div class="rp-openbar">
+      <button class="rp-back" type="button" (click)="closeReport()">&#8592; Back to Reports</button>
+      <span class="rp-openbar-title">{{ activeReport.name }}</span>
+    </div>
+
+    <div class="rp-detail">
+      <erp-dynamic-report [def]="activeReport" [service]="reportsSvc"></erp-dynamic-report>
+    </div>
+  </ng-container>
+</div>

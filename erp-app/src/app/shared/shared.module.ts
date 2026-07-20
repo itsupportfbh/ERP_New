@@ -15,6 +15,7 @@ import { GuideComponent } from './components/guide/guide.component';
 import { GuidedJourneyComponent } from './components/guided-journey/guided-journey.component';
 import { MoneyPipe } from './pipes/money.pipe';
 import { TaxNamePipe } from './pipes/tax-name.pipe';
+import { ButtonPermissionDirective } from './directives/button-permission.directive';
 
 
 const COMPONENTS = [
@@ -37,9 +38,9 @@ const PIPES = [
 ];
 
 @NgModule({
-  declarations: [...COMPONENTS],
+  declarations: [...COMPONENTS, ButtonPermissionDirective],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, ...PIPES],
-  exports: [...COMPONENTS, ...PIPES, CommonModule, FormsModule, ReactiveFormsModule],
+  exports: [...COMPONENTS, ...PIPES, ButtonPermissionDirective, CommonModule, FormsModule, ReactiveFormsModule],
   // CommonModule, FormsModule, ReactiveFormsModule are both imported and exported so consumers get them transitively
 })
 export class SharedModule {}
