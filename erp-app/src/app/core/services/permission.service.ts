@@ -97,7 +97,20 @@ export class PermissionService {
   }
 
   private isMaster(): boolean {
-    return localStorage.getItem('isMasterOwner') === 'true';
+    if (
+      localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES' ||
+      localStorage.getItem('selectedOrgKey') === 'ALL_ORGANIZATIONS' ||
+      Number(localStorage.getItem('companyId') || 0) === 0
+    ) {
+      return false;
+    }
+
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    const fullAccessRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
+    return Array.isArray(roles) && roles.some(r =>
+      fullAccessRoles.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
+    );
   }
 
   private hasData(): boolean {

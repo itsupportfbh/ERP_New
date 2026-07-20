@@ -89,7 +89,7 @@ export class CompanyComponent implements OnInit {
 
   /** Only a Super Admin may create a NEW organization; others are limited to adding a
    *  company under their existing organization (enforced on the backend too). */
-  get isSuperAdmin(): boolean { return this.auth.isSuperAdmin(); }
+  get isSuperAdmin(): boolean { return this.isPlatformSuperAdmin(); }
 
   ngOnInit(): void {
     this.loadPermission();
@@ -124,7 +124,7 @@ export class CompanyComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    const isSuperAdmin = this.auth.isSuperAdmin();
+    const isSuperAdmin = this.isPlatformSuperAdmin();
     const approvalLevelName = isSuperAdmin ? 'Super Admin' : '';
     // SuperAdmin accounts live only in the master DB and have no orgGuid of
     // their own — a stale login can leave the literal string "undefined"
@@ -139,9 +139,12 @@ export class CompanyComponent implements OnInit {
         let all: any[] = Array.isArray(res) ? res : (res?.data || []);
         // companyId > 1 means sub-company admin — show only their own company, and make the
         // counts (stat cards + org header) reflect the filtered view, not the backend total.
-        if (!isSuperAdmin && userCompanyId > 1) {
+        if (!isSuperAdmin && userCompanyId > 0) {
           all = all.map(org => {
-                     const companies = (org.companies || []).filter((c: any) => c.id === userCompanyId);
+                     const companies = (org.companies || []).filter((c: any) =>
+                       Number(c.id ?? c.Id ?? 0) === userCompanyId ||
+                       Number(c.masterCompanyId ?? c.MasterCompanyId ?? 0) === userCompanyId
+                     );
                      return { ...org, companies, companyCount: companies.length };
                    })
                    .filter(org => org.companies.length > 0);
@@ -153,6 +156,23 @@ export class CompanyComponent implements OnInit {
       },
       error: () => { this.orgs = []; this.filteredOrgs = []; this.updateCounts(); this.loading = false; }
     });
+  }
+
+  private isPlatformSuperAdmin(): boolean {
+    if (
+      localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES' ||
+      localStorage.getItem('selectedOrgKey') === 'ALL_ORGANIZATIONS' ||
+      Number(localStorage.getItem('companyId') || 0) === 0
+    ) {
+      return false;
+    }
+
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    const platformRoles = new Set(['superadmin', 'master', 'systemadministrator']);
+    return Array.isArray(roles) && roles.some(role =>
+      platformRoles.has(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
+    );
   }
 
   updateCounts(): void {

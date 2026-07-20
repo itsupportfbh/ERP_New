@@ -77,7 +77,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
   get hasAccessSwitcher(): boolean { return this.organizations.length > 0 || this.companies.length > 1; }
   get filteredCompanies(): AccessCompany[] {
-    if (!this.selectedOrgGuid) return this.companies;
+    if (!this.selectedOrgGuid || this.selectedOrgGuid === this.allOrganizationsKey) return this.companies;
     return this.companies.filter(c => this.getCompanyOrgGuid(c) === this.selectedOrgGuid);
   }
   get canSelectAllCompanies(): boolean { return this.filteredCompanies.length > 1; }
@@ -335,6 +335,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private masterSvc: MasterService,
     navigationCatalog: NavigationCatalogService
   ) {
+    this.showAll = this.shouldShowAllMenus();
     navigationCatalog.register(this.menus);
     this.showAll = this.auth.isSuperAdmin();
     window.addEventListener('menu-permission-updated', this.menuReloadHandler);
@@ -343,6 +344,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
      this.masterSvc.cacheCompanyLogo();
     this.loadAccessContext();
+    this.showAll = this.shouldShowAllMenus();
     // On phones/tablets start with the drawer closed so it doesn't cover the page.
     if (typeof window !== 'undefined' && window.innerWidth <= 768) {
       this.sidebarOpen = false;
@@ -413,11 +415,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   loadMenuPermissions(): void {
+    this.showAll = this.shouldShowAllMenus();
     if (this.showAll) {
       this.permLoaded = true;
       this.applyMenuFilter();
       return;
     }
+
+    const storedAllowedMenuIds = this.getStoredAllowedMenuIds();
+    if (storedAllowedMenuIds.size > 0) {
+      this.viewableIds = storedAllowedMenuIds;
+      this.permLoaded = true;
+      this.applyMenuFilter();
+      return;
+    }
+
     const userId = Number(localStorage.getItem('id') || 0);
     if (!userId) {
       this.permLoaded = true;
@@ -457,7 +469,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   onOrganizationChange(orgGuid: string): void {
     if (orgGuid === this.allOrganizationsKey || !orgGuid) {
-      this.selectedOrgGuid = '';
+      this.selectedOrgGuid = this.allOrganizationsKey;
       localStorage.setItem('selectedOrgKey', this.allOrganizationsKey);
       this.applyAllCompaniesContext(true);
       return;
@@ -561,7 +573,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     const storedOrgKey = localStorage.getItem('selectedOrgKey') || '';
     const storedCompanyKey = localStorage.getItem('selectedCompanyKey') || '';
     this.selectedOrgGuid = storedOrgKey === this.allOrganizationsKey
-      ? ''
+      ? this.allOrganizationsKey
       : localStorage.getItem('orgGuid') || this.getOrgGuid(this.organizations[0]) || '';
 
     if (!this.organizations.length && !this.companies.length && localStorage.getItem('isMasterOwner') === 'true' && !this.accessContextRequested) {
@@ -651,7 +663,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
     const firstCompany = this.filteredCompanies[0] || this.companies[0];
     if (!firstCompany) return;
 
-    const orgGuid = this.selectedOrgGuid || this.getCompanyOrgGuid(firstCompany);
+    const orgGuid = this.selectedOrgGuid && this.selectedOrgGuid !== this.allOrganizationsKey
+      ? this.selectedOrgGuid
+      : this.getCompanyOrgGuid(firstCompany);
     const databaseName = this.getCompanyDatabaseName(firstCompany);
 
     localStorage.setItem('companyId', '0');
@@ -661,7 +675,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     localStorage.setItem('selectedOrgKey', this.selectedOrgGuid || this.allOrganizationsKey);
     localStorage.setItem('selectedCompanyKey', this.allCompaniesKey);
 
-    this.selectedOrgGuid = this.selectedOrgGuid || '';
+    this.selectedOrgGuid = this.selectedOrgGuid || this.allOrganizationsKey;
     this.selectedCompanyKey = this.allCompaniesKey;
 
     if (reload) window.location.reload();
@@ -674,5 +688,28 @@ export class LayoutComponent implements OnInit, OnDestroy {
     } catch {
       return [];
     }
+  }
+
+  private getStoredAllowedMenuIds(): Set<string> {
+    const ids = this.readJsonArray<any>('allowedMenuIds')
+      .map(id => String(id ?? '').trim())
+      .filter(id => id.length > 0);
+    return new Set(ids);
+  }
+
+  private shouldShowAllMenus(): boolean {
+    if (this.auth.isSuperAdmin()) return true;
+
+    const isAllMode = localStorage.getItem('selectedCompanyKey') === this.allCompaniesKey
+      || localStorage.getItem('selectedOrgKey') === this.allOrganizationsKey
+      || Number(localStorage.getItem('companyId') || 0) === 0;
+    if (!isAllMode) return false;
+
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    const fullMenuRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
+    return Array.isArray(roles) && roles.some(role =>
+      fullMenuRoles.has(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
+    );
   }
 }

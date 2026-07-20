@@ -155,9 +155,17 @@ export class AuthService {
    * visible companies by CompanyId instead of granting full access).
    */
   isSuperAdmin(): boolean {
+    if (
+      localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES' ||
+      localStorage.getItem('selectedOrgKey') === 'ALL_ORGANIZATIONS' ||
+      Number(localStorage.getItem('companyId') || 0) === 0
+    ) {
+      return false;
+    }
+
     let roles: string[] = [];
     try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
-    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'master', 'systemadministrator']);
+    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
     return Array.isArray(roles) && roles.some(r =>
       SUPER_ADMIN_ROLES.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
     );
