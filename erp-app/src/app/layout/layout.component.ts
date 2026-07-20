@@ -15,6 +15,30 @@ interface MenuItem {
   permId?: string;
 }
 
+interface AccessOrganization {
+  orgGuid?: string;
+  OrgGuid?: string;
+  orgName?: string;
+  OrgName?: string;
+  organizationName?: string;
+  OrganizationName?: string;
+  databaseName?: string;
+  DatabaseName?: string;
+}
+
+interface AccessCompany {
+  id?: number;
+  Id?: number;
+  companyName?: string;
+  CompanyName?: string;
+  companyCode?: string;
+  CompanyCode?: string;
+  orgGuid?: string;
+  OrgGuid?: string;
+  databaseName?: string;
+  DatabaseName?: string;
+}
+
 @Component({
   selector: 'erp-layout',
   standalone: false,
@@ -34,6 +58,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
   showAll = false;
   currentPeriodLocked = false;
   currentPeriodName = '';
+  organizations: AccessOrganization[] = [];
+  companies: AccessCompany[] = [];
+  selectedOrgGuid = '';
+  selectedCompanyKey = '';
+  readonly allOrganizationsKey = 'ALL_ORGANIZATIONS';
+  readonly allCompaniesKey = 'ALL_COMPANIES';
+  private accessContextRequested = false;
 
   private readonly menuReloadHandler = () => this.loadMenuPermissions();
 
@@ -43,6 +74,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
     const c = localStorage.getItem('companyName');
     return c && c !== 'null' && c !== 'undefined' ? c : '';
   }
+  get hasAccessSwitcher(): boolean { return this.organizations.length > 0 || this.companies.length > 1; }
+  get filteredCompanies(): AccessCompany[] {
+    if (!this.selectedOrgGuid) return this.companies;
+    return this.companies.filter(c => this.getCompanyOrgGuid(c) === this.selectedOrgGuid);
+  }
+  get canSelectAllCompanies(): boolean { return this.filteredCompanies.length > 1; }
 
   hasChildren(menu: MenuItem): boolean { return !!(menu.children?.length); }
 
@@ -245,6 +282,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
      this.masterSvc.cacheCompanyLogo();
+    this.loadAccessContext();
     // On phones/tablets start with the drawer closed so it doesn't cover the page.
     if (typeof window !== 'undefined' && window.innerWidth <= 768) {
       this.sidebarOpen = false;
@@ -357,6 +395,44 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   logout(): void { this.auth.logout(); }
 
+  onOrganizationChange(orgGuid: string): void {
+    if (orgGuid === this.allOrganizationsKey || !orgGuid) {
+      this.selectedOrgGuid = '';
+      localStorage.setItem('selectedOrgKey', this.allOrganizationsKey);
+      this.applyAllCompaniesContext(true);
+      return;
+    }
+
+    this.selectedOrgGuid = orgGuid;
+    localStorage.setItem('selectedOrgKey', orgGuid);
+    const org = this.organizations.find(o => this.getOrgGuid(o) === orgGuid);
+    if (org) {
+      localStorage.setItem('orgGuid', orgGuid);
+      localStorage.setItem('databaseName', this.getOrgDatabaseName(org));
+    }
+
+    const firstCompany = this.filteredCompanies[0];
+    if (firstCompany) {
+      this.applyCompanyContext(firstCompany, true);
+      return;
+    }
+
+    localStorage.setItem('companyId', '0');
+    localStorage.setItem('companyName', '');
+    this.selectedCompanyKey = '';
+    window.location.reload();
+  }
+
+  onCompanyChange(key: string): void {
+    if (key === this.allCompaniesKey) {
+      this.applyAllCompaniesContext(true);
+      return;
+    }
+    const company = this.companies.find(c => this.getCompanyKey(c) === key);
+    if (!company) return;
+    this.applyCompanyContext(company, true);
+  }
+
   toggleMenu(menu: MenuItem): void {
     if (!menu.children?.length) return;
     const topLevelLabels = new Set(this.menus.filter(m => m.children?.length).map(m => m.label));
@@ -417,5 +493,126 @@ export class LayoutComponent implements OnInit, OnDestroy {
       }
     }
     return '';
+  }
+
+  private loadAccessContext(): void {
+    this.organizations = this.readJsonArray<AccessOrganization>('organizations');
+    this.companies = this.readJsonArray<AccessCompany>('companies');
+    const storedOrgKey = localStorage.getItem('selectedOrgKey') || '';
+    const storedCompanyKey = localStorage.getItem('selectedCompanyKey') || '';
+    this.selectedOrgGuid = storedOrgKey === this.allOrganizationsKey
+      ? ''
+      : localStorage.getItem('orgGuid') || this.getOrgGuid(this.organizations[0]) || '';
+
+    if (!this.organizations.length && !this.companies.length && localStorage.getItem('isMasterOwner') === 'true' && !this.accessContextRequested) {
+      this.accessContextRequested = true;
+      this.auth.getAccessContext().subscribe({
+        next: () => this.loadAccessContext(),
+        error: () => {}
+      });
+      return;
+    }
+
+    if (storedCompanyKey === this.allCompaniesKey && this.canSelectAllCompanies) {
+      this.selectedCompanyKey = this.allCompaniesKey;
+      return;
+    }
+
+    const storedCompanyId = Number(localStorage.getItem('companyId') || 0);
+    const currentCompany = this.companies.find(c =>
+      this.getCompanyId(c) === storedCompanyId &&
+      (!this.selectedOrgGuid || this.getCompanyOrgGuid(c) === this.selectedOrgGuid)
+    ) || this.filteredCompanies[0] || this.companies[0];
+
+    if (currentCompany) {
+      this.selectedOrgGuid = this.getCompanyOrgGuid(currentCompany) || this.selectedOrgGuid;
+      this.selectedCompanyKey = localStorage.getItem('selectedCompanyKey') === this.allCompaniesKey && this.canSelectAllCompanies
+        ? this.allCompaniesKey
+        : this.getCompanyKey(currentCompany);
+    } else if (localStorage.getItem('selectedCompanyKey') === this.allCompaniesKey && this.canSelectAllCompanies) {
+      this.selectedCompanyKey = this.allCompaniesKey;
+    }
+  }
+
+  getOrgGuid(org: AccessOrganization | undefined): string {
+    return String(org?.orgGuid ?? org?.OrgGuid ?? '');
+  }
+
+  getOrgLabel(org: AccessOrganization): string {
+    return String(org.orgName ?? org.OrgName ?? org.organizationName ?? org.OrganizationName ?? this.getOrgGuid(org));
+  }
+
+  getCompanyKey(company: AccessCompany): string {
+    return `${this.getCompanyOrgGuid(company)}|${this.getCompanyId(company)}`;
+  }
+
+  getCompanyLabel(company: AccessCompany): string {
+    const code = String(company.companyCode ?? company.CompanyCode ?? '').trim();
+    const name = String(company.companyName ?? company.CompanyName ?? `Company ${this.getCompanyId(company)}`).trim();
+    return code ? `${code} - ${name}` : name;
+  }
+
+  private getCompanyId(company: AccessCompany): number {
+    return Number(company.id ?? company.Id ?? 0);
+  }
+
+  private getCompanyOrgGuid(company: AccessCompany): string {
+    return String(company.orgGuid ?? company.OrgGuid ?? '');
+  }
+
+  private getCompanyDatabaseName(company: AccessCompany): string {
+    return String(company.databaseName ?? company.DatabaseName ?? '');
+  }
+
+  private getOrgDatabaseName(org: AccessOrganization): string {
+    return String(org.databaseName ?? org.DatabaseName ?? '');
+  }
+
+  private applyCompanyContext(company: AccessCompany, reload: boolean): void {
+    const orgGuid = this.getCompanyOrgGuid(company);
+    const companyId = this.getCompanyId(company);
+    const companyName = String(company.companyName ?? company.CompanyName ?? '');
+    const databaseName = this.getCompanyDatabaseName(company);
+
+    localStorage.setItem('companyId', String(companyId));
+    localStorage.setItem('companyName', companyName);
+    localStorage.setItem('orgGuid', orgGuid);
+    localStorage.setItem('databaseName', databaseName);
+    localStorage.setItem('selectedOrgKey', orgGuid);
+    localStorage.setItem('selectedCompanyKey', this.getCompanyKey(company));
+
+    this.selectedOrgGuid = orgGuid;
+    this.selectedCompanyKey = this.getCompanyKey(company);
+
+    if (reload) window.location.reload();
+  }
+
+  private applyAllCompaniesContext(reload: boolean): void {
+    const firstCompany = this.filteredCompanies[0] || this.companies[0];
+    if (!firstCompany) return;
+
+    const orgGuid = this.selectedOrgGuid || this.getCompanyOrgGuid(firstCompany);
+    const databaseName = this.getCompanyDatabaseName(firstCompany);
+
+    localStorage.setItem('companyId', '0');
+    localStorage.setItem('companyName', 'All companies');
+    localStorage.setItem('orgGuid', orgGuid);
+    localStorage.setItem('databaseName', databaseName);
+    localStorage.setItem('selectedOrgKey', this.selectedOrgGuid || this.allOrganizationsKey);
+    localStorage.setItem('selectedCompanyKey', this.allCompaniesKey);
+
+    this.selectedOrgGuid = this.selectedOrgGuid || '';
+    this.selectedCompanyKey = this.allCompaniesKey;
+
+    if (reload) window.location.reload();
+  }
+
+  private readJsonArray<T>(key: string): T[] {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 }

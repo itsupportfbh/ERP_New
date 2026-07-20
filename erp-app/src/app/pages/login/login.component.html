@@ -1,12 +1,8 @@
 <div class="login-page">
-
   <div class="main-area">
-
-    <!-- ═══ LEFT PANEL ═══ -->
     <div class="left-panel">
       <div class="lp-overlay"></div>
 
-      <!-- Logo -->
       <div class="lp-logo-row">
         <img src="assets/images/catering-logo.png" alt="Catering ERP" class="lp-logo-img"/>
         <div class="lp-logo-text">
@@ -16,33 +12,27 @@
       </div>
       <div class="lp-accent"></div>
 
-      <!-- Heading -->
       <h1 class="lp-heading">
-        Empowering Catering<br>
-        Businesses <em>Worldwide</em>
+        One login for every<br>
+        company in <em>UnityWorks</em>
       </h1>
       <p class="lp-desc">
-        Manage your catering operations seamlessly with our<br>
-        all-in-one ERP solution.
+        ERP_CORE verifies the user first, then opens only the companies
+        and permissions assigned to that account.
       </p>
-
-
     </div>
 
-    <!-- ═══ RIGHT PANEL ═══ -->
     <div class="right-panel">
       <div class="rp-inner">
-
         <div class="rp-head">
-          <h2 class="rp-title">Welcome Back! 👋</h2>
-          <p class="rp-sub">Sign in to continue to UnityWorks ERP</p>
+          <p class="rp-kicker">ERP_CORE secure access</p>
+          <h2 class="rp-title">Welcome back</h2>
+          <p class="rp-sub">Sign in once, then continue with your assigned company.</p>
         </div>
 
         <form (ngSubmit)="onLogin()" autocomplete="on">
-
-          <!-- Username -->
           <div class="f-group">
-            <label class="f-label">UserEmail</label>
+            <label class="f-label">Email or username</label>
             <div class="f-control" [class.is-focused]="uFocus" [class.is-error]="error">
               <div class="f-icon">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -51,13 +41,12 @@
                 </svg>
               </div>
               <input type="text" [(ngModel)]="email" name="email"
-                     placeholder="Enter your username"
+                     placeholder="Enter email or username"
                      autocomplete="username"
                      (focus)="uFocus=true" (blur)="uFocus=false"/>
             </div>
           </div>
 
-          <!-- Password -->
           <div class="f-group">
             <label class="f-label">Password</label>
             <div class="f-control" [class.is-focused]="pFocus" [class.is-error]="error">
@@ -72,7 +61,7 @@
                      placeholder="Enter your password"
                      autocomplete="current-password"
                      (focus)="pFocus=true" (blur)="pFocus=false"/>
-              <button type="button" class="eye-btn" (click)="showPassword=!showPassword" tabindex="-1">
+              <button type="button" class="eye-btn" (click)="showPassword=!showPassword" tabindex="-1" aria-label="Toggle password visibility">
                 <svg *ngIf="!showPassword" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                   <path d="M1 10s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7z"/>
                   <circle cx="10" cy="10" r="2.5"/>
@@ -86,7 +75,6 @@
             </div>
           </div>
 
-          <!-- Options -->
           <div class="f-options">
             <label class="f-remember" (click)="rememberMe=!rememberMe">
               <span class="f-chk" [class.checked]="rememberMe">
@@ -99,7 +87,6 @@
             <a class="f-forgot" routerLink="/forgot-password">Forgot Password?</a>
           </div>
 
-          <!-- Error -->
           <div class="f-error" *ngIf="error">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
               <circle cx="10" cy="10" r="9"/>
@@ -109,45 +96,50 @@
             {{ error }}
           </div>
 
-          <!-- Login button -->
           <button type="submit" class="btn-login" [disabled]="loading">
             <span class="btn-spinner" *ngIf="loading"></span>
-            <span>{{ loading ? 'Signing in…' : 'Login' }}</span>
+            <span>{{ loading ? 'Checking ERP_CORE...' : 'Login' }}</span>
             <svg *ngIf="!loading" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
               <line x1="4" y1="10" x2="16" y2="10"/>
               <polyline points="11 5 16 10 11 15"/>
             </svg>
           </button>
-
         </form>
-
       </div>
     </div>
-
-  </div><!-- /main-area -->
-
-
-
+  </div>
 </div>
 
-<!-- Company Modal -->
 <div class="company-overlay" *ngIf="showCompanySelect">
   <div class="company-modal">
-    <h2 class="company-title">Select Company</h2>
-    <p class="company-sub">Your account is linked to multiple companies. Please select one to continue.</p>
-    <div class="company-select-wrap">
-      <select class="company-select" [(ngModel)]="selectedCompanyId">
-        <option [ngValue]="null" disabled>-- Select a company --</option>
-        <option *ngFor="let c of companies" [ngValue]="c.id">{{ c.companyName }}</option>
-      </select>
-      <svg class="company-select-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="5 8 10 13 15 8"/>
-      </svg>
+    <p class="company-kicker">ERP_CORE company access</p>
+    <h2 class="company-title">Select company</h2>
+    <p class="company-sub">Your account is active in more than one company. Choose the tenant database to open for this session.</p>
+    <div class="company-list">
+      <button
+        type="button"
+        class="company-option"
+        [class.active]="selectedAllCompanies"
+        (click)="chooseAllCompanies()">
+        <span class="company-code">ALL</span>
+        <span class="company-name">All companies</span>
+        <small>{{ companies.length }} assigned companies</small>
+      </button>
+      <button
+        type="button"
+        class="company-option"
+        *ngFor="let c of companies"
+        [class.active]="!selectedAllCompanies && selectedCompanyId === (c.id ?? c.Id) && pendingOrgGuid === (c.orgGuid ?? c.OrgGuid ?? '')"
+        (click)="chooseCompany(c)">
+        <span class="company-code">{{ c.companyCode || c.CompanyCode || 'ERP' }}</span>
+        <span class="company-name">{{ c.companyName || c.CompanyName }}</span>
+        <small>{{ c.databaseName || c.DatabaseName }}</small>
+      </button>
     </div>
     <div class="f-error" *ngIf="error" style="margin-top:12px">{{ error }}</div>
     <button class="btn-login" [disabled]="loading || !selectedCompanyId" (click)="selectCompany()">
       <span class="btn-spinner" *ngIf="loading"></span>
-      <span>{{ loading ? 'Signing in…' : 'Continue' }}</span>
+      <span>{{ loading ? 'Opening company...' : 'Continue' }}</span>
     </button>
   </div>
 </div>

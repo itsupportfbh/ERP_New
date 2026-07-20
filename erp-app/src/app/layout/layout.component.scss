@@ -312,6 +312,41 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.access-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.access-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+
+  span {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  select {
+    height: 30px;
+    max-width: 260px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 28px 0 9px;
+    outline: none;
+  }
 }
 
 .avatar {
@@ -457,5 +492,6 @@
   .content { padding: 12px 12px 0; }
   .topbar { padding: 0 10px; }
   .topbar-company { display: none; }
+  .access-switcher { display: none; }
 }
 

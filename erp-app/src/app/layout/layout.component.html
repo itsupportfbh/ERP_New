@@ -111,6 +111,22 @@
       </button>
       <span class="topbar-title">UnityWorks ERP</span>
       <div class="topbar-right">
+        <div class="access-switcher" *ngIf="hasAccessSwitcher">
+          <label class="access-field" *ngIf="organizations.length">
+            <span>Organization</span>
+            <select [(ngModel)]="selectedOrgGuid" (ngModelChange)="onOrganizationChange($event)">
+              <option *ngIf="organizations.length > 1" [ngValue]="allOrganizationsKey">All organizations</option>
+              <option *ngFor="let org of organizations" [ngValue]="getOrgGuid(org)">{{ getOrgLabel(org) }}</option>
+            </select>
+          </label>
+          <label class="access-field" *ngIf="companies.length">
+            <span>Company</span>
+            <select [(ngModel)]="selectedCompanyKey" (ngModelChange)="onCompanyChange($event)">
+              <option *ngIf="canSelectAllCompanies" [ngValue]="allCompaniesKey">All companies</option>
+              <option *ngFor="let company of filteredCompanies" [ngValue]="getCompanyKey(company)">{{ getCompanyLabel(company) }}</option>
+            </select>
+          </label>
+        </div>
         <div class="user-menu-wrap" clickOutside (clickOutside)="userMenuOpen=false">
           <button class="user-menu-btn" (click)="userMenuOpen=!userMenuOpen">
             <div class="avatar">{{ userInitial }}</div>
