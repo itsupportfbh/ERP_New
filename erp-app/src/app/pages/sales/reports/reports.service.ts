@@ -17,6 +17,15 @@ export class ReportsService {
     return [];
   }
 
+  /**
+   * Access metadata the API attaches to a report response:
+   * `allowedFields` are the columns this user's role may see, `branchLock`
+   * the branch its rows were restricted to. Absent until the API supplies it.
+   */
+  unwrapMeta(res: any): { allowedFields?: string[]; branchLock?: string | null } | null {
+    return res?.meta ?? res?.Meta ?? null;
+  }
+
   getSalesByItem(): Observable<any> {
     return this.http.get(`${this.api}/SalesReport/GetSalesByItemAsync`);
   }

@@ -82,11 +82,10 @@ import { MobileReceivingComponent } from './pages/purchase/mobile-receiving/mobi
 import { QuotationListComponent } from './pages/sales/quotation/quotation-list.component';
 import { QuotationFormComponent } from './pages/sales/quotation/quotation-form.component';
 import { ReportComponent } from './pages/sales/reports/report.component';
-import { ReportFiltersComponent } from './pages/sales/reports/report-filters.component';
-import { ReportSalesByItemComponent } from './pages/sales/reports/report-sales-by-item.component';
-import { ReportAverageMarginComponent } from './pages/sales/reports/report-average-margin.component';
-import { ReportDeliveriesComponent } from './pages/sales/reports/report-deliveries.component';
+import { DynamicReportComponent } from './pages/sales/reports/dynamic-report.component';
 import { ReportDeliveryNoteComponent } from './pages/sales/reports/report-delivery-note.component';
+import { PurchaseReportComponent } from './pages/purchase/reports/purchase-report.component';
+import { InventoryReportComponent } from './pages/inventory/reports/inventory-report.component';
 import { SalesOrderListComponent } from './pages/sales/sales-order/sales-order-list.component';
 import { SalesOrderFormComponent } from './pages/sales/sales-order/sales-order-form.component';
 import { PendingFulfillmentComponent } from './pages/sales/pending-fulfillment/pending-fulfillment.component';
@@ -224,10 +223,9 @@ MobileReceivingComponent,
     QuotationListComponent,
     QuotationFormComponent,
     ReportComponent,
-    ReportFiltersComponent,
-    ReportSalesByItemComponent,
-    ReportAverageMarginComponent,
-    ReportDeliveriesComponent,
+    DynamicReportComponent,
+    PurchaseReportComponent,
+    InventoryReportComponent,
     ReportDeliveryNoteComponent,
     SalesOrderListComponent,
     SalesOrderFormComponent,

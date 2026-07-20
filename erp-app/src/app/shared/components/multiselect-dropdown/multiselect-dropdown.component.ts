@@ -1,6 +1,7 @@
 import { Component, Input, forwardRef, HostListener, ElementRef, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { DropdownOption } from '../dropdown/dropdown.component';
+import { rankSearchResults } from '../../utils/search-ranking';
 
 @Component({
   selector: 'erp-multiselect',
@@ -47,8 +48,7 @@ export class MultiselectDropdownComponent implements ControlValueAccessor, OnIni
   }
 
   get filteredOptions(): DropdownOption[] {
-    const q = this.search.toLowerCase();
-    return this.options.filter(o => o.label.toLowerCase().includes(q));
+    return rankSearchResults(this.options, this.search, option => option.label);
   }
 
   get displayText(): string {

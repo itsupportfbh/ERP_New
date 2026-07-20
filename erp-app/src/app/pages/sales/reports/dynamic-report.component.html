@@ -1,0 +1,316 @@
+<div class="dt-pg dyn-rep">
+  <div class="dt-card">
+
+    <div class="dt-card-head">
+      <h2>{{ def.name }}</h2>
+      <span class="dyn-crumb">{{ def.crumb }}</span>
+      <span class="dyn-lock" *ngIf="branchLock">Locked to {{ branchLock }}</span>
+      <span class="dyn-head-actions">
+        <!-- canExport/canPrint already come from the per-function permission
+             endpoint, so the global button directive must not re-judge them. -->
+        <button class="mbtn-add" type="button" erpPermissionAction="none"
+                (click)="openColumns()">Columns</button>
+        <button class="mbtn-add" type="button" erpPermissionAction="none"
+                *ngIf="canExport" (click)="exportExcel()">Export Excel</button>
+        <button class="mbtn-add" type="button" erpPermissionAction="none"
+                *ngIf="canPrint" (click)="exportPdf()">Export PDF</button>
+      </span>
+    </div>
+
+    <div class="dyn-toolbar">
+      <div class="dyn-fld">
+        <label>Search</label>
+        <input type="text" [(ngModel)]="searchValue" name="search"
+               (input)="onSearch()" placeholder="Type to filter rows" />
+      </div>
+
+      <div class="dyn-fld" *ngIf="def.dateField">
+        <label>Date from</label>
+        <input type="date" [(ngModel)]="fFrom" name="fFrom" (change)="onFilterChange()" />
+      </div>
+
+      <div class="dyn-fld" *ngIf="def.dateField">
+        <label>Date to</label>
+        <input type="date" [(ngModel)]="fTo" name="fTo" (change)="onFilterChange()" />
+      </div>
+
+      <div class="dyn-fld" *ngIf="customers.length">
+        <label>{{ filterLabels.customer }}</label>
+        <select [(ngModel)]="fCustomer" name="fCustomer" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let c of customers" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld" *ngIf="branches.length || branchLock">
+        <label>{{ filterLabels.branch }} <span class="dyn-fld-lock" *ngIf="branchLock">(locked to {{ branchLock }})</span></label>
+        <select [(ngModel)]="fBranch" name="fBranch" (change)="onFilterChange()" [disabled]="!!branchLock">
+          <option value="">All</option>
+          <option *ngFor="let b of branches" [value]="b.id">{{ b.name }}</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld" *ngIf="categories.length">
+        <label>{{ filterLabels.category }}</label>
+        <select [(ngModel)]="fCategory" name="fCategory" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld" *ngIf="salespersons.length">
+        <label>{{ filterLabels.salesperson }}</label>
+        <select [(ngModel)]="fSalesPerson" name="fSalesPerson" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let s of salespersons" [value]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld" *ngIf="statuses.length">
+        <label>{{ filterLabels.status }}</label>
+        <select [(ngModel)]="fStatus" name="fStatus" (change)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let s of statuses" [value]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld" *ngIf="groupableFields.length">
+        <label>Group by</label>
+        <select [(ngModel)]="groupKey" name="groupKey" (change)="onGroupChange()">
+          <option value="">No grouping</option>
+          <option *ngFor="let f of groupableFields" [value]="f.key">{{ f.label }}</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld">
+        <label>Show</label>
+        <select [(ngModel)]="pageSize" name="pageSize" (change)="onPageSizeChange()">
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </div>
+
+      <div class="dyn-fld">
+        <label>&nbsp;</label>
+        <button class="mbtn-add" type="button" (click)="clearFilters()">Clear filters</button>
+      </div>
+    </div>
+
+    <!-- saved views -->
+    <div class="dyn-views">
+      <span class="dyn-views-lbl">Saved views:</span>
+      <span class="dyn-chip" *ngFor="let v of views" (click)="loadView(v)">
+        {{ v.name }}
+        <span class="dyn-chip-x" (click)="askDeleteView(v, $event)" title="Delete view">&times;</span>
+      </span>
+      <span class="dyn-views-none" *ngIf="!views.length">None yet - set columns &amp; filters, then save.</span>
+      <button class="mbtn-add" type="button" (click)="openSaveView()">+ Save current view</button>
+    </div>
+
+    <!-- headline figures for whatever the filters currently select -->
+    <div class="dyn-kpis" *ngIf="kpis.length && !loading">
+      <div [ngClass]="kpiClass(k)" *ngFor="let k of kpis">
+        <div class="dyn-kpi-label">{{ k.label }}</div>
+        <div class="dyn-kpi-value">{{ k.value }}</div>
+      </div>
+    </div>
+
+    <div class="dyn-chart" *ngIf="hasChart && !loading">
+      <div class="dyn-chart-title">{{ def.chart?.title }}</div>
+      <div class="dyn-bars">
+        <div class="dyn-bar-wrap" *ngFor="let b of chartBars" [title]="b.label + ': ' + b.display">
+          <span class="dyn-bar-val">{{ b.display }}</span>
+          <div class="dyn-bar" [style.height.%]="b.heightPct"></div>
+          <span class="dyn-bar-label">{{ b.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dt-table-wrap">
+      <table class="dt-table">
+        <thead>
+          <tr>
+            <th *ngFor="let f of visibleFields; trackBy: trackByKey"
+                [class.dt-num]="isNumeric(f)"
+                (click)="sortByField(f.key)">
+              {{ f.label }}
+              <span class="sort-arr">{{ sortKey === f.key ? (sortDir === 'asc' ? '&#9650;' : '&#9660;') : '&#8645;' }}</span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngIf="loading">
+            <td [attr.colspan]="visibleFields.length" class="dt-empty">Loading...</td>
+          </tr>
+          <tr *ngIf="!loading && errorMsg">
+            <td [attr.colspan]="visibleFields.length" class="dt-error">{{ errorMsg }}</td>
+          </tr>
+          <tr *ngIf="!loading && !errorMsg && !filteredRows.length">
+            <td [attr.colspan]="visibleFields.length" class="dt-empty">No records found for the current filters.</td>
+          </tr>
+
+          <!-- grouped -->
+          <ng-container *ngIf="!loading && groupKey && filteredRows.length">
+            <ng-container *ngFor="let g of groups">
+              <tr class="dyn-grp">
+                <td [attr.colspan]="visibleFields.length">
+                  {{ g.label }} &middot; {{ g.rows.length }} record{{ g.rows.length === 1 ? '' : 's' }}
+                </td>
+              </tr>
+              <tr *ngFor="let row of g.rows">
+                <td *ngFor="let f of visibleFields; trackBy: trackByKey" [class.dt-num]="isNumeric(f)">
+                  <span *ngIf="f.type === 'status'; else plainGrp" [ngClass]="statusClass(row[f.key])">{{ row[f.key] }}</span>
+                  <ng-template #plainGrp>{{ fmt(row[f.key], f) }}</ng-template>
+                </td>
+              </tr>
+              <tr class="dyn-sub" *ngIf="hasTotals">
+                <td *ngFor="let f of visibleFields; let i = index; trackBy: trackByKey" [class.dt-num]="isNumeric(f)">
+                  <ng-container *ngIf="i === 0">Subtotal - {{ g.label }}</ng-container>
+                  <ng-container *ngIf="i > 0 && f.sum">{{ fmt(g.totals[f.key], f) }}</ng-container>
+                </td>
+              </tr>
+            </ng-container>
+          </ng-container>
+
+          <!-- flat (paged) -->
+          <ng-container *ngIf="!loading && !groupKey">
+            <tr *ngFor="let row of pagedRows">
+              <td *ngFor="let f of visibleFields; trackBy: trackByKey" [class.dt-num]="isNumeric(f)">
+                <span *ngIf="f.type === 'status'; else plainFlat" [ngClass]="statusClass(row[f.key])">{{ row[f.key] }}</span>
+                <ng-template #plainFlat>{{ fmt(row[f.key], f) }}</ng-template>
+              </td>
+            </tr>
+          </ng-container>
+
+          <tr class="dyn-grand" *ngIf="!loading && filteredRows.length && hasTotals">
+            <td *ngFor="let f of visibleFields; let i = index; trackBy: trackByKey" [class.dt-num]="isNumeric(f)">
+              <ng-container *ngIf="i === 0">Grand total</ng-container>
+              <ng-container *ngIf="i > 0 && f.sum">{{ fmt(grandTotals[f.key], f) }}</ng-container>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dt-footer">
+      <span>{{ filteredRows.length }} total &middot; {{ visibleFields.length }} column{{ visibleFields.length === 1 ? '' : 's' }} shown</span>
+      <span class="dt-pager" *ngIf="!groupKey">
+        <button class="mbtn-add" type="button" (click)="prevPage()" [disabled]="page <= 1">Prev</button>
+        <span class="dt-page-info">Page {{ page }} of {{ totalPages }}</span>
+        <button class="mbtn-add" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Next</button>
+      </span>
+      <span class="dt-page-info" *ngIf="groupKey">Grouped view shows all rows</span>
+    </div>
+  </div>
+
+  <!-- ============ DELETE VIEW ============ -->
+  <div class="dyn-overlay" *ngIf="deleteTarget" (click)="cancelDeleteView()">
+    <div class="dyn-modal dyn-modal-sm" (click)="$event.stopPropagation()">
+      <div class="dyn-modal-head">
+        <div>
+          <h3>Delete view</h3>
+          <p>"{{ deleteTarget.name }}" will be removed. This cannot be undone.</p>
+        </div>
+        <button class="dyn-close" type="button" (click)="cancelDeleteView()">&times;</button>
+      </div>
+      <div class="dyn-modal-body" *ngIf="deleteError">
+        <p class="dyn-save-msg">{{ deleteError }}</p>
+      </div>
+      <div class="dyn-modal-foot">
+        <button class="mbtn-add" type="button" (click)="cancelDeleteView()">Cancel</button>
+        <button class="mbtn-add dyn-danger" type="button" (click)="confirmDeleteView()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SAVE VIEW ============ -->
+  <div class="dyn-overlay" *ngIf="saveOpen" (click)="closeSaveView()">
+    <div class="dyn-modal dyn-modal-sm" (click)="$event.stopPropagation()">
+      <div class="dyn-modal-head">
+        <div>
+          <h3>Save current view</h3>
+          <p>Stores the chosen columns, filters and grouping for {{ def.name }}.</p>
+        </div>
+        <button class="dyn-close" type="button" (click)="closeSaveView()">&times;</button>
+      </div>
+
+      <div class="dyn-modal-body">
+        <div class="dyn-fld dyn-fld-block">
+          <label>View name</label>
+          <input type="text" [(ngModel)]="saveName" name="saveName" autocomplete="off"
+                 placeholder="e.g. Monthly by branch"
+                 (keyup.enter)="saveView()" />
+        </div>
+        <p class="dyn-save-msg" *ngIf="saveError">{{ saveError }}</p>
+      </div>
+
+      <div class="dyn-modal-foot">
+        <button class="mbtn-add" type="button" (click)="closeSaveView()">Cancel</button>
+        <button class="mbtn-add dyn-primary" type="button" (click)="saveView()" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'Save view' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COLUMNS PICKER ============ -->
+  <div class="dyn-overlay" *ngIf="colsOpen" (click)="closeColumns()">
+    <div class="dyn-modal" (click)="$event.stopPropagation()">
+      <div class="dyn-modal-head">
+        <div>
+          <h3>Headers (Columns)</h3>
+          <p>Pick columns for the list and export. Locked fields are hidden by your role.</p>
+        </div>
+        <button class="dyn-close" type="button" (click)="closeColumns()">&times;</button>
+      </div>
+
+      <div class="dyn-modal-body">
+        <div class="dyn-tabs">
+          <button *ngFor="let t of tabs" class="dyn-tab" [class.on]="t === activeTab" type="button"
+                  (click)="activeTab = t">{{ t }}</button>
+          <span class="dyn-tab-cnt">Selected: <b>{{ tempCount }}</b> / {{ allowedFields.length }}</span>
+        </div>
+
+        <input class="dyn-modal-search" type="text" [(ngModel)]="colSearch" name="colSearch"
+               placeholder="Search header..." />
+
+        <div class="dyn-selrow">
+          <label><input type="checkbox" [checked]="tempCount === allowedFields.length"
+                        (change)="selectAll($any($event.target).checked)" /> Select all</label>
+          <span class="dyn-mini">
+            <button class="mbtn-add" type="button" (click)="tabBulk(true)">Select tab</button>
+            <button class="mbtn-add" type="button" (click)="tabBulk(false)">Clear tab</button>
+          </span>
+        </div>
+
+        <div class="dyn-fields">
+          <label class="dyn-fcard" *ngFor="let f of pickerFields; trackBy: trackByKey"
+                 [class.checked]="isTemp(f.key) && !isDenied(f)"
+                 [class.denied]="isDenied(f)">
+            <span class="dyn-fmeta">
+              <span class="dyn-fname">
+                {{ f.label }}
+                <span class="dyn-flock" *ngIf="isSensitive(f)" title="Commercially sensitive field">&#128274;</span>
+              </span>
+              <span class="dyn-ftab">{{ isDenied(f) ? 'Locked by role permission' : f.tab }}</span>
+            </span>
+            <input type="checkbox" [checked]="isTemp(f.key) && !isDenied(f)"
+                   [disabled]="isDenied(f)" (change)="toggleTemp(f.key)" />
+          </label>
+          <p class="dyn-fnone" *ngIf="!pickerFields.length">No headers match that search.</p>
+        </div>
+      </div>
+
+      <div class="dyn-modal-foot">
+        <button class="mbtn-add" type="button" (click)="closeColumns()">Cancel</button>
+        <button class="mbtn-add dyn-primary" type="button" (click)="applyColumns()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TOAST ============ -->
+  <div class="dyn-toast" *ngIf="toastMsg" (click)="dismissToast()">{{ toastMsg }}</div>
+</div>

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
@@ -32,6 +32,15 @@ const FUNCTION_ID_ALIAS: Record<string, string> = {
 export class PermissionService {
   private permMap = new Map<string, PermFlags>();
   private loaded = false;
+  private readonly permissionChanges = new BehaviorSubject<void>(undefined);
+  readonly changes$ = this.permissionChanges.asObservable();
+
+  /**
+   * Emits true once a load attempt has settled. Route guards wait on this so a
+   * direct URL hit is not judged against a half-restored permission map.
+   */
+  private readonly readyState = new BehaviorSubject<boolean>(false);
+  readonly ready$ = this.readyState.asObservable();
 
   constructor(private http: HttpClient) {
     // Try to restore from localStorage on startup (for page refreshes)
@@ -43,22 +52,40 @@ export class PermissionService {
       }
     } catch {}
     window.addEventListener('menu-permission-updated', () => this.load());
+
+    // The cache is only a first-paint optimisation; the API is the authority.
+    // Without this refresh a permission granted since the cache was written
+    // stays invisible to the route guards, while the sidebar - which queries
+    // the API per item - already shows it. That mismatch shows up as a menu
+    // entry that bounces straight back to the dashboard when clicked.
+    this.load();
   }
 
   load(): void {
     const userId = localStorage.getItem('id');
-    if (!userId) { this.loaded = true; return; }
+    if (!userId) { this.settle(); return; }
 
     this.http.get<any>(`${environment.apiUrl}/User/organization-role/${userId}`)
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
-        this.parsePermissions(res);
-        try {
-          const arr = this.extractArray(res);
-          if (arr.length) localStorage.setItem(LS_KEY, JSON.stringify(arr));
-        } catch {}
-        this.loaded = true;
+        const arr = this.extractArray(res);
+        // Only replace on a usable response. Parsing an empty/failed one would
+        // clear the map, and every canX() then falls through to the master-owner
+        // check - silently stripping a normal user of everything they just had
+        // because of one transient network error.
+        if (arr.length) {
+          this.parsePermissions(arr);
+          try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); } catch {}
+        }
+        this.settle();
       });
+  }
+
+  /** Mark the permission map usable and wake anything waiting on it. */
+  private settle(): void {
+    this.loaded = true;
+    this.readyState.next(true);
+    this.permissionChanges.next();
   }
 
   /** Load directly from a permissions array (e.g., from login response or stored JSON) */
@@ -66,7 +93,7 @@ export class PermissionService {
     if (!Array.isArray(data) || !data.length) return;
     this.parsePermissions(data);
     try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
-    this.loaded = true;
+    this.settle();
   }
 
   private isMaster(): boolean {

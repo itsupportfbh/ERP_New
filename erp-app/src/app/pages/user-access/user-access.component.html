@@ -151,7 +151,19 @@
 
     <div class="card perm-card">
       <div class="perm-intro">
-        <div class="section-label">Roles &amp; Permissions</div>
+        <div class="perm-title-row">
+          <div class="section-label">Roles &amp; Permissions</div>
+          <div class="perm-title-actions" *ngIf="modules.length > 0">
+            <button class="btn btn-primary btn-sm"
+                    [disabled]="activeModuleRows.length === 0 || activeModuleAllSelected"
+                    (click)="selectActiveModuleAll()">
+              &#10003; Select All {{ activeModuleTitle }}
+            </button>
+            <button class="btn btn-outline btn-sm" (click)="resetPermissions()">
+              &#8635; Reset All
+            </button>
+          </div>
+        </div>
         <p class="perm-hint">
           Configure visible functions and permission flags for the selected department
         </p>
@@ -214,11 +226,6 @@
         </table>
       </div>
 
-      <div class="perm-card-footer">
-        <button class="btn btn-outline btn-sm" (click)="resetPermissions()">
-          &#8635; Reset All
-        </button>
-      </div>
     </div>
 
     <div class="wizard-footer">

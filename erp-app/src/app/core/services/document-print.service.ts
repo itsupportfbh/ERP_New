@@ -105,6 +105,12 @@ export class DocumentPrintService {
       .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
+  /** Same letterhead details this service prints, for other screens (e.g. the
+   *  report exports) that need to render their own layout under one header. */
+  getPrintCompany(): { name: string; addr1: string; addr2: string; phone: string; email: string; logo: string } {
+    return this.companyFromStore();
+  }
+
   /** Company header sourced from the Company master (cached in localStorage by
    *  MasterService.cacheCompanyLogo), falling back to the built-in defaults. */
   private companyFromStore(): { name: string; addr1: string; addr2: string; phone: string; email: string; logo: string } {

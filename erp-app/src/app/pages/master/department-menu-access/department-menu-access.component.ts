@@ -8,6 +8,7 @@ import {
   SaveDepartmentMenuAccessRequest
 } from './department-menu-access.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
+import { NavigationCatalogService } from '../../../core/services/navigation-catalog.service';
 
 interface MenuModule {
   id: string;
@@ -15,17 +16,6 @@ interface MenuModule {
   description: string;
   icon: string;
 }
-
-const MENU_MODULES: MenuModule[] = [
-  { id: 'home', title: 'General', description: 'Dashboard and common access', icon: 'fas fa-home' },
-  { id: 'businesspartners', title: 'Business Partners', description: 'Customers, suppliers and users', icon: 'fas fa-users' },
-  { id: 'sales', title: 'Sales', description: 'Sales documents and order flow', icon: 'fas fa-chart-line' },
-  { id: 'purchase', title: 'Purchase', description: 'Procurement and vendor operations', icon: 'fas fa-shopping-cart' },
-  { id: 'inventory', title: 'Inventory', description: 'Stock, transfers and internal requests', icon: 'fas fa-boxes' },
-  { id: 'financial', title: 'Financial', description: 'Accounting, ledger and tax', icon: 'fas fa-wallet' },
-  { id: 'master', title: 'Master', description: 'Core setup and administrative masters', icon: 'fas fa-cogs' },
-  { id: 'recipe', title: 'Recipe', description: 'Recipe and production planning', icon: 'fas fa-utensils' }
-];
 
 @Component({
   selector: 'erp-department-menu-access',
@@ -44,7 +34,7 @@ export class DepartmentMenuAccessComponent implements OnInit {
   selectedDepartmentName = '';
   checkedIds = new Set<string>();
 
-  readonly modules = MENU_MODULES;
+  readonly modules: MenuModule[];
 
   permission: FunctionPermission;
   isPermissionLoaded = false;
@@ -56,7 +46,22 @@ export class DepartmentMenuAccessComponent implements OnInit {
   canEdit(): boolean { return this.permissionService.hasEdit(this.permission); }
   canDelete(): boolean { return this.permissionService.hasDelete(this.permission); }
 
-  constructor(private service: DepartmentMenuAccessService, private permissionService: PermissionService) {
+  constructor(
+    private service: DepartmentMenuAccessService,
+    private permissionService: PermissionService,
+    navigationCatalog: NavigationCatalogService
+  ) {
+    this.modules = navigationCatalog.snapshot().map(menu => {
+      const id = navigationCatalog.moduleId(menu);
+      return {
+        id: id === 'general' ? 'home' : id,
+        title: id === 'general' ? 'General' : menu.label,
+        description: menu.children?.length
+          ? `${menu.children.length} menu group${menu.children.length === 1 ? '' : 's'}`
+          : `${menu.label} access`,
+        icon: menu.icon || 'fas fa-folder'
+      };
+    });
     this.userId = Number(localStorage.getItem('id') || 0);
     this.companyId = Number(localStorage.getItem('companyId') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
