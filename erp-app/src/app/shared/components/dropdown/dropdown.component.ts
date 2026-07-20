@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { rankSearchResults } from '../../utils/search-ranking';
 
 export interface DropdownOption { label: string; value: any; }
 
@@ -89,9 +90,7 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
   }
 
   get filteredOptions(): DropdownOption[] {
-    const q = this.searchText.trim().toLowerCase();
-    if (!q) return this.resolvedOptions;
-    return this.resolvedOptions.filter(o => o.label.toLowerCase().includes(q));
+    return rankSearchResults(this.resolvedOptions, this.searchText, option => option.label);
   }
 
   toggle(): void {

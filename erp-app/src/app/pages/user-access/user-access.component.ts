@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { BusinessPartnersService, UserPayload } from '../business-partners/business-partners.service';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.component';
 import { QuickAddType, QuickAddResult } from '../../shared/components/quick-add-modal/quick-add-modal.component';
+import { NavigationCatalogService, NavigationMenuItem } from '../../core/services/navigation-catalog.service';
 
 export type PermFlag = 'V' | 'C' | 'E' | 'D' | 'S' | 'A' | 'R' | 'N' | 'X' | 'P' | 'M';
 
@@ -230,16 +231,18 @@ export class UserAccessComponent implements OnInit {
   approvalLevelOptions: DropdownOption[] = [];
 
   // ── Step 2 ──────────────────────────────────────
-  modules: ModuleDef[] = FALLBACK_MODULES;
+  modules: ModuleDef[] = [];
   readonly permFlags = PERM_FLAGS;
-  activeModuleId     = FALLBACK_MODULES[0].id;
-  permRows: PermRow[] = this.buildPermRows();
+  activeModuleId     = '';
+  permRows: PermRow[] = [];
   loadingPermissions = false;
+  private menuTree: NavigationMenuItem[] = [];
 
   constructor(
     private route:   ActivatedRoute,
     private router:  Router,
-    private svc:     BusinessPartnersService
+    private svc:     BusinessPartnersService,
+    private navigationCatalog: NavigationCatalogService
   ) {}
 
   // ── Computed ────────────────────────────────────
@@ -255,6 +258,7 @@ export class UserAccessComponent implements OnInit {
 
   // ── Lifecycle ────────────────────────────────────
   ngOnInit(): void {
+    this.menuTree = this.navigationCatalog.snapshot();
     const id = this.route.snapshot.paramMap.get('id');
     this.userId = id && id !== 'new' ? Number(id) : null;
     this.loadMasters();
@@ -388,6 +392,23 @@ export class UserAccessComponent implements OnInit {
         row.flags['V'] = true;
       }
     });
+  }
+
+  selectActiveModuleAll(): void {
+    this.activeModuleRows.forEach(row => {
+      this.permFlags.forEach(flag => row.flags[flag.key] = true);
+    });
+  }
+
+  get activeModuleTitle(): string {
+    return this.modules.find(module => module.id === this.activeModuleId)?.title || 'Tab';
+  }
+
+  get activeModuleAllSelected(): boolean {
+    const rows = this.activeModuleRows;
+    return rows.length > 0 && rows.every(row =>
+      this.permFlags.every(flag => row.flags[flag.key])
+    );
   }
 
   allChecked(flag: PermFlag): boolean {
@@ -549,24 +570,20 @@ export class UserAccessComponent implements OnInit {
     const allowed = new Set(menuIds.map(id => id.toLowerCase()));
     const modules: ModuleDef[] = [];
 
-    if (allowed.has('home')) {
-      modules.push({
-        id: 'general',
-        title: 'General',
-        fns: [{ id: 'home', title: 'Dashboard' }]
-      });
+    for (const menu of this.menuTree.filter(item => !item.hidden)) {
+      const moduleId = this.navigationCatalog.moduleId(menu);
+      const functionId = this.navigationCatalog.functionId(menu);
+      if (!menu.children?.length) {
+        if (allowed.has(functionId.toLowerCase()) || allowed.has(moduleId.toLowerCase())) {
+          modules.push({ id: moduleId, title: moduleId === 'general' ? 'General' : menu.label,
+            fns: [{ id: functionId, title: menu.label }] });
+        }
+        continue;
+      }
+      if (!allowed.has(moduleId.toLowerCase())) continue;
+      const fns = this.flattenModuleFns(menu.children);
+      if (fns.length) modules.push({ id: moduleId, title: menu.label, fns });
     }
-
-    const mappedModules = APP_MENU_TREE
-      .filter(item => item.type === 'collapsible' && !item.hidden)
-      .map(module => {
-        if (!allowed.has(module.id.toLowerCase())) return null;
-        const fns = this.flattenModuleFns(module.children || []);
-        return fns.length ? { id: module.id, title: module.title, fns } : null;
-      })
-      .filter((module): module is ModuleDef => !!module);
-
-    modules.push(...mappedModules);
 
     const deduped = modules.map(module => ({
       ...module,
@@ -604,12 +621,15 @@ export class UserAccessComponent implements OnInit {
       .filter(Boolean);
   }
 
-  private flattenModuleFns(nodes: MenuNode[]): Array<{ id: string; title: string }> {
+  private flattenModuleFns(nodes: NavigationMenuItem[]): Array<{ id: string; title: string }> {
     const result: Array<{ id: string; title: string }> = [];
     for (const node of nodes || []) {
       if (!node || node.hidden) continue;
-      if (node.type === 'item') {
-        result.push({ id: node.id, title: node.title });
+      if (!node.children?.length && (node.route || node.permId)) {
+        result.push({ id: this.navigationCatalog.functionId(node), title: node.label });
+      }
+      if (node.permissionChildren?.length) {
+        result.push(...this.flattenModuleFns(node.permissionChildren));
       }
       if (node.children?.length) {
         result.push(...this.flattenModuleFns(node.children));

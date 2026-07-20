@@ -5,8 +5,9 @@ import { AuthService } from '../core/services/auth.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { CurrentPeriodLockState, PeriodLockStateService } from '../core/services/period-lock-state.service';
 import { MasterService } from '../core/services/master.service';
+import { NavigationCatalogService, NavigationMenuItem } from '../core/services/navigation-catalog.service';
 
-interface MenuItem {
+interface MenuItem extends NavigationMenuItem {
   label: string;
   icon: string;
   route?: string;
@@ -141,7 +142,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Delivery Order',     icon: 'delivery', route: '/app/sales/delivery-orders',   permId: 'do-list2' },
         { label: 'Sales Invoice',      icon: 'invoice',  route: '/app/sales/invoices',          permId: 'si-list' },
         { label: 'Return / Credit',    icon: 'credit',   route: '/app/sales/credit-notes',      permId: 'cn-list' },
-        { label: 'Report',             icon: 'report',   route: '/app/sales/reports',           permId: 'sales-report' },
+        {
+          label: 'Report', icon: 'report', route: '/app/sales/reports', permId: 'sales-report',
+          permissionChildren: [
+            { label: 'Sales By Item',          permId: 'sales-report-by-item' },
+            { label: 'Average Margin',         permId: 'sales-report-average-margin' },
+            { label: 'Deliveries',             permId: 'sales-report-deliveries' },
+            { label: 'Delivery Note Summary',  permId: 'sales-report-delivery-note' }
+          ]
+        },
       ]
     },
     {
@@ -155,8 +164,30 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Mobile Receiving', icon: 'grn',       route: '/app/purchase/mobile-receiving', permId: 'mobilereceiving' },
         { label: 'Supplier Invoice', icon: 'invoice',   route: '/app/purchase/supplier-invoice', permId: 'pin-list' },
         { label: 'Debit Note',       icon: 'debit',     route: '/app/purchase/debit-note',       permId: 'dn-list' },
-        { label: 'Scorecard',        icon: 'scorecard', route: '/app/purchase/scorecard',        permId: 'supplier-scorecard' },
+        // Scorecard is reached through Report > Supplier Scorecard. The standalone
+        // screen and its /app/purchase/scorecard route are still in place.
         { label: 'Pending Fulfillment', icon: 'pr',     route: '/app/purchase/pending-fulfillment', permId: 'pr-list' },
+        {
+          label: 'Report', icon: 'report', route: '/app/purchase/reports', permId: 'purchase-report',
+          permissionChildren: [
+            { label: 'PR Register',                     permId: 'purchase-report-pr-register' },
+            { label: 'Pending PR Approvals',            permId: 'purchase-report-pr-pending' },
+            { label: 'PR by Department',                permId: 'purchase-report-pr-by-dept' },
+            { label: 'PO Register',                     permId: 'purchase-report-po-register' },
+            { label: 'Open PO / Outstanding Deliveries',permId: 'purchase-report-po-open' },
+            { label: 'PO Summary by Supplier',          permId: 'purchase-report-po-by-supplier' },
+            { label: 'GRN Register',                    permId: 'purchase-report-grn-register' },
+            { label: 'Quality Check / Rejections',      permId: 'purchase-report-grn-quality' },
+            { label: 'PO vs GRN Variance',              permId: 'purchase-report-grn-variance' },
+            { label: 'Supplier Invoice Register',       permId: 'purchase-report-pin-register' },
+            { label: '3-Way Match Exceptions',          permId: 'purchase-report-pin-match' },
+            { label: 'Outstanding Payables',            permId: 'purchase-report-pin-payable' },
+            { label: 'Debit Note Register',             permId: 'purchase-report-dn-register' },
+            { label: 'Monthly Spend Trend',             permId: 'purchase-report-spend-trend' },
+            { label: 'Supplier Scorecard',              permId: 'purchase-report-scorecard' },
+            { label: 'Procure-to-Pay Cycle',            permId: 'purchase-report-p2p-cycle' }
+          ]
+        },
       ]
     },
         {
@@ -177,6 +208,19 @@ export class LayoutComponent implements OnInit, OnDestroy {
             { label: 'Stock Transfer Request', icon: 'inv-transfer', route: '/app/inventory/list-stock-transfer-receipt', permId: 'list-stock-transfer-receipt' },
           ]
         },
+        {
+          label: 'Report', icon: 'report', route: '/app/inventory/reports', permId: 'inventory-report',
+          permissionChildren: [
+            { label: 'Stock Summary',            permId: 'inventory-report-stock-summary' },
+            { label: 'Valuation by Category',    permId: 'inventory-report-valuation' },
+            { label: 'Stock Movement',           permId: 'inventory-report-movement' },
+            { label: 'Stock Adjustments',        permId: 'inventory-report-adjustments' },
+            { label: 'Transfers & Requisitions', permId: 'inventory-report-transfers' },
+            { label: 'Stock Take Variance',      permId: 'inventory-report-variance' },
+            { label: 'Reorder / Low Stock',      permId: 'inventory-report-reorder' },
+            { label: 'COGS / Consumption',       permId: 'inventory-report-cogs' },
+          ]
+        },
       ]
     },
     {
@@ -193,8 +237,22 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Year End Close',      icon: 'close',   route: '/app/finance/year-end-close',    permId: 'year-end' },
         { label: 'Trial Balance',       icon: 'report',  route: '/app/finance/trial-balance',     permId: 'tb' },
         { label: 'Bank Reconciliation', icon: 'ledger',  route: '/app/finance/bank-reconciliation', permId: 'ledger' },
-        // { label: 'Fixed Assets',        icon: 'finance', route: '/app/finance/fixed-assets' },
-        { label: 'Reports',             icon: 'report',  route: '/app/finance/reports',           permId: 'reports' },
+        { label: 'Fixed Assets',        icon: 'finance', route: '/app/finance/fixed-assets', permId: 'fixed-asset' },
+        {
+          label: 'Reports', icon: 'report', route: '/app/finance/reports', permId: 'reports',
+          permissionChildren: [
+            { label: 'Trial Balance',        permId: 'finance-report-trial-balance' },
+            { label: 'Account Ledger',       permId: 'finance-report-ledger' },
+            { label: 'Profit & Loss',        permId: 'finance-report-profit-loss' },
+            { label: 'Balance Sheet',        permId: 'finance-report-balance-sheet' },
+            { label: 'AR/AP Aging',          permId: 'finance-report-arap-aging' },
+            { label: 'GST Detail Report',    permId: 'finance-report-gst-detail' },
+            { label: 'Collections Forecast', permId: 'finance-report-collection-forecast' },
+            { label: 'Daybook',              permId: 'finance-report-daybook' },
+            { label: 'Receipts Register',    permId: 'finance-report-receipts' },
+            { label: 'Payments Register',    permId: 'finance-report-payments' }
+          ]
+        },
       ]
     },
       {
@@ -274,8 +332,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private router: Router,
     private permissionService: PermissionService,
     private periodLockState: PeriodLockStateService,
-    private masterSvc: MasterService
+    private masterSvc: MasterService,
+    navigationCatalog: NavigationCatalogService
   ) {
+    navigationCatalog.register(this.menus);
     this.showAll = this.auth.isSuperAdmin();
     window.addEventListener('menu-permission-updated', this.menuReloadHandler);
   }
