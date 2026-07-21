@@ -333,18 +333,18 @@ const routes: Routes = [
       { path: 'sales/reports', component: ReportComponent, canActivate: [ReportPermissionGuard], data: { permissionFunctionId: 'sales-report' } },
       { path: 'sales/reports/delivery-note',   component: ReportDeliveryNoteComponent },
 
-      // ── Recipe / Production ─────────────────────────────
-      { path: 'recipe/recipes',                    component: RecipeMasterListComponent },
-      { path: 'recipe/recipes/new',                component: RecipeMasterFormComponent },
-      { path: 'recipe/recipes/:id',                component: RecipeMasterFormComponent },
+      // ── Recipe / Production (hidden — routes disabled so direct URLs also fail) ──
+      // { path: 'recipe/recipes',                    component: RecipeMasterListComponent },
+      // { path: 'recipe/recipes/new',                component: RecipeMasterFormComponent },
+      // { path: 'recipe/recipes/:id',                component: RecipeMasterFormComponent },
 
-      { path: 'recipe/production-planning',        component: ProductionPlanningListComponent },
-      { path: 'recipe/production-planning/new',    component: ProductionPlanningFormComponent },
-      { path: 'recipe/production-planning/:id',    component: ProductionPlanningFormComponent },
+      // { path: 'recipe/production-planning',        component: ProductionPlanningListComponent },
+      // { path: 'recipe/production-planning/new',    component: ProductionPlanningFormComponent },
+      // { path: 'recipe/production-planning/:id',    component: ProductionPlanningFormComponent },
 
-      { path: 'recipe/batch-production',           component: BatchProductionListComponent },
-      { path: 'recipe/batch-production/new',        component: BatchProductionFormComponent },
-      { path: 'recipe/batch-production/:id',        component: BatchProductionFormComponent },
+      // { path: 'recipe/batch-production',           component: BatchProductionListComponent },
+      // { path: 'recipe/batch-production/new',        component: BatchProductionFormComponent },
+      // { path: 'recipe/batch-production/:id',        component: BatchProductionFormComponent },
 
       
     ]

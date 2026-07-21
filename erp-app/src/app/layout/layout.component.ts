@@ -289,7 +289,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
         },
       ]
     },
-      {
+      // Recipe / Production menu hidden — chef recipes not available yet.
+      // Re-enable this block (and the routes in app-routing-module.ts) when ready.
+      /* {
       label: 'Recipe',
       icon: 'recipe',
       children: [
@@ -297,7 +299,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { label: 'Production Planning', icon: 'plan',   route: '/app/recipe/production-planning',  permId: 'pp-list' },
         { label: 'Batch Production',    icon: 'batch',  route: '/app/recipe/batch-production',     permId: 'bp-list' },
       ]
-    },
+    }, */
   ];
 
   filteredMenus: MenuItem[] = this.menus;

@@ -167,14 +167,14 @@
     <app-all-finance-exceptions></app-all-finance-exceptions>
   </ng-container>
 
-  <!-- Recipe / Production Executive -->
-  <ng-container *ngIf="showRole('recipe-production')">
+  <!-- Recipe / Production Executive — hidden (recipe concept off) -->
+  <ng-container *ngIf="false && showRole('recipe-production')">
     <app-recipe-production></app-recipe-production>
     <app-planning-orders></app-planning-orders>
   </ng-container>
 
-  <!-- Production Manager / HOD -->
-  <ng-container *ngIf="showRole('production-manager')">
+  <!-- Production Manager / HOD — hidden (recipe concept off) -->
+  <ng-container *ngIf="false && showRole('production-manager')">
     <app-production-manager></app-production-manager>
     <app-production-output></app-production-output>
     <app-top-recipes></app-top-recipes>
