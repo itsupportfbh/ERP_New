@@ -123,8 +123,8 @@
     </div>
   </div>
 
-  <!-- Stock Review Variance -->
-  <div class="card st-card">
+  <!-- Stock Review Variance — approval step, hidden from users who can only record the count -->
+  <div class="card st-card" *ngIf="canApprove()">
     <div class="table-search-bar st-review-toggle" (click)="toggleStockReview()">
       <span style="font-size:13px;font-weight:600;color:var(--text)">Stock Review Variance</span>
       <svg class="st-caret" [style.transform]="showStockReview ? 'rotate(180deg)' : 'none'"

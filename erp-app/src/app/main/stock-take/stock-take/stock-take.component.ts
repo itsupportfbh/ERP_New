@@ -13,6 +13,7 @@ import { BinService } from '../../../master/bin/bin.service';
 import { StockIssueService } from 'app/main/master/stock-issue/stock-issue.service';
 import { SupplierService } from 'app/main/businessPartners/supplier/supplier.service';
 import { QuickAddType, QuickAddResult } from 'app/shared/components/quick-add-modal/quick-add-modal.component';
+import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
 interface StockTakeLine {
   id: number;
@@ -84,6 +85,9 @@ export class StockTakeComponent implements OnInit {
   strategyCheck = false;
   stockTakeId: number = 0;
 
+  functionId = 'stocktake-list';
+  permission: FunctionPermission;
+
   @ViewChild('reviewTpl', { static: true }) reviewTpl!: any;
   @ViewChild('chkSelectAllRef') chkSelectAllRef!: ElementRef<HTMLInputElement>;
   private reviewRef?: NgbModalRef;
@@ -99,10 +103,28 @@ export class StockTakeComponent implements OnInit {
     private route: ActivatedRoute,
     private StockissueService: StockIssueService,
     private supplierService: SupplierService,
-    private cd: ChangeDetectorRef
-  ) { }
+    private cd: ChangeDetectorRef,
+    private permissionService: PermissionService
+  ) {
+    this.permission = this.permissionService.getEmptyPermission(this.functionId);
+  }
+
+  /** Approving the variance is a supervisor step — an Executive only records the count. */
+  canApprove(): boolean {
+    return this.permissionService.hasApprove(this.permission);
+  }
+
+  private loadPermission(): void {
+    const userId = Number(localStorage.getItem('id') || 0);
+    if (userId <= 0) return;
+    this.permissionService.getFunctionPermission(userId, this.functionId).subscribe({
+      next: res => { this.permission = res || this.permissionService.getEmptyPermission(this.functionId); },
+      error: () => { this.permission = this.permissionService.getEmptyPermission(this.functionId); }
+    });
+  }
 
   ngOnInit(): void {
+    this.loadPermission();
     forkJoin({
       warehouse: this.warehouseService.getWarehouse(),
       bin: this.BinService.getAllBin(),
