@@ -25,3 +25,19 @@
 /* extra action-icon colors (edit/del come from global dt-icon-btn) */
 .dt-icon-btn.view  { svg { stroke: #0ea5e9; } &:hover { background: #e0f2fe; } }
 .dt-icon-btn.print { svg { stroke: #2E5F73; } &:hover { background: #eef6f8; } }
+.dt-icon-btn.codes { svg { stroke:#7c3aed; } &:hover { background:#ede9fe; } }
+.codes-overlay { position:fixed; inset:0; z-index:1050; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,.5); }
+.codes-modal { width:min(760px,96vw); overflow:hidden; border-radius:16px; background:#fff; box-shadow:0 24px 64px rgba(0,0,0,.25); }
+.codes-modal header { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; color:#fff; background:#176b75; }
+.codes-modal header h3 { margin:0; font-size:17px; }.codes-modal header p { margin:3px 0 0; opacity:.75; font-size:12px; }
+.codes-modal header button { display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:50%; color:#fff; background:rgba(255,255,255,.16); font-size:20px; cursor:pointer; }
+.codes-body { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:24px; }
+.codes-body article { display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px; border:1px solid #dbe4e8; border-radius:12px; }
+.codes-body h4 { align-self:flex-start; margin:0; color:#2e5f73; }.codes-body strong { color:#1f3440; }
+.code-frame { display:flex; align-items:center; justify-content:center; width:100%; min-height:190px; border:1px solid #e5e7eb; border-radius:9px; background:#fff; }
+.barcode-frame img { width:100%; max-height:110px; object-fit:contain; }.qr-frame img { width:190px; height:190px; object-fit:contain; }
+.codes-body article>button { padding:8px 14px; border:0; border-radius:7px; color:#fff; background:#2e5f73; cursor:pointer; }
+.codes-loading,.codes-error { padding:65px 20px; text-align:center; color:#6b7280; }.codes-error { color:#dc2626; }
+.codes-modal footer { display:flex; justify-content:flex-end; padding:12px 20px; border-top:1px solid #e5e7eb; background:#f8fafc; }
+.codes-modal footer button { padding:8px 18px; border:1px solid #d5dde1; border-radius:8px; background:#fff; cursor:pointer; }
+@media(max-width:650px) { .codes-body { grid-template-columns:1fr; } }
