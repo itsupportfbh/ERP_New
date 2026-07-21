@@ -48,6 +48,10 @@ export class MasterService {
 
   // BIN
   getBins(): Observable<any> { return this.http.get(`${this.api}/Bins/GetAllBin`); }
+  /** Only the bins assigned to one warehouse (Warehouse.BinID), not the whole bin master. */
+  getWarehouseBins(warehouseId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/Warehouse/getBinNameByIdAsync/${warehouseId}`);
+  }
   createBin(d: any): Observable<any> { return this.http.post(`${this.api}/Bins/createBin`, this.withAudit(d)); }
   updateBin(id: number, d: any): Observable<any> { return this.http.put(`${this.api}/Bins/updateBinById/${id}`, this.withAudit({ ...d, id })); }
   deleteBin(id: number): Observable<any> { return this.http.delete(`${this.api}/Bins/deleteBinById/${id}`); }

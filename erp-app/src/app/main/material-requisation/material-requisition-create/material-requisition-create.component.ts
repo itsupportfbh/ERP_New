@@ -66,6 +66,14 @@ type BinDto = {
 })
 export class MaterialRequisitionCreateComponent implements OnInit {
   OutletList: any[] = [];
+
+  /**
+   * Whether the warehouse is fixed for this user. It is locked once we can
+   * determine the right one (their own outlet, or the single warehouse of the
+   * selected company) and left open otherwise — the field used to be permanently
+   * disabled, which stranded any user whose location matched no warehouse.
+   */
+  warehouseLocked = false;
   items: ItemMaster[] = [];
   binList: BinDto[] = [];
 
@@ -182,23 +190,46 @@ loadOutlets(): void {
         return;
       }
 
-      const locationId = this.getLocalLocationId();
-
-      if (!locationId) {
+      // In "All companies" mode the list spans every company, so there is no one
+      // warehouse this request belongs to — the user must choose deliberately.
+      // With a single company selected the choice is unambiguous, so prefill it.
+      if (this.isAllCompaniesMode()) {
+        this.header.OutletId = null;
+        this.header.BinId = null;
+        this.binList = [];
+        this.warehouseLocked = false;
         return;
       }
 
-      // Find warehouse mapped to location
-      const warehouse = this.OutletList.find(
-        (x: any) =>
-          Number(x.locationId ?? x.LocationId ?? x.locationID ?? 0) === locationId
-      );
+      const locationId = this.getLocalLocationId();
+
+      // Prefer the warehouse at the user's own location. Falling back to the only
+      // warehouse of the selected company covers the case where a head-office user
+      // works on behalf of an outlet, whose location never matches their own.
+      let warehouse = locationId
+        ? this.OutletList.find(
+            (x: any) =>
+              Number(x.locationId ?? x.LocationId ?? x.locationID ?? 0) === locationId
+          )
+        : null;
+
+      if (!warehouse && this.OutletList.length === 1) {
+        warehouse = this.OutletList[0];
+      }
 
       if (warehouse) {
         this.header.OutletId = Number(warehouse.id);
+        // Determined for this user — keep it fixed so a requisition cannot be
+        // raised against someone else's outlet by accident.
+        this.warehouseLocked = true;
 
         // Auto load bins
         this.loadBinsByOutlet(this.header.OutletId);
+      } else {
+        // Nothing could be determined (e.g. a head-office user whose own location
+        // matches no warehouse of the selected company). Leave it open rather than
+        // showing an empty field that cannot be filled in.
+        this.warehouseLocked = false;
       }
     },
     error: (err) => {
@@ -562,6 +593,16 @@ receivedQty: 0
     this.router.navigate(['/app/inventory/list-material-requisition']);
   }
 
+
+  /**
+   * True when the company switcher is on "All companies". The switcher writes
+   * companyId 0 in that mode, which is also what drops the X-Company-Id header,
+   * so the warehouse list comes back spanning every company.
+   */
+  private isAllCompaniesMode(): boolean {
+    return localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
+      || Number(localStorage.getItem('companyId') || 0) === 0;
+  }
 
   private getLocalLocationId(): number | null {
   const val =

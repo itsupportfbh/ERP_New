@@ -26,7 +26,7 @@
           <label class="fc-label">Warehouse</label>
           <erp-dropdown [(ngModel)]="header.OutletId" name="OutletId"
             [items]="OutletList" bindLabel="name" bindValue="id"
-            placeholder="Select Warehouse" [disabled]="true" (ngModelChange)="onOutletChanged()">
+            placeholder="Select Warehouse" [disabled]="warehouseLocked" (ngModelChange)="onOutletChanged()">
           </erp-dropdown>
         </div>
         <div>
