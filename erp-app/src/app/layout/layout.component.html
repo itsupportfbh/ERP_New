@@ -130,7 +130,7 @@
         <div class="user-menu-wrap" clickOutside (clickOutside)="userMenuOpen=false">
           <button class="user-menu-btn" (click)="userMenuOpen=!userMenuOpen">
             <div class="avatar">{{ userInitial }}</div>
-            <span class="user-name" *ngIf="sidebarOpen">{{ userName }}</span>
+            <span class="user-name">{{ userName }}</span>
             <svg class="caret-icon" [class.open]="userMenuOpen" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <polyline points="4 6 8 10 12 6"/>
             </svg>

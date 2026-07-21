@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { forkJoin, Subscription, filter } from 'rxjs';
+import { Subscription, filter } from 'rxjs';
 import { AuthService } from '../core/services/auth.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 import { CurrentPeriodLockState, PeriodLockStateService } from '../core/services/period-lock-state.service';
@@ -302,7 +302,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }, */
   ];
 
-  filteredMenus: MenuItem[] = this.menus;
+  /**
+   * Starts empty on purpose. Seeding this with the full menu made every code
+   * path that skips applyMenuFilter - a missing user id, a permission load that
+   * never settles - render the entire sidebar as if all View flags were granted.
+   * The sidebar must be built up from permissions, never trimmed down to them.
+   */
+  filteredMenus: MenuItem[] = [];
   menuSearch = '';
 
   get searchedMenus(): MenuItem[] {
@@ -338,22 +344,27 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   private applyMenuFilter(): void {
-    if (this.showAll || !this.permLoaded) {
+    if (this.showAll) {
       this.filteredMenus = this.menus;
+      return;
+    }
+    // Until the grants are in, show nothing rather than everything.
+    if (!this.permLoaded) {
+      this.filteredMenus = [];
       return;
     }
     this.filteredMenus = this.menus
       .map(m => {
         if (!m.children?.length) {
-          return (!m.permId || this.viewableIds.has(m.permId)) ? m : null;
+          return (!m.permId || this.viewableIds.has(m.permId.toLowerCase())) ? m : null;
         }
         const visibleChildren = m.children
           .map(child => {
             if (!child.children?.length) {
-              return (!child.permId || this.viewableIds.has(child.permId)) ? child : null;
+              return (!child.permId || this.viewableIds.has(child.permId.toLowerCase())) ? child : null;
             }
             const visibleGrandchildren = child.children.filter(
-              gc => !gc.permId || this.viewableIds.has(gc.permId)
+              gc => !gc.permId || this.viewableIds.has(gc.permId.toLowerCase())
             );
             return visibleGrandchildren.length ? { ...child, children: visibleGrandchildren } : null;
           })
@@ -371,16 +382,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private masterSvc: MasterService,
     navigationCatalog: NavigationCatalogService
   ) {
-    this.showAll = this.shouldShowAllMenus();
+    this.showAll = false;
     navigationCatalog.register(this.menus);
-    this.showAll = this.auth.isSuperAdmin();
     window.addEventListener('menu-permission-updated', this.menuReloadHandler);
   }
 
   ngOnInit(): void {
      this.masterSvc.cacheCompanyLogo();
     this.loadAccessContext();
-    this.showAll = this.shouldShowAllMenus();
+    this.showAll = false;
     // On phones/tablets start with the drawer closed so it doesn't cover the page.
     if (typeof window !== 'undefined' && window.innerWidth <= 768) {
       this.sidebarOpen = false;
@@ -396,12 +406,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         }
       });
 
-    if (this.showAll) {
-      this.permLoaded = true;
-      this.applyMenuFilter();
-    } else {
-      this.loadMenuPermissions();
-    }
+    this.loadMenuPermissions();
 
     this.periodLockSub = this.periodLockState.currentState$.subscribe((state: CurrentPeriodLockState) => {
       this.currentPeriodLocked = !!state.isLocked;
@@ -451,50 +456,33 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   loadMenuPermissions(): void {
-    this.showAll = this.shouldShowAllMenus();
-    if (this.showAll) {
-      this.permLoaded = true;
-      this.applyMenuFilter();
-      return;
-    }
-
-    const storedAllowedMenuIds = this.getStoredAllowedMenuIds();
-    if (storedAllowedMenuIds.size > 0) {
-      this.viewableIds = storedAllowedMenuIds;
-      this.permLoaded = true;
-      this.applyMenuFilter();
-      return;
-    }
+    // RolesJSON is the function-level authority. allowedMenuIds belongs to
+    // Department Menu Access and must never be treated as a View permission.
+    this.showAll = false;
 
     const userId = Number(localStorage.getItem('id') || 0);
     if (!userId) {
+      // No identity means no grants can be proven - and this path used to leave
+      // filteredMenus at its full-menu seed, handing out the whole sidebar.
+      this.viewableIds.clear();
       this.permLoaded = true;
+      this.applyMenuFilter();
       return;
     }
 
-    const allPermIds: string[] = [];
-    const collectPermIds = (items: MenuItem[]) => {
-      for (const item of items) {
-        if (item.permId) allPermIds.push(item.permId);
-        if (item.children) collectPermIds(item.children);
-      }
-    };
-    collectPermIds(this.menus);
-
-    forkJoin(allPermIds.map(permId =>
-      this.permissionService.getFunctionPermission(userId, permId)
-    )).subscribe({
+    this.permissionService.getUserFunctionPermissions(userId).subscribe({
       next: (results: FunctionPermission[]) => {
         this.viewableIds = new Set(
           results
-            .map((perm, i) => (perm?.view ? allPermIds[i] : null))
-            .filter((id): id is string => id !== null)
+            .filter(perm => perm.view && !!perm.functionId)
+            .map(perm => perm.functionId.toLowerCase())
         );
         this.permLoaded = true;
         this.applyMenuFilter();
       },
       error: () => {
-        this.showAll = true;
+        this.showAll = false;
+        this.viewableIds.clear();
         this.permLoaded = true;
         this.applyMenuFilter();
       }
@@ -726,26 +714,4 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getStoredAllowedMenuIds(): Set<string> {
-    const ids = this.readJsonArray<any>('allowedMenuIds')
-      .map(id => String(id ?? '').trim())
-      .filter(id => id.length > 0);
-    return new Set(ids);
-  }
-
-  private shouldShowAllMenus(): boolean {
-    if (this.auth.isSuperAdmin()) return true;
-
-    const isAllMode = localStorage.getItem('selectedCompanyKey') === this.allCompaniesKey
-      || localStorage.getItem('selectedOrgKey') === this.allOrganizationsKey
-      || Number(localStorage.getItem('companyId') || 0) === 0;
-    if (!isAllMode) return false;
-
-    let roles: string[] = [];
-    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
-    const fullMenuRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
-    return Array.isArray(roles) && roles.some(role =>
-      fullMenuRoles.has(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
-    );
-  }
 }

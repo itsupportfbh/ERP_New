@@ -320,13 +320,17 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  /* The switcher yields width first. Without this a long company name pushed
+     the user menu - and so the only Logout - past the right edge. */
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 
 .access-field {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 150px;
+  min-width: 110px;
 
   span {
     font-size: 9px;
@@ -365,6 +369,7 @@
 /* User menu dropdown */
 .user-menu-wrap {
   position: relative;
+  flex-shrink: 0;
 }
 
 .user-menu-btn {

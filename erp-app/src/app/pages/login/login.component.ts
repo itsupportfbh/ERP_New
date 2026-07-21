@@ -24,6 +24,7 @@ export class LoginComponent implements OnInit {
   selectedCompanyId: number | null = null;
   pendingOrgGuid = '';
   selectedAllCompanies = false;
+  companyChoice = '';
 
   constructor(private auth: AuthService, private router: Router) {}
 
@@ -44,15 +45,16 @@ export class LoginComponent implements OnInit {
         if (!res.success) { this.error = 'Invalid credentials.'; return; }
 
         if (res.data.requiresCompanySelection && res.data.companies?.length > 1) {
+          // Everyone picks their own company, admins included. Silently opening
+          // an admin in "All companies" made the whole session read-only - that
+          // mode is a cross-company overview, so a company admin lost the
+          // Create / Edit / Delete their RolesJSON actually grants and had no
+          // way back except changing the company in the topbar.
           this.companies = res.data.companies;
-          if (this.isHqAdmin(res.data)) {
-            this.chooseAllCompanies();
-            this.selectCompany();
-            return;
-          }
           this.selectedCompanyId = null;
           this.pendingOrgGuid = '';
           this.selectedAllCompanies = false;
+          this.companyChoice = '';
           this.showCompanySelect = true;
         } else {
           this.afterLogin();
@@ -65,10 +67,32 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  /** Company id alone is not unique across organizations, so the dropdown is
+   *  keyed by org + id - the same pair selectCompany() resolves against. */
+  companyOptionKey(company: any): string {
+    return `${company?.orgGuid ?? company?.OrgGuid ?? ''}|${Number(company?.id ?? company?.Id) || 0}`;
+  }
+
+  onCompanyChoice(key: string): void {
+    this.companyChoice = key;
+    if (key === 'ALL') { this.chooseAllCompanies(); return; }
+    const match = this.companies.find(c => this.companyOptionKey(c) === key);
+    if (match) this.chooseCompany(match);
+  }
+
+  /** Tenant database of the current pick, shown under the dropdown - the card
+   *  layout used to surface it and it is how users tell look-alike names apart. */
+  get selectedCompanyDatabase(): string {
+    if (!this.companyChoice || this.selectedAllCompanies) return '';
+    const match = this.companies.find(c => this.companyOptionKey(c) === this.companyChoice);
+    return match?.databaseName ?? match?.DatabaseName ?? '';
+  }
+
   chooseCompany(company: any): void {
     this.selectedCompanyId = Number(company?.id ?? company?.Id) || null;
     this.pendingOrgGuid = company?.orgGuid ?? company?.OrgGuid ?? '';
     this.selectedAllCompanies = false;
+    this.companyChoice = this.companyOptionKey(company);
     this.error = '';
   }
 
@@ -77,6 +101,7 @@ export class LoginComponent implements OnInit {
     this.selectedCompanyId = Number(first?.id ?? first?.Id) || null;
     this.pendingOrgGuid = first?.orgGuid ?? first?.OrgGuid ?? '';
     this.selectedAllCompanies = true;
+    this.companyChoice = 'ALL';
     this.error = '';
   }
 
@@ -117,14 +142,5 @@ export class LoginComponent implements OnInit {
       ? this.auth.setRememberedUser(this.email.trim())
       : this.auth.clearRememberedUser();
     this.router.navigate(['/app/dashboard']);
-  }
-
-  private isHqAdmin(data: any): boolean {
-    const roles = Array.isArray(data?.approvalLevelNames) ? data.approvalLevelNames : [];
-    const adminRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
-    const hasAdminRole = roles.some((role: any) =>
-      adminRoles.has(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
-    );
-    return hasAdminRole && Number(data?.companyId ?? 0) === 1;
   }
 }

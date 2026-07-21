@@ -115,27 +115,24 @@
     <p class="company-kicker">ERP_CORE company access</p>
     <h2 class="company-title">Select company</h2>
     <p class="company-sub">Your account is active in more than one company. Choose the tenant database to open for this session.</p>
-    <div class="company-list">
-      <button
-        type="button"
-        class="company-option"
-        [class.active]="selectedAllCompanies"
-        (click)="chooseAllCompanies()">
-        <span class="company-code">ALL</span>
-        <span class="company-name">All companies</span>
-        <small>{{ companies.length }} assigned companies</small>
-      </button>
-      <button
-        type="button"
-        class="company-option"
-        *ngFor="let c of companies"
-        [class.active]="!selectedAllCompanies && selectedCompanyId === (c.id ?? c.Id) && pendingOrgGuid === (c.orgGuid ?? c.OrgGuid ?? '')"
-        (click)="chooseCompany(c)">
-        <span class="company-code">{{ c.companyCode || c.CompanyCode || 'ERP' }}</span>
-        <span class="company-name">{{ c.companyName || c.CompanyName }}</span>
-        <small>{{ c.databaseName || c.DatabaseName }}</small>
-      </button>
+    <!-- A dropdown rather than a card per company: an account assigned to 7-8
+         companies pushed Continue below the fold with a stacked list. -->
+    <div class="company-select-wrap">
+      <select
+        class="company-select"
+        [value]="companyChoice"
+        (change)="onCompanyChoice($any($event.target).value)">
+        <option value="" disabled>Choose a company...</option>
+        <option value="ALL">All companies ({{ companies.length }} assigned)</option>
+        <option *ngFor="let c of companies" [value]="companyOptionKey(c)">
+          {{ c.companyCode || c.CompanyCode || 'ERP' }} - {{ c.companyName || c.CompanyName }}
+        </option>
+      </select>
+      <svg class="company-select-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 6 8 10 12 6"/>
+      </svg>
     </div>
+    <p class="company-hint" *ngIf="selectedCompanyDatabase">{{ selectedCompanyDatabase }}</p>
     <div class="f-error" *ngIf="error" style="margin-top:12px">{{ error }}</div>
     <button class="btn-login" [disabled]="loading || !selectedCompanyId" (click)="selectCompany()">
       <span class="btn-spinner" *ngIf="loading"></span>
