@@ -98,6 +98,10 @@ export class PurchaseService {
   createPrFromSalesOrder(data: any): Observable<any> {
     return this.http.post(`${this.api}/PurchaseRequest/CreateFromSalesOrder`, data);
   }
+  createPrFromMr(data: any): Observable<any> {
+    return this.http.post(`${this.api}/PurchaseRequest/create-from-mr-shortage`, data);
+  }
+
   createPrFromRecipeShortage(data: any): Observable<any> {
     return this.http.post(`${this.api}/PurchaseRequest/create-from-recipe-shortage`, data);
   }

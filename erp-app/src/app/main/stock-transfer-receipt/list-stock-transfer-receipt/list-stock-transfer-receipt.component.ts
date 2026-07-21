@@ -7,7 +7,7 @@ import { TableColumn, RowAction } from 'app/shared/components/data-table/data-ta
 
 type TransferStatus = 'IN_TRANSIT' | 'PARTIAL_RECEIVED' | 'RECEIVED' | 'CANCELLED';
 
-interface WarehouseOption { id: number; name: string; }
+interface WarehouseOption { id: number; name: string; companyId?: number; }
 
 interface TransferDetailDto {
   stockId: number;
@@ -166,6 +166,41 @@ export class ListStockTransferReceiptComponent implements OnInit {
   rowActions: RowAction[] = [
     { key: 'receive', label: 'Receive', icon: 'truck', btnClass: 'btn-outline-primary' }
   ];
+
+  /** Head office. Sees every outlet's transfers, but never receives for them. */
+  private static readonly HEAD_OFFICE_COMPANY_ID = 1;
+
+  /**
+   * Only the outlet that raised the request may confirm receipt.
+   *
+   * Head office (company 1) is deliberately excluded: it sees every outlet's
+   * transfers so it can monitor them, but receiving is the requesting outlet's
+   * act — head office must not close a transfer on the outlet's behalf. Every
+   * other company sees the action only on transfers coming to its own
+   * warehouses, and a warehouse belongs to exactly one company, so the
+   * destination warehouse identifies the requester.
+   *
+   * `loginCompanyId` rather than `companyId`: head office usually works in
+   * "All companies" mode where `companyId` is 0, but the login company is the
+   * user's real one. If the destination cannot be resolved the action is hidden
+   * — better to withhold it than to let the wrong side receive.
+   *
+   * Arrow function: it is passed to <erp-table> and invoked outside this class.
+   */
+  receiveActionFilter = (actionKey: string, row: any): boolean => {
+    if (actionKey !== 'receive') return true;
+
+    const myCompanyId = Number(
+      localStorage.getItem('loginCompanyId') ?? localStorage.getItem('companyId') ?? 0
+    );
+    if (!myCompanyId) return false;
+    if (myCompanyId === ListStockTransferReceiptComponent.HEAD_OFFICE_COMPANY_ID) return false;
+
+    const destination = this.toOutletOptions.find(w => w.id === Number(row?.toWarehouseId));
+    if (!destination?.companyId) return false;
+
+    return destination.companyId === myCompanyId;
+  };
 
   pageSize = 10;
   currentPage = 1;
@@ -327,7 +362,8 @@ export class ListStockTransferReceiptComponent implements OnInit {
         const raw = Array.isArray(res) ? res : (res?.data ?? []);
         const list: WarehouseOption[] = raw.map((x: any) => ({
           id: Number(x.id ?? x.warehouseId ?? x.WarehouseId),
-          name: String(x.name ?? x.warehouseName ?? x.WarehouseName)
+          name: String(x.name ?? x.warehouseName ?? x.WarehouseName),
+          companyId: Number(x.companyId ?? x.CompanyId ?? 0)
         }));
 
         this.toOutletOptions = [{ id: 0, name: 'All Outlets' }, ...list];

@@ -12,6 +12,15 @@
       </span>
     </h2>
     <div class="btn-group">
+      <!-- Shortage items have no stock to transfer; this raises a PR to buy them. -->
+      <button *ngIf="selectedMrId && shortageCount>0"
+              class="btn btn-sm"
+              type="button"
+              style="background:var(--warning);color:#fff"
+              [disabled]="raisingPr"
+              (click)="raisePr()">
+        {{ raisingPr ? 'Raising PR…' : ('Raise PR (' + shortageCount + ')') }}
+      </button>
       <button class="btn btn-outline btn-sm" type="button" (click)="goToStockOverviewList()">&#8592; List</button>
     </div>
   </div>

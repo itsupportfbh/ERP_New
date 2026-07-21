@@ -45,6 +45,11 @@ export class LoginComponent implements OnInit {
 
         if (res.data.requiresCompanySelection && res.data.companies?.length > 1) {
           this.companies = res.data.companies;
+          if (this.isHqAdmin(res.data)) {
+            this.chooseAllCompanies();
+            this.selectCompany();
+            return;
+          }
           this.selectedCompanyId = null;
           this.pendingOrgGuid = '';
           this.selectedAllCompanies = false;
@@ -112,5 +117,14 @@ export class LoginComponent implements OnInit {
       ? this.auth.setRememberedUser(this.email.trim())
       : this.auth.clearRememberedUser();
     this.router.navigate(['/app/dashboard']);
+  }
+
+  private isHqAdmin(data: any): boolean {
+    const roles = Array.isArray(data?.approvalLevelNames) ? data.approvalLevelNames : [];
+    const adminRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
+    const hasAdminRole = roles.some((role: any) =>
+      adminRoles.has(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
+    );
+    return hasAdminRole && Number(data?.companyId ?? 0) === 1;
   }
 }

@@ -34,7 +34,7 @@ export class StoreInchargeComponent implements OnInit {
     this.loading = true;
 
     const companyId =
-      Number(localStorage.getItem('companyId')) || 1;
+      Number(localStorage.getItem('companyId')) || 0;
 
     this.dashboardService
       .getInventorySummary(companyId)

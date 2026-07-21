@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { responseInterceptor } from './core/interceptors/response.interceptor';
 import { payloadInterceptor } from './core/interceptors/payload.interceptor';
+import { allCompaniesReadonlyInterceptor } from './core/interceptors/all-companies-readonly.interceptor';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
@@ -301,7 +302,9 @@ MobileReceivingComponent,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([jwtInterceptor, payloadInterceptor, responseInterceptor])),
+    // allCompaniesReadonlyInterceptor runs before payloadInterceptor so a blocked
+    // write is cancelled before it can be stamped with companyId: 0.
+    provideHttpClient(withInterceptors([jwtInterceptor, allCompaniesReadonlyInterceptor, payloadInterceptor, responseInterceptor])),
     // Preload the company's base currency symbol + tax name before the app renders,
     // so screens that format money once (e.g. the dashboard) use the correct symbol
     // even on a hard reload — not only after a fresh login.

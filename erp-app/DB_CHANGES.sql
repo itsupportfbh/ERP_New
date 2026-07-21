@@ -10,6 +10,273 @@
 
 
 /* =====================================================================
+   2026-07-20  Fix sp_RebuildWarehouseStockSummary - stamp CompanyId
+   ---------------------------------------------------------------------
+   The proc (called from the GRN posting path) created warehouse summary
+   rows in dbo.ItemWarehouseStock without a CompanyId. Now that the
+   inventory reads filter on CompanyId those rows would be invisible.
+   The summary INSERT now derives CompanyId from the warehouse the row
+   belongs to. CREATE OR ALTER, safe to re-run.
+
+   Backfill for any summary rows already created without a company:
+   ===================================================================== */
+
+UPDATE s
+SET s.CompanyId = w.CompanyId
+FROM dbo.ItemWarehouseStock s
+INNER JOIN dbo.Warehouse w ON w.Id = s.WarehouseId
+WHERE s.BinId IS NULL
+  AND ISNULL(s.CompanyId,0) = 0
+  AND ISNULL(w.CompanyId,0) <> 0;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_RebuildWarehouseStockSummary]
+    @WarehouseId INT = NULL,
+  @CompanyId INT = 0
+
+AS
+BEGIN
+    SET NOCOUNT ON;
+ 
+    /* =========================================================
+       1) Ensure summary rows exist for all physical/reservation items
+       ========================================================= */
+    ;WITH AllItems AS
+    (
+        SELECT DISTINCT
+            s.ItemId,
+            s.WarehouseId
+        FROM dbo.ItemWarehouseStock s
+        WHERE s.BinId IS NOT NULL
+          AND s.WarehouseId = ISNULL(@WarehouseId, s.WarehouseId)
+ 
+        UNION
+ 
+        SELECT DISTINCT
+            r.IngredientItemId AS ItemId,
+            r.WarehouseId
+        FROM dbo.ProductionPlanReservation r
+        WHERE r.WarehouseId = ISNULL(@WarehouseId, r.WarehouseId)
+    )
+    INSERT INTO dbo.ItemWarehouseStock
+    (
+        ItemId,
+        WarehouseId,
+        BinId,
+        StrategyId,
+        OnHand,
+        Reserved,
+        MinQty,
+        MaxQty,
+        ReorderQty,
+        LeadTimeDays,
+        BatchFlag,
+        SerialFlag,
+        Available,
+        IsTransfered,
+        IsApproved,
+        StockIssueID,
+        IsFullTransfer,
+        IsPartialTransfer,
+        ApprovedBy,
+        CompanyId
+    )
+    SELECT
+        a.ItemId,
+        a.WarehouseId,
+        NULL,
+        NULL,
+        CAST(0 AS DECIMAL(18,4)),
+        CAST(0 AS DECIMAL(18,4)),
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        CAST(0 AS BIT),
+        CAST(0 AS BIT),
+        CAST(0 AS DECIMAL(18,4)),
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        -- A warehouse belongs to exactly one company, so the summary row must
+        -- carry that company. Without it these rows land with CompanyId NULL
+        -- and disappear from every company-filtered read.
+        w.CompanyId
+    FROM AllItems a
+    INNER JOIN dbo.Warehouse w ON w.Id = a.WarehouseId
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM dbo.ItemWarehouseStock s
+        WHERE s.ItemId = a.ItemId
+          AND s.WarehouseId = a.WarehouseId
+          AND s.BinId IS NULL
+          AND s.StrategyId IS NULL
+    );
+ 
+    /* =========================================================
+       2) Aggregate physical bin stock
+       ========================================================= */
+    ;WITH PhysicalAgg AS
+    (
+        SELECT
+            s.ItemId,
+            s.WarehouseId,
+            CAST(SUM(ISNULL(s.OnHand, 0)) AS DECIMAL(18,4)) AS OnHandQty
+        FROM dbo.ItemWarehouseStock s
+        WHERE s.BinId IS NOT NULL
+          AND s.WarehouseId = ISNULL(@WarehouseId, s.WarehouseId)
+        GROUP BY s.ItemId, s.WarehouseId
+    ),
+    ReserveAgg AS
+    (
+        SELECT
+            r.IngredientItemId AS ItemId,
+            r.WarehouseId,
+            CAST(SUM(ISNULL(r.ReservedQty, 0)) AS DECIMAL(18,4)) AS ReservedQty
+        FROM dbo.ProductionPlanReservation r
+        WHERE r.WarehouseId = ISNULL(@WarehouseId, r.WarehouseId)
+        GROUP BY r.IngredientItemId, r.WarehouseId
+    ),
+    FinalAgg AS
+    (
+        SELECT
+            x.ItemId,
+            x.WarehouseId,
+            CAST(ISNULL(p.OnHandQty, 0) AS DECIMAL(18,4)) AS OnHandQty,
+            CAST(ISNULL(r.ReservedQty, 0) AS DECIMAL(18,4)) AS ReservedQty
+        FROM
+        (
+            SELECT DISTINCT ItemId, WarehouseId
+            FROM dbo.ItemWarehouseStock
+            WHERE WarehouseId = ISNULL(@WarehouseId, WarehouseId)
+        ) x
+        LEFT JOIN PhysicalAgg p
+            ON p.ItemId = x.ItemId
+           AND p.WarehouseId = x.WarehouseId
+        LEFT JOIN ReserveAgg r
+            ON r.ItemId = x.ItemId
+           AND r.WarehouseId = x.WarehouseId
+    )
+    UPDATE s
+       SET s.OnHand = f.OnHandQty,
+           s.Reserved = f.ReservedQty,
+           s.Available =
+                CASE
+                    WHEN f.OnHandQty - f.ReservedQty < 0 THEN 0
+                    ELSE CAST(f.OnHandQty - f.ReservedQty AS DECIMAL(18,4))
+                END
+    FROM dbo.ItemWarehouseStock s
+    INNER JOIN FinalAgg f
+        ON f.ItemId = s.ItemId
+       AND f.WarehouseId = s.WarehouseId
+    WHERE s.BinId IS NULL
+      AND s.StrategyId IS NULL;
+END
+GO
+
+
+
+/* =====================================================================
+   2026-07-20  Inventory module tenant scoping - PRE-DEPLOY CHECK
+   ---------------------------------------------------------------------
+   The inventory repositories now filter every read and write on CompanyId.
+   Several edit paths used to INSERT line rows without a CompanyId, and a
+   few queries had no tenant predicate at all, so rows may exist that carry
+   no company. Those rows become invisible the moment the new API is
+   deployed.
+
+   This block is READ ONLY - it only reports. Run it against every company
+   database BEFORE deploying. Expect no rows returned.
+
+   Checked on 2026-07-20: ERP_CSPL and ERP_Template both clean.
+   ===================================================================== */
+
+SET NOCOUNT ON;
+
+SELECT TableName, Orphans, TotalRows
+FROM (
+    SELECT 'Item'                      AS TableName, SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END) AS Orphans, COUNT(*) AS TotalRows FROM dbo.Item
+    UNION ALL SELECT 'ItemMaster',                   SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.ItemMaster
+    UNION ALL SELECT 'ItemPrice',                    SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.ItemPrice
+    UNION ALL SELECT 'ItemWarehouseStock',           SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.ItemWarehouseStock
+    UNION ALL SELECT 'ItemBom',                      SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.ItemBom
+    UNION ALL SELECT 'Stock',                        SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.Stock
+    UNION ALL SELECT 'StockTake',                    SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.StockTake
+    UNION ALL SELECT 'StockTakeLines',               SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.StockTakeLines
+    UNION ALL SELECT 'StockReorder',                 SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.StockReorder
+    UNION ALL SELECT 'StockReorderLines',            SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.StockReorderLines
+    UNION ALL SELECT 'StockReorderLineSuppliers',    SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.StockReorderLineSuppliers
+    UNION ALL SELECT 'MaterialRequisition',          SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.MaterialRequisition
+    UNION ALL SELECT 'MaterialRequisitionLine',      SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.MaterialRequisitionLine
+    UNION ALL SELECT 'StockTakeInventoryAdjustment', SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.StockTakeInventoryAdjustment
+    UNION ALL SELECT 'Warehouse',                    SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.Warehouse
+    UNION ALL SELECT 'BIN',                          SUM(CASE WHEN ISNULL(CompanyId,0)=0 THEN 1 ELSE 0 END), COUNT(*) FROM dbo.BIN
+) x
+WHERE Orphans > 0
+ORDER BY Orphans DESC;
+
+IF @@ROWCOUNT = 0
+    PRINT 'OK - every inventory row carries a CompanyId. Nothing will disappear after deploy.';
+ELSE
+    PRINT 'ACTION NEEDED - the rows listed above will vanish from the UI after deploy.';
+GO
+
+/* ---------------------------------------------------------------------
+   BACKFILL - run ONLY if the check above returned rows, and only for the
+   tables it named. Each statement takes the company from the parent row,
+   so it cannot guess: a child row whose parent is also orphaned stays
+   orphaned and needs to be looked at by hand.
+
+   Review before running. Kept commented out deliberately.
+   --------------------------------------------------------------------- */
+
+-- UPDATE l SET l.CompanyId = h.CompanyId
+-- FROM dbo.StockTakeLines l
+-- INNER JOIN dbo.StockTake h ON h.Id = l.StockTakeId
+-- WHERE ISNULL(l.CompanyId,0) = 0 AND ISNULL(h.CompanyId,0) <> 0;
+
+-- UPDATE l SET l.CompanyId = h.CompanyId
+-- FROM dbo.StockReorderLines l
+-- INNER JOIN dbo.StockReorder h ON h.Id = l.StockReorderId
+-- WHERE ISNULL(l.CompanyId,0) = 0 AND ISNULL(h.CompanyId,0) <> 0;
+
+-- UPDATE s SET s.CompanyId = l.CompanyId
+-- FROM dbo.StockReorderLineSuppliers s
+-- INNER JOIN dbo.StockReorderLines l ON l.Id = s.StockReorderLineId
+-- WHERE ISNULL(s.CompanyId,0) = 0 AND ISNULL(l.CompanyId,0) <> 0;
+
+-- UPDATE l SET l.CompanyId = h.CompanyId
+-- FROM dbo.MaterialRequisitionLine l
+-- INNER JOIN dbo.MaterialRequisition h ON h.Id = l.MaterialReqId
+-- WHERE ISNULL(l.CompanyId,0) = 0 AND ISNULL(h.CompanyId,0) <> 0;
+
+-- UPDATE im SET im.CompanyId = i.CompanyId
+-- FROM dbo.ItemMaster im
+-- INNER JOIN dbo.Item i ON i.Id = im.ItemId
+-- WHERE ISNULL(im.CompanyId,0) = 0 AND ISNULL(i.CompanyId,0) <> 0;
+
+-- UPDATE p SET p.CompanyId = im.CompanyId
+-- FROM dbo.ItemPrice p
+-- INNER JOIN dbo.ItemMaster im ON im.Id = p.ItemId
+-- WHERE ISNULL(p.CompanyId,0) = 0 AND ISNULL(im.CompanyId,0) <> 0;
+
+-- UPDATE s SET s.CompanyId = im.CompanyId
+-- FROM dbo.ItemWarehouseStock s
+-- INNER JOIN dbo.ItemMaster im ON im.Id = s.ItemId
+-- WHERE ISNULL(s.CompanyId,0) = 0 AND ISNULL(im.CompanyId,0) <> 0;
+
+-- UPDATE b SET b.CompanyId = im.CompanyId
+-- FROM dbo.ItemBom b
+-- INNER JOIN dbo.ItemMaster im ON im.Id = b.ItemId
+-- WHERE ISNULL(b.CompanyId,0) = 0 AND ISNULL(im.CompanyId,0) <> 0;
+GO
+
+
+/* =====================================================================
    2026-07-20  Inventory reports hub - menu permissions
    ---------------------------------------------------------------------
    No schema change is required. dbo.ReportSavedView and dbo.ReportRoleAccess

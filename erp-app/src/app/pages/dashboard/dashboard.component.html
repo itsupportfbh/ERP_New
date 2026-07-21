@@ -21,7 +21,7 @@
   <!-- PENDING MATERIAL REQUESTS (Company 1 only) + PENDING FULFILLMENT        -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <div class="mr-row-2" *ngIf="showRole('procurement-executive')" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-    <div class="mr-widget" *ngIf="companyId === 1" (click)="goToMrList()" style="flex:1 1 360px;min-width:320px">
+    <div class="mr-widget" *ngIf="canSeeCrossCompanyMr" (click)="goToMrList()" style="flex:1 1 360px;min-width:320px">
       <div class="mr-widget-head">
         <div class="mr-widget-title">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">

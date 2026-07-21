@@ -94,20 +94,16 @@ export class PermissionService {
   }
 
   private isFullAccessContext(): boolean {
-    if (
-      localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES' ||
-      localStorage.getItem('selectedOrgKey') === 'ALL_ORGANIZATIONS' ||
-      Number(localStorage.getItem('companyId') || 0) === 0
-    ) {
-      return false;
-    }
-
     let roles: string[] = [];
     try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
     const fullAccessRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
-    return Array.isArray(roles) && roles.some(r =>
+    const hasFullRole = Array.isArray(roles) && roles.some(r =>
       fullAccessRoles.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
     );
+    if (!hasFullRole) return false;
+    const isAllMode = localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
+      || Number(localStorage.getItem('companyId') || 0) === 0;
+    return !isAllMode || Number(localStorage.getItem('loginCompanyId') || 0) === 1;
   }
 
   hasView(permission: FunctionPermission | null | undefined): boolean { return !!permission?.view; }

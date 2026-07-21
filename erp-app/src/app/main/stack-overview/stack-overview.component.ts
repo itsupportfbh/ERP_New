@@ -6,6 +6,7 @@ import { WarehouseService } from 'app/main/master/warehouse/warehouse.service';
 import { StackOverviewService } from './stack-overview.service';
 import { MaterialRequisitionService } from '../material-requisation/material-requisition.service';
 import { StockAdjustmentService } from '../stock-adjustment/stock-adjustment.service';
+import { PurchaseService } from 'app/pages/purchase/purchase.service';
 
 /* ===================== STOCK API Interfaces ===================== */
 interface ApiItemRow {
@@ -189,6 +190,7 @@ export class StackOverviewComponent implements OnInit {
     private stockService: StackOverviewService,
     private mrService: MaterialRequisitionService,
     private stockAdjService: StockAdjustmentService,
+    private purchaseService: PurchaseService,
     private router: Router
   ) {}
 
@@ -784,6 +786,79 @@ private rebuildFromOutletOptions(): void {
 
     this.shortageCount = shortage;
     this.transferableLineCount = transferable;
+  }
+
+  /* ===================== RAISE PR (shortage → purchase) ===================== */
+
+  raisingPr = false;
+
+  /**
+   * Shortage items cannot be fulfilled by transfer because no warehouse stocks
+   * them. This raises a Purchase Request for exactly those lines and links it
+   * back to the MR (server sets SourceType=MR / SourceRefId=MrId). Idempotent -
+   * a second click returns the PR already raised rather than duplicating it.
+   */
+  raisePr(): void {
+    if (!this.selectedMrId) {
+      Swal.fire({ icon: 'info', title: 'Select a material requisition first.' });
+      return;
+    }
+
+    const shortageLines = (this.mrLines || [])
+      .filter(l => Number(l.shortageQty ?? 0) > 0 && Number(l.itemId) > 0)
+      .map(l => ({ itemId: Number(l.itemId), qty: Number(l.shortageQty) }));
+
+    if (!shortageLines.length) {
+      Swal.fire({
+        icon: 'info',
+        title: 'No shortage',
+        text: 'Every requested item can be transferred — nothing to purchase.'
+      });
+      return;
+    }
+
+    const userId = Number(localStorage.getItem('id') ?? 0) || 0;
+    const userName = localStorage.getItem('username') || localStorage.getItem('email') || 'System';
+
+    const payload = {
+      MrId: Number(this.selectedMrId),
+      UserId: userId,
+      UserName: userName,
+      Location: this.destinationOutletName ?? '',
+      Note: `Auto from MR ${this.selectedMrNo ?? this.selectedMrId}`,
+      Lines: shortageLines
+    };
+
+    this.raisingPr = true;
+    this.purchaseService.createPrFromMr(payload).subscribe({
+      next: (res: any) => {
+        this.raisingPr = false;
+        const ok = res?.isSuccess ?? res?.issucess ?? false;
+        if (ok && Number(res?.prId) > 0) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Purchase Request raised',
+            text: res?.message || 'A PR was created for the shortage items.',
+            showCancelButton: true,
+            confirmButtonText: 'Go to Purchase Requests',
+            cancelButtonText: 'Stay here',
+            confirmButtonColor: '#116e73'
+          }).then(r => {
+            if (r.isConfirmed) this.router.navigate(['/app/purchase/requests']);
+          });
+        } else {
+          Swal.fire({ icon: 'info', title: 'Not created', text: res?.message || 'No orderable shortage items.' });
+        }
+      },
+      error: (err) => {
+        this.raisingPr = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed',
+          text: err?.error?.message || err?.message || 'Could not raise the PR.'
+        });
+      }
+    });
   }
 
   /* ===================== TRANSFER ===================== */
