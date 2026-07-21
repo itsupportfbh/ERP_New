@@ -35,12 +35,38 @@ export class PermissionService {
 
   constructor(private http: HttpClient) {}
 
+  /** Bulk permission source used by the sidebar. The API stores this array in
+   * RolesJSON; allowedMenuIds is department navigation and is not a View grant. */
+  getUserFunctionPermissions(userId: number): Observable<FunctionPermission[]> {
+    return this.http.get<any>(`${this.baseUrl}/User/organization-role/${userId}`).pipe(
+      map(res => {
+        const rows = this.extractPermissionRows(res);
+        // A successful response that carries no rows means "this user has no
+        // grants" and must be honoured. Falling back to the cache here made
+        // revoked View flags keep showing their menu, because the previous
+        // session's permissions were still sitting in localStorage. The cache
+        // is only a stand-in for an unreachable API - see catchError below.
+        const permissions = rows.map(row => this.toPermission(row)).filter(p => !!p.functionId);
+        try { localStorage.setItem(LS_KEY, JSON.stringify(rows)); } catch {}
+        return permissions;
+      }),
+      catchError(err => of(this.isApiUnreachable(err) ? this.getCachedPermissions() : []))
+    );
+  }
+
+  /**
+   * Only a genuinely unreachable API justifies answering from the cache. A 4xx
+   * is the server's verdict - "no role stored for you" arrives as 404 on older
+   * deployments - and treating it as an outage resurrected the previous
+   * session's permissions, so revoked menus kept appearing.
+   */
+  private isApiUnreachable(err: any): boolean {
+    const status = Number(err?.status ?? 0);
+    return status === 0 || status >= 500;
+  }
+
   getFunctionPermission(userId: number, functionId: string): Observable<FunctionPermission> {
     const normalizedFunctionId = this.normalizeFunctionId(functionId);
-
-    if (this.isFullAccessContext()) {
-      return of(this.getFullPermission(normalizedFunctionId));
-    }
 
     return this.http
       .get<any>(`${this.baseUrl}/OrganizationRole/permission`, {
@@ -55,7 +81,9 @@ export class PermissionService {
 
           return this.getCachedPermission(normalizedFunctionId);
         }),
-        catchError(() => of(this.getCachedPermission(normalizedFunctionId)))
+        catchError(err => of(this.isApiUnreachable(err)
+          ? this.getCachedPermission(normalizedFunctionId)
+          : this.getEmptyPermission(normalizedFunctionId)))
       );
   }
 
@@ -74,36 +102,6 @@ export class PermissionService {
       export: false,
       post: false
     };
-  }
-
-  private getFullPermission(functionId: string): FunctionPermission {
-    return {
-      ...this.getEmptyPermission(functionId),
-      view: true,
-      create: true,
-      edit: true,
-      delete: true,
-      submit: true,
-      approve: true,
-      reject: true,
-      cancel: true,
-      print: true,
-      export: true,
-      post: true
-    };
-  }
-
-  private isFullAccessContext(): boolean {
-    let roles: string[] = [];
-    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
-    const fullAccessRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
-    const hasFullRole = Array.isArray(roles) && roles.some(r =>
-      fullAccessRoles.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
-    );
-    if (!hasFullRole) return false;
-    const isAllMode = localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
-      || Number(localStorage.getItem('companyId') || 0) === 0;
-    return !isAllMode || Number(localStorage.getItem('loginCompanyId') || 0) === 1;
   }
 
   /**
@@ -125,9 +123,9 @@ export class PermissionService {
   hasPrint(permission: FunctionPermission | null | undefined): boolean { return !!permission?.print; }
 
   // Writes — additionally blocked while in "All companies".
-  hasCreate(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.create; }
-  hasEdit(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.edit; }
-  hasDelete(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.delete; }
+  hasCreate(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && (this.isSubCompanyAdmin() || !!permission?.create); }
+  hasEdit(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && (this.isSubCompanyAdmin() || !!permission?.edit); }
+  hasDelete(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && (this.isSubCompanyAdmin() || !!permission?.delete); }
   hasSubmit(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.submit; }
   hasApprove(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.approve; }
   hasReject(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.reject; }
@@ -137,6 +135,83 @@ export class PermissionService {
   private normalizeFunctionId(functionId: string): string {
     const key = String(functionId || '').trim().toLowerCase();
     return FUNCTION_ID_ALIAS[key] || key;
+  }
+
+  private isSubCompanyAdmin(): boolean {
+    if (Number(localStorage.getItem('companyId') || 0) <= 1) return false;
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    return Array.isArray(roles) && roles.some(role =>
+      String(role || '').toLowerCase().replace(/[\s_-]/g, '') === 'admin'
+    );
+  }
+
+  private toPermission(row: any): FunctionPermission {
+    const p = row?.Permissions ?? row?.permissions ?? row?.flags ?? row?.Flags ?? row ?? {};
+    const functionId = this.normalizeFunctionId(row?.FunctionId ?? row?.functionId ?? '');
+    return {
+      functionId,
+      view: !!(p?.View ?? p?.view ?? p?.V ?? false),
+      create: !!(p?.Create ?? p?.create ?? p?.C ?? false),
+      edit: !!(p?.Edit ?? p?.edit ?? p?.E ?? false),
+      delete: !!(p?.Delete ?? p?.delete ?? p?.D ?? false),
+      submit: !!(p?.Submit ?? p?.submit ?? p?.S ?? false),
+      approve: !!(p?.Approve ?? p?.approve ?? p?.A ?? false),
+      reject: !!(p?.Reject ?? p?.reject ?? p?.R ?? false),
+      cancel: !!(p?.Cancel ?? p?.cancel ?? p?.N ?? false),
+      print: !!(p?.Print ?? p?.print ?? p?.P ?? false),
+      export: !!(p?.Export ?? p?.export ?? p?.X ?? false),
+      post: !!(p?.Post ?? p?.post ?? p?.M ?? false)
+    };
+  }
+
+  private extractPermissionRows(res: any): any[] {
+    const isRow = (x: any) => x && typeof x === 'object' && (x.FunctionId || x.functionId);
+    const parse = (value: any): any[] => {
+      if (typeof value !== 'string' || !value.trim()) return [];
+      try {
+        let parsed: any = JSON.parse(value);
+        // Some database drivers return RolesJSON as a JSON string containing
+        // another JSON string. Unwrap both forms.
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
+    };
+    if (Array.isArray(res)) return res.filter(isRow);
+    const data = res?.data ?? res;
+    if (Array.isArray(data)) {
+      const direct = data.filter(isRow);
+      if (direct.length) return direct;
+      for (const item of data) {
+        const nested = this.extractPermissionRows(item);
+        if (nested.length) return nested;
+      }
+    }
+    if (data && typeof data === 'object') {
+      const roles = parse(data.RolesJSON ?? data.rolesJSON);
+      if (roles.length) return roles.filter(isRow);
+      for (const key of ['permissions', 'Permissions', 'items', 'Items', 'roles', 'Roles']) {
+        if (Array.isArray(data[key])) {
+          const rows = data[key].filter(isRow);
+          if (rows.length) return rows;
+        }
+      }
+      // SQL aliases differ between deployed databases (RolesJSON, RoleJson,
+      // PermissionJSON, etc.). Inspect every JSON-array string, as the User
+      // Access editor already does, and accept only function permission rows.
+      for (const key of Object.keys(data)) {
+        const rows = parse(data[key]);
+        if (rows.some(isRow)) return rows.filter(isRow);
+      }
+    }
+    return [];
+  }
+
+  private getCachedPermissions(): FunctionPermission[] {
+    try {
+      const rows = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      return Array.isArray(rows) ? rows.map(row => this.toPermission(row)).filter(p => !!p.functionId) : [];
+    } catch { return []; }
   }
 
   private parsePermissionResponse(res: any, fallbackFunctionId: string): FunctionPermission | null {

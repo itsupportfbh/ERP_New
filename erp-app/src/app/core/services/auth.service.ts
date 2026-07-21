@@ -137,6 +137,7 @@ export class AuthService {
       'userPermissions'
     ];
     keys.forEach(k => localStorage.removeItem(k));
+    this.perm.clear();
     this.periodLockState.clear();
     this.router.navigate(['/login']);
   }

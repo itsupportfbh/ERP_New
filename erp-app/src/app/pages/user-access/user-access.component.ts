@@ -728,6 +728,11 @@ export class UserAccessComponent implements OnInit {
   }
 
   private refreshAllowedMenuIds(): void {
+    // Saving another user's access must never replace the permissions of the
+    // administrator who is currently using this browser session.
+    const loggedInUserId = Number(localStorage.getItem('id') || 0);
+    if (!this.userId || Number(this.userId) !== loggedInUserId) return;
+
     const ids = Array.from(new Set(
       this.permRows
         .filter(row => row.flags.V)

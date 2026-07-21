@@ -66,19 +66,35 @@ export class PermissionService {
     if (!userId) { this.settle(); return; }
 
     this.http.get<any>(`${environment.apiUrl}/User/organization-role/${userId}`)
-      .pipe(catchError(() => of(null)))
+      // A 4xx is the server's verdict, not an outage - older deployments answer
+      // "no role stored" with 404. Only an unreachable API keeps the last known
+      // permissions; anything else is parsed, so a revoked grant really goes.
+      .pipe(catchError(err => {
+        const status = Number(err?.status ?? 0);
+        return of(status === 0 || status >= 500 ? { __permissionLoadFailed: true } : []);
+      }))
       .subscribe(res => {
+        // Preserve the last known permissions only for a genuine transport/API
+        // failure. A successful empty response means the user has no grants and
+        // must clear a stale cache instead of inheriting old access.
+        if (res?.__permissionLoadFailed) { this.settle(); return; }
         const arr = this.extractArray(res);
-        // Only replace on a usable response. Parsing an empty/failed one would
-        // clear the map, and every canX() then falls through to the master-owner
-        // check - silently stripping a normal user of everything they just had
-        // because of one transient network error.
-        if (arr.length) {
-          this.parsePermissions(arr);
-          try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); } catch {}
-        }
+        this.parsePermissions(arr);
+        try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); } catch {}
         this.settle();
       });
+  }
+
+  /**
+   * Drop every grant held in memory. The service is an app-wide singleton, so
+   * without this the next user to sign in inside the same tab is judged against
+   * the previous user's permissions until their own load returns.
+   */
+  clear(): void {
+    this.permMap.clear();
+    this.loaded = false;
+    this.readyState.next(false);
+    this.permissionChanges.next();
   }
 
   /** Mark the permission map usable and wake anything waiting on it. */
@@ -90,27 +106,23 @@ export class PermissionService {
 
   /** Load directly from a permissions array (e.g., from login response or stored JSON) */
   loadFromJson(data: any[]): void {
-    if (!Array.isArray(data) || !data.length) return;
+    if (!Array.isArray(data)) return;
     this.parsePermissions(data);
     try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
     this.settle();
   }
 
-  private isMaster(): boolean {
-    let roles: string[] = [];
-    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
-    const fullAccessRoles = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
-    const hasFullRole = Array.isArray(roles) && roles.some(r =>
-      fullAccessRoles.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
-    );
-    if (!hasFullRole) return false;
-    const isAllMode = localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
-      || Number(localStorage.getItem('companyId') || 0) === 0;
-    return !isAllMode || Number(localStorage.getItem('loginCompanyId') || 0) === 1;
-  }
-
   private hasData(): boolean {
     return this.permMap.size > 0;
+  }
+
+  private isSubCompanyAdmin(): boolean {
+    if (Number(localStorage.getItem('companyId') || 0) <= 1) return false;
+    let roles: string[] = [];
+    try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
+    return Array.isArray(roles) && roles.some(role =>
+      String(role || '').toLowerCase().replace(/[\s_-]/g, '') === 'admin'
+    );
   }
 
   private flags(functionId: string): PermFlags | null {
@@ -120,9 +132,11 @@ export class PermissionService {
 
   canView(functionId: string): boolean {
     if (!functionId) return true;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
-    return this.flags(functionId)?.View ?? this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
+    // Once an explicit permission set exists, a missing function is denied.
+    // Otherwise unchecking/removing View could fall back to the user's role and
+    // silently grant the screen again.
+    return this.flags(functionId)?.View ?? false;
   }
 
   /**
@@ -139,78 +153,71 @@ export class PermissionService {
   canCreate(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (this.isSubCompanyAdmin()) return true;
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Create ?? false;
   }
 
   canEdit(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (this.isSubCompanyAdmin()) return true;
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Edit ?? false;
   }
 
   canDelete(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (this.isSubCompanyAdmin()) return true;
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Delete ?? false;
   }
 
   canApprove(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Approve ?? false;
   }
 
   canReject(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Reject ?? false;
   }
 
   canExport(functionId: string): boolean {
     if (!functionId) return true;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Export ?? false;
   }
 
   canPrint(functionId: string): boolean {
     if (!functionId) return true;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Print ?? false;
   }
 
   canPost(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Post ?? false;
   }
 
   canSubmit(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Submit ?? false;
   }
 
   canCancel(functionId: string): boolean {
     if (!functionId) return true;
     if (this.isAllCompaniesMode()) return false;
-    if (!this.loaded) return this.isMaster();
-    if (!this.hasData()) return this.isMaster();
+    if (!this.loaded || !this.hasData()) return false;
     return this.flags(functionId)?.Cancel ?? false;
   }
 
@@ -225,7 +232,7 @@ export class PermissionService {
     for (const item of arr) {
       const fnId = this.normalizeFunctionId(item?.FunctionId ?? item?.functionId ?? '');
       if (!fnId) continue;
-      const p = item?.Permissions ?? item?.permissions ?? item?.flags ?? {};
+      const p = item?.Permissions ?? item?.permissions ?? item?.flags ?? item?.Flags ?? item ?? {};
       this.permMap.set(fnId, {
         View:   !!(p?.View   ?? p?.view   ?? p?.V ?? false),
         Create: !!(p?.Create ?? p?.create ?? p?.C ?? false),
@@ -252,7 +259,8 @@ export class PermissionService {
     const tryParseJson = (s: any): any[] => {
       if (typeof s !== 'string' || !s.trim()) return [];
       try {
-        const p = JSON.parse(s);
+        let p: any = JSON.parse(s);
+        if (typeof p === 'string') p = JSON.parse(p);
         return Array.isArray(p) ? p : [];
       } catch { return []; }
     };
@@ -263,8 +271,8 @@ export class PermissionService {
 
     if (Array.isArray(data) && data.length) {
       if (isPermRow(data[0])) return data;
-      if (Array.isArray(data[0])) {
-        const nested = this.extractArray(data[0]);
+      for (const item of data) {
+        const nested = this.extractArray(item);
         if (nested.length) return nested;
       }
     }
@@ -279,6 +287,13 @@ export class PermissionService {
 
       for (const key of ['permissions', 'Permissions', 'items', 'Items', 'roles', 'Roles', 'functionPermissions', 'FunctionPermissions']) {
         if (Array.isArray(data[key]) && data[key].length && isPermRow(data[key][0])) return data[key];
+      }
+
+      // Support legacy/custom column aliases containing the serialized role
+      // permissions instead of relying only on the exact RolesJSON casing.
+      for (const key of Object.keys(data)) {
+        const parsed = tryParseJson(data[key]);
+        if (parsed.length && isPermRow(parsed[0])) return parsed;
       }
     }
 
