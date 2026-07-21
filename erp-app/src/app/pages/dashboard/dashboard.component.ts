@@ -33,6 +33,15 @@ export class DashboardComponent implements OnInit {
 
   readonly companyId = Number(localStorage.getItem('companyId')) || 0;
 
+  /**
+   * The cross-company "Pending Material Requests" widget belongs to the HQ
+   * company (1), which fulfils other companies' requisitions. "All companies"
+   * mode (companyId 0) is a superset view, so it must see the widget too -
+   * otherwise selecting All Companies hides data that a single-company HQ login
+   * would show.
+   */
+  get canSeeCrossCompanyMr(): boolean { return this.companyId === 1 || this.companyId === 0; }
+
   pendingMrRequests: any[] = [];
   mrLoading = false;
 
@@ -79,7 +88,7 @@ export class DashboardComponent implements OnInit {
 
     // Pending widgets are only shown to Procurement Executive.
     if (this.showRole('procurement-executive')) {
-      if (this.companyId === 1) {
+      if (this.canSeeCrossCompanyMr) {
         this.loadPendingMrRequests();
       }
       this.loadPendingFulfillment();

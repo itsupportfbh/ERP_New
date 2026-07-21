@@ -17,9 +17,15 @@ export const payloadInterceptor: HttpInterceptorFn = (req, next) => {
 
  if (isWriteMethod && !isSkipped && req.body && typeof req.body === 'object' && !Array.isArray(req.body) && !(req.body instanceof FormData)) {
     const userId = readInt('id');
-    const companyId = readInt('companyId');
+    const contextCompanyId = readInt('companyId');
     const now = new Date().toISOString();
     const body = req.body as Record<string, any>;
+    const bodyCompanyId = Number(body['companyId'] ?? body['CompanyId']);
+    // In All Companies mode an edit payload already carries the owning company.
+    // Never replace that with 0. New HQ-admin records default to company 1.
+    const companyId = Number.isFinite(bodyCompanyId) && bodyCompanyId > 0
+      ? Math.trunc(bodyCompanyId)
+      : contextCompanyId || readInt('loginCompanyId');
 
     const enriched: Record<string, any> = {
       ...body,

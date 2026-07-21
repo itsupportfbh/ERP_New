@@ -63,7 +63,6 @@ export class ItemMasterListComponent implements OnInit {
   selectedAudit: any | null = null;
   userId: number = 0;
   functionId = 'im-list';
-  userCompanyId: number = 0;
 
     permission: FunctionPermission;
     isPermissionLoaded = false;
@@ -72,20 +71,20 @@ export class ItemMasterListComponent implements OnInit {
     private router: Router, private permissionService: PermissionService)
      {
        this.userId = Number(localStorage.getItem('id') || 0);
-       this.userCompanyId = Number(localStorage.getItem('companyId') || 0);
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
      }
 
-  get isRootCompany(): boolean { return this.userCompanyId === 1; }
-
-  ngOnInit(): void {
+  /** Row actions follow the same permission flags as the toolbar buttons. */
+  private buildRowActions(): void {
     this.rowActions = [
       { key: 'view', label: 'View', icon: 'view', btnClass: 'view-action' },
-      ...(this.isRootCompany ? [
-        { key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'warning' } as RowAction,
-        { key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' } as RowAction
-      ] : [])
+      ...(this.canEdit() ? [{ key: 'edit', label: 'Edit', icon: 'edit', btnClass: 'warning' } as RowAction] : []),
+      ...(this.canDelete() ? [{ key: 'delete', label: 'Delete', icon: 'delete', btnClass: 'danger' } as RowAction] : [])
     ];
+  }
+
+  ngOnInit(): void {
+    this.buildRowActions();
     this.loadPermission();
   }
 
@@ -175,7 +174,9 @@ export class ItemMasterListComponent implements OnInit {
           this.permission = res || this.permissionService.getEmptyPermission(this.functionId);
           this.isPermissionLoaded = true;
           this.isPageLoading = false;
-  
+          // Rebuilt here because ngOnInit runs before the permission resolves.
+          this.buildRowActions();
+
           if (this.canView()) {
             this.loadMasterItem();  
           } else {
@@ -202,16 +203,20 @@ export class ItemMasterListComponent implements OnInit {
       return this.permissionService.hasView(this.permission);
     }
   
+    // Item Master is maintained per company, so these are governed by the role's
+    // permission flags alone. They previously also required companyId === 1,
+    // which hid Create/Edit/Delete from every other company no matter what the
+    // permission matrix said.
     canCreate(): boolean {
-      return this.isRootCompany && this.permissionService.hasCreate(this.permission);
+      return this.permissionService.hasCreate(this.permission);
     }
 
     canEdit(): boolean {
-      return this.isRootCompany && this.permissionService.hasEdit(this.permission);
+      return this.permissionService.hasEdit(this.permission);
     }
 
     canDelete(): boolean {
-      return this.isRootCompany && this.permissionService.hasDelete(this.permission);
+      return this.permissionService.hasDelete(this.permission);
     }
   /** Search filter across common fields */
   applyFilter(): void {

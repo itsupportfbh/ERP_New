@@ -29,7 +29,7 @@ export class SalesManagerDashboardComponent implements OnInit {
   loadDashboard(): void {
 
   const companyId =
-    Number(localStorage.getItem('companyId')) || 1;
+    Number(localStorage.getItem('companyId')) || 0;
 
   this.loading = true;
 

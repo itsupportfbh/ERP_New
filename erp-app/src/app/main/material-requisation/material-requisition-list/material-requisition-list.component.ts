@@ -74,7 +74,7 @@ export class MaterialRequisitionListComponent implements OnInit {
   ];
 
   rowActionFilter = (action: string, row: MaterialReqRow): boolean => {
-    if (action === 'edit') return row.companyId === this.companyId;
+    if (action === 'edit') return this.companyId === 0 || row.companyId === this.companyId;
     return true;
   };
 
@@ -328,7 +328,7 @@ getStatusClass(status?: number | null): string {
         this.applyPage();
         this.loading = false;
 
-        if (this.companyId === 1) {
+        if (this.isHqOrAllCompanies()) {
           const otherPending = this.rows.filter(r => r.companyId !== 1 && r.status === 1);
           if (otherPending.length > 0 && !sessionStorage.getItem('mr_alert_shown')) {
             sessionStorage.setItem('mr_alert_shown', '1');
@@ -382,7 +382,17 @@ goStockTransfer() {
 }
 
 canShowStockButtons(): boolean {
-  return this.companyId === 1;
+  return this.isHqOrAllCompanies();
+}
+
+/**
+ * Cross-company procurement (Stock Overview/Transfer, the "pending from other
+ * companies" alert) is an HQ-company (1) capability. "All companies" mode
+ * (companyId 0) is a superset view and must expose the same, otherwise
+ * selecting All Companies hides what an HQ login would see.
+ */
+private isHqOrAllCompanies(): boolean {
+  return this.companyId === 1 || this.companyId === 0;
 }
 }
 

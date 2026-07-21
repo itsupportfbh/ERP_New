@@ -89,38 +89,72 @@ export class LayoutComponent implements OnInit, OnDestroy {
      {
       label: 'Master',
       icon: 'master',
+      // Master carries ~30 setup screens; grouping them keeps the panel
+      // scannable. Each group is a collapsible sub-section (level-3 in the
+      // sidebar); the leaf items keep their own permId so per-item permissions
+      // and the permission filter are unchanged.
       children: [
-        { label: 'Approval Level',  icon: 'm-approval',  route: '/app/master/approval-level',  permId: 'approval-level' },
-        { label: 'Bank',            icon: 'm-bank',      route: '/app/master/bank-list',        permId: 'bank' },
-        { label: 'Bin',             icon: 'm-bin',       route: '/app/master/bin',              permId: 'bin' },
-        { label: 'Category',        icon: 'm-category',  route: '/app/master/catagory',         permId: 'catagory' },
-        { label: 'Cities',          icon: 'm-cities',    route: '/app/master/cities',           permId: 'cities' },
-        { label: 'Costing Method',  icon: 'm-costing',   route: '/app/master/coastingmethod',   permId: 'costingmethod' },
-        { label: 'Company',         icon: 'm-company',   route: '/app/master/companyList',      permId: 'company' },
-        { label: 'Countries',       icon: 'm-countries', route: '/app/master/countries',        permId: 'countries' },
-        { label: 'Currency',        icon: 'm-currency',  route: '/app/master/currency',         permId: 'currency' },
-        { label: 'Customer Groups', icon: 'm-custgrp',   route: '/app/master/customergroups',   permId: 'customergroups' },
-        { label: 'Department',      icon: 'm-dept',      route: '/app/master/department',       permId: 'department' },
-        { label: 'Department Menu Access', icon: 'm-dept', route: '/app/master/department-menu-access', permId: 'department-menu-access' },
-        { label: 'Driver',          icon: 'm-driver',    route: '/app/master/driver',           permId: 'driver' },
-        { label: 'Exchange Rate',   icon: 'm-exchange',  route: '/app/master/exchangerate',     permId: 'exchangerate' },
-        { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue',        permId: 'flagissue' },
-        { label: 'Incoterms',       icon: 'm-incoterms', route: '/app/master/incoterms',        permId: 'incoterms' },
-        { label: 'Item Type',       icon: 'm-itemtype',  route: '/app/master/itemType',         permId: 'itemType' },
-        { label: 'Item Set',        icon: 'm-itemset',   route: '/app/master/itemSet',          permId: 'itemSet' },
-        { label: 'Outlet',          icon: 'm-location',  route: '/app/master/location',         permId: 'location' },
-        { label: 'Payment Terms',   icon: 'm-payment',   route: '/app/master/paymentTerms',     permId: 'paymentTerms' },
-        { label: 'Recurring',       icon: 'm-recurring', route: '/app/master/recurring',        permId: 'recurring' },
-        { label: 'Service',         icon: 'm-service',   route: '/app/master/service',          permId: 'service' },
-        { label: 'States',          icon: 'm-states',    route: '/app/master/states',           permId: 'states' },
-        { label: 'Stock Issue',     icon: 'm-stock',     route: '/app/master/stockIssue',       permId: 'stockissue' },
-        { label: 'Frequency',       icon: 'm-strategy',  route: '/app/master/strategy',         permId: 'strategy' },
-        { label: 'Supplier Groups', icon: 'm-suppgrp',   route: '/app/master/suppliergroups',   permId: 'suppliergroups' },
-        { label: 'Tax Code',        icon: 'm-tax',       route: '/app/master/taxcode',          permId: 'taxcode' },
-        { label: 'UOM',             icon: 'm-uom',       route: '/app/master/uom',              permId: 'uom' },
-        { label: 'UOM Conversion',  icon: 'm-uomconv',   route: '/app/master/uomconversion',    permId: 'uomconversion' },
-        { label: 'Vehicle',         icon: 'm-vehicle',   route: '/app/master/vehicle',          permId: 'vehicle' },
-        { label: 'Warehouse',       icon: 'm-warehouse', route: '/app/master/warehouse',        permId: 'warehouse' },
+        {
+          label: 'Organization & Access', icon: 'm-company',
+          children: [
+            { label: 'Company',                icon: 'm-company',  route: '/app/master/companyList',            permId: 'company' },
+            { label: 'Department',             icon: 'm-dept',     route: '/app/master/department',             permId: 'department' },
+            { label: 'Department Menu Access', icon: 'm-dept',     route: '/app/master/department-menu-access', permId: 'department-menu-access' },
+            { label: 'Approval Level',         icon: 'm-approval', route: '/app/master/approval-level',         permId: 'approval-level' },
+          ]
+        },
+        {
+          label: 'Finance & Tax', icon: 'm-bank',
+          children: [
+            { label: 'Bank',          icon: 'm-bank',     route: '/app/master/bank-list',      permId: 'bank' },
+            { label: 'Currency',      icon: 'm-currency', route: '/app/master/currency',       permId: 'currency' },
+            { label: 'Exchange Rate', icon: 'm-exchange', route: '/app/master/exchangerate',   permId: 'exchangerate' },
+            { label: 'Payment Terms', icon: 'm-payment',  route: '/app/master/paymentTerms',   permId: 'paymentTerms' },
+            { label: 'Tax Code',      icon: 'm-tax',      route: '/app/master/taxcode',        permId: 'taxcode' },
+            { label: 'Costing Method',icon: 'm-costing',  route: '/app/master/coastingmethod', permId: 'costingmethod' },
+          ]
+        },
+        {
+          label: 'Geography', icon: 'm-countries',
+          children: [
+            { label: 'Countries', icon: 'm-countries', route: '/app/master/countries', permId: 'countries' },
+            { label: 'States',    icon: 'm-states',    route: '/app/master/states',    permId: 'states' },
+            { label: 'Cities',    icon: 'm-cities',    route: '/app/master/cities',    permId: 'cities' },
+          ]
+        },
+        {
+          label: 'Items & UOM', icon: 'm-category',
+          children: [
+            { label: 'Category',       icon: 'm-category', route: '/app/master/catagory',      permId: 'catagory' },
+            { label: 'Item Type',      icon: 'm-itemtype', route: '/app/master/itemType',      permId: 'itemType' },
+            { label: 'Item Set',       icon: 'm-itemset',  route: '/app/master/itemSet',       permId: 'itemSet' },
+            { label: 'UOM',            icon: 'm-uom',      route: '/app/master/uom',           permId: 'uom' },
+            { label: 'UOM Conversion', icon: 'm-uomconv',  route: '/app/master/uomconversion', permId: 'uomconversion' },
+            { label: 'Stock Issue',    icon: 'm-stock',    route: '/app/master/stockIssue',    permId: 'stockissue' },
+          ]
+        },
+        {
+          label: 'Locations & Logistics', icon: 'm-warehouse',
+          children: [
+            { label: 'Outlet',    icon: 'm-location',  route: '/app/master/location',  permId: 'location' },
+            { label: 'Warehouse', icon: 'm-warehouse', route: '/app/master/warehouse', permId: 'warehouse' },
+            { label: 'Bin',       icon: 'm-bin',       route: '/app/master/bin',       permId: 'bin' },
+            { label: 'Driver',    icon: 'm-driver',    route: '/app/master/driver',    permId: 'driver' },
+            { label: 'Vehicle',   icon: 'm-vehicle',   route: '/app/master/vehicle',   permId: 'vehicle' },
+            { label: 'Incoterms', icon: 'm-incoterms', route: '/app/master/incoterms', permId: 'incoterms' },
+          ]
+        },
+        {
+          label: 'Partners & Others', icon: 'm-suppgrp',
+          children: [
+            { label: 'Customer Groups', icon: 'm-custgrp',   route: '/app/master/customergroups', permId: 'customergroups' },
+            { label: 'Supplier Groups', icon: 'm-suppgrp',   route: '/app/master/suppliergroups', permId: 'suppliergroups' },
+            { label: 'Service',         icon: 'm-service',   route: '/app/master/service',        permId: 'service' },
+            { label: 'Recurring',       icon: 'm-recurring', route: '/app/master/recurring',      permId: 'recurring' },
+            { label: 'Frequency',       icon: 'm-strategy',  route: '/app/master/strategy',       permId: 'strategy' },
+            { label: 'Flag Issue',      icon: 'm-flag',      route: '/app/master/flagIssue',      permId: 'flagissue' },
+          ]
+        },
       ]
     },
     {

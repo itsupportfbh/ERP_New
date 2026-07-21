@@ -95,6 +95,10 @@ export class AuthService {
     localStorage.setItem('teams', JSON.stringify(data.teams));
     localStorage.setItem('allowedMenuIds', JSON.stringify(data.allowedMenuIds));
     localStorage.setItem('companyId', numStr(data.companyId));
+    // Keep the company from the authenticated token even when the UI switches to
+    // companyId 0 (the cross-company context).  This is what lets an HQ admin be
+    // distinguished from an ordinary user who happens to be in an aggregate view.
+    localStorage.setItem('loginCompanyId', numStr(data.companyId));
     localStorage.setItem('companyName', data.companyName);
     localStorage.setItem('locationId', numStr(data.locationId));
     localStorage.setItem('departmentId', numStr(data.departmentId));
@@ -124,6 +128,7 @@ export class AuthService {
       'token', 'username', 'email', 'id',
       'approvalRoles', 'approvalLevelIds', 'teams', 'allowedMenuIds',
       'companyId', 'companyName', 'locationId', 'departmentId',
+      'loginCompanyId',
       'orgGuid', 'databaseName', 'isMasterOwner', 'isTenantUser',
       'organizations', 'companies', 'organizationId', 'selectedOrgKey', 'selectedCompanyKey',
       'companyCurrencyId', 'companyCurrencyName',
@@ -155,20 +160,20 @@ export class AuthService {
    * visible companies by CompanyId instead of granting full access).
    */
   isSuperAdmin(): boolean {
-    if (
-      localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES' ||
-      localStorage.getItem('selectedOrgKey') === 'ALL_ORGANIZATIONS' ||
-      Number(localStorage.getItem('companyId') || 0) === 0
-    ) {
-      return false;
-    }
-
     let roles: string[] = [];
     try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
     const SUPER_ADMIN_ROLES = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
-    return Array.isArray(roles) && roles.some(r =>
+    const hasAdminRole = Array.isArray(roles) && roles.some(r =>
       SUPER_ADMIN_ROLES.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
     );
+    if (!hasAdminRole) return false;
+
+    const isAllCompanies = localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
+      || Number(localStorage.getItem('companyId') || 0) === 0;
+    if (!isAllCompanies) return true;
+
+    // Only the HQ (company 1) admin receives elevated cross-company rights.
+    return Number(localStorage.getItem('loginCompanyId') || 0) === 1;
   }
 
   getRememberedUser(): string | null {
