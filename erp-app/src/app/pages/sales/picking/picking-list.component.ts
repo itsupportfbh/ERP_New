@@ -23,6 +23,12 @@ export class PickingListComponent implements OnInit {
 
   showDeleteModal = false;
   itemToDelete: any = null;
+  showCodesModal = false;
+  codesLoading = false;
+  codesTitle = '';
+  barCode = '';
+  barCodeSrc = '';
+  qrCodeSrc = '';
 
   // lookups for resolving line names
   private uomMap = new Map<number, string>();
@@ -133,6 +139,36 @@ export class PickingListComponent implements OnInit {
   create(): void { this.router.navigate(['/app/sales/picking/new']); }
 
   edit(row: any): void { this.router.navigate(['/app/sales/picking', row.id]); }
+
+  showCodes(row: any): void {
+    this.codesTitle = row.pickNo || row.salesOrderNo || 'Picking & Packing';
+    this.barCode = ''; this.barCodeSrc = ''; this.qrCodeSrc = '';
+    this.codesLoading = true; this.showCodesModal = true;
+    const generate = (soId: any) => {
+      if (!Number(soId)) { this.codesLoading = false; return; }
+      this.svc.generatePackingCodes(Number(soId)).subscribe({
+        next: response => {
+          const code = this.svc.unwrapOne(response);
+          this.barCode = code.barCode ?? code.BarCode ?? '';
+          this.barCodeSrc = code.barCodeSrcBase64 ?? code.BarCodeSrcBase64 ?? '';
+          this.qrCodeSrc = code.qrCodeSrcBase64 ?? code.QrCodeSrcBase64 ?? '';
+          this.codesLoading = false;
+        }, error: () => { this.codesLoading = false; }
+      });
+    };
+    const soId = row.soId ?? row.SoId;
+    if (Number(soId)) { generate(soId); return; }
+    this.svc.getPackingById(row.id).subscribe({
+      next: response => { const detail = this.svc.unwrapOne(response); generate(detail.soId ?? detail.SoId); },
+      error: () => { this.codesLoading = false; }
+    });
+  }
+
+  downloadCode(src: string, suffix: string): void {
+    if (!src) return;
+    const link = document.createElement('a'); link.href = src;
+    link.download = `${this.codesTitle}-${suffix}.png`; link.click();
+  }
 
   // ── View / Print ──────────────────────────────────────
   private parseLines(raw: any): any[] {
