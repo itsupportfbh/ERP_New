@@ -20,12 +20,11 @@ export const payloadInterceptor: HttpInterceptorFn = (req, next) => {
     const contextCompanyId = readInt('companyId');
     const now = new Date().toISOString();
     const body = req.body as Record<string, any>;
-    const bodyCompanyId = Number(body['companyId'] ?? body['CompanyId']);
-    // In All Companies mode an edit payload already carries the owning company.
-    // Never replace that with 0. New HQ-admin records default to company 1.
-    const companyId = Number.isFinite(bodyCompanyId) && bodyCompanyId > 0
-      ? Math.trunc(bodyCompanyId)
-      : contextCompanyId || readInt('loginCompanyId');
+    // The company selected in the header dropdown is authoritative. Never let a
+    // stale form value or a record copied from another company override it.
+    // All Companies writes are rejected by allCompaniesReadonlyInterceptor; the
+    // fallback only supports account/auth requests that are explicitly exempt.
+    const companyId = contextCompanyId || readInt('loginCompanyId');
 
     const enriched: Record<string, any> = {
       ...body,
@@ -37,6 +36,12 @@ export const payloadInterceptor: HttpInterceptorFn = (req, next) => {
       updatedDate: now,
       companyId
     };
+
+    // Some legacy DTOs use PascalCase. Keep it synchronized when present so the
+    // serialized payload can never contain two conflicting company identities.
+    if (Object.prototype.hasOwnProperty.call(body, 'CompanyId')) {
+      enriched['CompanyId'] = companyId;
+    }
 
     // For PUT with /{id} at end of URL, inject id into body to satisfy backend route-body id match
     if (req.method === 'PUT') {

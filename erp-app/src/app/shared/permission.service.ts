@@ -106,17 +106,33 @@ export class PermissionService {
     return !isAllMode || Number(localStorage.getItem('loginCompanyId') || 0) === 1;
   }
 
+  /**
+   * "All companies" is a cross-company overview, not a place to work from: a
+   * record created there has no unambiguous owning company. So it is read-only
+   * for everyone — the write checks below all return false, which hides Create /
+   * Edit / Delete buttons across every screen that asks this service. This
+   * mirrors allCompaniesReadonlyInterceptor, which blocks the same writes at the
+   * HTTP layer; here it stops the buttons appearing in the first place.
+   */
+  private isAllCompaniesMode(): boolean {
+    return localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
+      || Number(localStorage.getItem('companyId') || 0) === 0;
+  }
+
+  // Reads — always allowed when the role permits.
   hasView(permission: FunctionPermission | null | undefined): boolean { return !!permission?.view; }
-  hasCreate(permission: FunctionPermission | null | undefined): boolean { return !!permission?.create; }
-  hasEdit(permission: FunctionPermission | null | undefined): boolean { return !!permission?.edit; }
-  hasDelete(permission: FunctionPermission | null | undefined): boolean { return !!permission?.delete; }
-  hasSubmit(permission: FunctionPermission | null | undefined): boolean { return !!permission?.submit; }
-  hasApprove(permission: FunctionPermission | null | undefined): boolean { return !!permission?.approve; }
-  hasReject(permission: FunctionPermission | null | undefined): boolean { return !!permission?.reject; }
-  hasCancel(permission: FunctionPermission | null | undefined): boolean { return !!permission?.cancel; }
   hasExport(permission: FunctionPermission | null | undefined): boolean { return !!permission?.export; }
   hasPrint(permission: FunctionPermission | null | undefined): boolean { return !!permission?.print; }
-  hasPost(permission: FunctionPermission | null | undefined): boolean { return !!permission?.post; }
+
+  // Writes — additionally blocked while in "All companies".
+  hasCreate(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.create; }
+  hasEdit(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.edit; }
+  hasDelete(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.delete; }
+  hasSubmit(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.submit; }
+  hasApprove(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.approve; }
+  hasReject(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.reject; }
+  hasCancel(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.cancel; }
+  hasPost(permission: FunctionPermission | null | undefined): boolean { return !this.isAllCompaniesMode() && !!permission?.post; }
 
   private normalizeFunctionId(functionId: string): string {
     const key = String(functionId || '').trim().toLowerCase();

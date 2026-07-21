@@ -302,8 +302,8 @@ MobileReceivingComponent,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    // allCompaniesReadonlyInterceptor runs before payloadInterceptor so a blocked
-    // write is cancelled before it can be stamped with companyId: 0.
+    // The read-only guard runs before payloadInterceptor so every All Companies
+    // write is cancelled before a payload can be stamped with companyId: 0.
     provideHttpClient(withInterceptors([jwtInterceptor, allCompaniesReadonlyInterceptor, payloadInterceptor, responseInterceptor])),
     // Preload the company's base currency symbol + tax name before the app renders,
     // so screens that format money once (e.g. the dashboard) use the correct symbol

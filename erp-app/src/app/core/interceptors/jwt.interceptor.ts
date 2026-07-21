@@ -15,7 +15,11 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
       Authorization: `Bearer ${token}`
     };
     if (orgGuid) headers['X-Org-Guid'] = orgGuid;
-    if (companyId && companyId !== '0') headers['X-Company-Id'] = companyId;
+    // Always send the selected company context. A positive id scopes every
+    // read/write to that company; 0 explicitly requests the All Companies view.
+    // Omitting this header for 0 made some APIs fall back to the login company,
+    // so their aggregate lists showed only one company's records.
+    if (companyId) headers['X-Company-Id'] = companyId;
 
     req = req.clone({
       setHeaders: headers

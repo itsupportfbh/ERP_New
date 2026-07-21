@@ -43,6 +43,10 @@ interface TransferDetailDto {
   remarks?: string;
   transferNo: string;
 
+  /** Server decides who may receive; see receiveActionFilter. */
+  canReceive?: boolean;
+  CanReceive?: boolean;
+
   // ✅ API might send any of these:
   receivedQty?: number;
   ReceivedQty?: number;
@@ -90,6 +94,9 @@ interface TransferRow {
 
   onHand: number;
   available: number;
+
+  /** Server's verdict on whether this caller may receive this transfer. */
+  canReceive: boolean;
 
   remarks?: string;
 }
@@ -167,39 +174,20 @@ export class ListStockTransferReceiptComponent implements OnInit {
     { key: 'receive', label: 'Receive', icon: 'truck', btnClass: 'btn-outline-primary' }
   ];
 
-  /** Head office. Sees every outlet's transfers, but never receives for them. */
-  private static readonly HEAD_OFFICE_COMPANY_ID = 1;
-
   /**
-   * Only the outlet that raised the request may confirm receipt.
+   * Only the outlet the goods are going to may confirm receipt; head office sees
+   * every transfer but does not receive on an outlet's behalf.
    *
-   * Head office (company 1) is deliberately excluded: it sees every outlet's
-   * transfers so it can monitor them, but receiving is the requesting outlet's
-   * act — head office must not close a transfer on the outlet's behalf. Every
-   * other company sees the action only on transfers coming to its own
-   * warehouses, and a warehouse belongs to exactly one company, so the
-   * destination warehouse identifies the requester.
-   *
-   * `loginCompanyId` rather than `companyId`: head office usually works in
-   * "All companies" mode where `companyId` is 0, but the login company is the
-   * user's real one. If the destination cannot be resolved the action is hidden
-   * — better to withhold it than to let the wrong side receive.
+   * The decision comes from the server as `canReceive` on each row rather than
+   * being re-derived here: the warehouse list this screen loads is a separate
+   * async call, so gating on it raced the table render and hid the action from
+   * the very outlet that owned the transfer.
    *
    * Arrow function: it is passed to <erp-table> and invoked outside this class.
    */
   receiveActionFilter = (actionKey: string, row: any): boolean => {
     if (actionKey !== 'receive') return true;
-
-    const myCompanyId = Number(
-      localStorage.getItem('loginCompanyId') ?? localStorage.getItem('companyId') ?? 0
-    );
-    if (!myCompanyId) return false;
-    if (myCompanyId === ListStockTransferReceiptComponent.HEAD_OFFICE_COMPANY_ID) return false;
-
-    const destination = this.toOutletOptions.find(w => w.id === Number(row?.toWarehouseId));
-    if (!destination?.companyId) return false;
-
-    return destination.companyId === myCompanyId;
+    return row?.canReceive === true;
   };
 
   pageSize = 10;
@@ -443,6 +431,7 @@ export class ListStockTransferReceiptComponent implements OnInit {
 
             status: st,
             statusLabel: this.statusLabel(st),
+            canReceive: (d.canReceive ?? d.CanReceive) === true,
 
             mrId: Number(d.mrId ?? 0),
             reqNo: String(d.reqNo ?? ''),

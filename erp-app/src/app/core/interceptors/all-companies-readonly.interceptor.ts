@@ -1,28 +1,27 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { throwError } from 'rxjs';
 import Swal from 'sweetalert2';
-import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
 
 /**
- * "All companies" mode stays read-only for ordinary users. HQ company-1 admins
- * are allowed to maintain records across companies; payloadInterceptor preserves
- * the target record's companyId so their writes never persist against company 0.
+ * "All companies" mode is a cross-company reporting view and is read-only for
+ * every user, including administrators. To maintain data, the user must select
+ * the owning company first so the API receives an unambiguous company context.
  *
- * PUT/DELETE/PATCH are always writes and are blocked outright. POST is used both
- * for writes and for a handful of report/preview reads (e.g. preview-allocation,
- * finance report bodies, trial-balance), so a POST is blocked only when its URL
- * looks like a mutation - see WRITE_POST_HINTS. Auth endpoints are never touched.
+ * All non-read HTTP verbs are blocked by default. A small explicit allow-list is
+ * used for POST endpoints that only calculate/preview data; this is safer than
+ * guessing from mutation endpoint names and covers legacy endpoints named simply
+ * `insert`, `lock`, `sync`, etc. Auth endpoints are never touched.
  */
-const SKIP_PATHS = ['/user/login', '/user/register', '/auth/', '/user/forgotPassword', '/user/resetPassword'];
+const SKIP_PATHS = ['/user/login', '/auth/', '/user/forgotpassword', '/user/resetpassword', '/user/changepassword'];
 
-// URL fragments that mark a POST as a write. Matched case-insensitively against
-// the path. Reads (preview/report/search/list/...) fall through and are allowed.
-const WRITE_POST_HINTS = [
-  'create', 'insert', 'update', 'save', 'submit', 'confirm', 'approve',
-  'register', 'delete', 'remove', 'deactivate', 'cancel', 'void', 'reverse',
-  'post', 'run-', 'reval', 'depreciation', 'adjust', 'markas', 'mark-', 'close',
-  'generate', 'raise', 'from-mr', 'createfrom', 'transfer', 'receive', 'issue'
+// These POSTs do not persist business data; they only return a preview, scan, or
+// derived lookup result needed by view/report flows.
+const READ_ONLY_POST_PATHS = [
+  '/salesorder/preview-allocation',
+  '/picking/codes',
+  '/quotation/item-flags/bulk',
+  '/ocr/extract-groq-si',
+  '/ocr/extract-groq-multi'
 ];
 
 function isAllCompaniesMode(): boolean {
@@ -31,19 +30,17 @@ function isAllCompaniesMode(): boolean {
 
 function isBlockedWrite(method: string, url: string): boolean {
   const m = method.toUpperCase();
-  if (m === 'PUT' || m === 'DELETE' || m === 'PATCH') return true;
-  if (m === 'POST') {
-    const path = (url.split('?')[0] || '').toLowerCase();
-    return WRITE_POST_HINTS.some(h => path.includes(h));
-  }
-  return false;
+  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return false;
+  const path = (url.split('?')[0] || '').toLowerCase();
+  if (m === 'POST' && READ_ONLY_POST_PATHS.some(p => path.endsWith(p))) return false;
+  return true;
 }
 
 export const allCompaniesReadonlyInterceptor: HttpInterceptorFn = (req, next) => {
-  const auth = inject(AuthService);
-  const isSkipped = SKIP_PATHS.some(p => req.url.includes(p));
+  const normalizedUrl = req.url.toLowerCase();
+  const isSkipped = SKIP_PATHS.some(p => normalizedUrl.includes(p));
 
-  if (!isSkipped && isAllCompaniesMode() && !auth.isSuperAdmin() && isBlockedWrite(req.method, req.url)) {
+  if (!isSkipped && isAllCompaniesMode() && isBlockedWrite(req.method, req.url)) {
     Swal.fire({
       icon: 'info',
       title: 'Read-only in All Companies',

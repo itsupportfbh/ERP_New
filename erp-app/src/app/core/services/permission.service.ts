@@ -125,8 +125,20 @@ export class PermissionService {
     return this.flags(functionId)?.View ?? this.isMaster();
   }
 
+  /**
+   * "All companies" is a cross-company overview, not a place to work from — a
+   * record created there has no unambiguous owning company. Every write check
+   * below refuses in that mode, so Create / Edit / Delete buttons disappear.
+   * Mirrors allCompaniesReadonlyInterceptor, which blocks the same calls in HTTP.
+   */
+  private isAllCompaniesMode(): boolean {
+    return localStorage.getItem('selectedCompanyKey') === 'ALL_COMPANIES'
+      || Number(localStorage.getItem('companyId') || 0) === 0;
+  }
+
   canCreate(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Create ?? false;
@@ -134,6 +146,7 @@ export class PermissionService {
 
   canEdit(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Edit ?? false;
@@ -141,6 +154,7 @@ export class PermissionService {
 
   canDelete(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Delete ?? false;
@@ -148,6 +162,7 @@ export class PermissionService {
 
   canApprove(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Approve ?? false;
@@ -155,6 +170,7 @@ export class PermissionService {
 
   canReject(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Reject ?? false;
@@ -176,6 +192,7 @@ export class PermissionService {
 
   canPost(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Post ?? false;
@@ -183,6 +200,7 @@ export class PermissionService {
 
   canSubmit(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Submit ?? false;
@@ -190,6 +208,7 @@ export class PermissionService {
 
   canCancel(functionId: string): boolean {
     if (!functionId) return true;
+    if (this.isAllCompaniesMode()) return false;
     if (!this.loaded) return this.isMaster();
     if (!this.hasData()) return this.isMaster();
     return this.flags(functionId)?.Cancel ?? false;
