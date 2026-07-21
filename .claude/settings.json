@@ -536,7 +536,12 @@
       "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -h -1 -W -s '|' -Q 'SET NOCOUNT ON; SELECT Id, InvoiceNo, DoId, CAST\\(Subtotal AS DECIMAL\\(18,2\\)\\) Subtotal, CAST\\(TaxAmount AS DECIMAL\\(18,2\\)\\) Tax, CAST\\(Total AS DECIMAL\\(18,2\\)\\) Total FROM dbo.SalesInvoice;')",
       "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -E -C -d ERP_CSSB -h -1 -W -s \"|\" -Q \"SET NOCOUNT ON; SELECT si.Id SiId, si.SoId, si.DoId, do1.SoId AS DoSoId FROM dbo.SalesInvoice si LEFT JOIN dbo.DeliveryOrder do1 ON do1.Id=si.DoId; SELECT 'SO itemset map:' t, SoId, ItemSetId FROM dbo.SalesOrderItemSetMap;\")",
       "Bash(grep -n \"import.*rxjs\\\\|from 'rxjs'\\\\|{ of \\\\|, of \\\\|of,\" erp-app/src/app/pages/sales/sales-invoice/sales-invoice-list.component.ts)",
-      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -E -C -d ERP_CSSB -h -1 -W -s \"|\" -Q \"SET NOCOUNT ON; SELECT Id, Status, CASE Status WHEN 1 THEN 'Draft' WHEN 2 THEN 'Approved' WHEN 3 THEN 'Posted' ELSE '?' END AS Label, ISNULL\\(CAST\\(IsActive AS INT\\),-9\\) Act FROM dbo.StockTake ORDER BY Id;\")"
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -E -C -d ERP_CSSB -h -1 -W -s \"|\" -Q \"SET NOCOUNT ON; SELECT Id, Status, CASE Status WHEN 1 THEN 'Draft' WHEN 2 THEN 'Approved' WHEN 3 THEN 'Posted' ELSE '?' END AS Label, ISNULL\\(CAST\\(IsActive AS INT\\),-9\\) Act FROM dbo.StockTake ORDER BY Id;\")",
+      "Bash(grep -v \"/\\\\*\")",
+      "Bash(grep -nA6 \"private autoFulfillmentFromFlags\" erp-app/src/app/pages/sales/sales-order/sales-order-form.component.ts)",
+      "Bash(grep -nA4 \"private autoFulfillmentFromFlags\" erp-app/src/app/pages/sales/quotation/quotation-form.component.ts)",
+      "Bash(grep -nB1 -A4 \"fulfillmentOptions\\\\s*=\" erp-app/src/app/pages/sales/quotation/quotation-form.component.ts)",
+      "Bash(grep -nB1 -A4 \"fulfillmentOptions\\\\s*=\" erp-app/src/app/pages/sales/sales-order/sales-order-form.component.ts)"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",
