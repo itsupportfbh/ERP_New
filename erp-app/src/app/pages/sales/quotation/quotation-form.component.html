@@ -183,6 +183,18 @@
 
     <div class="dt-table-wrap qf-tableWrap">
       <table class="dt-table qf-table">
+        <colgroup>
+          <col class="qf-colItem" />
+          <col class="qf-colDesc" />
+          <col class="qf-colUom" />
+          <col class="qf-colQty" />
+          <col class="qf-colBaseQty" />
+          <col class="qf-colPrice" />
+          <col class="qf-colDisc" />
+          <col class="qf-colTax" />
+          <col class="qf-colTotal" />
+          <col class="qf-colAction" />
+        </colgroup>
         <thead>
           <tr>
             <th>Item / Package</th>
@@ -190,12 +202,10 @@
             <th>UOM</th>
             <th class="qf-c">Qty</th>
             <th class="qf-c">Base Qty</th>
-            <th class="qf-c">Unit Price <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
+            <th class="qf-c">Unit Price <span>({{ quoteCurrencyLabel }})</span></th>
             <th class="qf-c">Discount %</th>
-            <!-- table-layout is fixed, so the column takes its WIDTH from here, not min-width.
-                 180px fits the longest label ("Standard-Rated") without the ellipsis. -->
-            <th style="width:180px">Tax Mode</th>
-            <th class="qf-c">Line Total <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
+            <th>Tax Mode</th>
+            <th class="qf-c">Line Total <span>({{ quoteCurrencyLabel }})</span></th>
             <th class="qf-c">Action</th>
           </tr>
         </thead>
@@ -249,17 +259,18 @@
             <tr *ngIf="!l.isSetHeader && !(l.isFromSet && isSetCollapsed(l.itemSetId))">
               <td><span class="qf-itemName">{{ l.itemName || getItemName(l.itemId) || '-' }}</span></td>
               <td>
-                <input class="mf-input qf-cellInput" [(ngModel)]="l.description"
+                <textarea class="mf-textarea qf-cellInput qf-lineDesc" rows="2" [(ngModel)]="l.description"
                   (ngModelChange)="onLineChanged(i)" placeholder="-"
                   [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
-                  [title]="l.isFromSet ? 'Set at package level' : ''" />
+                  [title]="l.isFromSet ? 'Set at package level' : ''"></textarea>
               </td>
               <td class="qf-uom">
-                <erp-dropdown *ngIf="!l.isFromSet && lineUomOptions(l).length > 1" [(ngModel)]="l.uomId"
+                <erp-dropdown *ngIf="!l.isFromSet" class="qf-uomDropdown" [(ngModel)]="l.uomId"
                   [items]="lineUomOptions(l)" bindLabel="name" bindValue="id"
                   [menuMinWidth]="120"
+                  [clearable]="false"
                   (ngModelChange)="onLineUomChange(i)"></erp-dropdown>
-                <span *ngIf="l.isFromSet || lineUomOptions(l).length <= 1">{{ getUomName(l.uomId) || (l.uomName || '-') }}</span>
+                <span *ngIf="l.isFromSet">{{ lineUomLabel(l) }}</span>
               </td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.qty"
@@ -386,16 +397,17 @@
         <!-- UOM -->
         <div class="mf-group qf-mCol3">
           <label class="mf-label">UOM</label>
-          <erp-dropdown *ngIf="modalUomOptions().length > 1" [(ngModel)]="modal.uomId" name="modalUom"
+          <erp-dropdown class="qf-uomDropdown" [(ngModel)]="modal.uomId" name="modalUom"
             [items]="modalUomOptions()" bindLabel="name" bindValue="id"
+            [disabled]="!modal.itemId"
+            [clearable]="false"
             (ngModelChange)="onModalUomChange()"></erp-dropdown>
-          <input *ngIf="modalUomOptions().length <= 1" class="mf-input" [value]="getUomName(modal.uomId)" placeholder="UOM" readonly />
           <small class="qf-muted" *ngIf="modal.itemId">Base Qty: {{ modalBaseQty | number:'1.0-4' }} {{ getUomName(modal.baseUomId) }}</small>
         </div>
 
         <!-- Unit Price -->
         <div class="mf-group qf-mCol3">
-          <label class="mf-label">Unit Price <span *ngIf="isForeignCurrency()" class="qf-muted">({{ header.currency }})</span></label>
+          <label class="mf-label">Unit Price <span class="qf-muted">({{ quoteCurrencyLabel }})</span></label>
           <input type="number" class="mf-input qf-num" [(ngModel)]="modal.unitPrice" name="modalPrice"
             min="0" step="0.0001" (ngModelChange)="previewLineTotals()" />
         </div>

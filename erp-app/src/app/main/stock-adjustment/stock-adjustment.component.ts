@@ -114,7 +114,10 @@ export class StockAdjustmentComponent implements OnInit {
       next: (res: any) => {
         const data = Array.isArray(res) ? res : (res?.data ?? []);
         this.itemOptions = (data || []).map((r: any) => {
-          const id = Number(r.id ?? r.itemId ?? 0);
+          // Stock (ItemWarehouseStock/ItemPrice) and GetItemDetailsByItemId (WHERE im.Id=@Id)
+          // are keyed by ItemMaster.Id, NOT Item.Id. The list returns both; use ItemMaster.Id
+          // so the adjustment loads/writes the correct item's stock.
+          const id = Number(r.itemMasterId ?? r.itemMasterID ?? r.id ?? r.itemId ?? 0);
           const sku = String(r.sku ?? r.itemCode ?? '');
           const name = String(r.itemName ?? r.name ?? '');
           const onHand = Number(r.onHand ?? 0);

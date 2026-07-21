@@ -20,6 +20,7 @@ type SimpleItem = {
   itemName: string;
   itemCode?: string;
   uomId?: number | null;
+  uomName?: string | null;
   price?: number | null;
   baseUomId?: number | null;
   uomFactor?: number | null;
@@ -295,6 +296,31 @@ export class QuotationFormComponent implements OnInit {
   getUomName = (id?: number | null): string =>
     this.uomList.find(u => u.id === id)?.name ?? '';
 
+  get quoteCurrencyLabel(): string {
+    return (this.header.currency || this.baseCurrencyName || 'SGD').trim();
+  }
+
+  lineUomLabel(l: UiLine): string {
+    const item = this.itemsList.find(x => x.id === Number(l.itemId));
+    return this.getUomName(l.uomId)
+      || (l.uomName || '').trim()
+      || (Number(l.uomId) === Number(item?.uomId) ? (item?.uomName || '') : '')
+      || (Number(l.uomId) === Number(item?.baseUomId) ? (item?.baseUomName || '') : '')
+      || (item?.uomName || '')
+      || (item?.baseUomName || '')
+      || '-';
+  }
+
+  modalUomLabel(): string {
+    const row = this.modal.itemId ? this.itemsList.find(x => x.id === this.modal.itemId) : null;
+    return this.getUomName(this.modal.uomId)
+      || (Number(this.modal.uomId) === Number(row?.uomId) ? (row?.uomName || '') : '')
+      || (Number(this.modal.uomId) === Number(row?.baseUomId) ? (row?.baseUomName || '') : '')
+      || (row?.uomName || '')
+      || (row?.baseUomName || '')
+      || '';
+  }
+
   fulfillmentLabel(v: number | null | undefined): string {
     return v === 2 ? 'Direct DO' : v === 1 ? 'PP' : 'Select';
   }
@@ -426,6 +452,7 @@ export class QuotationFormComponent implements OnInit {
         itemName: item.itemName ?? item.name ?? '',
         itemCode: item.itemCode ?? '',
         uomId: Number(item.uomId ?? item.UomId ?? item.baseUomId ?? 0) || null,
+        uomName: item.uomName ?? item.UomName ?? item.uom ?? item.Uom ?? null,
         // Sales module always prices from the item's SALES price (legacy `price` kept as fallback).
         price: Number(item.salesPrice ?? item.SalesPrice ?? item.price ?? 0) || 0,
         baseUomId: Number(item.baseUomId ?? item.BaseUomId ?? 0) || null,
@@ -514,8 +541,9 @@ export class QuotationFormComponent implements OnInit {
           l.isConsumable = !!f.isConsumable;
           l.allowManualFulfillment = !!f.allowManualFulfillment;
           this.applyFulfillmentByPolicy(l);
-          // Fresh quotation: 'Both' items start Pending (procurement decides later).
-          if (!this.isEdit && l.allowManualFulfillment) l.fulfillmentMode = null;
+          // Finished food stock is not maintained, so keep "Both" items in the
+          // normal DO flow instead of Pending Fulfillment.
+          if (!this.isEdit && l.allowManualFulfillment) l.fulfillmentMode = 2;
         }
         this.syncAllSetHeaders();
         this.computeTotals();
@@ -527,18 +555,19 @@ export class QuotationFormComponent implements OnInit {
   // System's automatic fulfillment from item flags: sellable-only (Sales Item) → PP,
   // consumable-only (Purchase Item) → Direct DO, both/neither → Direct DO (default).
   private autoFulfillmentFromFlags(l: UiLine): number {
-    if (l.isSellable && !l.isConsumable) return 1; // Sales Item → PP
-    if (!l.isSellable && l.isConsumable) return 2; // Purchase Item → Direct DO
-    return 2; // both / neither → default Direct DO (staff can switch if manual)
+    // Recipe / Production Planning module is hidden — a PP line can never be
+    // completed downstream, so a quotation must not seed one that later carries
+    // into a Sales Order. Route everything to Direct DO. Restore the PP branch
+    // below when the Recipe/Production module is re-enabled.
+    //   if (l.isSellable && !l.isConsumable) return 1; // Sales Item → PP
+    return 2; // all items → Direct DO (ship from stock)
   }
 
-  // Non-manual items are system-decided and locked to the auto value.
-  // 'Both' items stay Pending (null) — sales does not decide; the procurement
-  // team resolves PP / Direct DO later. Any value already set is preserved.
+  // Sales should not run recipe/finished-item shortage routing now; every line
+  // stays in the normal DO flow.
   private applyFulfillmentByPolicy(l: UiLine): void {
     if (l.isSetHeader) return;
-    if (!l.allowManualFulfillment) { l.fulfillmentMode = this.autoFulfillmentFromFlags(l); return; }
-    // 'Both' → leave as-is (Pending when new)
+    l.fulfillmentMode = 2;
   }
 
   onFulfillmentChanged(l: UiLine, i: number): void {
@@ -1254,6 +1283,7 @@ export class QuotationFormComponent implements OnInit {
     l.baseUomId = base;
     l.uomFactor = factor;
     if (l.uomId == null) l.uomId = sell;
+    if (!l.uomName && l.uomId === it?.uomId) l.uomName = it?.uomName ?? null;
     l.uomIdPrev = l.uomId;
     this.recomputeBaseQty(l);
   }
@@ -1264,20 +1294,30 @@ export class QuotationFormComponent implements OnInit {
     const qty = l.qty == null ? 0 : +l.qty;
     const factor = Number(l.uomFactor ?? 1) || 1;
     const inBase = l.baseUomId != null && Number(l.uomId) === Number(l.baseUomId);
-    l.baseQty = this.round4(inBase ? qty : qty * factor);
+    const inSell = l.sellUomId != null && Number(l.uomId) === Number(l.sellUomId);
+    l.baseQty = this.round4(inBase ? qty : inSell ? qty * factor : qty);
   }
 
-  // The two UOMs a line can be transacted in: the item's selling UOM and its base UOM.
+  // Prefer the item's selling/base UOM, then expose the UOM master list so Sales can change it
+  // when an item needs to be quoted in a different unit.
   lineUomOptions(l: UiLine): { id: number; name: string }[] {
     const opts: { id: number; name: string }[] = [];
+    const item = this.itemsList.find(x => x.id === Number(l.itemId));
     const add = (id: number | null | undefined) => {
       if (id == null) return;
       if (opts.some(o => o.id === Number(id))) return;
-      opts.push({ id: Number(id), name: this.getUomName(id) || String(id) });
+      opts.push({
+        id: Number(id),
+        name: this.getUomName(id)
+          || (Number(id) === Number(item?.uomId) ? (item?.uomName || '') : '')
+          || (Number(id) === Number(item?.baseUomId) ? (item?.baseUomName || '') : '')
+          || String(id)
+      });
     };
     add(l.sellUomId ?? l.uomId);
     add(l.baseUomId);
     add(l.uomId);
+    for (const u of this.uomList || []) add(u.id);
     return opts;
   }
 
@@ -1304,14 +1344,22 @@ export class QuotationFormComponent implements OnInit {
   // Modal UOM options + convert on change (same rules as the grid line).
   modalUomOptions(): { id: number; name: string }[] {
     const opts: { id: number; name: string }[] = [];
+    const row = this.modal.itemId ? this.itemsList.find(x => x.id === this.modal.itemId) : null;
     const add = (id: number | null | undefined) => {
       if (id == null) return;
       if (opts.some(o => o.id === Number(id))) return;
-      opts.push({ id: Number(id), name: this.getUomName(id) || String(id) });
+      opts.push({
+        id: Number(id),
+        name: this.getUomName(id)
+          || (Number(id) === Number(row?.uomId) ? (row?.uomName || '') : '')
+          || (Number(id) === Number(row?.baseUomId) ? (row?.baseUomName || '') : '')
+          || String(id)
+      });
     };
     add(this.modal.sellUomId ?? this.modal.uomId);
     add(this.modal.baseUomId);
     add(this.modal.uomId);
+    for (const u of this.uomList || []) add(u.id);
     return opts;
   }
 
@@ -1335,7 +1383,8 @@ export class QuotationFormComponent implements OnInit {
     const qty = this.modal.qty == null ? 0 : +this.modal.qty;
     const factor = Number(this.modal.uomFactor ?? 1) || 1;
     const inBase = this.modal.baseUomId != null && Number(this.modal.uomId) === Number(this.modal.baseUomId);
-    return this.round4(inBase ? qty : qty * factor);
+    const inSell = this.modal.sellUomId != null && Number(this.modal.uomId) === Number(this.modal.sellUomId);
+    return this.round4(inBase ? qty : inSell ? qty * factor : qty);
   }
 
   private computeLine(l: UiLine): { base: number; discount: number } {
@@ -1546,14 +1595,8 @@ export class QuotationFormComponent implements OnInit {
         const arr: any[] = (res?.data ?? res ?? []) as any;
         const f = Array.isArray(arr) ? arr.find((x: any) => Number(x.itemId) === Number(itemId)) : null;
         if (!f) return;
-        const sellable = !!f.isSellable;
-        const consumable = !!f.isConsumable;
         this.modal.allowManualFulfillment = !!f.allowManualFulfillment;
-        // 'Both' items stay Pending (procurement decides); auto items show their value.
-        this.modal.fulfillmentMode = f.allowManualFulfillment
-          ? null
-          // Sales Item (sellable-only) → PP (1); Purchase Item (consumable-only) → Direct DO (2)
-          : ((sellable && !consumable) ? 1 : (!sellable && consumable) ? 2 : 2);
+        this.modal.fulfillmentMode = 2;
       },
       error: () => { /* leave defaults; policy resolves after add */ }
     });

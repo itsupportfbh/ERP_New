@@ -145,7 +145,7 @@
             [disabled]="r.saving || (r.choice !== 1 && r.choice !== 2)"
             (click)="resolve(r)">{{ r.saving ? 'Saving…' : 'Confirm' }}</button>
         </div>
-        <small class="pf-hint">{{ r.available >= r.quantity ? 'Stock available → Direct DO suggested' : 'Short → PP / buy suggested' }}</small>
+        <small class="pf-hint">{{ r.available >= r.quantity ? 'Stock available → Direct DO' : 'Short → Direct DO + auto PR (buy)' }}</small>
       </div>
     </div>
 

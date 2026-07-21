@@ -41,8 +41,11 @@ export class PendingFulfillmentComponent implements OnInit {
   private locationId = Number(localStorage.getItem('locationId') || 0);
   private userId = Number(localStorage.getItem('userId') || 1) || 1;
 
+  // Recipe / Production Planning module is hidden — a PP-routed line can never be
+  // completed and would get stuck, so only Direct DO is offered here. Restore the
+  // PP option when the Recipe/Production module is re-enabled.
   fulfillmentOptions = [
-    { value: 1, label: 'PP (Produce)' },
+    // { value: 1, label: 'PP (Produce)' },
     { value: 2, label: 'Direct DO (Ship)' }
   ];
 
@@ -70,8 +73,8 @@ export class PendingFulfillmentComponent implements OnInit {
           fulfillmentMode: r.fulfillmentMode ?? r.FulfillmentMode ?? null,
           choice: null
         }));
-        // Suggest a default based on stock: enough → Direct DO, short → PP
-        for (const r of this.rows) r.choice = r.available >= r.quantity ? 2 : 1;
+        // Recipe/Production hidden → always Direct DO. Short lines auto-create a PR (buy).
+        for (const r of this.rows) r.choice = 2;
         this.applyFilter();
         this.loading = false;
       },
