@@ -541,7 +541,13 @@
       "Bash(grep -nA6 \"private autoFulfillmentFromFlags\" erp-app/src/app/pages/sales/sales-order/sales-order-form.component.ts)",
       "Bash(grep -nA4 \"private autoFulfillmentFromFlags\" erp-app/src/app/pages/sales/quotation/quotation-form.component.ts)",
       "Bash(grep -nB1 -A4 \"fulfillmentOptions\\\\s*=\" erp-app/src/app/pages/sales/quotation/quotation-form.component.ts)",
-      "Bash(grep -nB1 -A4 \"fulfillmentOptions\\\\s*=\" erp-app/src/app/pages/sales/sales-order/sales-order-form.component.ts)"
+      "Bash(grep -nB1 -A4 \"fulfillmentOptions\\\\s*=\" erp-app/src/app/pages/sales/sales-order/sales-order-form.component.ts)",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -h -1 -W -Q 'SET NOCOUNT ON; SELECT STRING_AGG\\(name,'\\\\'', '\\\\''\\) FROM sys.columns WHERE object_id=OBJECT_ID\\('\\\\''dbo.Catagory'\\\\''\\);')",
+      "Bash(sqlcmd -S \"DESKTOP-AE5HV6B\\\\SQLSERVER2022\" -E -C -d ERP_CSSB -h -1 -W -s \"|\" -Q \"SET NOCOUNT ON; SELECT ItemCode, FulfillmentMode FROM dbo.Item WHERE ItemCode='IN001';\")",
+      "Bash(grep -nA5 \"private applyFulfillmentByPolicy\" erp-app/src/app/pages/sales/sales-order/sales-order-form.component.ts)",
+      "Bash(grep -nA5 \"private applyFulfillmentByPolicy\\\\|applyFulfillmentByPolicy\" erp-app/src/app/pages/sales/quotation/quotation-form.component.ts)",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -h -1 -W -s '|' -Q 'SET NOCOUNT ON; SELECT Id, CatagoryName, ItemCategoryType AS Typ, ISNULL\\(SalesParentHeadCode,'\\\\''NULL'\\\\''\\) Sales, ISNULL\\(PurchaseParentHeadCode,'\\\\''NULL'\\\\''\\) Purch, ISNULL\\(StockParentHeadCode,'\\\\''NULL'\\\\''\\) Stock FROM dbo.Catagory WHERE ISNULL\\(IsActive,1\\)=1;')",
+      "Bash(sqlcmd -S 'DESKTOP-AE5HV6B\\\\SQLSERVER2022' -E -C -d ERP_CSSB -h -1 -W -s '|' -Q 'SET NOCOUNT ON; SELECT Id, CatagoryName, ItemCategoryType AS Typ, CONCAT\\('\\\\''S='\\\\'',SalesParentHeadCode,'\\\\'' P='\\\\'',PurchaseParentHeadCode,'\\\\'' St='\\\\'',StockParentHeadCode\\) AS Parents FROM dbo.Catagory WHERE ISNULL\\(IsActive,1\\)=1;')"
     ],
     "additionalDirectories": [
       "C:\\Users\\CCSPLNB03\\source\\repos\\Unity_ERP\\starter-kit\\src\\app\\auth\\helpers",

@@ -415,6 +415,9 @@ export class SalesOrderFormComponent implements OnInit {
     if (this.showModal) this.closeModal();
   }
 
+  // Item ids that cannot be SOLD (no Sales/revenue account). Warn + block when added to a sales line.
+  private blockedSalesItemIds = new Set<number>();
+
   // ── Lookups ──────────────────────────────────────────
   loadLookups(): void {
     this.svc.getItems().subscribe((res: any) => {
@@ -430,6 +433,13 @@ export class SalesOrderFormComponent implements OnInit {
         uomFactor: Number(item.uomFactor ?? item.UomFactor ?? 1) || 1,
         baseUomName: item.baseUomName ?? item.BaseUomName ?? null
       })) as SimpleItem[];
+      // Items with no Sales (revenue) account can't be sold — flag them for the add-line guard.
+      this.blockedSalesItemIds = new Set(
+        (Array.isArray(raw) ? raw : [])
+          .filter((i: any) => (i.hasSalesAccount ?? i.HasSalesAccount) === false)
+          .map((i: any) => Number(i.id ?? i.itemId ?? 0))
+          .filter((n: number) => n > 0)
+      );
     });
 
     this.svc.getUOMs().subscribe((res: any) => {
@@ -1634,6 +1644,16 @@ export class SalesOrderFormComponent implements OnInit {
   }
   addLineFromModal(): void {
     if (!this.modal.itemId) { void Swal.fire({ icon: 'warning', title: 'Validation', text: 'Item is required.', confirmButtonColor: '#16a34a' }); return; }
+    // Block selling an item with no revenue account — the invoice's GL would have nowhere to post revenue.
+    if (this.blockedSalesItemIds.has(Number(this.modal.itemId))) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Item not set up for selling',
+        text: `"${this.getItemName(this.modal.itemId) || 'This item'}" has no Sales (revenue) account. In Item Master set its category to Sales or Both and map the Sales account, then try again.`,
+        confirmButtonColor: '#16a34a',
+      });
+      return;
+    }
     // Fulfillment is system-decided (auto) or left Pending for procurement — sales never picks it here.
     const payload: UiLine = {
       itemId: this.modal.itemId,

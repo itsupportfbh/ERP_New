@@ -367,6 +367,19 @@ export class SalesInvoiceFormComponent implements OnInit {
 
   onItemSelect(line: SiLine): void {
     const opt = this.itemOptions.find(o => String(o.value) === String(line.itemId));
+    // Block selling an item with no revenue account — the invoice's GL would have nowhere to post revenue.
+    if (opt && (opt.raw?.hasSalesAccount ?? opt.raw?.HasSalesAccount) === false) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Item not set up for selling',
+        text: `"${opt.label}" has no Sales (revenue) account. In Item Master set its category to Sales or Both and map the Sales account, then try again.`,
+        confirmButtonColor: '#16a34a',
+      });
+      line.itemId = null as any;
+      line.itemName = '';
+      this.recalcLine(line);
+      return;
+    }
     if (opt) {
       line.itemName = opt.label;
       line.uom = opt.raw?.uomName ?? opt.raw?.uom ?? line.uom;

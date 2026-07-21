@@ -633,6 +633,20 @@ export class PurchaseOrderFormComponent implements OnInit {
   onModalItemChange(): void {
     const found = this.itemOptions.find(o => o.value === this.modalLine.itemId);
     if (!found?.raw) return;
+    // Block purchasing an item with no inventory (stock) account — the GRN's GL would have nowhere
+    // to capitalise the stock. Purchasing needs a Stock account (category Purchase or Both).
+    if ((found.raw.hasStockAccount ?? found.raw.HasStockAccount) === false) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Item not set up for purchasing',
+        text: `"${found.raw.itemName ?? found.label}" has no Stock (inventory) account. In Item Master set its category to Purchase or Both and map the stock account, then try again.`,
+        confirmButtonColor: '#16a34a',
+      });
+      this.modalLine.itemId = null as any;
+      this.modalLine.itemCode = '';
+      this.modalLine.itemName = '';
+      return;
+    }
     this.modalLine.itemCode = found.raw.itemCode ?? '';
     this.modalLine.itemName = found.raw.itemName ?? found.label;
     if (!this.modalLine.description) this.modalLine.description = found.raw.description ?? '';
@@ -928,6 +942,25 @@ export class PurchaseOrderFormComponent implements OnInit {
   */
 
   submit(): void {
+    // Block items with no inventory (Stock) account — purchasing them has nowhere to capitalise
+    // stock in the GL. This runs on EVERY line, so it also catches lines pulled from a PR/RFQ that
+    // never went through the modal item-pick guard (onModalItemChange).
+    const notPurchasable = Array.from(new Set(
+      (this.lines || [])
+        .map(l => this.itemOptions.find(o => String(o.value) === String((l as any).itemId)))
+        .filter(o => o?.raw && ((o!.raw.hasStockAccount ?? o!.raw.HasStockAccount) === false))
+        .map(o => String(o!.raw.itemName ?? o!.label))
+    ));
+    if (notPurchasable.length) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Item not set up for purchasing',
+        text: `These items have no Stock (inventory) account and cannot be purchased: ${notPurchasable.join(', ')}. In Item Master set each item's category to Purchase or Both and map the stock account, then submit again.`,
+        confirmButtonColor: '#16a34a',
+      });
+      return;
+    }
+
     this.error = '';
     this.saving = true;
     this.svc.checkPeriodLock(this.poDate).subscribe({
