@@ -24,6 +24,7 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
   @Input() bindValue = 'value';
   @Input() required = false;
   @Input() disabled = false;
+  @Input() clearable = true;
   @Input() errorMsg = '';
   /** Optional minimum width (px) for the dropdown panel. Useful for long labels. */
   @Input() menuMinWidth = 0;

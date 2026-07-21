@@ -188,8 +188,13 @@ export class SalesInvoiceListComponent implements OnInit {
         const contact  = hdr.contactNumber ?? hdr.ContactNumber ?? '';
         const deliverTo = hdr.deliveryTo ?? hdr.DeliveryTo ?? '';
 
-        // Package money lives on the source SO's item sets → resolve, then group the lines.
-        this.svc.getSourceSoItemSets({ soId: hdr.soId ?? hdr.SoId, doId: hdr.doId ?? hdr.DoId }).subscribe(itemSets => {
+        // Package (item-set) money lives on the invoice's OWN map — authoritative and present for
+        // every package invoice. Only fall back to the source SO's item sets for older invoices that
+        // didn't persist their own map: reconstructing from the source drops the package whenever the
+        // DO->SO link can't be resolved, so the shown lines stopped adding up to the header total.
+        const ownItemSets = Array.isArray(d.itemSets) ? d.itemSets
+                          : (Array.isArray(hdr.itemSets) ? hdr.itemSets : []);
+        const renderWithItemSets = (itemSets: any[]) => {
           this.svc.groupViewLinesByPackage(baseLines, itemSets, (s: any) => {
             const setNet = +(s.lineNet ?? s.LineNet ?? 0) || 0;
             const setTax = +(s.lineTax ?? s.LineTax ?? 0) || 0;
@@ -234,7 +239,9 @@ export class SalesInvoiceListComponent implements OnInit {
             this.viewLoading = false;
             cb();
           });
-        });
+        };
+        if (ownItemSets.length) renderWithItemSets(ownItemSets);
+        else this.svc.getSourceSoItemSets({ soId: hdr.soId ?? hdr.SoId, doId: hdr.doId ?? hdr.DoId }).subscribe(renderWithItemSets);
       },
       error: () => { this.viewLoading = false; cb(); }
     });

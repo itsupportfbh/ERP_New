@@ -16,7 +16,7 @@
        (keydown)="onTriggerKeydown($event)">
     <span class="dd-value" [class.placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
     <span class="dd-actions">
-      <span class="dd-clear" *ngIf="value !== null && value !== undefined" (click)="clear($event)">&#x2715;</span>
+      <span class="dd-clear" *ngIf="clearable && value !== null && value !== undefined" (click)="clear($event)">&#x2715;</span>
       <span class="dd-arrow" [class.rotated]="open">&#x25BE;</span>
     </span>
   </div>

@@ -166,16 +166,6 @@ const APP_MENU_TREE: MenuNode[] = [
       { id: 'tb', title: 'Trial Balance', type: 'item' },
       { id: 'reports', title: 'Reports', type: 'item' }
     ]
-  },
-  {
-    id: 'recipe',
-    title: 'Recipe',
-    type: 'collapsible',
-    children: [
-      { id: 'recipe-list', title: 'Recipe Master', type: 'item' },
-      { id: 'pp-list', title: 'Production Planning', type: 'item' },
-      { id: 'bp-list', title: 'Batch Production', type: 'item' }
-    ]
   }
 ];
 
@@ -197,8 +187,7 @@ const FALLBACK_MODULES: ModuleDef[] = [
     { id: 'stockcogs', title: 'Stock COGS' },
     { id: 'list-stock-history', title: 'Stock History' }
   ]},
-  { id: 'financial', title: 'Financial', fns: APP_MENU_TREE.find(x => x.id === 'financial')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] },
-  { id: 'recipe', title: 'Recipe', fns: APP_MENU_TREE.find(x => x.id === 'recipe')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] }
+  { id: 'financial', title: 'Financial', fns: APP_MENU_TREE.find(x => x.id === 'financial')?.children?.map(x => ({ id: x.id, title: x.title })) ?? [] }
 ];
 
 @Component({

@@ -208,48 +208,6 @@ export class DeliveryOrderFormComponent implements OnInit {
         // group delivery lines under their package header (from the SO's item sets)
         this.applyPackageGrouping(d);
 
-        // 'Both' items still awaiting a PP / Direct DO decision (procurement not done)
-        const hasPendingFulfillment = arr.some((l: any) => {
-          const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
-          return sm !== 1 && sm !== 2;   // 0 / null = Pending
-        });
-        const hasDirectDoShortage = arr.some((l: any) => {
-          const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
-          const sq = Number(l.shortageQty ?? l.ShortageQty ?? 0);
-          const ps = Number(l.procurementStatus ?? l.ProcurementStatus ?? 0);
-          return sm === 2 && sq > 0 && ps < 4;
-        });
-        const hasRecipeNotReady = arr.some((l: any) => {
-          const sm = Number(l.supplyMethodId ?? l.SupplyMethodId ?? 0);
-          const ps = Number(l.procurementStatus ?? l.ProcurementStatus ?? 0);
-          return sm === 1 && ps < 4;
-        });
-        if (hasPendingFulfillment) {
-          void Swal.fire({
-            icon: 'warning',
-            title: 'Fulfillment Pending',
-            text: 'This Sales Order has item(s) still awaiting a PP / Direct DO decision. Please resolve them in Purchase → Pending Fulfillment before creating a Delivery Order.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#16a34a'
-          }).then(() => this.clear());
-        } else if (hasDirectDoShortage) {
-          void Swal.fire({
-            icon: 'warning',
-            title: 'Stock Not Yet Received',
-            text: 'This Sales Order has Direct DO items where stock has not been fully received yet. Delivery may be incomplete.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#16a34a'
-          }).then(() => this.clear());
-        } else if (hasRecipeNotReady) {
-          void Swal.fire({
-            icon: 'warning',
-            title: 'Recipe Not Ready',
-            text: 'This Sales Order has items where recipe / food preparation has not been completed yet. Delivery may be incomplete.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#16a34a'
-          }).then(() => this.clear());
-        }
-
         this.loading = false;
       },
       error: () => { this.loading = false; void Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load sales order lines.', confirmButtonColor: '#16a34a' }); }

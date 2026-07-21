@@ -753,9 +753,9 @@ export class SalesOrderFormComponent implements OnInit {
           l.isConsumable = !!f.isConsumable;
           l.allowManualFulfillment = !!f.allowManualFulfillment;
           this.applyFulfillmentByPolicy(l);
-          // Fresh SO (new / from quotation): 'Both' items start Pending so the
-          // procurement team resolves them on the Pending Fulfillment screen.
-          if (!this.isEdit && l.allowManualFulfillment) l.fulfillmentMode = null;
+          // Finished food stock is not maintained, so keep "Both" items in the
+          // normal DO flow instead of Pending Fulfillment.
+          if (!this.isEdit && l.allowManualFulfillment) l.fulfillmentMode = 2;
         }
         this.syncAllSetHeaders();
         this.computeTotals();
@@ -767,19 +767,21 @@ export class SalesOrderFormComponent implements OnInit {
   // System's automatic fulfillment from item flags: sellable-only (Sales Item) → PP,
   // consumable-only (Purchase Item) → Direct DO, both/neither → Direct DO (default).
   private autoFulfillmentFromFlags(l: UiLine): number {
-    if (l.isSellable && !l.isConsumable) return 1; // Sales Item → PP
-    if (!l.isSellable && l.isConsumable) return 2; // Purchase Item → Direct DO
-    return 2; // both / neither → default Direct DO (staff can switch if manual)
+    // Recipe / Production Planning module is hidden — no screen can complete a PP
+    // line (set its ProcurementStatus to 4), so a PP line would get stuck and could
+    // never be delivered or invoiced. Route everything to Direct DO (ship from stock)
+    // so the plain Sales flow works standalone. Restore the PP branch below when the
+    // Recipe/Production module is re-enabled.
+    //   if (l.isSellable && !l.isConsumable) return 1; // Sales Item → PP
+    return 2; // all items → Direct DO (ship from stock)
   }
 
 
-  // Non-manual items are system-decided and locked to the auto value.
-  // 'Both' items stay Pending (null) — sales does not decide; the procurement
-  // team resolves PP / Direct DO later. Any value already set is preserved.
+  // Sales should not run recipe/finished-item shortage routing now; every line
+  // stays in the normal DO flow.
   private applyFulfillmentByPolicy(l: UiLine): void {
     if (l.isSetHeader) return;
-    if (!l.allowManualFulfillment) { l.fulfillmentMode = this.autoFulfillmentFromFlags(l); return; }
-    // 'Both' → leave as-is (Pending when new)
+    l.fulfillmentMode = 2;
   }
 
   onFulfillmentChanged(l: UiLine, i: number): void {
@@ -1610,14 +1612,8 @@ export class SalesOrderFormComponent implements OnInit {
         const arr: any[] = (res?.data ?? res ?? []) as any;
         const f = Array.isArray(arr) ? arr.find((x: any) => Number(x.itemId) === Number(itemId)) : null;
         if (!f) return;
-        const sellable = !!f.isSellable;
-        const consumable = !!f.isConsumable;
         this.modal.allowManualFulfillment = !!f.allowManualFulfillment;
-        // 'Both' items stay Pending (procurement decides); auto items show their value.
-        this.modal.fulfillmentMode = f.allowManualFulfillment
-          ? null
-          // Sales Item (sellable-only) → PP (1); Purchase Item (consumable-only) → Direct DO (2)
-          : ((sellable && !consumable) ? 1 : (!sellable && consumable) ? 2 : 2);
+        this.modal.fulfillmentMode = 2;
       },
       error: () => { /* leave defaults; policy resolves after add */ }
     });
@@ -1832,41 +1828,14 @@ export class SalesOrderFormComponent implements OnInit {
     }
     if (!this.validateBeforeSave()) return;
 
-    // Step 1: fetch availability for any Direct DO lines missing it
-    await this.ensureAvailabilityBeforeSave();
-
-    // Step 2: check shortage — only Direct DO lines with insufficient stock
-    const shortageLines = this.getDirectDoShortageLines();
-
-    if (shortageLines.length) {
-      const txt = shortageLines
-        .map(l => {
-          const uom = this.getUomName(l.baseUomId) || this.getUomName(l.uomId) || '';
-          return `${l.itemName || this.getItemName(l.itemId)} | Req: ${this.lineBaseNeed(l)} ${uom} | Avl: ${l.availability ?? 0} ${uom}`;
-        })
-        .join('\n');
-
-      const confirm = await Swal.fire({
-        icon: 'warning',
-        title: 'Stock Not Available',
-        text: `Some Direct DO items do not have enough stock.\n\n${txt}\n\nPR will be auto-created. Continue?`,
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Continue',
-        cancelButtonText: 'No',
-        confirmButtonColor: '#16a34a'
-      });
-
-      if (!confirm.isConfirmed) return;
-    }
+    const shortageLines: UiLine[] = [];
 
     // Status rule:
-    //   Pending (1)  → any Direct-DO shortage OR any PP line (goes to recipe/production, not yet completed)
-    //   Approved (2) → no shortage AND no pending PP line
+    //   Approved (2) → no finished-item shortage check for food sales.
     //   Completed (3)→ set later when a Delivery Order is created
     //   Rejected (4) → manual reject
     if (!this.isEdit || this.header.status === 1 || this.header.status === 2) {
-      const hasPpPending = this.lines.some(l => !l.isSetHeader && Number(l.fulfillmentMode) === 1);
-      this.header.status = (shortageLines.length || hasPpPending) ? 1 : 2;
+      this.header.status = 2;
     }
 
     // Step 3: save the SO
