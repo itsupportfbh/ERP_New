@@ -50,7 +50,9 @@ export class StockTakeListComponent implements OnInit {
 
   /** Per-row action visibility: Post only for Approved; hide Edit/Delete once Posted. */
   rowActionFilter = (action: string, row: any): boolean => {
-    if (action === 'post') return row?.status === 2;
+    // Posting writes the inventory and its GL entry, so it needs Post permission —
+    // an Inventory Executive may record a stock take but not post it.
+    if (action === 'post') return row?.status === 2 && this.canPost();
     if (action === 'edit' || action === 'delete') return row?.status !== 3;
     return true;
   };
@@ -199,6 +201,9 @@ export class StockTakeListComponent implements OnInit {
   canExport(): boolean {
     return this.permissionService.hasExport(this.permission);
   }
+  canPost(): boolean {
+    return this.permissionService.hasPost(this.permission);
+  }
   filterUpdate(event: any) {
     const val = (event?.target?.value ?? this.searchValue ?? '').toString().toLowerCase();
     this.rows = !val ? [...this.tempData] : this.tempData.filter((d) => {
@@ -238,7 +243,7 @@ export class StockTakeListComponent implements OnInit {
     if (e.action === 'view') { this.openLinesModal(e.row); }
     else if (e.action === 'edit') { if (this.canEdit() && e.row.status !== 3) this.editStockTake(e.row); }
     else if (e.action === 'delete') { if (this.canDelete() && e.row.status !== 3) this.deleteStockTake(e.row.id); }
-    else if (e.action === 'post') { this.post(e.row); }
+    else if (e.action === 'post') { if (this.canPost()) this.post(e.row); }
   }
 
 
