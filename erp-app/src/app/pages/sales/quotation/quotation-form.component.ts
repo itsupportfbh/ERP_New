@@ -9,6 +9,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SalesService } from '../sales.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 import Swal from 'sweetalert2';
 import { QuickAddType, QuickAddResult } from '../../../shared/components/quick-add-modal/quick-add-modal.component';
 
@@ -256,7 +257,8 @@ export class QuotationFormComponent implements OnInit {
     private svc: SalesService,
     private route: ActivatedRoute,
     private router: Router,
-    public perm: PermissionService
+    public perm: PermissionService,
+    private currencyDisplay: CurrencyDisplayService
   ) {}
 
   // ── Lifecycle ────────────────────────────────────────
@@ -298,6 +300,13 @@ export class QuotationFormComponent implements OnInit {
 
   get quoteCurrencyLabel(): string {
     return (this.header.currency || this.baseCurrencyName || 'SGD').trim();
+  }
+
+  /** Symbol form of the quote currency (MYR → RM), for column headers that show bare numbers. */
+  get quoteCurrencySymbol(): string {
+    return this.header.currencyId
+      ? this.currencyDisplay.symbolFor(this.header.currencyId)
+      : this.currencyDisplay.symbolForName(this.quoteCurrencyLabel);
   }
 
   lineUomLabel(l: UiLine): string {
@@ -374,7 +383,7 @@ export class QuotationFormComponent implements OnInit {
       case 1: return 'Standard-Rated';
       case 2: return 'Zero-Rated';
       case 3: return 'Exempt';
-      default: return (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated';
+      default: return 'Standard-Rated';
     }
   }
 
@@ -395,7 +404,14 @@ export class QuotationFormComponent implements OnInit {
   }
 
   get taxModeItems(): { value: LineTaxMode; label: string }[] {
-    return this.taxModesForCurrentGst.map(m => ({ value: m, label: m }));
+    // Stored values keep the "-Rated" suffix (tax code mapping); only the label is shortened.
+    return this.taxModesForCurrentGst.map(m => ({ value: m, label: m.replace('-Rated', '') }));
+  }
+
+  /** Cash Sales types its own rate, so every line has to be re-taxed when it changes. */
+  onHeaderTaxPctChange(): void {
+    this.lines.forEach(l => { if (!l.isSetHeader) this.computeLine(l); });
+    this.computeTotals();
   }
 
   get packageOptions(): { label: string; value: any }[] {
@@ -1010,13 +1026,8 @@ export class QuotationFormComponent implements OnInit {
       this.header.countryId = null;
       this.activeCustomerCountry = null;
       this.header.taxPct = 0;
-      this.lines.forEach(l => {
-        if (!l.isSetHeader) {
-          l.taxMode = 'Zero-Rated';
-          l.taxCodeId = this.taxModeToTaxCodeId('Zero-Rated');
-          this.computeLine(l);
-        }
-      });
+      // The rate is typed in for a cash sale; lines keep whatever tax mode the user chose.
+      this.lines.forEach(l => { if (!l.isSetHeader) this.computeLine(l); });
       this.computeTotals();
       return;
     }
@@ -1027,23 +1038,11 @@ export class QuotationFormComponent implements OnInit {
     this.activeCustomerCountry = country;
     this.header.taxPct = country?.gstPercentage ?? 0;
 
-    const gst = +this.header.taxPct || 0;
-    if (gst !== 9) {
-      this.lines.forEach(l => {
-        if (!l.isSetHeader && (l.taxMode === 'Standard-Rated' || l.taxMode === 'Exempt')) {
-          l.taxMode = 'Zero-Rated';
-          l.taxCodeId = this.taxModeToTaxCodeId('Zero-Rated');
-          this.computeLine(l);
-        }
-      });
-    }
+    // Only the rate changes with the customer's country — the tax mode is the user's choice
+    // (it used to be forced to Zero-Rated whenever the rate was not 9%, which broke SST at 6%).
+    this.lines.forEach(l => { if (!l.isSetHeader) this.computeLine(l); });
 
-    if (this.showModal) {
-      if ((+this.header.taxPct || 0) !== 9 && this.modal.taxMode !== 'Zero-Rated') {
-        this.modal.taxMode = 'Zero-Rated';
-      }
-      this.previewLineTotals();
-    }
+    if (this.showModal) this.previewLineTotals();
     this.computeTotals();
   }
 
@@ -1214,7 +1213,7 @@ export class QuotationFormComponent implements OnInit {
         if (setPrice > 0) setHeader.unitPrice = setPrice;
         this.lines.push(setHeader);
 
-        const defaultTax: LineTaxMode = (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated';
+        const defaultTax: LineTaxMode = 'Standard-Rated';
 
         for (const it of rows) {
           const itemId = Number(it.itemId ?? it.ItemId ?? it.id ?? 0);
@@ -1433,9 +1432,11 @@ export class QuotationFormComponent implements OnInit {
     for (const l of this.lines) {
       // children are zeroed but still need their fields reset
       if (this.isPackageChild(l)) { this.computeLine(l); continue; }
-      // package headers + custom lines carry the money
-      const { base } = this.computeLine(l);
-      baseSubtotal += base;
+      // package headers + custom lines carry the money.
+      // Sum the NET (after the line's own discount) — summing the gross made a line
+      // discount invisible in Subtotal / Net Total while the line total already showed it.
+      this.computeLine(l);
+      baseSubtotal += l.lineNet || 0;
       if ((+(l.discountPct ?? 0) || 0) > 10) hod = true;
     }
     this.header.subtotal = this.round2(baseSubtotal);
@@ -1537,15 +1538,48 @@ export class QuotationFormComponent implements OnInit {
       sellUomId: null, baseUomId: null, uomFactor: 1, uomIdPrev: null, baseQty: null,
       unitPrice: null,
       discountPct: 0,
-      taxMode: (+this.header.taxPct || 0) === 9 ? 'Standard-Rated' : 'Zero-Rated',
+      taxMode: 'Standard-Rated',
       fulfillmentMode: null, allowManualFulfillment: false, description: '', dropdownOpen: false, filteredItems: []
     };
     this.showModal = true;
   }
+  /** Reopen an existing line in the same modal. -1 means "adding", any other index means "editing". */
+  editingLineIndex = -1;
+
+  openEdit(i: number): void {
+    const l = this.lines[i];
+    if (!l || l.isFromSet || l.isSetHeader) return;
+
+    this.modalPreview = null;
+    this.editingLineIndex = i;
+    this.modal = {
+      itemId: l.itemId ?? null,
+      itemSearch: l.itemName || this.getItemName(l.itemId) || '',
+      qty: l.qty ?? null,
+      uomId: l.uomId ?? null,
+      sellUomId: l.sellUomId ?? null,
+      baseUomId: l.baseUomId ?? null,
+      uomFactor: l.uomFactor ?? 1,
+      uomIdPrev: l.uomId ?? null,
+      baseQty: l.baseQty ?? null,
+      unitPrice: l.unitPrice ?? null,
+      discountPct: l.discountPct ?? 0,
+      taxMode: l.taxMode,
+      fulfillmentMode: l.fulfillmentMode ?? null,
+      allowManualFulfillment: !!l.allowManualFulfillment,
+      description: l.description || '',
+      dropdownOpen: false,
+      filteredItems: []
+    };
+    this.previewLineTotals();
+    this.showModal = true;
+  }
+
   closeModal(): void {
     this.showModal = false;
     this.modal.dropdownOpen = false;
     this.modalPreview = null;
+    this.editingLineIndex = -1;
   }
   onModalContainer(ev: MouseEvent): void { ev.stopPropagation(); }
   toggleModalItemDropdown(): void {
@@ -1653,10 +1687,40 @@ export class QuotationFormComponent implements OnInit {
     };
     this.attachUomConversion(payload);
     this.computeLine(payload);
-    this.lines.push(payload);
+    if (this.editingLineIndex >= 0 && this.lines[this.editingLineIndex]) {
+      this.lines[this.editingLineIndex] = payload;
+    } else {
+      this.lines.push(payload);
+    }
     this.computeTotals();
     this.loadFlagsForLines([payload]);
     this.closeModal();
+  }
+
+  /**
+   * Item swapped on an existing grid line — refresh everything the modal would have
+   * set when the line was first added (UOM pair, factor, default price, flags).
+   */
+  onLineItemChange(i: number): void {
+    const l = this.lines[i];
+    if (!l || l.isFromSet) return;
+
+    const row = l.itemId ? this.itemsList.find(x => x.id === Number(l.itemId)) : null;
+    l.itemName = row?.itemName ?? '';
+
+    const sell = (row?.uomId ?? null) as number | null;
+    l.sellUomId = sell;
+    l.baseUomId = (row?.baseUomId ?? sell) as number | null;
+    l.uomFactor = Number(row?.uomFactor ?? 1) || 1;
+    l.uomId = sell;
+
+    // Same as the Add-line modal: seed the item's price, which the user may still override.
+    l.unitPrice = (row && row.price != null ? +row.price : 0) as any;
+
+    this.attachUomConversion(l);
+    this.computeLine(l);
+    this.computeTotals();
+    this.loadFlagsForLines([l]);
   }
 
   remove(i: number): void {

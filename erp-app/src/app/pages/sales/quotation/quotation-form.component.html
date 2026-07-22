@@ -126,8 +126,12 @@
       <!-- GST % -->
       <div class="mf-group">
         <label class="mf-label">{{ 'GST %' | taxName }}</label>
-        <!-- Read-only: the GST rate comes from the company tax setup. -->
-        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct" disabled />
+        <!-- Normally read-only: the rate comes from the customer's country. Cash Sales has no
+             customer country, so the rate is entered here instead. -->
+        <input type="number" class="mf-input" [(ngModel)]="header.taxPct" name="taxPct"
+          min="0" max="100" step="0.01"
+          [disabled]="!header.isCashSales"
+          (ngModelChange)="onHeaderTaxPctChange()" />
       </div>
     </div>
 
@@ -188,7 +192,6 @@
           <col class="qf-colDesc" />
           <col class="qf-colUom" />
           <col class="qf-colQty" />
-          <col class="qf-colBaseQty" />
           <col class="qf-colPrice" />
           <col class="qf-colDisc" />
           <col class="qf-colTax" />
@@ -201,17 +204,16 @@
             <th>Description</th>
             <th>UOM</th>
             <th class="qf-c">Qty</th>
-            <th class="qf-c">Base Qty</th>
-            <th class="qf-c">Unit Price <span>({{ quoteCurrencyLabel }})</span></th>
+            <th class="qf-c">Unit Price</th>
             <th class="qf-c">Discount %</th>
             <th>Tax Mode</th>
-            <th class="qf-c">Line Total <span>({{ quoteCurrencyLabel }})</span></th>
+            <th class="qf-c">Line Total <span>({{ quoteCurrencySymbol }})</span></th>
             <th class="qf-c">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="lines.length === 0">
-            <td class="dt-empty" [attr.colspan]="10">No lines yet. Click <b>Add line</b> or select a package to start.</td>
+            <td class="dt-empty" [attr.colspan]="9">No lines yet. Click <b>Add line</b> or select a package to start.</td>
           </tr>
 
           <ng-container *ngFor="let l of lines; let i = index">
@@ -232,7 +234,6 @@
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.qty"
                   (ngModelChange)="onSetQtyChange(l)" min="0" step="0.0001" placeholder="0" />
               </td>
-              <td class="qf-c qf-uom">-</td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"
                   (ngModelChange)="onSetPriceChange(l)" min="0" step="0.01" placeholder="0.00" />
@@ -244,10 +245,10 @@
               <td>
                 <erp-dropdown [(ngModel)]="l.taxMode"
                   [items]="taxModeItems" bindLabel="label" bindValue="value"
-                  [menuMinWidth]="170"
+                  [menuMinWidth]="120"
                   (ngModelChange)="onSetLineChanged(l)"></erp-dropdown>
               </td>
-              <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
+              <td class='qf-c qf-total'>{{ (l.lineTotal || 0) | number:'1.2-2' }}</td>
               <td class="qf-c">
                 <button class="dt-icon-btn del" type="button" (click)="removeItemSet(l.itemSetId!)" title="Remove Package">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
@@ -257,7 +258,15 @@
 
             <!-- Item row (package children hide when their package is collapsed) -->
             <tr *ngIf="!l.isSetHeader && !(l.isFromSet && isSetCollapsed(l.itemSetId))">
-              <td><span class="qf-itemName">{{ l.itemName || getItemName(l.itemId) || '-' }}</span></td>
+              <!-- Lines added with "Add line" stay editable; package children are fixed by the package. -->
+              <td>
+                <erp-dropdown *ngIf="!l.isFromSet" [(ngModel)]="l.itemId"
+                  [items]="itemsList" bindLabel="itemName" bindValue="id"
+                  placeholder="Search item..."
+                  [menuMinWidth]="220"
+                  (ngModelChange)="onLineItemChange(i)"></erp-dropdown>
+                <span *ngIf="l.isFromSet" class="qf-itemName">{{ l.itemName || getItemName(l.itemId) || '-' }}</span>
+              </td>
               <td>
                 <textarea class="mf-textarea qf-cellInput qf-lineDesc" rows="2" [(ngModel)]="l.description"
                   (ngModelChange)="onLineChanged(i)" placeholder="-"
@@ -278,10 +287,6 @@
                   [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
                   [title]="l.isFromSet ? 'Set at package level' : ''" />
               </td>
-              <td class="qf-c qf-uom" [title]="(l.baseQty || 0) + ' ' + (getUomName(l.baseUomId) || '')">
-                {{ (l.baseQty || 0) | number:'1.0-4' }}
-                <small class="qf-muted" *ngIf="l.baseUomId">{{ getUomName(l.baseUomId) }}</small>
-              </td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"
                   (ngModelChange)="onLineChanged(i)" min="0" step="0.0001"
@@ -297,13 +302,18 @@
               <td>
                 <erp-dropdown [(ngModel)]="l.taxMode"
                   [items]="taxModeItems" bindLabel="label" bindValue="value"
-                  [menuMinWidth]="170"
+                  [menuMinWidth]="120"
                   [disabled]="l.isFromSet"
                   (ngModelChange)="onLineChanged(i)"></erp-dropdown>
               </td>
-              <td class="qf-c qf-total">{{ (l.lineTotal || 0) | money:header.currencyId }}</td>
-              <td class="qf-c">
-                <!-- Package children can't be removed individually — remove the whole package instead. -->
+              <td class='qf-c qf-total'>{{ (l.lineTotal || 0) | number:'1.2-2' }}</td>
+              <td class="qf-c qf-actions">
+                <!-- Package children can't be edited or removed individually — change the whole package instead. -->
+                <button *ngIf="!l.isFromSet" class="dt-icon-btn" type="button" (click)="openEdit(i)" title="Edit line">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10z"/>
+                  </svg>
+                </button>
                 <button *ngIf="!l.isFromSet" class="dt-icon-btn del" type="button" (click)="remove(i)" title="Remove">
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
                 </button>
@@ -321,9 +331,8 @@
     <div class="card qf-totals__card">
       <div class="qf-totalsHead">
         <span>Summary</span>
-        <span class="qf-curPill">Currency: <b>{{ header.currency || '-' }}</b></span>
       </div>
-      <div class="qf-sumRow"><span>Subtotal</span><strong>{{ header.subtotal | money:header.currencyId }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Subtotal</span><strong>{{ header.subtotal | money:header.currencyId }}</strong></div>
       <div class="qf-sumRow qf-discRow">
         <span>Discount</span>
         <div class="qf-discCtrls">
@@ -336,12 +345,12 @@
           <span class="qf-discAmt">({{ header.discountAmount | money:header.currencyId }})</span>
         </div>
       </div>
-      <div class="qf-sumRow"><span>Net Total</span><strong>{{ header.netTotal | money:header.currencyId }} {{ header.currency }}</strong></div>
-      <div class="qf-sumRow"><span>Tax</span><strong>{{ header.taxAmount | money:header.currencyId }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Net Total</span><strong>{{ header.netTotal | money:header.currencyId }}</strong></div>
+      <div class="qf-sumRow"><span>Tax</span><strong>{{ header.taxAmount | money:header.currencyId }}</strong></div>
       <div class="qf-divider"></div>
       <div class="qf-grand">
         <div class="lhs"><span class="k">Grand Total</span><small class="h">Net Total + Tax</small></div>
-        <h3 class="v">{{ header.grandTotal | money:header.currencyId }} <span class="cur">{{ header.currency }}</span></h3>
+        <h3 class="v">{{ header.grandTotal | money:header.currencyId }}</h3>
       </div>
       <div class="qf-grand qf-grand--base" *ngIf="isForeignCurrency()">
         <div class="lhs">
