@@ -156,14 +156,20 @@ export class AuthService {
    * every screen agrees on who gets full access, instead of each component
    * doing its own ad-hoc string match.
    *
-   * Plain "Admin" is intentionally NOT treated as Super Admin — Admin is a
-   * narrower, per-company role (see CompanyComponent, which scopes an Admin's
-   * visible companies by CompanyId instead of granting full access).
+   * Plain "Admin" is NOT a Super Admin. Admin is a tenant role: it works inside
+   * one organisation, its menu comes from its own OrganizationRole grants, and
+   * it may not hand out access to another Admin. Super Admin is a master-level
+   * role (ERP_Master MasterRoles) that sits above every Admin.
+   *
+   * 'admin' used to be in the set below, which contradicted this very comment
+   * and quietly gave every Admin full-access treatment - bypassing the sidebar
+   * permission filter and the All-companies read-only rule. The server enforces
+   * the same split in AccessControlService; this only keeps the UI honest.
    */
   isSuperAdmin(): boolean {
     let roles: string[] = [];
     try { roles = JSON.parse(localStorage.getItem('approvalRoles') || '[]'); } catch {}
-    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'master', 'systemadministrator', 'admin', 'orgadmin', 'owner', 'orgowner']);
+    const SUPER_ADMIN_ROLES = new Set(['superadmin', 'master', 'systemadministrator', 'orgadmin', 'owner', 'orgowner']);
     const hasAdminRole = Array.isArray(roles) && roles.some(r =>
       SUPER_ADMIN_ROLES.has(String(r || '').toLowerCase().replace(/[\s_-]/g, ''))
     );

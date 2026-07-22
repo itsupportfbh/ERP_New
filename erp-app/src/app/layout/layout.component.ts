@@ -425,10 +425,20 @@ export class LayoutComponent implements OnInit, OnDestroy {
     for (const menu of this.menus) {
       if (menu.children?.length && this.menuContainsUrl(menu, url)) {
         const toOpen = new Set<string>([menu.label]);
-        // Also open any level-2 parent that contains the active URL
+        // Also open any level-2 parent that contains the active URL. Groups here
+        // are siblings under the same module dir (e.g. everything under
+        // /app/master/), so the loose module-dir fallback would open all of them
+        // - match strictly and only fall back to loose if nothing matched.
         for (const child of menu.children) {
-          if (child.children?.length && this.menuContainsUrl(child, url)) {
+          if (child.children?.length && this.menuContainsUrl(child, url, true)) {
             toOpen.add(child.label);
+          }
+        }
+        if (toOpen.size === 1) {
+          for (const child of menu.children) {
+            if (child.children?.length && this.menuContainsUrl(child, url)) {
+              toOpen.add(child.label);
+            }
           }
         }
         this.openMenus = toOpen;
@@ -438,19 +448,19 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.openMenus = new Set();
   }
 
-  private menuContainsUrl(menu: MenuItem, url: string): boolean {
+  private menuContainsUrl(menu: MenuItem, url: string, strict = false): boolean {
     if (!menu.children) return false;
     for (const child of menu.children) {
       if (child.route) {
         if (url.startsWith(child.route)) return true;
         // Also match create/edit pages under the same module directory
         const lastSlash = child.route.lastIndexOf('/');
-        if (lastSlash > 5) {
+        if (!strict && lastSlash > 5) {
           const moduleDir = child.route.substring(0, lastSlash + 1);
           if (url.startsWith(moduleDir)) return true;
         }
       }
-      if (child.children?.length && this.menuContainsUrl(child, url)) return true;
+      if (child.children?.length && this.menuContainsUrl(child, url, strict)) return true;
     }
     return false;
   }
