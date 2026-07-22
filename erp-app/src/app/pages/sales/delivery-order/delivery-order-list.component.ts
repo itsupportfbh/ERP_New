@@ -328,7 +328,7 @@ export class DeliveryOrderListComponent implements OnInit {
       fromEmail: email, fromName: name,
       toEmail: '', ccEmail: '',
       subject: `Delivery Order ${docNo}`.trim(),
-      bodyHtml: `<p>Dear Customer,</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`
+      bodyHtml: `<p>Dear Customer,</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`
     };
 
     this.emailSvc.getRecipient('DO', row.id).subscribe({
@@ -336,7 +336,7 @@ export class DeliveryOrderListComponent implements OnInit {
         const info = this.emailSvc.unwrapOne(res) || {};
         this.emailModel.toEmail = info.email ?? info.Email ?? '';
         const party = info.partyName ?? info.PartyName;
-        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`;
+        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`;
       },
       error: () => {}
     });

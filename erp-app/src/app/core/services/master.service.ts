@@ -88,9 +88,14 @@ export class MasterService {
   cacheCompanyLogo(): void {
     const companyId = Number(localStorage.getItem('companyId') || 0);
     if (!companyId) return;
-    this.getCompanyById(companyId).subscribe({
+    // Pass the org like the Company edit screen does — without it the company row (and with it
+    // the logo) can resolve to a different tenant, which is why printed documents fell back to
+    // the "UW" placeholder even though a logo was uploaded.
+    const orgGuid = (localStorage.getItem('orgGuid') || '').trim();
+    this.getCompanyById(companyId, orgGuid || undefined).subscribe({
       next: (res: any) => {
-        if (res?.logoBase64) localStorage.setItem('companyLogoBase64', res.logoBase64);
+        const logo = res?.logoBase64 || res?.LogoBase64 || '';
+        if (logo) localStorage.setItem('companyLogoBase64', logo);
         else localStorage.removeItem('companyLogoBase64');
         const g = res?.general || {};
         localStorage.setItem('companyPrintName',    g.name     || localStorage.getItem('companyName') || '');

@@ -61,6 +61,58 @@ export class EmailComposeService {
     return this.http.post(`${this.api}/invoiceemail/compose-doc/${docType}/${id}`, dto);
   }
 
+  /**
+   * Sign-off block for a document email: the sender's name followed by the company's
+   * name, address, phone and email. Reads the company details cached at login by
+   * MasterService.cacheCompanyLogo() (the same values the printed documents use), so
+   * it costs no extra request and follows the company the user is working under.
+   */
+  signatureHtml(senderName: string): string {
+    const ls = (k: string) => (localStorage.getItem(k) || '').trim();
+    const company = ls('companyPrintName') || ls('companyName');
+    const cityLine = [ls('companyPrintPostal'), ls('companyPrintCity')].filter(Boolean).join(' ');
+    const phone = ls('companyPrintPhone');
+    const email = ls('companyPrintEmail');
+
+    const lines = [
+      senderName ? this.escape(senderName) : '',
+      company ? `<b>${this.escape(company)}</b>` : '',
+      this.escape(ls('companyPrintAddress1')),
+      this.escape(ls('companyPrintAddress2')),
+      this.escape(cityLine),
+      this.escape(ls('companyPrintState')),
+      phone ? `Tel: ${this.escape(phone)}` : '',
+      email ? `Email: ${this.escape(email)}` : ''
+    ].filter(Boolean);
+
+    return `<p>Regards,<br/>${lines.join('<br/>')}</p>`;
+  }
+
+  /** Compose boxes show readable text; the API is sent HTML. These two convert between them. */
+  htmlToText(html: string): string {
+    return (html || '')
+      .replace(/<\s*br\s*\/?>/gi, '\n')
+      .replace(/<\s*\/p\s*>/gi, '\n\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  textToHtml(text: string): string {
+    return this.escape(text || '')
+      .split(/\n{2,}/)
+      .map(block => `<p>${block.replace(/\n/g, '<br/>')}</p>`)
+      .join('');
+  }
+
+  private escape(v: string): string {
+    return (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   unwrapOne(res: any): any {
     if (res?.data && !Array.isArray(res.data)) return res.data;
     if (Array.isArray(res?.data)) return res.data[0] ?? {};

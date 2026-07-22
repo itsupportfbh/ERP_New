@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { EmailComposeService } from '../../services/email-compose.service';
 
 export interface EmailComposeAttachment {
   /** e.g. "Sales Invoice" */
@@ -45,8 +46,25 @@ export class EmailComposeComponent {
   @Input() model!: EmailComposeModel;
   @Input() attachments: EmailComposeAttachment[] = [];
 
+  constructor(private emailSvc: EmailComposeService) {}
+
   @Output() send = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
+
+  /**
+   * The box shows readable text, not markup. The model keeps HTML (that is what the API
+   * sends), so we convert on the way in and back out — otherwise the user saw raw
+   * "<p>…<br/>" tags, and anything they typed was treated as markup.
+   */
+  get bodyText(): string {
+    return this.htmlToText(this.model?.bodyHtml ?? '');
+  }
+  set bodyText(value: string) {
+    if (this.model) this.model.bodyHtml = this.textToHtml(value ?? '');
+  }
+
+  private htmlToText(html: string): string { return this.emailSvc.htmlToText(html); }
+  private textToHtml(text: string): string { return this.emailSvc.textToHtml(text); }
 
   onSend(): void { if (!this.sending) this.send.emit(); }
   onCancel(): void { if (!this.sending) this.cancel.emit(); }

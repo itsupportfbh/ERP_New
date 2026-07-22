@@ -410,7 +410,7 @@ export class DocumentPrintService {
         windowHeight: contentH,
       });
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
       const pageW = pdf.internal.pageSize.getWidth();   // 210mm
       const pageH = pdf.internal.pageSize.getHeight();  // 297mm
 
@@ -437,7 +437,10 @@ export class DocumentPrintService {
         ctx.drawImage(canvas, 0, rendered, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
 
         if (!first) pdf.addPage();
-        pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', margin, margin, imgW, slicePx / pxPerMm);
+        // JPEG, not PNG: a full-page lossless bitmap is ~10 MB per page, so a three-document
+        // email came to 37 MB and the mail server bounced it (35 MB limit). At this quality a
+        // text document stays crisp but the page drops to a few hundred KB.
+        pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.85), 'JPEG', margin, margin, imgW, slicePx / pxPerMm);
         rendered += slicePx;
         first = false;
       }
