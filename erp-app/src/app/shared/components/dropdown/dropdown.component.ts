@@ -28,6 +28,8 @@ export class DropdownComponent implements ControlValueAccessor, OnInit, OnDestro
   @Input() errorMsg = '';
   /** Optional minimum width (px) for the dropdown panel. Useful for long labels. */
   @Input() menuMinWidth = 0;
+  /** Let long option labels wrap instead of being hidden with an ellipsis. */
+  @Input() wrapOptions = false;
   /** When true, shows a "+ Add new" row at the bottom of the menu so the user
    *  can create a missing master value inline without leaving the form. */
   @Input() allowAdd = false;

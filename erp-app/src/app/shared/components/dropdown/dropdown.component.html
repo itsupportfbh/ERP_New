@@ -22,7 +22,7 @@
   </div>
 
   <!-- Menu rendered at fixed position — escapes overflow:hidden parents -->
-  <div class="dd-menu" *ngIf="open" [ngStyle]="menuStyle">
+  <div class="dd-menu" *ngIf="open" [class.dd-menu--wrap]="wrapOptions" [ngStyle]="menuStyle">
     <div class="dd-search-wrap" (click)="$event.stopPropagation()">
       <input #searchInput class="dd-search" [(ngModel)]="searchText"
              placeholder="Search..." autocomplete="off">

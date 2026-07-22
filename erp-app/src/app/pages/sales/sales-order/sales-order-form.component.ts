@@ -278,6 +278,10 @@ export class SalesOrderFormComponent implements OnInit {
 
   get statusLabel(): string { return STATUS_MAP[this.header.status] ?? 'Pending'; }
 
+  get quoteCurrencyLabel(): string {
+    return (this.header.currency || this.baseCurrencyName || 'SGD').trim();
+  }
+
   get packageNames(): string {
     return (this.selectedItemSets || []).map(s => s.setName).filter(Boolean).join(', ') || '—';
   }
@@ -367,7 +371,12 @@ export class SalesOrderFormComponent implements OnInit {
   }
 
   get taxModeItems(): { value: LineTaxMode; label: string }[] {
-    return this.taxModesForCurrentGst.map(m => ({ value: m, label: m }));
+    const labels: Record<LineTaxMode, string> = {
+      'Standard-Rated': 'Standard',
+      'Zero-Rated': 'Zero',
+      Exempt: 'Exempt'
+    };
+    return this.taxModesForCurrentGst.map(m => ({ value: m, label: labels[m] }));
   }
 
   get packageOptions(): { label: string; value: any }[] {

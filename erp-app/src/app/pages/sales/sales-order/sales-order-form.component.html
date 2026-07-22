@@ -24,6 +24,7 @@
         <label class="mf-label">Quotation No</label>
         <erp-dropdown [(ngModel)]="quotationId" name="quotationId"
           [items]="quotations" bindLabel="label" bindValue="id"
+          [menuMinWidth]="560" [wrapOptions]="true"
           [disabled]="isEdit" placeholder="Select quotation (optional)"
           (ngModelChange)="onQuotationChange()"></erp-dropdown>
       </div>
@@ -114,6 +115,18 @@
 
     <div class="dt-table-wrap qf-tableWrap">
       <table class="dt-table qf-table">
+        <colgroup>
+          <col class="qf-colItem" />
+          <col class="qf-colDesc" />
+          <col class="qf-colUom" />
+          <col class="qf-colQty" />
+          <col class="qf-colBaseQty" />
+          <col class="qf-colPrice" />
+          <col class="qf-colDisc" />
+          <col class="qf-colTax" />
+          <col class="qf-colTotal" />
+          <col class="qf-colAction" />
+        </colgroup>
         <thead>
           <tr>
             <th>Item / Package</th>
@@ -121,11 +134,11 @@
             <th>UOM</th>
             <th class="qf-c">Qty</th>
             <th class="qf-c">Base Qty</th>
-            <th class="qf-c">Unit Price <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
+            <th class="qf-c">Unit Price <span>({{ quoteCurrencyLabel }})</span></th>
             <th class="qf-c">Discount %</th>
             <!-- table-layout is fixed, so the column takes its WIDTH from here, not min-width. -->
-            <th style="width:180px">Tax Mode</th>
-            <th class="qf-c">Line Total <span *ngIf="isForeignCurrency()">({{ header.currency }})</span></th>
+            <th>Tax Mode</th>
+            <th class="qf-c">Line Total <span>({{ quoteCurrencyLabel }})</span></th>
             <th class="qf-c">Action</th>
           </tr>
         </thead>
@@ -240,7 +253,7 @@
         <span>Summary</span>
         <span class="qf-curPill">Currency: <b>{{ header.currency || '-' }}</b></span>
       </div>
-      <div class="qf-sumRow"><span>Subtotal</span><strong>{{ header.subtotal | money:header.currencyId }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Subtotal</span><strong>{{ header.subtotal | money:header.currencyId }}</strong></div>
       <div class="qf-sumRow qf-discRow">
         <span>Discount</span>
         <div class="qf-discCtrls">
@@ -253,19 +266,19 @@
           <span class="qf-discAmt">({{ header.discountAmount | money:header.currencyId }})</span>
         </div>
       </div>
-      <div class="qf-sumRow"><span>Net Total</span><strong>{{ header.netTotal | money:header.currencyId }} {{ header.currency }}</strong></div>
-      <div class="qf-sumRow"><span>Tax</span><strong>{{ header.taxAmount | money:header.currencyId }} {{ header.currency }}</strong></div>
+      <div class="qf-sumRow"><span>Net Total</span><strong>{{ header.netTotal | money:header.currencyId }}</strong></div>
+      <div class="qf-sumRow"><span>Tax</span><strong>{{ header.taxAmount | money:header.currencyId }}</strong></div>
       <div class="qf-divider"></div>
       <div class="qf-grand">
         <div class="lhs"><span class="k">Grand Total</span><small class="h">Net Total + Tax</small></div>
-        <h3 class="v">{{ header.grandTotal | money:header.currencyId }} <span class="cur">{{ header.currency }}</span></h3>
+        <h3 class="v">{{ header.grandTotal | money:header.currencyId }}</h3>
       </div>
       <div class="qf-grand qf-grand--base" *ngIf="isForeignCurrency()">
         <div class="lhs">
           <span class="k">Base ({{ baseCurrencyName }})</span>
-          <small class="h">{{ header.grandTotal | money:header.currencyId }} {{ header.currency }} × {{ header.fxRate | number:'1.4-4' }}</small>
+          <small class="h">{{ header.grandTotal | money:header.currencyId }} × {{ header.fxRate | number:'1.4-4' }}</small>
         </div>
-        <h3 class="v">{{ grandTotalBase | money }} <span class="cur">{{ baseCurrencyName }}</span></h3>
+        <h3 class="v">{{ grandTotalBase | money }}</h3>
       </div>
     </div>
   </div>
@@ -319,7 +332,7 @@
 
         <!-- Unit Price -->
         <div class="mf-group qf-mCol3">
-          <label class="mf-label">Unit Price <span *ngIf="isForeignCurrency()" class="qf-muted">({{ header.currency }})</span></label>
+          <label class="mf-label">Unit Price <span class="qf-muted">({{ quoteCurrencyLabel }})</span></label>
           <input type="number" class="mf-input qf-num" [(ngModel)]="modal.unitPrice" name="modalPrice"
             min="0" step="0.0001" (ngModelChange)="previewLineTotals()" />
         </div>
@@ -360,10 +373,10 @@
         <!-- Preview -->
         <div class="qf-mCol12" *ngIf="modalPreview">
           <div class="qf-preview">
-            <div class="r"><span>Net</span><strong>{{ modalPreview.net | money:header.currencyId }} <span class="qf-muted" *ngIf="isForeignCurrency()">{{ header.currency }}</span></strong></div>
+            <div class="r"><span>Net</span><strong>{{ modalPreview.net | money:header.currencyId }}</strong></div>
             <div class="r"><span>Tax</span><strong>{{ modalPreview.tax | money:header.currencyId }}</strong></div>
-            <div class="r r--total"><span>Total</span><strong>{{ modalPreview.total | money:header.currencyId }} <span class="qf-muted" *ngIf="isForeignCurrency()">{{ header.currency }}</span></strong></div>
-            <div class="r" *ngIf="isForeignCurrency()"><span>Base ({{ baseCurrencyName }})</span><strong>{{ (modalPreview.total * header.fxRate) | money }} {{ baseCurrencyName }}</strong></div>
+            <div class="r r--total"><span>Total</span><strong>{{ modalPreview.total | money:header.currencyId }}</strong></div>
+            <div class="r" *ngIf="isForeignCurrency()"><span>Base ({{ baseCurrencyName }})</span><strong>{{ (modalPreview.total * header.fxRate) | money }}</strong></div>
           </div>
         </div>
       </div>
