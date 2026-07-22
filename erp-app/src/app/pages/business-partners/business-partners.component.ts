@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { RowAction, TableColumn, SortState } from '../../shared/components/data-table/data-table.component';
 import { BusinessPartnersService } from './business-partners.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
+import { AccessControlService } from '../../core/services/access-control.service';
 
 type PartnerTab = 'customers' | 'suppliers' | 'users';
 
@@ -70,7 +71,8 @@ export class BusinessPartnersComponent implements OnInit {
     private partners: BusinessPartnersService,
     private route: ActivatedRoute,
     private router: Router,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private accessControl: AccessControlService
   ) {
     this.loginUserId = Number(localStorage.getItem('id') || 0);
     this.tabPermissions = {
@@ -98,6 +100,20 @@ export class BusinessPartnersComponent implements OnInit {
       (a.key === 'delete' && this.canDelete())
     );
   }
+
+  /**
+   * On the Users tab, editing a row means editing that person's access, so it is
+   * additionally limited by rank: nobody edits themselves, and an Admin cannot
+   * edit another Admin — only a Super Admin can. The API enforces this and
+   * answers 403; this just stops us offering an action that would be refused.
+   * Other tabs are ordinary records and are unaffected.
+   *
+   * Arrow function: it is handed to <erp-table> and invoked outside this class.
+   */
+  userActionFilter = (_actionKey: string, row: any): boolean => {
+    if (this.activeTab !== 'users') return true;
+    return this.accessControl.canManageUser(row);
+  };
 
   canCreate(): boolean { return this.permissionService.hasCreate(this.tabPermissions[this.activeTab]); }
   canEdit(): boolean { return this.permissionService.hasEdit(this.tabPermissions[this.activeTab]); }
@@ -221,6 +237,9 @@ export class BusinessPartnersComponent implements OnInit {
   }
 
   onActionClick(event: { action: string; row: any }): void {
+    // The table already hides these, but a stale row must not slip through.
+    if (this.activeTab === 'users' && !this.accessControl.canManageUser(event.row)) return;
+
     if (event.action === 'edit') {
       this.edit(event.row);
       return;

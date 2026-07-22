@@ -7,6 +7,7 @@ import { BusinessPartnersService, UserPayload } from '../business-partners/busin
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.component';
 import { QuickAddType, QuickAddResult } from '../../shared/components/quick-add-modal/quick-add-modal.component';
 import { NavigationCatalogService, NavigationMenuItem } from '../../core/services/navigation-catalog.service';
+import { AccessControlService } from '../../core/services/access-control.service';
 
 export type PermFlag = 'V' | 'C' | 'E' | 'D' | 'S' | 'A' | 'R' | 'N' | 'X' | 'P' | 'M';
 
@@ -227,11 +228,15 @@ export class UserAccessComponent implements OnInit {
   loadingPermissions = false;
   private menuTree: NavigationMenuItem[] = [];
 
+  /** Approval levels of the user being edited; drives the rank check on save. */
+  private editingUserApprovalLevelNames: string[] = [];
+
   constructor(
     private route:   ActivatedRoute,
     private router:  Router,
     private svc:     BusinessPartnersService,
-    private navigationCatalog: NavigationCatalogService
+    private navigationCatalog: NavigationCatalogService,
+    private accessControl: AccessControlService
   ) {}
 
   // ── Computed ────────────────────────────────────
@@ -282,6 +287,8 @@ export class UserAccessComponent implements OnInit {
     this.svc.getUserById(this.userId!).subscribe({
       next: res => {
         const d = this.svc.unwrapOne(res);
+        // Kept so the save guard can tell whether this user outranks the caller.
+        this.editingUserApprovalLevelNames = d.approvalLevelNames ?? d.ApprovalLevelNames ?? [];
         this.account = {
           id:               d.id    ?? d.userId    ?? null,
           username:         d.username  ?? d.Username  ?? '',
@@ -494,6 +501,23 @@ export class UserAccessComponent implements OnInit {
       this.saving = false;
       this.error = 'OrgGuid is missing in local storage.';
       await this.showError('Missing Data', this.error);
+      return;
+    }
+
+    // Reachable by URL, so check here too rather than relying on the users list
+    // having hidden the action. The API refuses with 403 regardless; this turns
+    // that into a clear message instead of a failed save.
+    if (!this.accessControl.canManageAccess()) {
+      this.saving = false;
+      this.error = 'Only an administrator can change user access.';
+      await this.showError('Not allowed', this.error);
+      return;
+    }
+
+    if (this.isEdit && !this.accessControl.canManageUser({ id: this.userId, approvalLevelNames: this.editingUserApprovalLevelNames })) {
+      this.saving = false;
+      this.error = this.accessControl.blockedReason({ id: this.userId, approvalLevelNames: this.editingUserApprovalLevelNames });
+      await this.showError('Not allowed', this.error);
       return;
     }
 
