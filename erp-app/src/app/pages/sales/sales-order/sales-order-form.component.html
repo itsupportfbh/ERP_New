@@ -120,7 +120,6 @@
           <col class="qf-colDesc" />
           <col class="qf-colUom" />
           <col class="qf-colQty" />
-          <col class="qf-colBaseQty" />
           <col class="qf-colPrice" />
           <col class="qf-colDisc" />
           <col class="qf-colTax" />
@@ -133,8 +132,7 @@
             <th>Description</th>
             <th>UOM</th>
             <th class="qf-c">Qty</th>
-            <th class="qf-c">Base Qty</th>
-            <th class="qf-c">Unit Price <span>({{ quoteCurrencyLabel }})</span></th>
+            <th class="qf-c">Unit Price</th>
             <th class="qf-c">Discount %</th>
             <!-- table-layout is fixed, so the column takes its WIDTH from here, not min-width. -->
             <th>Tax Mode</th>
@@ -144,7 +142,7 @@
         </thead>
         <tbody>
           <tr *ngIf="lines.length === 0">
-            <td class="dt-empty" [attr.colspan]="10">No lines yet. Click <b>Add line</b> or select a package to start.</td>
+            <td class="dt-empty" [attr.colspan]="9">No lines yet. Click <b>Add line</b> or select a package to start.</td>
           </tr>
 
           <ng-container *ngFor="let l of lines; let i = index">
@@ -165,7 +163,6 @@
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.qty"
                   (ngModelChange)="onSetQtyChange(l)" min="0" step="0.0001" placeholder="0" />
               </td>
-              <td class="qf-c qf-uom">-</td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"
                   (ngModelChange)="onSetPriceChange(l)" min="0" step="0.01" placeholder="0.00" />
@@ -207,10 +204,6 @@
                   (ngModelChange)="onLineChanged(i)" min="0" step="0.0001"
                   [readonly]="l.isFromSet" [class.qf-locked]="l.isFromSet"
                   [title]="l.isFromSet ? 'Set at package level' : ''" />
-              </td>
-              <td class="qf-c qf-uom" [title]="(l.baseQty || 0) + ' ' + (getUomName(l.baseUomId) || '')">
-                {{ (l.baseQty || 0) | number:'1.0-4' }}
-                <small class="qf-muted" *ngIf="l.baseUomId">{{ getUomName(l.baseUomId) }}</small>
               </td>
               <td class="qf-c">
                 <input type="number" class="mf-input qf-cellInput qf-num" [(ngModel)]="l.unitPrice"

@@ -97,16 +97,16 @@
 .qf-table {
   width: 100%;
   table-layout: fixed;
-  .qf-colItem { width: 10%; }
+  // Base Qty was dropped from the grid; its width goes to Item and Line Total.
+  .qf-colItem { width: 16%; }
   .qf-colDesc { width: 10%; }
   .qf-colUom { width: 9%; }
   .qf-colQty { width: 7%; }
-  .qf-colBaseQty { width: 8%; }
   .qf-colPrice { width: 9%; }
   .qf-colDisc { width: 8%; }
-  .qf-colTax { width: 17%; }
-  .qf-colTotal { width: 14%; }
-  .qf-colAction { width: 8%; }
+  .qf-colTax { width: 14%; }
+  .qf-colTotal { width: 17%; }
+  .qf-colAction { width: 10%; }
   .qf-c { text-align: center; }
   thead th span { font-weight: 400; opacity: 0.85; font-size: 10.5px; }
   th, td { vertical-align: middle; white-space: normal; word-break: break-word; padding-left: 6px; padding-right: 6px; }

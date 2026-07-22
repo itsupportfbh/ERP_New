@@ -1477,8 +1477,10 @@ export class SalesOrderFormComponent implements OnInit {
     let hod = false;
     for (const l of this.lines) {
       if (this.isPackageChild(l)) { this.computeLine(l); continue; }
-      const { base } = this.computeLine(l);
-      baseSubtotal += base;
+      // Sum the NET (after the line's own discount) — summing the gross made a line
+      // discount invisible in Subtotal / Net Total while the line total already showed it.
+      this.computeLine(l);
+      baseSubtotal += l.lineNet || 0;
       if ((+(l.discountPct ?? 0) || 0) > 10) hod = true;
     }
     this.header.subtotal = this.round2(baseSubtotal);
