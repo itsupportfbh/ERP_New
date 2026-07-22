@@ -8,7 +8,7 @@ import { EmailComposeModel, EmailComposeAttachment } from '../../../core/compone
 import Swal from 'sweetalert2';
 
 
-const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Pending', 2: 'Approved', 3: 'Completed', 4: 'Rejected' };
+const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Not Confirmed', 2: 'Confirmed', 3: 'Confirmed', 4: 'Rejected' };
 
 @Component({
   selector: 'erp-sales-order-list',
@@ -118,9 +118,6 @@ export class SalesOrderListComponent implements OnInit {
     this.svc.getSalesOrders().subscribe({
       next: res => {
         this.rows = this.svc.unwrap(res).map((r: any) => {
-          const lineItems: any[] = r.lineItems ?? r.LineItems ?? r.salesOrderLines ?? r.SalesOrderLines ?? [];
-          const allFullyReceived = lineItems.length > 0 &&
-            lineItems.every((l: any) => +(l.procurementStatus ?? l.ProcurementStatus ?? 0) === 4);
           return {
             ...r,
             id: r.id ?? r.iD,
@@ -135,12 +132,8 @@ export class SalesOrderListComponent implements OnInit {
             fxRate: Number(r.fxRate ?? r.fxrate ?? 1) || 1,
             netTotal: r.netTotal ?? r.grandTotal ?? 0,
             status: r.approvalStatus ?? r.status ?? 0,
-            statusLabel: allFullyReceived
-              ? 'Completed'
-              : (STATUS_MAP[r.approvalStatus ?? r.status] ?? 'Pending'),
-            statusClass: allFullyReceived
-              ? 'st-completed'
-              : ('st-' + (r.approvalStatus ?? r.status ?? 0)),
+            statusLabel: STATUS_MAP[r.approvalStatus ?? r.status] ?? 'Not Confirmed',
+            statusClass: 'st-' + (r.approvalStatus ?? r.status ?? 0),
           };
         });
         // Newest first: the API returns insertion order, which put the oldest SO at the top.
