@@ -8,7 +8,8 @@ import { EmailComposeService } from '../../../core/services/email-compose.servic
 import { EmailComposeModel, EmailComposeAttachment } from '../../../core/components/email-compose/email-compose.component';
 import Swal from 'sweetalert2';
 
-const STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Submitted', 2: 'Approved', 3: 'Rejected', 4: 'Posted' };
+// Sales wording: a quotation is either not yet confirmed by the customer, or confirmed.
+const STATUS_MAP: Record<number, string> = { 0: 'Not Confirmed', 1: 'Submitted', 2: 'Confirmed', 3: 'Rejected', 4: 'Confirmed' };
 
 @Component({
   selector: 'erp-quotation-list',
@@ -131,7 +132,7 @@ export class QuotationListComponent implements OnInit {
       validityDate,
       status,
       isExpired: expired,
-      statusLabel: expired ? 'Expired' : (STATUS_MAP[status] ?? 'Draft'),
+      statusLabel: expired ? 'Expired' : (STATUS_MAP[status] ?? 'Not Confirmed'),
     };
   }
 
@@ -335,7 +336,7 @@ export class QuotationListComponent implements OnInit {
       fromEmail: email, fromName: name,
       toEmail: '', ccEmail: '',
       subject: `Quotation ${docNo}`.trim(),
-      bodyHtml: `<p>Dear Customer,</p><p>Please find attached Quotation <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`
+      bodyHtml: `<p>Dear Customer,</p><p>Please find attached Quotation <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`
     };
 
     this.emailSvc.getRecipient('QUOTE', row.id).subscribe({
@@ -343,7 +344,7 @@ export class QuotationListComponent implements OnInit {
         const info = this.emailSvc.unwrapOne(res) || {};
         this.emailModel.toEmail = info.email ?? info.Email ?? '';
         const party = info.partyName ?? info.PartyName;
-        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Quotation <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`;
+        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Quotation <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`;
       },
       error: () => {}
     });

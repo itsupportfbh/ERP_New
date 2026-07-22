@@ -1,8 +1,11 @@
 import { Component, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { SalesService } from '../sales.service';
 import { DocumentPrintService, DocumentPrintConfig, PrintColumn, PrintField } from '../../../core/services/document-print.service';
 import { PermissionService } from '../../../core/services/permission.service';
+import { EmailComposeService } from '../../../core/services/email-compose.service';
+import { SalesDocPrintBuilderService } from '../sales-doc-print-builder.service';
 import Swal from 'sweetalert2';
 
 // Status -> badge code: 0 Draft (grey), 1 Printed/Pending (amber), 4 Posted (blue)
@@ -72,7 +75,7 @@ export class SalesInvoiceListComponent implements OnInit {
   ];
 
   readonly fnId = 'si-list';
-  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService) {}
+  constructor(private svc: SalesService, private router: Router, private printSvc: DocumentPrintService, public perm: PermissionService, private emailSvc: EmailComposeService, private docBuilder: SalesDocPrintBuilderService) {}
 
   ngOnInit(): void {
     this.load();
@@ -274,6 +277,18 @@ export class SalesInvoiceListComponent implements OnInit {
     });
   }
 
+  /** The invoice PDF for the row the email dialog is open on — same layout as Print. */
+  private pdfForCurrentInvoice(): Promise<Blob | null> {
+    const row = this.rows.find(r => Number(r.id) === Number(this.emailModel?.siId)) ?? this.activeRow;
+    if (!row) return Promise.resolve(null);
+    return new Promise(resolve => {
+      this.buildDetail(row, async () => {
+        try { resolve(await this.printSvc.generatePdfBlob(this.buildDocConfig())); }
+        catch { resolve(null); }
+      });
+    });
+  }
+
   printActive(): void { if (this.activeRow) this.print(this.activeRow); }
 
   private fmtDate(d: any): string {
@@ -370,7 +385,7 @@ export class SalesInvoiceListComponent implements OnInit {
         this.emailModel.bodyHtml =
           `<p>Dear ${this.emailInfo.customerName || 'Customer'},</p>` +
           `<p>Please find attached the requested document(s).</p>` +
-          `<p>Regards,<br/>${fromName || fromEmail}</p>`;
+          this.emailSvc.signatureHtml(fromName || fromEmail);
         this.emailLoading = false;
       },
       error: err => {
@@ -380,6 +395,10 @@ export class SalesInvoiceListComponent implements OnInit {
       }
     });
   }
+
+  /** The box shows plain text; the model keeps the HTML that gets sent. */
+  get emailBodyText(): string { return this.emailSvc.htmlToText(this.emailModel?.bodyHtml || ''); }
+  set emailBodyText(v: string) { if (this.emailModel) this.emailModel.bodyHtml = this.emailSvc.textToHtml(v || ''); }
 
   closeEmailModal(): void {
     if (this.emailSending) return;
@@ -396,25 +415,49 @@ export class SalesInvoiceListComponent implements OnInit {
     }
 
     this.emailSending = true;
-    const dto = {
-      fromEmail: m.fromEmail,
-      fromName: m.fromName,
-      toEmail: m.toEmail,
-      toName: m.toName,
-      ccEmail: m.ccEmail,
-      subject: m.subject,
-      bodyHtml: m.bodyHtml,
-      includeSalesInvoice: m.includeSalesInvoice,
-      includeSalesOrder: m.includeSalesOrder,
-      includeDeliveryOrder: m.includeDeliveryOrder
-    };
+    // Render the attachments here, exactly as Print does, instead of letting the API
+    // generate its own plain layout — the customer gets the same document either way.
+    void this.sendWithRenderedAttachments(m);
+  }
 
-    this.svc.sendInvoiceEmailComposed(m.siId, dto).subscribe({
+  private async sendWithRenderedAttachments(m: any): Promise<void> {
+    const files: { fileName: string; blob: Blob }[] = [];
+
+    try {
+      if (m.includeSalesInvoice) {
+        const blob = await this.pdfForCurrentInvoice();
+        if (blob) files.push({ fileName: `${this.emailInfo?.invoiceNo || 'Sales-Invoice'}.pdf`, blob });
+      }
+      if (m.includeSalesOrder && this.emailInfo?.soId) {
+        const cfg = await firstValueFrom(this.docBuilder.buildSalesOrderConfig(this.emailInfo.soId));
+        files.push({ fileName: `${this.emailInfo.soNo || 'Sales-Order'}.pdf`, blob: await this.printSvc.generatePdfBlob(cfg) });
+      }
+      if (m.includeDeliveryOrder && this.emailInfo?.doId) {
+        const cfg = await firstValueFrom(this.docBuilder.buildDeliveryOrderConfig(this.emailInfo.doId));
+        files.push({ fileName: `${this.emailInfo.doNo || 'Delivery-Order'}.pdf`, blob: await this.printSvc.generatePdfBlob(cfg) });
+      }
+    } catch {
+      this.emailSending = false;
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to prepare the documents.', confirmButtonColor: '#16a34a' });
+      return;
+    }
+
+    if (!files.length) {
+      this.emailSending = false;
+      Swal.fire({ icon: 'warning', title: 'No document', text: 'Nothing to attach.', confirmButtonColor: '#16a34a' });
+      return;
+    }
+
+    this.emailSvc.sendWithAttachments({
+      toEmail: m.toEmail, toName: m.toName, ccEmail: m.ccEmail,
+      subject: m.subject, bodyHtml: m.bodyHtml,
+      fromEmail: m.fromEmail, fromName: m.fromName, files
+    }).subscribe({
       next: () => {
         this.emailSending = false;
         this.showEmailModal = false;
         this.emailInfo = null;
-        Swal.fire({ icon: 'success', title: 'Sent!', text: `Email sent to ${dto.toEmail}.`, confirmButtonColor: '#16a34a' });
+        Swal.fire({ icon: 'success', title: 'Sent!', text: `Email sent to ${m.toEmail}.`, confirmButtonColor: '#16a34a' });
       },
       error: err => {
         this.emailSending = false;

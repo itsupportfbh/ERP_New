@@ -702,7 +702,7 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
       fromEmail: email, fromName: name,
       toEmail: '', ccEmail: '',
       subject: `Purchase Order ${docNo}`.trim(),
-      bodyHtml: `<p>Dear Supplier,</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`
+      bodyHtml: `<p>Dear Supplier,</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`
     };
 
     this.emailSvc.getRecipient('PO', row.id).subscribe({
@@ -710,7 +710,7 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
         const info = this.emailSvc.unwrapOne(res) || {};
         this.emailModel.toEmail = info.email ?? info.Email ?? '';
         const party = info.partyName ?? info.PartyName;
-        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p><p>Regards,<br/>${name || email}</p>`;
+        if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`;
         this.emailLoading = false;
       },
       error: () => { this.emailLoading = false; }

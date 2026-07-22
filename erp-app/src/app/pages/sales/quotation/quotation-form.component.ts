@@ -77,7 +77,7 @@ type UiLine = {
 };
 
 const STATUS_MAP: Record<number, string> = {
-  0: 'Pending', 1: 'Submitted', 2: 'Approved', 3: 'Rejected', 4: 'Posted'
+  0: 'Not Confirmed', 1: 'Submitted', 2: 'Confirmed', 3: 'Rejected', 4: 'Confirmed'
 };
 
 @Component({
@@ -283,7 +283,7 @@ export class QuotationFormComponent implements OnInit {
     return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 
-  get statusLabel(): string { return STATUS_MAP[this.header.status] ?? 'Pending'; }
+  get statusLabel(): string { return STATUS_MAP[this.header.status] ?? 'Not Confirmed'; }
 
   get title(): string {
     return this.isEdit
