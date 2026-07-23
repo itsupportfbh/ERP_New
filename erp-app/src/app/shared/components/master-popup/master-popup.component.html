@@ -1,5 +1,5 @@
 <!-- Delete Confirm Popup -->
-<div class="mpopup-overlay" *ngIf="showDeleteConfirm" (click)="deleteCancelled.emit()">
+<div class="mpopup-overlay" *ngIf="showDeleteConfirm">
   <div class="mpopup-modal" (click)="$event.stopPropagation()">
     <div class="mpopup-icon warn">!</div>
     <h3 class="mpopup-title">Confirm Delete</h3>
@@ -12,7 +12,7 @@
 </div>
 
 <!-- Result Popup (Success / Error) -->
-<div class="mpopup-overlay" *ngIf="showResult" (click)="resultClosed.emit()">
+<div class="mpopup-overlay" *ngIf="showResult">
   <div class="mpopup-modal" (click)="$event.stopPropagation()">
     <div class="mpopup-icon" [class.success]="isSuccess" [class.error]="!isSuccess">
       <svg *ngIf="isSuccess" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

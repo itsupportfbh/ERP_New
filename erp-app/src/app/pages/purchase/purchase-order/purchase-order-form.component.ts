@@ -221,7 +221,10 @@ export class PurchaseOrderFormComponent implements OnInit {
       })));
     this.svc.getCurrencies().subscribe(r =>
       this.currencyOptions = this.svc.unwrap(r).map((c: any) => ({
-        label: `${c.currencyCode ?? c.code ?? c.currency ?? ''} - ${c.currencyName ?? c.name ?? ''}`.replace(/^-\s*|-\s*$/, '').trim(),
+        label: [c.currencyCode ?? c.code ?? c.currency, c.currencyName ?? c.name]
+          .map((x: any) => (x == null ? '' : String(x).trim()))
+          .filter((x: string) => x)
+          .join(' - '),
         value: c.id ?? c.iD, raw: c
       })));
     this.svc.getIncoterms().subscribe(r =>

@@ -631,6 +631,14 @@ export class GrnFormComponent implements OnInit {
   submit(): void {
     if (!this.poId) { this.error = 'Please select a Purchase Order.'; return; }
     if (!this.invoiceNo?.trim()) { this.error = 'Invoice No is required.'; return; }
+    if (!this.lines.length) { this.error = 'Please add at least one line.'; return; }
+    // Every line must have a Qty received before the GRN can be saved.
+    const missingQty = this.lines.find(l => l.qtyReceived == null || Number(l.qtyReceived) <= 0);
+    if (missingQty) {
+      missingQty.qtyError = 'Qty is required';
+      this.error = `Please enter a valid Qty for line "${missingQty.itemName || missingQty.itemCode || ''}".`;
+      return;
+    }
     const overQty = this.lines.find(l => l.qtyError);
     if (overQty) { this.error = `Line "${overQty.itemName || overQty.itemCode}": ${overQty.qtyError}`; return; }
     this.saving = true;

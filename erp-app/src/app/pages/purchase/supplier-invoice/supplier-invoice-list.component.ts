@@ -6,6 +6,7 @@ import { ReceivingIntegrationService, OcrReceivingMatchLine } from '../../../cor
 import { TaxDecisionService } from '../../../core/services/tax-decision.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import { PurchaseService } from '../purchase.service';
+import { DocumentPrintService, DocumentPrintConfig } from '../../../core/services/document-print.service';
 
 @Component({
   selector: 'erp-supplier-invoice-list',
@@ -97,7 +98,8 @@ export class SupplierInvoiceListComponent implements OnInit {
     public perm: PermissionService,
     private docNoSvc: DocumentNumberService,
     private receivingSvc: ReceivingIntegrationService,
-    private taxDecisionSvc: TaxDecisionService
+    private taxDecisionSvc: TaxDecisionService,
+    private printSvc: DocumentPrintService
   ) {}
 
   ngOnInit(): void { this.load(); }
@@ -193,179 +195,83 @@ export class SupplierInvoiceListComponent implements OnInit {
         let lines: any[] = [];
         const rawLines = d.linesJson ?? d.LinesJson ?? d.lines ?? '[]';
         try { lines = Array.isArray(rawLines) ? rawLines : JSON.parse(rawLines || '[]'); } catch { lines = []; }
-        this.openPrintWindow(this.buildInvoicePrintHtml(d, lines, row));
+        this.printSvc.print(this.buildInvoiceDocConfig(d, lines, row));
       },
       error: () => {
-        this.openPrintWindow(this.buildInvoicePrintHtml(row, [], row));
+        this.printSvc.print(this.buildInvoiceDocConfig(row, [], row));
       }
     });
   }
 
-  private openPrintWindow(html: string): void {
-    const w = window.open('', '_blank', 'width=1050,height=800');
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 700);
-  }
-
-  private buildInvoicePrintHtml(d: any, lines: any[], row?: any): string {
+  /** Supplier Invoice layout rendered through the shared DocumentPrintService so it
+   *  matches the Sales document letterhead (logo, teal header, "For & Behalf of"). */
+  private buildInvoiceDocConfig(d: any, lines: any[], row?: any): DocumentPrintConfig {
     const fmt = (dt: any) => {
       if (!dt) return '—';
-      try { const x = new Date(dt); return `${String(x.getDate()).padStart(2,'0')}-${String(x.getMonth()+1).padStart(2,'0')}-${x.getFullYear()}`; }
-      catch { return '—'; }
+      const x = new Date(dt);
+      return isNaN(x.getTime()) ? '—'
+        : `${String(x.getDate()).padStart(2, '0')}-${String(x.getMonth() + 1).padStart(2, '0')}-${x.getFullYear()}`;
     };
-    const esc = (s: any) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const n2 = (v: any) => Number(v || 0).toFixed(2);
+    const invNo    = d.invoiceNo ?? row?.invoiceNo ?? '';
+    const supInvNo = d.supplierInvoiceNo ?? row?.supplierInvoiceNo ?? '';
+    const supplier = d.supplierName ?? row?.supplierName ?? '—';
+    const currency = d.currencyName ?? d.currency ?? row?.currency ?? '';
+    const grnNos   = d.grnNos ?? row?.grnNos ?? '';
+    const taxRate  = Number(d.taxRate ?? d.taxPct ?? 0);
+    const totalTax = Number(d.tax ?? d.totalTax ?? 0);
+    const amount   = Number(d.amount ?? d.netTotal ?? row?.amount ?? 0);
 
-    const invNo     = esc(d.invoiceNo ?? row?.invoiceNo ?? '');
-    const supInvNo  = esc(d.supplierInvoiceNo ?? row?.supplierInvoiceNo ?? '');
-    const supplier  = esc(d.supplierName ?? row?.supplierName ?? '—');
-    const invDate   = fmt(d.invoiceDate ?? row?.invoiceDate);
-    const currency  = esc(d.currencyName ?? d.currency ?? row?.currency ?? '');
-    const grnNos    = esc(d.grnNos ?? row?.grnNos ?? '');
-    const taxRate   = Number(d.taxRate ?? d.taxPct ?? 0);
-    const totalTax  = Number(d.tax ?? d.totalTax ?? 0);
-    const amount    = Number(d.amount ?? d.netTotal ?? row?.amount ?? 0);
-    const printDate = new Date().toLocaleDateString('en-GB');
-    const companyLogo = localStorage.getItem('companyLogoBase64')  || '';
-    const coName      = localStorage.getItem('companyPrintName')    || localStorage.getItem('companyName') || '';
-    const coAddress1  = localStorage.getItem('companyPrintAddress1') || '';
-    const coAddress2  = localStorage.getItem('companyPrintAddress2') || '';
-    const coCity      = localStorage.getItem('companyPrintCity')     || '';
-    const coState     = localStorage.getItem('companyPrintState')    || '';
-    const coPostal    = localStorage.getItem('companyPrintPostal')   || '';
-    const coPhone     = localStorage.getItem('companyPrintPhone')    || '';
-    const coEmail     = localStorage.getItem('companyPrintEmail')    || '';
-    const coAddrLine  = [coAddress1, coAddress2].filter(Boolean).join(', ');
-    const coCityLine  = [coCity, coState, coPostal].filter(Boolean).join(', ');
-
-    let lineNo = 0;
     let subTotal = 0;
-    const lineRows = lines.map((l: any) => {
-      lineNo++;
-      const item   = esc(l.itemName ?? l.item ?? l.itemSearch ?? l.itemCode ?? '—');
-      const qty    = Number(l.qty ?? l.quantity ?? 0);
-      const price  = Number(l.unitPrice ?? l.price ?? 0);
-      const disc   = Number(l.discountPct ?? 0);
-      const taxMode = esc(l.taxMode ?? '');
+    const docLines = (lines || []).map((l: any) => {
+      const qty   = Number(l.qty ?? l.quantity ?? 0);
+      const price = Number(l.unitPrice ?? l.price ?? 0);
+      const disc  = Number(l.discountPct ?? 0);
       const taxAmt = Number(l.taxAmt ?? 0);
-      const base   = qty * price * (1 - disc / 100);
+      const base  = qty * price * (1 - disc / 100);
       subTotal += base;
-      const total  = Number(l.lineGrandTotal ?? l.lineTotal ?? (base + taxAmt));
-      const bg     = lineNo % 2 === 0 ? '#f8fafc' : '#ffffff';
-      return `<tr style="background:${bg};">
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280;">${lineNo}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;">${item}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${qty}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${n2(price)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${disc ? disc + '%' : '—'}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:11px;">${taxMode || '—'}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${n2(taxAmt)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;">${n2(total)}</td>
-      </tr>`;
-    }).join('');
+      return {
+        itemName: l.itemName ?? l.item ?? l.itemSearch ?? l.itemCode ?? '—',
+        qty,
+        unitPrice: price,
+        discountPct: disc,
+        taxMode: l.taxMode ?? '',
+        taxAmt,
+        lineTotal: Number(l.lineGrandTotal ?? l.lineTotal ?? (base + taxAmt)),
+      };
+    });
 
-    const thStyle = `padding:9px 10px;color:#fff;font-size:11px;font-weight:600;border-right:1px solid rgba(255,255,255,0.2);`;
-    const totRow  = (lbl: string, val: string, bold = false) =>
-      `<tr><td style="padding:6px 12px;color:#6b7280;font-size:12px;border-bottom:1px solid #f1f5f9;">${lbl}</td>
-           <td style="padding:6px 12px;text-align:right;font-size:12px;font-weight:${bold?'700':'600'};border-bottom:1px solid #f1f5f9;">${val}</td></tr>`;
+    const totals: { label: string; value: string }[] = [];
+    if (subTotal) totals.push({ label: 'Sub Total', value: subTotal.toFixed(2) });
+    if (totalTax) totals.push({ label: 'Tax', value: totalTax.toFixed(2) });
+    totals.push({ label: `Total (${currency || 'SGD'})`, value: amount.toFixed(2) });
 
-    return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Invoice - ${invNo}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1f2937;background:#fff;padding:24px 28px;}
-@page{size:A4;margin:12mm 14mm;}
-@media print{
-  body{padding:0;}
-  -webkit-print-color-adjust:exact !important;
-  print-color-adjust:exact !important;
-  color-adjust:exact !important;
-}
-.hdr{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:14px;border-bottom:3px solid #0e4a60;margin-bottom:18px;}
-.co-name{font-size:20px;font-weight:800;color:#0e4a60;letter-spacing:.5px;}
-.co-sub{font-size:11px;color:#6b7280;margin-top:3px;}
-.doc-title{text-align:right;}
-.doc-title h1{font-size:24px;font-weight:800;color:#0e4a60;letter-spacing:2px;}
-.doc-title .doc-no{font-size:13px;color:#374151;margin-top:4px;}
-.doc-title .doc-no span{font-weight:700;color:#0e4a60;}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:18px;}
-.info-cell{padding:10px 14px;border-bottom:1px solid #e5e7eb;}
-.info-cell:nth-child(odd){background:#f8fafc;border-right:1px solid #e5e7eb;}
-.info-key{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
-.info-val{font-size:13px;font-weight:700;color:#111827;}
-table.lines{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
-table.lines thead tr{background:#0e4a60 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-table.lines thead th{${thStyle}}
-table.lines thead th:last-child{border-right:none;}
-.tot-wrap{display:flex;justify-content:flex-end;margin-top:14px;}
-.tot-table{width:280px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
-.grand-row td{background:#0e4a60 !important;color:#fff !important;font-weight:700;font-size:14px;padding:8px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.sig-row{display:flex;justify-content:space-between;margin-top:50px;gap:16px;}
-.sig-box{flex:1;text-align:center;border-top:1.5px solid #374151;padding-top:6px;font-size:11px;color:#6b7280;}
-.footer{margin-top:24px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #f1f5f9;padding-top:8px;}
-</style></head><body>
+    const fields = [
+      { label: 'Inv No', value: invNo },
+      { label: 'Invoice Date', value: fmt(d.invoiceDate ?? row?.invoiceDate) },
+    ];
+    if (supInvNo) fields.push({ label: 'Supplier Inv No', value: supInvNo });
+    if (grnNos)   fields.push({ label: 'GRN No(s)', value: grnNos });
+    if (currency) fields.push({ label: 'Currency', value: currency });
+    if (taxRate)  fields.push({ label: 'Tax %', value: `${taxRate}%` });
 
-<div class="hdr">
-  <div style="display:flex;align-items:flex-start;gap:12px;">
-    ${companyLogo ? `<img src="${companyLogo}" style="height:64px;width:auto;object-fit:contain;border-radius:6px;flex-shrink:0;" alt="logo"/>` : ''}
-    <div>
-      <div class="co-name">${coName || 'Supplier Invoice'}</div>
-      ${coAddrLine ? `<div class="co-sub">${esc(coAddrLine)}</div>` : ''}
-      ${coCityLine ? `<div class="co-sub">${esc(coCityLine)}</div>` : ''}
-      ${coPhone    ? `<div class="co-sub">Tel: ${esc(coPhone)}${coEmail ? '  |  Email: ' + esc(coEmail) : ''}</div>` : (coEmail ? `<div class="co-sub">Email: ${esc(coEmail)}</div>` : '')}
-    </div>
-  </div>
-  <div class="doc-title">
-    <h1>SUPPLIER INVOICE</h1>
-    <div class="doc-no">Inv No: <span>${invNo}</span></div>
-  </div>
-</div>
-
-<div class="info-grid">
-  <div class="info-cell"><div class="info-key">Supplier</div><div class="info-val">${supplier}</div></div>
-  <div class="info-cell"><div class="info-key">Invoice Date</div><div class="info-val">${invDate}</div></div>
-  ${supInvNo ? `<div class="info-cell"><div class="info-key">Supplier Inv No</div><div class="info-val">${supInvNo}</div></div>` : ''}
-  ${grnNos   ? `<div class="info-cell"><div class="info-key">GRN No(s)</div><div class="info-val">${grnNos}</div></div>` : ''}
-  ${currency ? `<div class="info-cell"><div class="info-key">Currency</div><div class="info-val">${currency}</div></div>` : ''}
-  ${taxRate  ? `<div class="info-cell"><div class="info-key">Tax %</div><div class="info-val">${taxRate}%</div></div>` : ''}
-</div>
-
-<table class="lines">
-  <thead><tr>
-    <th style="${thStyle}width:36px;text-align:center;">#</th>
-    <th style="${thStyle}">Item</th>
-    <th style="${thStyle}width:60px;text-align:right;">Qty</th>
-    <th style="${thStyle}width:95px;text-align:right;">Unit Price</th>
-    <th style="${thStyle}width:60px;text-align:right;">Disc%</th>
-    <th style="${thStyle}width:80px;text-align:center;">Tax Mode</th>
-    <th style="${thStyle}width:90px;text-align:right;">Tax Amt</th>
-    <th style="${thStyle}width:110px;text-align:right;border-right:none;">Total (${currency})</th>
-  </tr></thead>
-  <tbody>
-    ${lineRows || `<tr><td colspan="8" style="padding:20px;text-align:center;color:#9ca3af;font-style:italic;">No line items found</td></tr>`}
-  </tbody>
-</table>
-
-<div class="tot-wrap"><table class="tot-table">
-  ${subTotal ? totRow('Sub Total', n2(subTotal)) : ''}
-  ${totalTax ? totRow('Tax', n2(totalTax)) : ''}
-  <tr class="grand-row">
-    <td>Total (${currency})</td>
-    <td style="text-align:right;">${n2(amount)}</td>
-  </tr>
-</table></div>
-
-<div class="sig-row">
-  <div class="sig-box">Prepared By</div>
-  <div class="sig-box">Checked By</div>
-  <div class="sig-box">Approved By</div>
-</div>
-
-<div class="footer">This is a computer-generated document &nbsp;|&nbsp; Printed on ${printDate}</div>
-</body></html>`;
+    return {
+      docTitle: 'SUPPLIER INVOICE',
+      docNo: invNo,
+      billTo: { name: supplier, lines: [], label: 'Supplier :' },
+      hideDeliverTo: true,
+      fields,
+      columns: [
+        { header: 'Item', key: 'itemName' },
+        { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
+        { header: 'Unit Price', key: 'unitPrice', align: 'right', type: 'number' },
+        { header: 'Disc %', key: 'discountPct', align: 'right', type: 'number' },
+        { header: 'Tax Mode', key: 'taxMode', align: 'center' },
+        { header: 'Tax Amt', key: 'taxAmt', align: 'right', type: 'number' },
+        { header: `Total (${currency || 'SGD'})`, key: 'lineTotal', align: 'right', type: 'number' },
+      ],
+      lines: docLines,
+      totals,
+    };
   }
 
   openOcrModal(): void {

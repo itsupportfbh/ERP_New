@@ -6,6 +6,7 @@ import { TableColumn, RowAction } from '../../../shared/components/data-table/da
 import { PermissionService } from '../../../core/services/permission.service';
 import { EmailComposeService } from '../../../core/services/email-compose.service';
 import { EmailComposeModel, EmailComposeAttachment } from '../../../core/components/email-compose/email-compose.component';
+import { DocumentPrintService, DocumentPrintConfig } from '../../../core/services/document-print.service';
 import { CURRENT_PERIOD_LOCKED_KEY } from '../../../core/services/period-lock-state.service';
 import Swal from 'sweetalert2';
 
@@ -174,7 +175,7 @@ export class PurchaseOrderListComponent implements OnInit {
     return 1;
   }
 
-  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService, private emailSvc: EmailComposeService) {}
+  constructor(private svc: PurchaseService, private router: Router, public perm: PermissionService, private emailSvc: EmailComposeService, private printSvc: DocumentPrintService) {}
 
   ngOnInit(): void {
     this.load();
@@ -427,206 +428,88 @@ export class PurchaseOrderListComponent implements OnInit {
 
   printPo(row: any): void {
     if (!this.perm.canPrint(this.fnId)) return;
-    const poNo = row.purchaseOrderNo ?? row.pO_No ?? '';
     this.svc.getPurchaseOrderById(row.id).subscribe({
       next: res => {
         const po = this.svc.unwrapOne(res);
-        let lines: any[] = [];
-        try { lines = Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); } catch { lines = []; }
-
-        // Fetch QR code then open print window
-        this.svc.getPurchaseOrderQr(poNo).subscribe({
-          next: (qrRes: any) => {
-            const qrSrc: string = qrRes?.qrCodeSrcBase64 ?? qrRes?.QrCodeSrcBase64 ?? '';
-            const html = this.buildPoPrintHtml(po, lines, row, qrSrc);
-            this.openPrintWindow(html);
-          },
-          error: () => {
-            const html = this.buildPoPrintHtml(po, lines, row, '');
-            this.openPrintWindow(html);
-          }
-        });
+        this.printSvc.print(this.buildPoDocConfig(po, this.extractPoLines(po), row));
       },
       error: () => {}
     });
   }
 
-  private openPrintWindow(html: string): void {
-    const w = window.open('', '_blank', 'width=1050,height=800');
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 700);
+  private extractPoLines(po: any): any[] {
+    try { return Array.isArray(po.poLines) ? po.poLines : JSON.parse(po.poLines || '[]'); }
+    catch { return []; }
   }
 
-  private buildPoPrintHtml(po: any, lines: any[], row?: any, qrSrc = ''): string {
+  /** Single source of truth for the PO layout, shared by Print and Email so the
+   *  emailed PDF matches Print exactly — rendered by the shared DocumentPrintService
+   *  (same letterhead / teal layout the Sales documents use). */
+  private buildPoDocConfig(po: any, lines: any[], row?: any): DocumentPrintConfig {
     const fmt = (d: any) => {
       if (!d) return '—';
-      try { const dt = new Date(d); return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`; }
-      catch { return '—'; }
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? '—'
+        : `${String(dt.getDate()).padStart(2, '0')}-${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`;
     };
-    const esc = (s: any) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const n2 = (v: any) => Number(v || 0).toFixed(2);
+    const poNo     = po.purchaseOrderNo ?? po.pO_No ?? row?.purchaseOrderNo ?? '';
+    const supplier = po.supplierName ?? row?.supplierName ?? '—';
+    const currency = po.currencyName ?? row?.currencyName ?? 'SGD';
+    const location = po.location ?? po.Location ?? '';
+    const subTotal = Number(po.subTotal ?? po.SubTotal ?? 0);
+    const tax      = Number(po.tax ?? po.Tax ?? 0);
+    const shipping = Number(po.shipping ?? po.Shipping ?? 0);
+    const discount = Number(po.discount ?? po.Discount ?? 0);
+    const netTotal = Number(po.netTotal ?? po.NetTotal ?? 0);
 
-    const poNo      = esc(po.purchaseOrderNo ?? po.pO_No ?? row?.purchaseOrderNo ?? '');
-    const supplier  = esc(po.supplierName ?? row?.supplierName ?? '—');
-    const poDate    = fmt(po.poDate);
-    const delDate   = fmt(po.deliveryDate);
-    const currency  = esc(po.currencyName ?? row?.currencyName ?? 'INR');
-    const location  = esc(po.location ?? po.Location ?? '');
-    const contact   = esc(po.contactNumber ?? '');
-    const remarks   = esc(po.remarks ?? '');
-    const netTotal  = Number(po.netTotal ?? po.NetTotal ?? 0);
-    const subTotal  = Number(po.subTotal ?? po.SubTotal ?? 0);
-    const tax       = Number(po.tax ?? po.Tax ?? 0);
-    const shipping  = Number(po.shipping ?? po.Shipping ?? 0);
-    const discount  = Number(po.discount ?? po.Discount ?? 0);
-    const printDate    = new Date().toLocaleDateString('en-GB');
-    const companyLogo  = localStorage.getItem('companyLogoBase64')  || '';
-    const coName       = localStorage.getItem('companyPrintName')    || localStorage.getItem('companyName') || '';
-    const coAddress1   = localStorage.getItem('companyPrintAddress1') || '';
-    const coAddress2   = localStorage.getItem('companyPrintAddress2') || '';
-    const coCity       = localStorage.getItem('companyPrintCity')     || '';
-    const coState      = localStorage.getItem('companyPrintState')    || '';
-    const coPostal     = localStorage.getItem('companyPrintPostal')   || '';
-    const coPhone      = localStorage.getItem('companyPrintPhone')    || '';
-    const coEmail      = localStorage.getItem('companyPrintEmail')    || '';
-    const coAddrLine   = [coAddress1, coAddress2].filter(Boolean).join(', ');
-    const coCityLine   = [coCity, coState, coPostal].filter(Boolean).join(', ');
+    const docLines = (lines || []).map((l: any) => {
+      const qty   = Number(l.qty ?? l.quantity ?? 0);
+      const price = Number(l.unitPrice ?? l.price ?? 0);
+      const disc  = Number(l.discountPct ?? 0);
+      return {
+        itemName: l.itemSearch ?? l.itemName ?? l.itemCode ?? l.description ?? '—',
+        qty,
+        unitPrice: price,
+        discountPct: disc,
+        amount: qty * price * (1 - disc / 100),
+        prNo: l.prNo ?? l.prNumber ?? '',
+        remarks: l.remarks ?? '',
+      };
+    });
 
-    let lineNo = 0;
-    const lineRows = lines.map((l: any) => {
-      lineNo++;
-      const item    = esc(l.itemSearch ?? l.itemName ?? l.itemCode ?? l.description ?? '—');
-      const qty     = Number(l.qty ?? l.quantity ?? 0);
-      const price   = Number(l.unitPrice ?? l.price ?? 0);
-      const disc    = Number(l.discountPct ?? 0);
-      const amount  = qty * price * (1 - disc / 100);
-      const rmk     = esc(l.remarks ?? '');
-      const prNo    = esc(l.prNo ?? l.prNumber ?? '');
-      const bg      = lineNo % 2 === 0 ? '#f8fafc' : '#ffffff';
-      return `<tr style="background:${bg};">
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280;">${lineNo}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;">${item}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${qty}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${n2(price)}</td>
-        ${disc ? `<td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${disc}%</td>` : '<td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">—</td>'}
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;">${n2(amount)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#2563eb;font-size:11px;">${prNo}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:11px;">${rmk}</td>
-      </tr>`;
-    }).join('');
+    const totals: { label: string; value: string }[] = [];
+    if (subTotal) totals.push({ label: 'Sub Total', value: subTotal.toFixed(2) });
+    if (discount) totals.push({ label: 'Discount', value: `-${discount.toFixed(2)}` });
+    if (tax)      totals.push({ label: 'Tax', value: tax.toFixed(2) });
+    if (shipping) totals.push({ label: 'Shipping', value: shipping.toFixed(2) });
+    totals.push({ label: `Net Total (${currency})`, value: netTotal.toFixed(2) });
 
-    const thStyle = `padding:9px 10px;color:#fff;font-size:11px;font-weight:600;border-right:1px solid rgba(255,255,255,0.2);`;
-    const totRow  = (lbl: string, val: string, bold = false) =>
-      `<tr><td style="padding:6px 12px;color:#6b7280;font-size:12px;border-bottom:1px solid #f1f5f9;">${lbl}</td>
-           <td style="padding:6px 12px;text-align:right;font-size:12px;font-weight:${bold?'700':'600'};border-bottom:1px solid #f1f5f9;">${val}</td></tr>`;
-
-    return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>PO - ${poNo}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#1f2937;background:#fff;padding:24px 28px;}
-@page{size:A4;margin:12mm 14mm;}
-@media print{
-  body{padding:0;}
-  -webkit-print-color-adjust:exact !important;
-  print-color-adjust:exact !important;
-  color-adjust:exact !important;
-}
-.hdr{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:14px;border-bottom:3px solid #0e4a60;margin-bottom:18px;}
-.co-name{font-size:20px;font-weight:800;color:#0e4a60;letter-spacing:.5px;}
-.co-sub{font-size:11px;color:#6b7280;margin-top:3px;}
-.doc-title{text-align:right;}
-.doc-title h1{font-size:26px;font-weight:800;color:#0e4a60;letter-spacing:2px;}
-.doc-title .doc-no{font-size:13px;color:#374151;margin-top:4px;}
-.doc-title .doc-no span{font-weight:700;color:#0e4a60;}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:18px;}
-.info-cell{padding:10px 14px;border-bottom:1px solid #e5e7eb;}
-.info-cell:nth-child(odd){background:#f8fafc;border-right:1px solid #e5e7eb;}
-.info-key{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
-.info-val{font-size:13px;font-weight:700;color:#111827;}
-table.lines{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
-table.lines thead tr{background:#0e4a60 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-table.lines thead th{${thStyle}}
-table.lines thead th:last-child{border-right:none;}
-.tot-wrap{display:flex;justify-content:flex-end;margin-top:14px;}
-.tot-table{width:280px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
-.grand-row td{background:#0e4a60 !important;color:#fff !important;font-weight:700;font-size:14px;padding:8px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.remark-box{margin-top:16px;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;background:#fffbeb;}
-.remark-lbl{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
-.sig-row{display:flex;justify-content:space-between;margin-top:50px;gap:16px;}
-.sig-box{flex:1;text-align:center;border-top:1.5px solid #374151;padding-top:6px;font-size:11px;color:#6b7280;}
-.footer{margin-top:24px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #f1f5f9;padding-top:8px;}
-</style></head><body>
-
-<div class="hdr">
-  <div style="display:flex;align-items:flex-start;gap:12px;">
-    ${companyLogo ? `<img src="${companyLogo}" style="height:64px;width:auto;object-fit:contain;border-radius:6px;flex-shrink:0;" alt="logo"/>` : ''}
-    <div>
-      <div class="co-name">${coName || 'Purchase Order'}</div>
-      ${coAddrLine ? `<div class="co-sub">${esc(coAddrLine)}</div>` : ''}
-      ${coCityLine ? `<div class="co-sub">${esc(coCityLine)}</div>` : ''}
-      ${coPhone    ? `<div class="co-sub">Tel: ${esc(coPhone)}${coEmail ? '  |  Email: ' + esc(coEmail) : ''}</div>` : (coEmail ? `<div class="co-sub">Email: ${esc(coEmail)}</div>` : '')}
-    </div>
-  </div>
-  <div class="doc-title" style="display:flex;align-items:center;gap:16px;">
-    ${qrSrc ? `<div style="text-align:center;"><img src="${qrSrc}" style="width:72px;height:72px;display:block;" /><div style="font-size:9px;color:#9ca3af;margin-top:2px;">Scan to receive</div></div>` : ''}
-    <div>
-      <h1>PURCHASE ORDER</h1>
-      <div class="doc-no">PO No: <span>${poNo}</span></div>
-    </div>
-  </div>
-</div>
-
-<div class="info-grid">
-  <div class="info-cell"><div class="info-key">Supplier</div><div class="info-val">${supplier}</div></div>
-  <div class="info-cell"><div class="info-key">PO Date</div><div class="info-val">${poDate}</div></div>
-  <div class="info-cell"><div class="info-key">Delivery Date</div><div class="info-val">${delDate}</div></div>
-  <div class="info-cell"><div class="info-key">Currency</div><div class="info-val">${currency}</div></div>
-  ${location ? `<div class="info-cell"><div class="info-key">Location / Outlet</div><div class="info-val">${location}</div></div>` : ''}
-  ${contact  ? `<div class="info-cell"><div class="info-key">Contact</div><div class="info-val">${contact}</div></div>` : ''}
-</div>
-
-<table class="lines">
-  <thead><tr>
-    <th style="${thStyle}width:36px;text-align:center;">#</th>
-    <th style="${thStyle}">Item / Description</th>
-    <th style="${thStyle}width:60px;text-align:right;">Qty</th>
-    <th style="${thStyle}width:95px;text-align:right;">Unit Price</th>
-    <th style="${thStyle}width:65px;text-align:right;">Disc%</th>
-    <th style="${thStyle}width:105px;text-align:right;">Amount (${currency})</th>
-    <th style="${thStyle}width:80px;">PR No</th>
-    <th style="${thStyle}width:110px;border-right:none;">Remarks</th>
-  </tr></thead>
-  <tbody>
-    ${lineRows || `<tr><td colspan="8" style="padding:20px;text-align:center;color:#9ca3af;font-style:italic;">No line items found</td></tr>`}
-  </tbody>
-</table>
-
-<div class="tot-wrap"><table class="tot-table">
-  ${subTotal  ? totRow('Sub Total', n2(subTotal)) : ''}
-  ${discount  ? totRow(`Discount`, `-${n2(discount)}`) : ''}
-  ${tax       ? totRow('Tax', n2(tax)) : ''}
-  ${shipping  ? totRow('Shipping', n2(shipping)) : ''}
-  <tr class="grand-row">
-    <td>Net Total (${currency})</td>
-    <td style="text-align:right;">${n2(netTotal)}</td>
-  </tr>
-</table></div>
-
-${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${remarks}</div>` : ''}
-
-<div class="sig-row">
-  <div class="sig-box">Prepared By</div>
-  <div class="sig-box">Checked By</div>
-  <div class="sig-box">Approved By</div>
-  <div class="sig-box">Received By</div>
-</div>
-
-<div class="footer">This is a computer-generated document &nbsp;|&nbsp; Printed on ${printDate}</div>
-</body></html>`;
+    return {
+      docTitle: 'PURCHASE ORDER',
+      docNo: poNo,
+      billTo: { name: supplier, lines: [], label: 'Supplier :' },
+      // A field labelled "Customer" is routed into the Deliver To box by the print
+      // service; for a PO that box shows the receiving location / outlet.
+      fields: [
+        { label: 'Customer', value: location || '—' },
+        { label: 'PO No', value: poNo },
+        { label: 'PO Date', value: fmt(po.poDate) },
+        { label: 'Delivery Date', value: fmt(po.deliveryDate) },
+        { label: 'Currency', value: currency },
+      ],
+      remarks: (po.remarks ?? '') as string,
+      columns: [
+        { header: 'Item / Description', key: 'itemName' },
+        { header: 'Qty', key: 'qty', align: 'right', type: 'qty' },
+        { header: 'Unit Price', key: 'unitPrice', align: 'right', type: 'number' },
+        { header: 'Disc %', key: 'discountPct', align: 'right', type: 'number' },
+        { header: `Amount (${currency})`, key: 'amount', align: 'right', type: 'number' },
+        { header: 'PR No', key: 'prNo' },
+        { header: 'Remarks', key: 'remarks' },
+      ],
+      lines: docLines,
+      totals,
+    };
   }
 
   openConfirm(row: any, status: 2 | 3): void {
@@ -711,6 +594,19 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
         this.emailModel.toEmail = info.email ?? info.Email ?? '';
         const party = info.partyName ?? info.PartyName;
         if (party) this.emailModel.bodyHtml = `<p>Dear ${party},</p><p>Please find attached Purchase Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`;
+      },
+      error: () => {}
+    });
+
+    // Render the same PDF that Print produces and attach it, so the email matches
+    // the printed document exactly (same layout as the Sales documents).
+    this.svc.getPurchaseOrderById(row.id).subscribe({
+      next: async res => {
+        try {
+          const po = this.svc.unwrapOne(res);
+          const blob = await this.printSvc.generatePdfBlob(this.buildPoDocConfig(po, this.extractPoLines(po), row));
+          this.emailAttachments = [{ label: 'Purchase Order', sublabel: docNo, checked: true, disabled: true, blob, fileName: `${docNo || 'PurchaseOrder'}.pdf` }];
+        } catch {}
         this.emailLoading = false;
       },
       error: () => { this.emailLoading = false; }
@@ -722,10 +618,12 @@ ${remarks ? `<div class="remark-box"><div class="remark-lbl">Remarks</div>${rema
   sendComposedEmail(): void {
     const m = this.emailModel;
     if (!m.toEmail) { void Swal.fire({ icon: 'warning', title: 'To is required', text: 'Supplier email is missing.', confirmButtonColor: '#16a34a' }); return; }
+    const files = this.emailAttachments.filter(a => a.checked && a.blob).map(a => ({ fileName: a.fileName || 'document.pdf', blob: a.blob! }));
+    if (!files.length) { void Swal.fire({ icon: 'warning', title: 'Attachment not ready', text: 'The PO PDF is still being prepared. Please wait a moment and try again.', confirmButtonColor: '#16a34a' }); return; }
     this.emailSending = true;
-    this.emailSvc.sendComposeDoc('PO', this.emailDocId, {
+    this.emailSvc.sendWithAttachments({
       toEmail: m.toEmail, ccEmail: m.ccEmail, subject: m.subject, bodyHtml: m.bodyHtml,
-      fromEmail: m.fromEmail, fromName: m.fromName, invoiceNo: this.emailDocNo
+      fromEmail: m.fromEmail, fromName: m.fromName, files
     }).subscribe({
       next: () => { this.emailSending = false; this.showEmailModal = false; void Swal.fire({ icon: 'success', title: 'Sent!', text: `Email sent to ${m.toEmail}.`, confirmButtonColor: '#16a34a' }); },
       error: err => { this.emailSending = false; void Swal.fire({ icon: 'error', title: 'Error', text: err?.error?.message || 'Unable to send email.', confirmButtonColor: '#16a34a' }); }

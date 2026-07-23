@@ -207,7 +207,7 @@
   </div>
 
   <!-- ============ DELETE VIEW ============ -->
-  <div class="dyn-overlay" *ngIf="deleteTarget" (click)="cancelDeleteView()">
+  <div class="dyn-overlay" *ngIf="deleteTarget">
     <div class="dyn-modal dyn-modal-sm" (click)="$event.stopPropagation()">
       <div class="dyn-modal-head">
         <div>
@@ -227,7 +227,7 @@
   </div>
 
   <!-- ============ SAVE VIEW ============ -->
-  <div class="dyn-overlay" *ngIf="saveOpen" (click)="closeSaveView()">
+  <div class="dyn-overlay" *ngIf="saveOpen">
     <div class="dyn-modal dyn-modal-sm" (click)="$event.stopPropagation()">
       <div class="dyn-modal-head">
         <div>
@@ -257,7 +257,7 @@
   </div>
 
   <!-- ============ COLUMNS PICKER ============ -->
-  <div class="dyn-overlay" *ngIf="colsOpen" (click)="closeColumns()">
+  <div class="dyn-overlay" *ngIf="colsOpen">
     <div class="dyn-modal" (click)="$event.stopPropagation()">
       <div class="dyn-modal-head">
         <div>

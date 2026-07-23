@@ -315,7 +315,7 @@
     </div><!-- /f5-card -->
 
     <!-- ── Adjustments Modal ── -->
-    <div class="f5-modal-overlay" *ngIf="showAdjModal" (click)="closeAdjustments()">
+    <div class="f5-modal-overlay" *ngIf="showAdjModal">
       <div class="f5-modal" (click)="$event.stopPropagation()">
         <div class="f5-modal-header">
           <strong>{{ 'GST Adjustments' | taxName }}</strong>

@@ -143,7 +143,7 @@
   </div>
 
   <!-- Create PR confirm popup -->
-  <div class="pp-confirm-overlay" *ngIf="showPrConfirm" (click)="cancelPrConfirm()">
+  <div class="pp-confirm-overlay" *ngIf="showPrConfirm">
     <div class="pp-confirm" (click)="$event.stopPropagation()">
       <h3>Create PR?</h3>
       <p>This will save the Production Plan if needed and create a Purchase Request for the shortage items (an alert is sent to Purchase / PO).</p>
