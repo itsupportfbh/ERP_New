@@ -2,7 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
-const initialFormState = { name: '', description: '' };
+const initialFormState = {
+  name: '', description: '',
+  discountPct: null as number | null,
+  defaultPaymentTermId: null as number | null,
+  defaultCreditAmount: null as number | null,
+};
 
 @Component({
   selector: 'erp-customer-groups',
@@ -23,6 +28,7 @@ export class CustomerGroupsComponent implements OnInit {
   showResultPopup = false; popupIsSuccess = false; popupMessage = '';
 
   form = { ...initialFormState };
+  paymentTermOptions: any[] = [];
   permission: FunctionPermission;
   isPermissionLoaded = false;
   userId: number = 0;
@@ -33,7 +39,10 @@ export class CustomerGroupsComponent implements OnInit {
     this.permission = this.permissionService.getEmptyPermission(this.functionId);
   }
 
-  ngOnInit(): void { this.loadPermission(); }
+  ngOnInit(): void {
+    this.loadPermission();
+    this.masterSvc.getPaymentTerms().subscribe((r: any) => this.paymentTermOptions = r?.data || r || []);
+  }
 
   load(): void {
     this.loading = true;
@@ -54,7 +63,12 @@ export class CustomerGroupsComponent implements OnInit {
     this.isFormVisible = true;
     this.isEditMode = true;
     this.selectedId = item.id;
-    this.form = { name: item.name || '', description: item.description || '' };
+    this.form = {
+      name: item.name || '', description: item.description || '',
+      discountPct: item.discountPct ?? null,
+      defaultPaymentTermId: item.defaultPaymentTermId ?? null,
+      defaultCreditAmount: item.defaultCreditAmount ?? null,
+    };
     this.message = '';
   }
 

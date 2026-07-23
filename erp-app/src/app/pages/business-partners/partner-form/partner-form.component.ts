@@ -61,6 +61,7 @@ export class PartnerFormComponent implements OnInit {
 
   countryOptions: DropdownOption[] = [];
   customerGroupOptions: DropdownOption[] = [];
+  rawCustomerGroups: any[] = [];   // raw group rows (carry DiscountPct / DefaultPaymentTermId / DefaultCreditAmount)
   paymentTermOptions: DropdownOption[] = [];
   currencyOptions: DropdownOption[] = [];
   incotermOptions: DropdownOption[] = [];
@@ -519,12 +520,26 @@ export class PartnerFormComponent implements OnInit {
       approvers: this.partners.getApprovalLevels().pipe(catchError(() => of([]))),
       customers: this.partners.getAllCustomerMaster().pipe(catchError(() => of([])))
     }).subscribe(({ groups, terms, ledgers, approvers, customers }) => {
-      this.customerGroupOptions = this.toOptions(this.partners.unwrapRows(groups), 'name', 'id', 'customerGroupName');
+      this.rawCustomerGroups = this.partners.unwrapRows(groups) || [];
+      this.customerGroupOptions = this.toOptions(this.rawCustomerGroups, 'name', 'id', 'customerGroupName');
       this.paymentTermOptions = this.toOptions(this.partners.unwrapRows(terms), 'paymentTermsName', 'id', 'name');
       this.ledgerOptions = this.toLedgerOptions(this.partners.unwrapRows(ledgers));
       this.approvalLevelOptions = this.toOptions(this.partners.unwrapRows(approvers), 'name', 'id');
       this.existingCustomers = this.partners.unwrapRows(customers);
     });
+  }
+
+  // Selecting a customer group applies its policy defaults (payment term + credit limit) so the
+  // user doesn't retype them per customer. They can still override after. Group defaults are set
+  // once on the Customer Group master.
+  onCustomerGroupChange(groupId: any): void {
+    this.customer.customerGroupId = groupId;
+    const g = (this.rawCustomerGroups || []).find((x: any) => Number(x.id ?? x.Id) === Number(groupId));
+    if (!g) return;
+    const term = g.defaultPaymentTermId ?? g.DefaultPaymentTermId;
+    const credit = g.defaultCreditAmount ?? g.DefaultCreditAmount;
+    if (term != null && term !== '') this.customer.paymentTermId = Number(term);
+    if (credit != null && credit !== '') this.customer.creditAmount = Number(credit);
   }
 
   private loadSupplierMasters(): void {

@@ -262,6 +262,12 @@ export class SalesService {
     fd.append('Module', 'SI');
     return this.http.post(`${this.api}/Ocr/extract-groq-si`, fd);
   }
+  // Live credit position for a customer (limit, outstanding, available).
+  // Outstanding already nets off receipts, credit notes and advances (backend).
+  getCustomerCreditStatus(customerId: number | string): Observable<any> {
+    return this.http.get(`${this.api}/CustomerMaster/GetCreditStatus/${customerId}`);
+  }
+
   getSalesInvoiceById(id: number | string): Observable<any> {
     return this.http.get(`${this.api}/salesinvoice/${id}`);
   }

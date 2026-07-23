@@ -52,6 +52,21 @@
           <label class="mf-label">Description</label>
           <textarea class="mf-input mf-textarea" [(ngModel)]="form.description" name="description" placeholder="Description (optional)" rows="3"></textarea>
         </div>
+        <div class="mf-group">
+          <label class="mf-label">Default Discount %</label>
+          <input class="mf-input" type="number" [(ngModel)]="form.discountPct" name="discountPct" min="0" max="100" placeholder="e.g. 10"/>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Default Payment Term</label>
+          <select class="mf-input" [(ngModel)]="form.defaultPaymentTermId" name="defaultPaymentTermId">
+            <option [ngValue]="null">— none —</option>
+            <option *ngFor="let t of paymentTermOptions" [ngValue]="t.id ?? t.Id">{{ t.paymentTermsName ?? t.PaymentTermsName ?? t.name }}</option>
+          </select>
+        </div>
+        <div class="mf-group">
+          <label class="mf-label">Default Credit Amount</label>
+          <input class="mf-input" type="number" [(ngModel)]="form.defaultCreditAmount" name="defaultCreditAmount" min="0" placeholder="e.g. 50000"/>
+        </div>
         <div class="mf-actions">
           <button type="submit" class="mf-btn submit">
             <svg viewBox="0 0 20 20"><polyline points="3 10 8 15 17 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
