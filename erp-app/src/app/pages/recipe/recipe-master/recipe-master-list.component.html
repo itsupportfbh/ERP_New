@@ -56,7 +56,7 @@
   </erp-doc-view-modal>
 
   <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal">
     <div class="mconfirm-modal" (click)="$event.stopPropagation()">
       <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
       <p class="mconfirm-msg">Are you sure you want to delete recipe {{ itemToDelete?.code }}?</p>

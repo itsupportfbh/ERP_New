@@ -91,7 +91,7 @@
   </div>
 
   <!-- Run Depreciation modal -->
-  <div class="fa-modal-overlay" *ngIf="showDepModal" (click)="closeDepModal()">
+  <div class="fa-modal-overlay" *ngIf="showDepModal">
     <div class="fa-modal" (click)="$event.stopPropagation()">
       <div class="fa-modal-head"><span>Run Depreciation</span><button class="fa-modal-close" type="button" (click)="closeDepModal()">&#215;</button></div>
       <div class="fa-modal-body">
@@ -106,7 +106,7 @@
   </div>
 
   <!-- Post Acquisition modal -->
-  <div class="fa-modal-overlay" *ngIf="showAcqModal" (click)="closeAcqModal()">
+  <div class="fa-modal-overlay" *ngIf="showAcqModal">
     <div class="fa-modal" (click)="$event.stopPropagation()">
       <div class="fa-modal-head"><span>Post Acquisition</span><button class="fa-modal-close" type="button" (click)="closeAcqModal()">&#215;</button></div>
       <div class="fa-modal-body">

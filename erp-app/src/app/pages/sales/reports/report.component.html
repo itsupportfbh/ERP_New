@@ -13,7 +13,7 @@
           <div class="rp-sub">{{ r.crumb }}</div>
         </div>
       </div>
-      <button class="rp-open" type="button" (click)="openReport(r)">{{ isActive(r) ? 'Viewing' : 'Open' }}</button>
+      <button class="rp-open" [class.rp-open--active]="isActive(r)" type="button" (click)="openReport(r)">{{ isActive(r) ? 'Viewing' : 'Open' }}</button>
     </div>
   </div>
 

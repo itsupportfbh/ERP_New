@@ -57,7 +57,7 @@
     (resultClosed)="showResultPopup=false">
   </erp-master-popup>
 
-  <div class="hist-overlay" *ngIf="showHistory" (click)="closeHistory()">
+  <div class="hist-overlay" *ngIf="showHistory">
     <div class="hist-modal" (click)="$event.stopPropagation()">
       <div class="hist-head">
         <div class="hist-title">

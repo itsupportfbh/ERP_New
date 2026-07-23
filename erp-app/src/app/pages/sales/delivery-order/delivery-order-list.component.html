@@ -85,7 +85,7 @@
        Proof of delivery is captured here, after the goods have been received — never at create.
        Two channels: sign on screen, or upload a photo/scan of the signed printed form. A person
        eyeballs the evidence and confirms, so nothing has to guess whether an image "looks signed". -->
-  <div class="do-modal-overlay" *ngIf="showConfirm" (click)="closeConfirm()">
+  <div class="do-modal-overlay" *ngIf="showConfirm">
     <div class="do-modal do-modal--wide" (click)="$event.stopPropagation()">
       <div class="do-modal-head">
         <span>Confirm Delivery — {{ confirmRow?.doNumber }}</span>
@@ -147,7 +147,7 @@
   </div>
 
   <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal">
     <div class="mconfirm-modal" (click)="$event.stopPropagation()">
       <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
       <p class="mconfirm-msg">Are you sure you want to delete delivery order {{ itemToDelete?.doNumber }}?</p>

@@ -245,7 +245,7 @@
 
 </div>
 
-<div class="modal-backdrop" *ngIf="columnsOpen" (click)="columnsOpen = false">
+<div class="modal-backdrop" *ngIf="columnsOpen">
   <section class="columns-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
     <header><div><h3>Headers (Columns)</h3><p>Pick columns for the list and export.</p></div><button class="modal-close" type="button" (click)="columnsOpen = false">×</button></header>
     <div class="selected-count">Selected: {{ visibleColumns.length }} / {{ reportColumns.length }}</div>

@@ -128,7 +128,7 @@
   </div>
 </div>
 
-<div class="columns-backdrop" *ngIf="columnsOpen" (click)="columnsOpen=false"><section class="columns-dialog" (click)="$event.stopPropagation()">
+<div class="columns-backdrop" *ngIf="columnsOpen"><section class="columns-dialog" (click)="$event.stopPropagation()">
   <header><div><h3>Headers (Columns)</h3><p>Pick columns for the report and export.</p></div><button type="button" (click)="columnsOpen=false">×</button></header>
   <div class="columns-list"><button type="button" *ngFor="let col of reportColumns" [class.selected]="col.selected" (click)="toggleColumn(col.key)"><span>{{ col.label }}</span><strong>{{ col.selected ? '✓' : '' }}</strong></button></div>
   <footer><button class="gl-btn-primary" type="button" (click)="columnsOpen=false">Apply</button></footer>

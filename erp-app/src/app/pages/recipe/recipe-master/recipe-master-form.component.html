@@ -161,7 +161,7 @@
   </ng-container>
 
   <!-- Add Recipe Line modal -->
-  <div class="rl-overlay" *ngIf="showLineModal" (click)="closeLineModal()">
+  <div class="rl-overlay" *ngIf="showLineModal">
     <div class="rl-modal" (click)="$event.stopPropagation()">
       <div class="rl-head">
         <h3>{{ isEditingLine ? 'Edit Recipe Line' : 'Add Recipe Line' }}</h3>

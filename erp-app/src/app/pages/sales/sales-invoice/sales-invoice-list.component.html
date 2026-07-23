@@ -77,7 +77,7 @@
   </erp-doc-view-modal>
 
   <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal">
     <div class="mconfirm-modal" (click)="$event.stopPropagation()">
       <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
       <p class="mconfirm-msg">Are you sure you want to delete invoice {{ itemToDelete?.invoiceNo }}?</p>
@@ -86,7 +86,7 @@
   </div>
 
   <!-- Email compose modal -->
-  <div class="mconfirm-overlay" *ngIf="showEmailModal" (click)="closeEmailModal()">
+  <div class="mconfirm-overlay" *ngIf="showEmailModal">
     <div class="email-modal" (click)="$event.stopPropagation()">
       <div class="email-head">
         <h3>Email Customer</h3>

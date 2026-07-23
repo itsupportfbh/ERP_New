@@ -10,7 +10,7 @@ export interface PrintColumn {
   type?: 'text' | 'number' | 'qty' | 'date';
 }
 
-export interface PrintParty { name?: string; lines?: string[]; }
+export interface PrintParty { name?: string; lines?: string[]; /** Box heading, defaults to "Bill To :" / "Deliver To :". */ label?: string; }
 
 export interface DocumentPrintConfig {
   docTitle: string;
@@ -27,6 +27,9 @@ export interface DocumentPrintConfig {
   /** Extra address lines shown under the customer name inside the "Order To" box
    *  (e.g. the Delivery To address captured on the quotation). */
   orderToLines?: string[];
+  /** Hide the "Deliver To" box entirely (documents with a single party, e.g. a
+   *  Supplier Invoice, only need the supplier block). */
+  hideDeliverTo?: boolean;
   /** Prints an acknowledgement block for the customer to sign on the hardcopy.
    *  The signed page is scanned back in and attached to the DO (Confirm Delivery). */
   signature?: {
@@ -170,6 +173,10 @@ export class DocumentPrintService {
 
     const hasBillTo = !!(cfg.billTo && ((cfg.billTo.name && String(cfg.billTo.name).trim()) ||
       (cfg.billTo.lines || []).some(l => l != null && String(l).trim() !== '')));
+    const showDeliver = !cfg.hideDeliverTo;
+    const billToLabel = cfg.billTo?.label ?? 'Bill To :';
+    // billTo box (if any) + Deliver To box (unless hidden) + fixed-width meta column.
+    const infoGridCols = [hasBillTo ? '1fr' : '', showDeliver ? '1fr' : '', '230px'].filter(Boolean).join(' ');
 
     const metaRowsHtml = metaFields.map(f =>
       `<tr>
@@ -288,19 +295,19 @@ export class DocumentPrintService {
   <div class="doc-title">${this.escape(cfg.docTitle)}</div>
 
   <!-- INFO ROW -->
-  <div class="info-row"${hasBillTo ? ' style="grid-template-columns:1fr 1fr 230px;"' : ''}>
+  <div class="info-row" style="grid-template-columns:${infoGridCols};">
     ${hasBillTo ? `<div class="bill-box">
-      <div class="bl">Bill To :</div>
+      <div class="bl">${this.escape(billToLabel)}</div>
       <div class="bn">${this.escape(cfg.billTo?.name ?? '—')}</div>
       ${(cfg.billTo?.lines || []).filter(l => l != null && String(l).trim() !== '')
         .map(l => `<div class="baddr">${this.escape(l)}</div>`).join('')}
     </div>` : ''}
-    <div class="bill-box">
+    ${showDeliver ? `<div class="bill-box">
       <div class="bl">Deliver To :</div>
       <div class="bn">${this.escape(customerField?.value ?? '—')}</div>
       ${(cfg.orderToLines || []).filter(l => l != null && String(l).trim() !== '')
         .map(l => `<div class="baddr">${this.escape(l)}</div>`).join('')}
-    </div>
+    </div>` : ''}
     <div>
       <table class="m-tbl">${metaRowsHtml}</table>
     </div>

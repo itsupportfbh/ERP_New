@@ -131,7 +131,7 @@
 </div>
 
 <!-- Export Modal -->
-<div class="dt-modal-overlay" *ngIf="showExportModal" (click)="closeExportModal()">
+<div class="dt-modal-overlay" *ngIf="showExportModal">
   <div class="dt-modal" (click)="$event.stopPropagation()">
     <h3 class="dt-modal-title">Export Stock History</h3>
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Select export format for current stock data</p>

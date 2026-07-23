@@ -68,7 +68,7 @@
     (print)="printActive()" (close)="showView=false">
   </erp-doc-view-modal>
 
-  <div class="codes-overlay" *ngIf="showCodesModal" (click)="showCodesModal=false">
+  <div class="codes-overlay" *ngIf="showCodesModal">
     <section class="codes-modal" (click)="$event.stopPropagation()">
       <header><div><h3>Picking QR &amp; Barcode</h3><p>{{ codesTitle }}</p></div><button type="button" (click)="showCodesModal=false">×</button></header>
       <div class="codes-loading" *ngIf="codesLoading">Generating codes...</div>
@@ -82,7 +82,7 @@
   </div>
 
   <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal">
     <div class="mconfirm-modal" (click)="$event.stopPropagation()">
       <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
       <p class="mconfirm-msg">Are you sure you want to delete picking for {{ itemToDelete?.salesOrderNo }}?</p>

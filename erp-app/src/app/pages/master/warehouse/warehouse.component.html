@@ -35,7 +35,7 @@
   </div>
 
   <!-- Add/Edit Modal -->
-  <div class="dt-modal-overlay" *ngIf="isFormVisible" (click)="cancel()">
+  <div class="dt-modal-overlay" *ngIf="isFormVisible">
     <div class="dt-modal" (click)="$event.stopPropagation()">
       <h3 class="dt-modal-title">{{ isEditMode ? 'Edit' : 'Add' }} Warehouse</h3>
       <form (ngSubmit)="onSubmit()" #f="ngForm">

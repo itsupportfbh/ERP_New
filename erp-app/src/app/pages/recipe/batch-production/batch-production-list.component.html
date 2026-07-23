@@ -62,7 +62,7 @@
   </erp-doc-view-modal>
 
   <!-- Production Plans ready for Batch Production modal -->
-  <div class="pp-alert-overlay" *ngIf="showPlanAlertModal" (click)="closePlanAlertModal()">
+  <div class="pp-alert-overlay" *ngIf="showPlanAlertModal">
     <div class="pp-alert-modal" (click)="$event.stopPropagation()">
       <div class="pp-alert-head">
         <h3>Production Plans Ready for Batch Production</h3>
@@ -97,7 +97,7 @@
   </div>
 
   <!-- Delete confirm -->
-  <div class="mconfirm-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal=false">
+  <div class="mconfirm-overlay" *ngIf="showDeleteModal">
     <div class="mconfirm-modal" (click)="$event.stopPropagation()">
       <div class="mconfirm-icon">!</div><h3 class="mconfirm-title">Confirm Delete</h3>
       <p class="mconfirm-msg">Are you sure you want to delete batch {{ itemToDelete?.batchNo }}?</p>

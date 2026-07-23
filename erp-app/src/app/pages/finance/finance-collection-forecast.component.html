@@ -18,7 +18,7 @@
       </button>
     </div>
   </div>
-  <div class="columns-backdrop" *ngIf="columnsOpen" (click)="columnsOpen=false"><section class="columns-dialog" (click)="$event.stopPropagation()"><header><div><h3>Headers (Columns)</h3><p>Pick columns for the report.</p></div><button type="button" class="dialog-close" (click)="columnsOpen=false">×</button></header><div class="columns-list"><button type="button" *ngFor="let col of reportColumns" [class.selected]="columnSelection[col]" (click)="toggleColumn(col)"><span>{{ col }}</span><strong>{{ columnSelection[col] ? '✓' : '' }}</strong></button></div><footer><button type="button" class="dialog-apply" (click)="columnsOpen=false">Apply</button></footer></section></div>
+  <div class="columns-backdrop" *ngIf="columnsOpen"><section class="columns-dialog" (click)="$event.stopPropagation()"><header><div><h3>Headers (Columns)</h3><p>Pick columns for the report.</p></div><button type="button" class="dialog-close" (click)="columnsOpen=false">×</button></header><div class="columns-list"><button type="button" *ngFor="let col of reportColumns" [class.selected]="columnSelection[col]" (click)="toggleColumn(col)"><span>{{ col }}</span><strong>{{ columnSelection[col] ? '✓' : '' }}</strong></button></div><footer><button type="button" class="dialog-apply" (click)="columnsOpen=false">Apply</button></footer></section></div>
 
   <!-- Bucket Summary Cards -->
   <div class="bucket-row">

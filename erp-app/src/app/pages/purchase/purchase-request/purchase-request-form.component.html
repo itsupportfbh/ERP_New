@@ -186,7 +186,7 @@
 </div>
 
 <!-- ── Modal: Add / Edit Line ──────────────────────── -->
-<div class="prl-overlay" *ngIf="showModal" (click)="closeModal()">
+<div class="prl-overlay" *ngIf="showModal">
   <div class="prl-modal" (click)="$event.stopPropagation()">
     <div class="prl-head">
       <h2 class="prl-title">{{ editingIndex !== null ? 'Edit Line' : 'Add Purchase Request Line' }}</h2>
