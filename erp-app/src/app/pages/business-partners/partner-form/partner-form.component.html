@@ -63,7 +63,8 @@
   <div class="card section-card" *ngIf="type === 'customers' && customerStep === 2">
     <div class="section-label">Personal Info</div>
     <div class="form-row cols-3">
-      <erp-dropdown label="Customer Groups" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"
+       <erp-dropdown label="Customer Groups" [options]="customerGroupOptions" [(ngModel)]="customer.customerGroupId"
+        (ngModelChange)="onCustomerGroupChange($event)"
         [allowAdd]="true" addTypeLabel="Customer Group" (addNew)="openQa('customerGroup','customerGroup',$event)"></erp-dropdown>
       <erp-dropdown label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="customer.paymentTermId"
         [allowAdd]="true" addTypeLabel="Payment Term" (addNew)="openQa('paymentTerms','customerPaymentTerm',$event)"></erp-dropdown>
