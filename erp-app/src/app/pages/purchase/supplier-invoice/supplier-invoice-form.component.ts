@@ -624,6 +624,13 @@ export class SupplierInvoiceFormComponent implements OnInit {
         );
         const poQty = poLine ? Number(poLine.qty ?? poLine.quantity ?? 0) : 0;
         const poTaxMode = this.mapPoTaxMode(poLine?.taxMode ?? poLine?.TaxMode);
+        // Carry the line discount from the GRN line, else the source PO line — it was
+        // hardcoded to 0, so a PO with a 10% discount invoiced at full price.
+        const discountPct = Number(
+          x.discountPct ?? x.DiscountPct ?? x.discount ?? x.Discount
+          ?? poLine?.discountPct ?? poLine?.DiscountPct ?? poLine?.discount ?? poLine?.Discount
+          ?? 0
+        ) || 0;
         const leafLedger = itemId ? (this.itemLeafLedgerMap.get(Number(itemId)) || null) : null;
         const itemLedger = itemId ? (this.itemLedgerMap.get(Number(itemId)) || null) : null;
         const catId = itemId ? (this.itemCategoryMap.get(Number(itemId)) || null) : null;
@@ -659,7 +666,7 @@ export class SupplierInvoiceFormComponent implements OnInit {
           grnQty,
           qty: grnQty,
           unitPrice,
-          discountPct: 0,
+          discountPct,
           // Tax mode is inherited from the source PO line; fall back to the
           // document default only when the PO carries no tax mode.
           taxMode: poTaxMode ?? (this.defaultTaxMode === 'ZeroRated' ? 'Zero' : 'Exclusive'),
