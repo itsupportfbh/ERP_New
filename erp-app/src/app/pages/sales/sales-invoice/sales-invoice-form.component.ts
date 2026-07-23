@@ -233,14 +233,35 @@ export class SalesInvoiceFormComponent implements OnInit {
       qty: Number(r.qtyOpen ?? r.qty ?? 0),
       unitPrice: Number(r.unitPrice ?? 0),
       discountPct: Number(r.discountPct ?? 0),
-      gstPct: Number(r.gstPct ?? 0),
-      tax: r.tax ?? '',
-      taxCodeId: r.taxCodeId ?? null,
+      // A zero-rated / exempt line must carry 0% even though the source stores the header
+      // rate (e.g. SST 6) on every line — otherwise a zero-rated SO/DO was taxed on invoice.
+      gstPct: this.isTaxableLine(r) ? Number(r.gstPct ?? 0) : 0,
+      tax: r.tax ?? r.taxMode ?? r.TaxMode ?? '',
+      taxCodeId: r.taxCodeId ?? r.TaxCodeId ?? null,
       lineAmount: 0,
       taxAmount: 0
     };
     this.recalcLine(line);
     return line;
+  }
+
+  /**
+   * Is a source line taxed? Standard-Rated is; Zero-Rated / Exempt are not.
+   * The source view returns the tax type in `Tax` as the tax-code number in string form
+   * ("1"=Standard, "2"=Zero, "3"=Exempt); older rows may hold the word instead. Handle both.
+   */
+  private isTaxableLine(r: any): boolean {
+    const raw = String(r.taxCodeId ?? r.TaxCodeId ?? r.tax ?? r.taxMode ?? r.TaxMode ?? '').trim();
+    const code = Number(raw);
+    if (!isNaN(code) && raw !== '') {
+      if (code === 2 || code === 3) return false;          // Zero / Exempt
+      if (code === 1) return true;                          // Standard
+    }
+    const mode = raw.toLowerCase();
+    if (/zero|exempt/.test(mode)) return false;
+    if (/standard/.test(mode)) return true;
+    // No usable tax type — fall back to whatever rate the source sent (0 = untaxed).
+    return Number(r.gstPct ?? 0) > 0;
   }
 
   // ── Lines / totals ────────────────────────────────────
