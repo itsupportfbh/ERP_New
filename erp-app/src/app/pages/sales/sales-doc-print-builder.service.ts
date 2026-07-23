@@ -4,9 +4,6 @@ import { map, switchMap, catchError } from 'rxjs/operators';
 import { SalesService } from './sales.service';
 import { DocumentPrintConfig, PrintColumn } from '../../core/services/document-print.service';
 
-const SO_STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Not Confirmed', 2: 'Confirmed', 3: 'Confirmed', 4: 'Rejected' };
-const DO_STATUS_MAP: Record<number, string> = { 0: 'Draft', 1: 'Submitted', 2: 'Approved', 3: 'Rejected', 4: 'Posted' };
-
 /**
  * Builds the printable layout for a Sales Order / Delivery Order from its id alone.
  *
@@ -132,9 +129,9 @@ export class SalesDocPrintBuilderService {
         return {
           docTitle: 'SALES ORDER',
           docNo: d.salesOrderNo ?? d.SalesOrderNo ?? '',
+          // Status is an internal workflow state — not shown on the customer's Sales Order.
           fields: [
             { label: 'SO No', value: d.salesOrderNo ?? d.SalesOrderNo ?? '' },
-            { label: 'Status', value: SO_STATUS_MAP[Number(d.status ?? d.Status ?? 0)] ?? 'Not Confirmed' },
             { label: 'Currency', value: cur },
             { label: 'Order Date', value: this.fmtDate(d.requestedDate ?? d.RequestedDate) },
             { label: 'Delivery Date', value: this.fmtDate(d.deliveryDate ?? d.DeliveryDate) },
@@ -209,18 +206,16 @@ export class SalesDocPrintBuilderService {
         const custAddr = hdr.customerAddress ?? hdr.CustomerAddress ?? '';
         const billAddr = this.custAddrMap.get(Number(hdr.customerId ?? hdr.CustomerId)) || custAddr;
         const routeName = hdr.routeName ?? hdr.RouteName ?? '';
-        const posted = !!(hdr.isPosted ?? hdr.IsPosted);
 
         return {
           docTitle: 'DELIVERY ORDER',
           docNo: hdr.doNumber ?? hdr.DoNumber ?? '',
+          // Status / Posted are internal workflow states — not shown on the customer's DO.
           fields: [
             { label: 'DO No', value: hdr.doNumber ?? hdr.DoNumber ?? '' },
             { label: 'SO No', value: hdr.salesOrderNo ?? hdr.SalesOrderNo ?? hdr.soNo ?? '—' },
             { label: 'Route', value: routeName || '—' },
             { label: 'Delivery Date', value: this.fmtDate(hdr.deliveryDate ?? hdr.DeliveryDate) },
-            { label: 'Status', value: DO_STATUS_MAP[Number(hdr.status ?? hdr.Status ?? 0)] ?? 'Draft' },
-            { label: 'Posted', value: posted ? 'Yes' : 'No' },
           ],
           columns: this.doColumns,
           lines,

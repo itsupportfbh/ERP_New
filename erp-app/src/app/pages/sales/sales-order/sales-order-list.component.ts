@@ -280,7 +280,8 @@ export class SalesOrderListComponent implements OnInit {
     return {
       docTitle: 'SALES ORDER',
       docNo: this.activeRow?.salesOrderNo ?? '',
-      fields: this.viewInfo.filter(f => f.label !== 'Remarks'),
+      // Status is an internal workflow state — not shown on the customer's Sales Order.
+      fields: this.viewInfo.filter(f => f.label !== 'Remarks' && f.label !== 'Status'),
       remarks: (this.viewInfo.find(f => f.label === 'Remarks')?.value as string) || '',
       columns: this.docColumns,
       lines: this.viewLines,
@@ -339,8 +340,9 @@ export class SalesOrderListComponent implements OnInit {
     this.emailLoading = true;
     this.emailAttachments = [];
     this.emailModel = {
-      fromLabel: name ? `${name}${email ? ' <' + email + '>' : ''}` : email,
-      fromEmail: email, fromName: name,
+      // The customer's inbox shows what the mail is about; replies still reach this user.
+      fromLabel: `${this.emailSvc.senderName('Sales Order')}${email ? ' <' + email + '>' : ''}`,
+      fromEmail: email, fromName: this.emailSvc.senderName('Sales Order'),
       toEmail: '', ccEmail: '',
       subject: `Sales Order ${docNo}`.trim(),
       bodyHtml: `<p>Dear Customer,</p><p>Please find attached Sales Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`

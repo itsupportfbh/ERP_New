@@ -332,8 +332,9 @@ export class QuotationListComponent implements OnInit {
     this.emailLoading = true;
     this.emailAttachments = [];
     this.emailModel = {
-      fromLabel: name ? `${name}${email ? ' <' + email + '>' : ''}` : email,
-      fromEmail: email, fromName: name,
+      // The customer's inbox shows what the mail is about; replies still reach this user.
+      fromLabel: `${this.emailSvc.senderName('Quotation')}${email ? ' <' + email + '>' : ''}`,
+      fromEmail: email, fromName: this.emailSvc.senderName('Quotation'),
       toEmail: '', ccEmail: '',
       subject: `Quotation ${docNo}`.trim(),
       bodyHtml: `<p>Dear Customer,</p><p>Please find attached Quotation <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`
