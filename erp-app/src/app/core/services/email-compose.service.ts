@@ -88,6 +88,16 @@ export class EmailComposeService {
     return `<p>Regards,<br/>${lines.join('<br/>')}</p>`;
   }
 
+  /**
+   * Sender display name for a document email, e.g. "Ms Vanishree Suppiah — Quotation":
+   * the logged-in user (as before) with the document type appended so the customer's
+   * inbox shows what the mail is about instead of a generic "Notification".
+   */
+  senderName(docLabel: string): string {
+    const user = (localStorage.getItem('username') || localStorage.getItem('email') || '').trim();
+    return user ? `${user} — ${docLabel}` : docLabel;
+  }
+
   /** Compose boxes show readable text; the API is sent HTML. These two convert between them. */
   htmlToText(html: string): string {
     return (html || '')

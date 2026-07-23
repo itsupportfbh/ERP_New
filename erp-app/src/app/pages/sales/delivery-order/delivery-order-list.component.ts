@@ -283,7 +283,8 @@ export class DeliveryOrderListComponent implements OnInit {
     return {
       docTitle: 'DELIVERY ORDER',
       docNo: this.activeRow?.doNumber ?? '',
-      fields: this.viewInfo.filter(f => f.label !== 'Customer'),
+      // Status / Posted are internal workflow states — not shown on the customer's DO.
+      fields: this.viewInfo.filter(f => !['Customer', 'Status', 'Posted'].includes(f.label as string)),
       columns: this.lineColumns,
       lines: this.viewLines,
       totals: this.viewTotals,
@@ -324,8 +325,9 @@ export class DeliveryOrderListComponent implements OnInit {
     this.emailLoading = true;
     this.emailAttachments = [];
     this.emailModel = {
-      fromLabel: name ? `${name}${email ? ' <' + email + '>' : ''}` : email,
-      fromEmail: email, fromName: name,
+      // The customer's inbox shows what the mail is about; replies still reach this user.
+      fromLabel: `${this.emailSvc.senderName('Delivery Order')}${email ? ' <' + email + '>' : ''}`,
+      fromEmail: email, fromName: this.emailSvc.senderName('Delivery Order'),
       toEmail: '', ccEmail: '',
       subject: `Delivery Order ${docNo}`.trim(),
       bodyHtml: `<p>Dear Customer,</p><p>Please find attached Delivery Order <b>${docNo}</b>.</p>${this.emailSvc.signatureHtml(name || email)}`

@@ -343,8 +343,10 @@ export class SalesInvoiceListComponent implements OnInit {
     if (!this.perm.canPrint(this.fnId)) return;
 
     const fromEmail = (localStorage.getItem('email') || '').trim();
-    const fromName = (localStorage.getItem('username') || '').trim();
-    const fromLabel = fromName ? `${fromName}${fromEmail ? ' <' + fromEmail + '>' : ''}` : fromEmail;
+    const userName = (localStorage.getItem('username') || '').trim();
+    // The customer's inbox shows what the mail is about; replies still reach this user.
+    const fromName = this.emailSvc.senderName('Sales Invoice');
+    const fromLabel = `${fromName}${fromEmail ? ' <' + fromEmail + '>' : ''}`;
 
     this.showEmailModal = true;
     this.emailLoading = true;
@@ -385,7 +387,7 @@ export class SalesInvoiceListComponent implements OnInit {
         this.emailModel.bodyHtml =
           `<p>Dear ${this.emailInfo.customerName || 'Customer'},</p>` +
           `<p>Please find attached the requested document(s).</p>` +
-          this.emailSvc.signatureHtml(fromName || fromEmail);
+          this.emailSvc.signatureHtml(userName || fromEmail);
         this.emailLoading = false;
       },
       error: err => {
