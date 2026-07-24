@@ -2,7 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { MasterService } from '../../../core/services/master.service';
 import { FunctionPermission, PermissionService } from 'app/shared/permission.service';
 
-const blank = () => ({ fromCurrencyId: null as any, toCurrencyId: null as any, rate: null as number | null, rateDate: '' });
+/** Local (not UTC) yyyy-MM-dd, so the date input opens on today's date in the user's timezone. */
+const todayIso = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// A rate is almost always entered for today, so default the date and let the user change it.
+const blank = () => ({ fromCurrencyId: null as any, toCurrencyId: null as any, rate: null as number | null, rateDate: todayIso() });
 
 @Component({ selector: 'erp-exchange-rate', standalone: false, templateUrl: './exchange-rate.component.html', styleUrls: ['./exchange-rate.component.scss'] })
 export class ExchangeRateComponent implements OnInit {
@@ -52,7 +59,8 @@ export class ExchangeRateComponent implements OnInit {
       fromCurrencyId: fromId,
       toCurrencyId: toId,
       rate: item.rate ?? null,
-      rateDate: item.rateDate ? item.rateDate.substring(0, 10) : ''
+      // Keep the rate's own date; fall back to today only if the record has none.
+      rateDate: item.rateDate ? item.rateDate.substring(0, 10) : todayIso()
     };
     this.message = '';
   }

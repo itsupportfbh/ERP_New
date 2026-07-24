@@ -97,7 +97,9 @@ export class DeliveryOrderFormComponent implements OnInit {
     if (!e?.id) { this.qaVisible = false; return; }
     switch (this.qaTarget) {
       case 'driver':
-        this.driverOptions = [...this.driverOptions, { id: e.id, name: e.label, mobile: '' }];
+        // Keep the mobile typed in the popup, so the Driver Mobile No field fills in
+        // immediately instead of showing a dash until the page is reloaded.
+        this.driverOptions = [...this.driverOptions, { id: e.id, name: e.label, mobile: e.mobile ?? '' }];
         this.driverId = e.id;
         this.onDriverChange();
         break;

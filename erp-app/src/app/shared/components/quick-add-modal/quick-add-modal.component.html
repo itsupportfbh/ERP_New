@@ -6,6 +6,11 @@
       <erp-input [label]="nameLabel" [required]="true" [(ngModel)]="name"></erp-input>
     </div>
 
+    <div class="form-row block-gap" *ngIf="needsMobile">
+      <erp-input label="Mobile No (10 digits)" [required]="true" placeholder="e.g. 0123456789"
+        [(ngModel)]="mobileNumber"></erp-input>
+    </div>
+
     <div class="form-row block-gap" *ngIf="needsLocation">
       <erp-dropdown label="Location" [required]="true" [options]="locationOptions"
         [(ngModel)]="locationId"></erp-dropdown>
