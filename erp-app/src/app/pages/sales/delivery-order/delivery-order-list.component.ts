@@ -244,8 +244,10 @@ export class DeliveryOrderListComponent implements OnInit {
                 { label: 'Route', value: row.routeName || '—' },
                 { label: 'Customer', value: hdr.customerName ?? hdr.CustomerName ?? '—' },
                 { label: 'Delivery Date', value: this.fmtDate(row.deliveryDate) },
-                { label: 'Status', value: row.statusLabel },
-                { label: 'Posted', value: row.postedLabel },
+                // Show the delivery state the grid shows (Pending / Completed / Invoice
+                // Created), not the internal approval status — the modal used to read
+                // "Posted" while the same row in the list read something else.
+                { label: 'Status', value: row.deliveryStatusLabel },
               ];
               this.viewTotals = [];
               const custName = hdr.customerName ?? hdr.CustomerName ?? '—';

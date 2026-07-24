@@ -15,6 +15,9 @@ export interface QuickAddResult {
   type: QuickAddType;
   id: number;
   label: string;
+  /** Mobile number typed in the popup (masters created with `needs: 'mobile'`, e.g. Driver),
+   *  so the calling form can show it straight away without re-reading the master. */
+  mobile?: string;
 }
 
 interface QaExtra {
@@ -23,6 +26,7 @@ interface QaExtra {
   countryId: number | null;
   stateId: number | null;
   cityId: number | null;
+  mobileNumber: string;
 }
 
 type Cfg = {
@@ -38,7 +42,7 @@ type Cfg = {
   /** Extra required control this master needs beyond the name:
    *  'location' = a Location picker (Warehouse), 'categoryType' = Sales/Purchase/Both
    *  (Category), 'geo' = Country→State→City cascade (Location itself). */
-  needs?: 'location' | 'categoryType' | 'geo';
+  needs?: 'location' | 'categoryType' | 'geo' | 'mobile';
 };
 
 /**
@@ -69,6 +73,18 @@ export class QuickAddModalComponent implements OnChanges {
   // Extra fields (only shown for the masters that require them).
   locationId: number | null = null;
   categoryType: number | null = null;
+  /**
+   * Digits only, hard-capped at 10 — typing letters or an 11th digit simply does nothing,
+   * so the user cannot enter an invalid number rather than being told off after Save.
+   */
+  private _mobileNumber = '';
+  get mobileNumber(): string { return this._mobileNumber; }
+  set mobileNumber(v: string) {
+    this._mobileNumber = String(v ?? '').replace(/\D/g, '').slice(0, 10);
+    // Clear the warning as soon as it is satisfied, instead of leaving it on screen
+    // until the user presses Save again.
+    if (this._mobileNumber.length === 10 && /Mobile No/i.test(this.error)) this.error = '';
+  }
   locationOptions: { label: string; value: any }[] = [];
   readonly categoryTypeOptions = [
     { label: 'Sales', value: 1 },
@@ -157,10 +173,16 @@ export class QuickAddModalComponent implements OnChanges {
       create: (s, p) => s.createTaxCode(p), list: s => s.getTaxCodes(), nameField: 'name',
     },
     driver: {
-      title: 'Add Driver', nameLabel: 'Driver Name',
-      // MobileNumber/LicenseNumber/LicenseExpiryDate are NOT NULL — send safe placeholders
-      // (the user completes the real details later in the Driver master).
-      build: n => ({ driverName: n, mobileNumber: 0, licenseNumber: '', licenseExpiryDate: '1900-01-01', nricOrId: '' }),
+      title: 'Add Driver', nameLabel: 'Driver Name', needs: 'mobile',
+      // Mobile is captured here (a driver without a contact number is not much use on a
+      // delivery). LicenseNumber/LicenseExpiryDate are NOT NULL — still placeholders, to be
+      // completed later in the Driver master.
+      // Driver.MobileNumber is a long on the API, so strip spaces/dashes and send digits only.
+      build: (n, e) => ({
+        driverName: n,
+        mobileNumber: Number(String(e.mobileNumber ?? '').replace(/\D/g, '')) || 0,
+        licenseNumber: '', licenseExpiryDate: '1900-01-01', nricOrId: ''
+      }),
       create: (s, p) => s.createDriver(p), list: s => s.getDrivers(), nameField: 'driverName',
     },
     vehicle: {
@@ -196,6 +218,7 @@ export class QuickAddModalComponent implements OnChanges {
       this.saving = false;
       this.locationId = null;
       this.categoryType = null;
+      this.mobileNumber = '';
       this.geoCountryId = null;
       this.geoStateId = null;
       this.geoCityId = null;
@@ -212,6 +235,7 @@ export class QuickAddModalComponent implements OnChanges {
   get needsLocation(): boolean { return this.current?.needs === 'location'; }
   get needsCategoryType(): boolean { return this.current?.needs === 'categoryType'; }
   get needsGeo(): boolean { return this.current?.needs === 'geo'; }
+  get needsMobile(): boolean { return this.current?.needs === 'mobile'; }
 
   private loadLocations(): void {
     this.master.getLocations().pipe(catchError(() => of([]))).subscribe((res: any) => {
@@ -261,6 +285,12 @@ export class QuickAddModalComponent implements OnChanges {
     if (!cfg) { this.close(); return; }
     const name = (this.name || '').trim();
     if (!name) { this.error = `${cfg.nameLabel} is required.`; return; }
+    if (cfg.needs === 'mobile') {
+      // Compare on digits only, so a number typed as "012-345 6789" still validates.
+      const digits = String(this.mobileNumber ?? '').replace(/\D/g, '');
+      if (!digits) { this.error = 'Mobile No is required.'; return; }
+      if (digits.length !== 10) { this.error = 'Mobile No must be exactly 10 digits.'; return; }
+    }
     if (cfg.needs === 'location' && !this.locationId) { this.error = 'Location is required.'; return; }
     if (cfg.needs === 'categoryType' && !this.categoryType) { this.error = 'Category type is required.'; return; }
     if (cfg.needs === 'geo' && (!this.geoCountryId || !this.geoStateId || !this.geoCityId)) {
@@ -271,6 +301,7 @@ export class QuickAddModalComponent implements OnChanges {
     this.saving = true;
     const payload = cfg.build(name, {
       locationId: this.locationId, categoryType: this.categoryType,
+      mobileNumber: (this.mobileNumber || '').trim(),
       countryId: this.geoCountryId, stateId: this.geoStateId, cityId: this.geoCityId,
     });
 
@@ -295,7 +326,12 @@ export class QuickAddModalComponent implements OnChanges {
 
   private finish(name: string, id: number): void {
     this.saving = false;
-    this.created.emit({ type: this.type as QuickAddType, id, label: name });
+    this.created.emit({
+      type: this.type as QuickAddType,
+      id,
+      label: name,
+      mobile: this.needsMobile ? this._mobileNumber : undefined
+    });
     this.closed.emit();
   }
 
